@@ -92,7 +92,10 @@
   escena.fog = new THREE.Fog(0x9fd8ff, 85, 180);
 
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
-  var cam = { objetivo: new V3(-15, 0, -7), dist: 36, distMeta: 36, az: 0.52, polar: 1.0 };
+  // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
+  function distInicial() { return window.innerWidth < window.innerHeight ? 62 : 46; }
+  var CENTRO_REINO = new V3(-5, 0, -2);
+  var cam = { objetivo: CENTRO_REINO.clone(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
 
   var hemi = new THREE.HemisphereLight(0xdff2ff, 0x6a8a4a, 0.55);
   escena.add(hemi);
@@ -1440,7 +1443,7 @@
     if (pellizco && ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       var d = Math.hypot(a.x - b.x, a.y - b.y);
-      cam.distMeta = Math.max(16, Math.min(52, pellizco.dist * pellizco.d / Math.max(20, d)));
+      cam.distMeta = Math.max(16, Math.min(70, pellizco.dist * pellizco.d / Math.max(20, d)));
       return;
     }
     if (!arrastre) return;
@@ -1464,7 +1467,7 @@
   lienzo.addEventListener('pointercancel', function (ev) { delete punteros[ev.pointerId]; arrastre = null; pellizco = null; });
   lienzo.addEventListener('wheel', function (ev) {
     ev.preventDefault();
-    cam.distMeta = Math.max(16, Math.min(52, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
+    cam.distMeta = Math.max(16, Math.min(70, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') { if (enMundo) cerrarMundo(); else if (modoColocar) salirModoColocar(); else cerrarPanel(); }
@@ -2086,7 +2089,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.6</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.7</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -2508,7 +2511,7 @@
     estado.vidaCastillo = vidaMaxCastillo();
     curarHeridos();
     tiempoJuego = 0;
-    cam.objetivo.set(-15, 0, -7); cam.distMeta = 36;
+    cam.objetivo.copy(CENTRO_REINO); cam.distMeta = distInicial();
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
     actualizarHUD();
