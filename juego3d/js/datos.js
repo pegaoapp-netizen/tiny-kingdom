@@ -90,6 +90,10 @@ var TEXTOS = {
     e_general: 'No se pudo. Inténtalo otra vez.', e_repetir: 'Las contraseñas no son iguales.',
     e_sin_nube: 'Las cuentas no están disponibles ahora (sin internet).',
     gemas_inf: 'Gemas infinitas',
+    camas: 'Camas', a_enfermeria: '💚 A la enfermería', curados: '💚 Se curaron {n} tropas', en_enfermeria: 'En la enfermería: {n} (vuelven al terminar la oleada)',
+    vida_extra: 'Vida extra del castillo', muralla_nivel: 'Muralla nivel {n}', sin_muralla: 'Todavía no tienes Muralla.',
+    c_enfermeria: 'Consejo: una Enfermería salva a las tropas que caen en batalla.', c_muralla: 'Consejo: construye la Muralla para que el castillo aguante más.',
+    muralla_lista: '🧱 ¡Muralla nivel {n} lista! El castillo tiene más vida.',
     modo_dueno: '👑 DUEÑO', poder_titulo: '¿Qué es el Poder?',
     poder_txt: 'El Poder es la fuerza total de tu reino. Sube cuando entrenas tropas, construyes o mejoras edificios y ganas oleadas.',
     poder_tropas: 'Tropas', poder_edificios: 'Edificios', poder_oleadas: 'Oleadas ganadas',
@@ -161,6 +165,10 @@ var TEXTOS = {
     e_general: 'Something went wrong. Try again.', e_repetir: 'Passwords do not match.',
     e_sin_nube: 'Accounts are not available right now (no internet).',
     gemas_inf: 'Infinite gems',
+    camas: 'Beds', a_enfermeria: '💚 To the infirmary', curados: '💚 {n} troops healed', en_enfermeria: 'In the infirmary: {n} (back when the wave ends)',
+    vida_extra: 'Extra castle health', muralla_nivel: 'Wall level {n}', sin_muralla: 'You do not have a Wall yet.',
+    c_enfermeria: 'Tip: an Infirmary saves troops that fall in battle.', c_muralla: 'Tip: build the Wall so the castle lasts longer.',
+    muralla_lista: '🧱 Wall level {n} ready! The castle has more health.',
     modo_dueno: '👑 OWNER', poder_titulo: 'What is Power?',
     poder_txt: 'Power is the total strength of your kingdom. It goes up when you train troops, build or upgrade buildings, and win waves.',
     poder_tropas: 'Troops', poder_edificios: 'Buildings', poder_oleadas: 'Waves won',
@@ -188,6 +196,10 @@ var NOMBRES = {
                 des_es: 'Permite entrenar caballeros.', des_en: 'Lets you train knights.' },
   torre:      { es: 'Torre',        en: 'Tower',
                 des_es: 'Dispara flechas a los enemigos.', des_en: 'Shoots arrows at enemies.' },
+  enfermeria: { es: 'Enfermería',   en: 'Infirmary',
+                des_es: 'Las tropas que caen se curan aquí y vuelven al terminar la oleada.', des_en: 'Fallen troops heal here and come back when the wave ends.' },
+  muralla:    { es: 'Muralla',      en: 'Wall',
+                des_es: 'Rodea el castillo y le da más vida.', des_en: 'Surrounds the castle and gives it more health.' },
   espadachin: { es: 'Espadachín',   en: 'Swordsman',
                 des_es: 'Rápido y valiente. Pelea cuerpo a cuerpo.', des_en: 'Fast and brave. Fights up close.' },
   arquero:    { es: 'Arquero',      en: 'Archer',
@@ -207,8 +219,12 @@ var INICIO = { monedas: 200, gemas: 20, vidaCastillo: 1200 };
 var EDIFICIOS = {
   granja:  { costo: [50, 90, 160],  tiempo: [3, 4, 6], produce: [3, 6, 10], cada: 3, icono: '🌾' },
   cuartel: { costo: [70, 120, 200], tiempo: [3, 5, 7], capacidad: [6, 10, 15], rapidez: [1, 1.3, 1.6], icono: '⚔️' },
-  torre:   { costo: [80, 140, 220], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [10, 11, 12.5], ritmo: 0.9, icono: '🏹' }
+  torre:   { costo: [80, 140, 220], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [10, 11, 12.5], ritmo: 0.9, icono: '🏹' },
+  // Enfermería: camas = cuántas tropas caídas puede salvar por oleada
+  enfermeria: { costo: [90, 150, 240], tiempo: [4, 5, 7], capacidad: [4, 8, 14], icono: '💚' }
 };
+// Muralla: una sola, alrededor del castillo. Da vida extra al castillo.
+var MURALLA = { costo: [120, 220, 360], tiempo: [5, 7, 9], vida: [400, 900, 1500], icono: '🧱' };
 
 // El castillo también dispara (para que la primera oleada sea posible)
 var CASTILLO = { dano: 12, alcance: 9.5, ritmo: 1.1 };
@@ -256,7 +272,9 @@ var CAMINO = [
 ];
 // Terrenos donde se puede construir
 var TERRENOS = [
-  [-11, -9], [-12, 9], [-22, -19], [7.5, 8], [8, -7.5], [0, 11.5], [-1, -12], [-24, 5]
+  [-11, -9], [-12, 9], [-22, -19], [7.5, 8], [8, -7.5], [0, 11.5], [-1, -12], [-24, 5],
+  // terrenos nuevos para que la ciudad crezca
+  [16, 1], [14, 13], [13, -12], [3, 21], [5, -21], [-7, 20]
 ];
 // Punto donde esperan las tropas
 var PUNTO_REUNION = [-12.5, 2.5];

@@ -274,6 +274,87 @@ var M = (function () {
     return g;
   }
 
+  // Enfermería: casa blanca con techo verde y cruz verde (no roja: la cruz roja es un símbolo protegido)
+  function enfermeria(nivel) {
+    var g = new THREE.Group();
+    var verde = 0x3fbf6a, verdeOsc = 0x2a8a48, blanco = 0xf6f3ea;
+    g.add(caja(3.2, 0.25, 2.4, C.piedraOsc, 0, 0.12, -0.3));
+    g.add(caja(3.0, 1.5, 2.2, blanco, 0, 1.0, -0.3));
+    var techo = malla(geo('techoEnf', function () {
+      var s = new THREE.Shape(); s.moveTo(-1.35, 0); s.lineTo(1.35, 0); s.lineTo(0, 0.95); s.lineTo(-1.35, 0);
+      var e = new THREE.ExtrudeGeometry(s, { depth: 3.3, bevelEnabled: false }); e.translate(0, 0, -1.65); e.rotateY(Math.PI / 2); return e;
+    }), mat(nivel >= 3 ? C.oro : verde), 0, 1.75, -0.3);
+    g.add(techo);
+    // cruz verde en el frente y en el techo
+    g.add(caja(0.7, 0.22, 0.06, verde, 0, 1.25, 0.82));
+    g.add(caja(0.22, 0.7, 0.06, verde, 0, 1.25, 0.82));
+    var cruz = new THREE.Group();
+    cruz.add(caja(0.9, 0.28, 0.28, verdeOsc, 0, 0, 0));
+    cruz.add(caja(0.28, 0.9, 0.28, verdeOsc, 0, 0, 0));
+    cruz.position.set(0, 3.15, -0.3);
+    g.add(cruz);
+    g.userData.cruz = cruz;
+    // puerta y ventanas
+    g.add(caja(0.6, 0.85, 0.06, C.maderaOsc, -0.9, 0.67, 0.82));
+    g.add(caja(0.45, 0.4, 0.06, 0x8fd8ff, 0.95, 1.05, 0.82));
+    // camas afuera (más camas con más nivel)
+    for (var i = 0; i < 1 + nivel; i++) {
+      var x = -1.2 + i * 0.85;
+      g.add(caja(0.6, 0.18, 1.0, C.madera, x, 0.2, 1.65));
+      g.add(caja(0.56, 0.08, 0.95, blanco, x, 0.33, 1.65));
+      g.add(caja(0.5, 0.1, 0.25, 0x9fe0b0, x, 0.4, 1.3));
+    }
+    // toldo
+    var toldo = caja(3.2, 0.06, 1.3, verde, 0, 1.25, 1.55);
+    toldo.rotation.x = -0.15;
+    g.add(toldo);
+    [-1.5, 1.5].forEach(function (x) { g.add(cil(0.05, 0.05, 1.2, 5, C.madera, x, 0.6, 2.15)); });
+    return g;
+  }
+
+  // Muralla alrededor del castillo: nivel 1 madera, 2 piedra, 3 piedra con torres y techos
+  function muralla(nivel) {
+    var g = new THREE.Group();
+    var R = 7.4, N = 30, hueco = 0.5; // el hueco mira hacia el camino (lado -x)
+    var alto = nivel === 1 ? 1.4 : nivel === 2 ? 1.9 : 2.4;
+    var color = nivel === 1 ? C.madera : C.piedra;
+    var largo = 2 * Math.PI * R / N * 1.08;
+    for (var i = 0; i < N; i++) {
+      var ang = i / N * Math.PI * 2;
+      var dif = Math.abs(((ang - Math.PI) + Math.PI * 3) % (Math.PI * 2) - Math.PI);
+      if (dif < hueco) continue;
+      var x = Math.cos(ang) * R, z = Math.sin(ang) * R;
+      var seg = caja(largo, alto, nivel === 1 ? 0.45 : 0.75, color, x, alto / 2, z);
+      seg.rotation.y = -ang + Math.PI / 2;
+      g.add(seg);
+      if (nivel === 1) {
+        var punta = cono(0.22, 0.45, 4, C.maderaOsc, x, alto + 0.2, z);
+        g.add(punta);
+      } else {
+        var al = caja(0.45, 0.4, 0.8, C.piedraOsc, x, alto + 0.2, z);
+        al.rotation.y = -ang + Math.PI / 2;
+        g.add(al);
+      }
+    }
+    // torres: 6 alrededor y 2 en la entrada
+    var torres = [0.5, 1.55, 2.6, 3.7, 4.75, 5.8].map(function (k) { return k; });
+    torres.push(Math.PI - hueco - 0.08, Math.PI + hueco + 0.08);
+    torres.forEach(function (ang, i) {
+      var x = Math.cos(ang) * R, z = Math.sin(ang) * R, h = alto + 1.0;
+      var entrada = i >= 6;
+      g.add(cil(entrada ? 0.75 : 0.6, entrada ? 0.85 : 0.7, h, 8, nivel === 1 ? C.maderaOsc : C.piedra, x, h / 2, z));
+      if (nivel === 1) g.add(cono(0.75, 0.7, 8, C.maderaOsc, x, h + 0.35, z));
+      else {
+        g.add(cil(entrada ? 0.9 : 0.75, entrada ? 0.9 : 0.75, 0.3, 8, C.piedraOsc, x, h + 0.15, z));
+        if (nivel >= 3) {
+          g.add(cono(entrada ? 1.05 : 0.9, 1.2, 8, C.techoAzul, x, h + 0.9, z));
+          if (entrada) { var b = bandera(C.techoRojo, 1.6); b.position.set(x, h + 1.4, z); g.add(b); (g.userData.banderas = g.userData.banderas || []).push(b.userData.tela); }
+        }
+      }
+    });
+    return g;
+  }
+
   // =================================================================
   //  UNIDADES CHIBI (caballeros y enemigos)
   // =================================================================
@@ -566,7 +647,7 @@ var M = (function () {
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
-    granja: granja, cuartel: cuartel, torre: torre,
+    granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla,
     unidad: unidad, animarUnidad: animarUnidad,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, nube: nube, flor: flor, moneda: moneda,

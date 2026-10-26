@@ -16,7 +16,7 @@
     return {
       monedas: INICIO.monedas, gemas: INICIO.gemas, oleada: 1, vidaCastillo: INICIO.vidaCastillo,
       edificios: TERRENOS.map(function () { return null; }),
-      tropas: {}, heroe: false, infinito: false,
+      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0,
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -34,10 +34,12 @@
       estado.tropas = t;
       estado.heroe = tropas.some(function (u) { return u.tipo === 'heroe'; });
       estado.actualizado = Date.now();
-      localStorage.setItem(claveLocal(), JSON.stringify(estado));
-    } catch (e) { /* sin almacenamiento: se juega igual */ }
+    } catch (e) {}
+    var copia = JSON.parse(JSON.stringify(estado));
+    if (obraMuralla) copia.muralla = obraMuralla.nivel;
+    try { localStorage.setItem(claveLocal(), JSON.stringify(copia)); } catch (e) { /* sin almacenamiento: se juega igual */ }
     // copia en la nube si hay cuenta
-    try { if (window.Cuentas && Cuentas.usuario()) Cuentas.guardarPartida(JSON.parse(JSON.stringify(estado)), ya); } catch (e) {}
+    try { if (window.Cuentas && Cuentas.usuario()) Cuentas.guardarPartida(copia, ya); } catch (e) {}
   }
   // Cada cuenta tiene su propia copia en este aparato; el invitado usa la clave base.
   function claveLocal() {
@@ -266,6 +268,49 @@
   escena.add(castillo);
   var castilloPos = new V3(0, 0, 0), RADIO_CASTILLO = 4.6;
   var castilloCd = 0;
+  var murallaModelo = null, obraMuralla = null, murallaBarra = null, murallaAndamios = [], murallaRebote = 1;
+  function vidaMaxCastillo() { return INICIO.vidaCastillo + (estado.muralla ? MURALLA.vida[estado.muralla - 1] : 0); }
+  function ponerMuralla(nivel) {
+    if (murallaModelo) { escena.remove(murallaModelo); murallaModelo = null; }
+    if (!nivel) return;
+    murallaModelo = M.muralla(nivel);
+    murallaModelo.userData.castillo = true;
+    escena.add(murallaModelo);
+  }
+  function construirMuralla() {
+    if (obraMuralla || estado.muralla >= 3) return;
+    var nivel = estado.muralla + 1;
+    if (!pagar(MURALLA.costo[nivel - 1])) return;
+    obraMuralla = { nivel: nivel, t: 0, total: MURALLA.tiempo[nivel - 1] };
+    murallaBarra = M.barraVida(false, 3.2);
+    murallaBarra.position.set(0, 10.5, 0);
+    escena.add(murallaBarra);
+    M.ponerVida(murallaBarra, 0);
+    // andamios alrededor mientras se construye
+    [0.6, 2.2, 3.9, 5.4].forEach(function (a) {
+      var an = M.andamio(); an.scale.setScalar(0.6);
+      an.position.set(Math.cos(a) * 7.4, 0, Math.sin(a) * 7.4);
+      escena.add(an); murallaAndamios.push(an);
+    });
+    sonar('martillo');
+    cerrarPanel();
+    guardar();
+  }
+  function terminarMuralla() {
+    var o = obraMuralla; obraMuralla = null;
+    escena.remove(murallaBarra); murallaBarra = null;
+    murallaAndamios.forEach(function (a) { escena.remove(a); }); murallaAndamios = [];
+    var antes = vidaMaxCastillo();
+    estado.muralla = o.nivel;
+    estado.vidaCastillo = Math.min(vidaMaxCastillo(), estado.vidaCastillo + (vidaMaxCastillo() - antes));
+    ponerMuralla(o.nivel);
+    murallaRebote = 0;
+    chispas(new V3(7.4, 1, 0), 0xd8c49a, 12, 4); chispas(new V3(-5, 1, 5), 0xd8c49a, 12, 4); chispas(new V3(0, 1, -7.4), 0xd8c49a, 12, 4);
+    sonar('listo');
+    consejoTemporal(T('muralla_lista', { n: o.nivel }));
+    actualizarHUD();
+    guardar();
+  }
 
   var slots = TERRENOS.map(function (p, i) {
     var g = new THREE.Group();
@@ -430,7 +475,7 @@
   //  EDIFICIOS
   // ------------------------------------------------------------------
   var ESCALA_EDIFICIO = 1.3;
-  function crearModelo(tipo, nivel) { return tipo === 'granja' ? M.granja(nivel) : tipo === 'cuartel' ? M.cuartel(nivel) : M.torre(nivel); }
+  function crearModelo(tipo, nivel) { return tipo === 'granja' ? M.granja(nivel) : tipo === 'cuartel' ? M.cuartel(nivel) : tipo === 'enfermeria' ? M.enfermeria(nivel) : M.torre(nivel); }
 
   function construir(i, tipo) {
     var s = slots[i];
@@ -498,6 +543,26 @@
   function rapidezEntreno() {
     return cuartelesListos().reduce(function (a, s) { return Math.max(a, EDIFICIOS.cuartel.rapidez[s.edificio.nivel - 1]); }, 1);
   }
+  function capacidadEnfermeria() {
+    return slots.reduce(function (a, s) { return a + (s.edificio && s.edificio.tipo === 'enfermeria' ? EDIFICIOS.enfermeria.capacidad[s.edificio.nivel - 1] : 0); }, 0);
+  }
+  function totalHeridos() { var n = 0; for (var k in estado.heridos) n += estado.heridos[k]; return n; }
+  function curarHeridos() {
+    var n = totalHeridos();
+    if (!n) return;
+    var enf = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'enfermeria'; })[0];
+    var base = enf ? enf.pos.clone().add(new V3(Math.sin(enf.grupo.rotation.y), 0, Math.cos(enf.grupo.rotation.y)).multiplyScalar(2.2)) : puertaCuartel();
+    Object.keys(estado.heridos).forEach(function (tipo) {
+      for (var k = 0; k < estado.heridos[tipo]; k++) {
+        var u = crearTropa(tipo, base.clone().add(new V3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2)));
+        chispas(u.pos.clone().setY(1), 0x7fe39a, 6, 2);
+      }
+    });
+    estado.heridos = {};
+    consejoTemporal(T('curados', { n: n }));
+    actualizarHUD();
+  }
+  function tropasOcupadas() { return tropasNormales() + totalHeridos() + colaEntreno.length; }
   function tropasNormales() { return tropas.filter(function (u) { return u.tipo !== 'heroe' && !u.invocada; }).length; }
 
   // ------------------------------------------------------------------
@@ -596,6 +661,11 @@
       sumarMonedas(u.d.oro, u.pos.clone().setY(u.altoBarra + 0.8));
       sonar('moneda');
     } else {
+      // con Enfermería, la tropa no se pierde: va a curarse
+      if (u.tipo !== 'heroe' && !u.invocada && totalHeridos() < capacidadEnfermeria()) {
+        estado.heridos[u.tipo] = (estado.heridos[u.tipo] || 0) + 1;
+        flotar(T('a_enfermeria'), u.pos.clone().setY(u.altoBarra + 0.6), 'gema');
+      }
       asignarPuestos();
     }
   }
@@ -628,7 +698,7 @@
   }
   function entrenar(tipo) {
     if (!cuartelesListos().length) { consejoTemporal(T('necesitas_cuartel')); sonar('error'); return; }
-    if (tropasNormales() + colaEntreno.length >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
+    if (tropasOcupadas() >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
     if (!pagar(TROPAS[tipo].costo)) return;
     colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
     sonar('click');
@@ -697,10 +767,11 @@
     sumarGemas(g, castilloPos.clone().setY(10));
     sonar('gemas');
     estado.oleada = n + 1;
-    estado.vidaCastillo = INICIO.vidaCastillo;
+    estado.vidaCastillo = vidaMaxCastillo();
     setTimeout(function () { guardar(true); }, 50);
     // las tropas heridas se curan
     tropas.forEach(function (u) { u.vida = u.max; u.barra.visible = false; M.ponerVida(u.barra, 1); });
+    curarHeridos();
     guardar();
     if (ultima) {
       setTimeout(function () { sonar('victoria'); pantallaVictoria(); }, 900);
@@ -782,6 +853,18 @@
     });
     castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
 
+    // ---- muralla en construcción ----
+    if (obraMuralla) {
+      obraMuralla.t += dt;
+      M.ponerVida(murallaBarra, obraMuralla.t / obraMuralla.total);
+      if (Math.random() < dt * 4) chispas(new V3((Math.random() - 0.5) * 14, 1.5, (Math.random() - 0.5) * 14), 0xc9a66a, 1, 1.5);
+      if (obraMuralla.t >= obraMuralla.total) terminarMuralla();
+    }
+    if (murallaModelo) {
+      if (murallaRebote < 1) { murallaRebote = Math.min(1, murallaRebote + dt * 2); murallaModelo.scale.y = Math.max(0.05, 1 - Math.pow(1 - murallaRebote, 3) + Math.sin(murallaRebote * Math.PI) * 0.15); }
+      if (murallaModelo.userData.banderas) murallaModelo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
+    }
+    if (murallaBarra) murallaBarra.quaternion.copy(camara.quaternion);
     // ---- castillo dispara ----
     castilloCd -= dt;
     if (castilloCd <= 0) {
@@ -1017,7 +1100,7 @@
     if (enMenu) return;
     mouse.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1);
     rayo.setFromCamera(mouse, camara);
-    var hits = rayo.intersectObjects(slots.map(function (s) { return s.grupo; }).concat([castillo]), true);
+    var hits = rayo.intersectObjects(slots.map(function (s) { return s.grupo; }).concat(murallaModelo ? [castillo, murallaModelo] : [castillo]), true);
     for (var i = 0; i < hits.length; i++) {
       var o = hits[i].object;
       while (o && o.userData.slot === undefined && !o.userData.castillo) o = o.parent;
@@ -1108,6 +1191,8 @@
         retratos[t] = foto(m, t === 'torre' ? 10 : 5.5, t === 'torre' ? 2.8 : 0.9);
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
+      retratos.enfermeria = (function () { var m = M.enfermeria(1); m.rotation.y = 0.5; return foto(m, 5.5, 1.0); })();
+      retratos.muralla = (function () { var m = M.muralla(3); return foto(m, 20, 1.5); })();
       r.dispose();
       if (r.forceContextLoss) r.forceContextLoss();
     } catch (err) { /* si falla, se usan emojis */ }
@@ -1158,18 +1243,27 @@
     var d = EDIFICIOS[tipo], i = nivel - 1;
     if (tipo === 'granja') return '<span>' + T('produce') + ': ' + d.produce[i] + ' 🪙 ' + T('cada', { s: d.cada }) + '</span>';
     if (tipo === 'cuartel') return '<span>' + T('capacidad') + ': ' + d.capacidad[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
+    if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
     return '<span>' + T('dano') + ': ' + d.dano[i] + '</span><span>' + T('alcance') + ': ' + d.alcance[i] + '</span>';
+  }
+  function htmlMuralla() {
+    var n = estado.muralla, sig = n + 1;
+    var h = '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('muralla', MURALLA.icono) + '</div><div><h3>' + N('muralla') + (n ? ' ★' + n : '') + '</h3><p>' + D('muralla') + '</p></div></div>';
+    if (obraMuralla) return h + '<div class="stats"><span>' + T('construyendo') + '</span></div></div>';
+    if (n >= 3) return h + '<div class="stats"><span>❤ +' + MURALLA.vida[2] + '</span><span>' + T('nivel_max') + '</span></div></div>';
+    return h + '<div class="stats"><span>❤ ' + T('vida_extra') + ' +' + MURALLA.vida[sig - 1] + '</span></div>' +
+      botonMonedas(MURALLA.costo[sig - 1], 'muralla', '', n ? T('mejorar') : T('construir')) + '</div>';
   }
 
   function abrirPanelConstruir(slot) {
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
-    ['granja', 'cuartel', 'torre'].forEach(function (t) {
+    ['granja', 'cuartel', 'torre', 'enfermeria'].forEach(function (t) {
       html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
         '<div class="stats">' + statsEdificio(t, 1) + '</div>' +
         botonMonedas(EDIFICIOS[t].costo[0], 'construir', 'data-tipo="' + t + '"', T('construir')) + '</div>';
     });
-    html += '</div>';
+    html += htmlMuralla() + '</div>';
     if (!slots.some(function (s) { return !s.edificio && !s.obra; })) html += '<p class="nota aviso-rojo">' + T('sin_terreno') + '</p>';
     abrirPanel(T('p_construir'), html, { tipo: 'construir', slot: slotElegido });
   }
@@ -1209,6 +1303,7 @@
       html += '<p class="nota">' + T('construyendo') + '</p>';
     } else {
       html += '<div class="stats">' + statsEdificio(tipo, nivel) + '</div>';
+      if (tipo === 'enfermeria') html += '<p class="nota">' + T('en_enfermeria', { n: totalHeridos() }) + '</p>';
       if (nivel < 3) {
         html += '<p class="nota">' + T('nivel') + ' ' + (nivel + 1) + ':</p><div class="stats">' + statsEdificio(tipo, nivel + 1) + '</div>' +
           botonMonedas(EDIFICIOS[tipo].costo[nivel], 'mejorar', 'data-slot="' + i + '"', T('mejorar'));
@@ -1222,6 +1317,7 @@
     var pt = 0, pe = 0;
     tropas.forEach(function (u) { pt += Math.round(u.d.vida * 2 + u.d.dano * 25); });
     slots.forEach(function (s) { if (s.edificio) pe += s.edificio.nivel * 450; });
+    pe += estado.muralla * 600;
     var html = '<div class="carta"><p>' + T('poder_txt') + '</p><div class="stats">' +
       '<span>🛡️ ' + T('poder_tropas') + ': ' + formatoNumero(pt) + '</span>' +
       '<span>🏠 ' + T('poder_edificios') + ': ' + formatoNumero(pe) + '</span>' +
@@ -1232,7 +1328,8 @@
   $('perfil').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'poder') cerrarPanel(); else abrirPanelPoder(); });
   function abrirPanelCastillo() {
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo') + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
-      '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + INICIO.vidaCastillo + '</span><span>⚔ ' + T('dano') + ' ' + CASTILLO.dano + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div></div>';
+      '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>⚔ ' + T('dano') + ' ' + CASTILLO.dano + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div></div>' +
+      '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>';
     abrirPanel(T('castillo'), html, { tipo: 'castillo' });
   }
 
@@ -1333,7 +1430,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.1</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.2</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -1347,6 +1444,7 @@
       if (slotElegido !== null && !slots[slotElegido].edificio && !slots[slotElegido].obra) construir(slotElegido, tipo);
       else entrarModoColocar(tipo);
     } else if (a === 'mejorar') mejorar(+b.getAttribute('data-slot'));
+    else if (a === 'muralla') construirMuralla();
     else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'));
     else if (a === 'invocar3') invocarTres();
     else if (a === 'heroe') invocarHeroe();
@@ -1381,13 +1479,14 @@
       var c = +b.getAttribute('data-costo') || 0, g = +b.getAttribute('data-gemas') || 0;
       var ok = puedePagar(c, g);
       var a = b.getAttribute('data-accion');
-      if (a === 'entrenar') ok = ok && cuartelesListos().length > 0 && tropasNormales() + colaEntreno.length < capacidad();
+      if (a === 'entrenar') ok = ok && cuartelesListos().length > 0 && tropasOcupadas() < capacidad();
+      if (a === 'muralla') ok = ok && !obraMuralla && estado.muralla < 3;
       if (a === 'heroe') ok = ok && !tropas.some(function (u) { return u.tipo === 'heroe'; });
       b.disabled = !ok;
     });
     var cola = $('cola');
     if (cola) {
-      var h = '<div>' + T('tropas_vivas', { a: tropasNormales(), b: capacidad() }) + '</div>';
+      var h = '<div>' + T('tropas_vivas', { a: tropasNormales(), b: capacidad() }) + '</div>' + (totalHeridos() ? '<div>' + T('en_enfermeria', { n: totalHeridos() }) + '</div>' : '');
       if (colaEntreno.length) {
         var c0 = colaEntreno[0];
         var cuenta = {};
@@ -1410,15 +1509,16 @@
     $('gemas').textContent = estado.gemasInfinitas ? '∞' : Math.floor(estado.gemas);
     $('tropas').textContent = textoTropas();
     $('oleada').textContent = textoOleada();
-    $('vida-castillo-fill').style.width = (estado.vidaCastillo / INICIO.vidaCastillo * 100) + '%';
-    $('vida-castillo').querySelector('.etq').textContent = T('castillo') + '  ❤ ' + Math.ceil(estado.vidaCastillo) + ' / ' + INICIO.vidaCastillo;
+    $('vida-castillo-fill').style.width = (estado.vidaCastillo / vidaMaxCastillo() * 100) + '%';
+    $('vida-castillo').querySelector('.etq').textContent = T('castillo') + '  ❤ ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo();
     $('btn-oleada-txt').textContent = T('empezar_oleada', { n: estado.oleada });
     $('btn-oleada-sub').textContent = textoComposicion(estado.oleada);
     document.querySelector('.poder span').textContent = estado.dueno ? T('modo_dueno') : T('poder');
   }
   function textoTropas() {
     var inv = tropas.filter(function (u) { return u.invocada || u.tipo === 'heroe'; }).length;
-    return tropasNormales() + '/' + capacidad() + (inv ? ' +' + inv + '✨' : '');
+    var her = totalHeridos();
+    return (tropasNormales() + her) + '/' + capacidad() + (inv ? ' +' + inv + '✨' : '') + (her ? ' 💚' + her : '');
   }
   function textoOleada() {
     var n = oleadaActiva ? oleadaActual : estado.oleada;
@@ -1437,6 +1537,7 @@
     var p = 0;
     tropas.forEach(function (u) { p += Math.round(u.d.vida * 2 + u.d.dano * 25); });
     slots.forEach(function (s) { if (s.edificio) p += s.edificio.nivel * 450; });
+    p += estado.muralla * 600;
     return p + (estado.oleada - 1) * 1000;
   }
   function formatoNumero(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, estado.idioma === 'en' ? ',' : '.'); }
@@ -1455,6 +1556,8 @@
       else if (estado.oleada === 1) txt = T('c_oleada');
       else if (!contarEdificios('torre')) txt = T('c_torre');
     }
+    else if (!oleadaActiva && estado.oleada >= 3 && !contarEdificios('enfermeria')) txt = T('c_enfermeria');
+    else if (!oleadaActiva && estado.oleada >= 4 && !estado.muralla && !obraMuralla) txt = T('c_muralla');
     var c = $('consejo');
     if (c.textContent !== txt) c.textContent = txt;
   }
@@ -1652,7 +1755,8 @@
     mostrarPantalla('💔', T('derrota'), T('derrota_txt', { n: oleadaActual }), [
       { texto: T('reintentar'), accion: function () {
         limpiarEnemigos();
-        estado.vidaCastillo = INICIO.vidaCastillo;
+        estado.vidaCastillo = vidaMaxCastillo();
+        curarHeridos();
         guardar();
         ocultarPantalla();
         $('btn-oleada').classList.remove('oculto');
@@ -1668,6 +1772,7 @@
     limpiarEnemigos();
     tropas.slice().forEach(function (u) { escena.remove(u.m.grupo); escena.remove(u.barra); });
     tropas = []; colaEntreno = []; oleadaActiva = false; colaSpawn = [];
+    if (obraMuralla) { escena.remove(murallaBarra); murallaAndamios.forEach(function (a) { escena.remove(a); }); murallaAndamios = []; murallaBarra = null; obraMuralla = null; }
     slots.forEach(function (s) {
       if (s.modelo) s.grupo.remove(s.modelo);
       if (s.andamio) s.grupo.remove(s.andamio);
@@ -1680,6 +1785,8 @@
     if (g) {
       estado.monedas = g.monedas; estado.gemas = g.gemas; estado.oleada = g.oleada || 1;
       estado.infinito = !!g.infinito;
+      estado.muralla = g.muralla || 0;
+      estado.heridos = g.heridos || {};
       (g.edificios || []).forEach(function (e, i) { if (e && slots[i]) ponerEdificio(slots[i], e.tipo, e.nivel); });
       var t = g.tropas || {};
       Object.keys(t).forEach(function (tipo) {
@@ -1690,6 +1797,9 @@
       if (g.heroe) crearTropa('heroe', reunion.clone());
       tropas.forEach(function (u) { u.pos.copy(u.puesto); });
     }
+    ponerMuralla(estado.muralla);
+    estado.vidaCastillo = vidaMaxCastillo();
+    curarHeridos();
     tiempoJuego = 0;
     cam.objetivo.set(-17, 0, -9); cam.distMeta = 50;
     ocultarPantalla();

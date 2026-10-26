@@ -444,3 +444,8 @@ button:active { transform: scale(.93); filter: brightness(1.12); }
 @media (min-width: 601px) {
   #panel { max-height: calc(100vh - 160px); }
 }
+/* Las cartas nunca se salen del panel */
+#panel { overflow-x: hidden; }
+.carta.compacta { grid-template-columns: 54px minmax(0, 1fr) auto; }
+.carta.compacta .stats span { white-space: normal; }
+@media (max-width: 600px) { .carta.compacta { grid-template-columns: 46px minmax(0, 1fr) auto; } }
