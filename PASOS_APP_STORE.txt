@@ -6,7 +6,9 @@ Todo el proyecto ya está listo en  C:\Users\maike\pegao_clash
   - codemagic.yaml  instrucciones para Codemagic
 Identificador de la app (Bundle ID):  com.pegao.tinykingdom
 
-PASO 1 — Registrar la app con Apple  (developer.apple.com y App Store Connect)
+PASO 1 — Registrar la app con Apple   ✅ HECHO (app "Tiny Kingdom" creada en App Store Connect)
+  Falta solo copiar el Apple ID (paso 1c).
+  (Antes:)  (developer.apple.com y App Store Connect)
   a) developer.apple.com -> Certificates, IDs & Profiles -> Identifiers -> (+)
      -> App IDs -> App -> Bundle ID "Explicit": com.pegao.tinykingdom
      Descripción: Tiny Kingdom. No hace falta marcar ninguna capacidad extra.
@@ -16,7 +18,9 @@ PASO 1 — Registrar la app con Apple  (developer.apple.com y App Store Connect)
   c) Dentro de la app: "Información de la app" -> copia el número "Apple ID"
      (son unos 10 números). Lo vas a necesitar en el paso 4.
 
-PASO 2 — Subir el proyecto a GitHub  (con GitHub Desktop, que ya tienes)
+PASO 2 — Subir el proyecto a GitHub   ✅ HECHO: https://github.com/pegaoapp-netizen/tiny-kingdom (privado)
+  Para subir cambios nuevos: en GitHub Desktop, Commit -> Push (o pídeselo a Claude).
+  (Antes:) con GitHub Desktop, que ya tienes
   File -> Add local repository -> C:\Users\maike\pegao_clash -> Add repository
   -> botón "Publish repository" -> deja marcado "Keep this code private" -> Publish.
 
