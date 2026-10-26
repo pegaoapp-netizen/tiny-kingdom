@@ -74,12 +74,17 @@ window.addEventListener("error", function (e) {
 <div id="barra-colocar" class="oculto"><span id="barra-colocar-txt"></span><button class="comprar rojo" id="btn-cancelar-colocar" data-t="cancelar">Cancelar</button></div>
 
 <!-- Barra de abajo -->
+<!-- Construir: botón redondo que flota sobre la barra -->
+<button id="btn-construir" class="flotante-construir"><span class="icono">🔨</span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
+
+<!-- Menú de abajo: siempre visible -->
 <div id="abajo">
-  <button class="pestana" id="btn-tropas"><span class="icono">⚔️</span><span class="txt" data-t="b_tropas">TROPAS</span></button>
-  <button class="pestana" id="btn-invocar"><span class="icono">✨</span><span class="txt" data-t="b_invocar">INVOCAR</span></button>
-  <button class="pestana grande" id="btn-construir"><span class="icono">🔨</span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
-  <button class="pestana" id="btn-mundo"><span class="icono">🗺️</span><span class="txt" data-t="b_mundo">MUNDO</span></button>
-  <button class="pestana" id="btn-alianza"><span class="icono">🛡️</span><span class="txt" data-t="b_alianza">ALIANZA</span></button>
+  <button class="pestana" id="btn-conquista"><span class="icono">⚔️</span><span class="txt" data-t="b_conquista">CONQUISTA</span><span class="badge" id="badge-conquista"></span></button>
+  <button class="pestana" id="btn-heroes"><span class="icono">👑</span><span class="txt" data-t="b_heroes">HÉROES</span><span class="badge" id="badge-heroes"></span></button>
+  <button class="pestana" id="btn-mochila"><span class="icono">🎒</span><span class="txt" data-t="b_mochila">MOCHILA</span><span class="badge" id="badge-mochila"></span></button>
+  <button class="pestana" id="btn-tienda"><span class="icono">🏪</span><span class="txt" data-t="b_tienda">TIENDA</span><span class="badge" id="badge-tienda"></span></button>
+  <button class="pestana" id="btn-alianza"><span class="icono">🛡️</span><span class="txt" data-t="b_alianza">ALIANZA</span><span class="badge" id="badge-alianza"></span></button>
+  <button class="pestana" id="btn-mundo"><span class="icono">🗺️</span><span class="txt" data-t="b_mundo">MUNDO</span><span class="badge" id="badge-mundo"></span></button>
 </div>
 
 <!-- Mapa del mundo -->

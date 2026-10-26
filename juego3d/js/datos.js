@@ -103,6 +103,22 @@ var TEXTOS = {
     t_lenta: 'Velocidad', t_ritmo: 'Ataca cada {s} s', t_oro: 'Suelta {n} de oro al caer', t_hambre: 'Con hambre: pega más débil',
     armadura: 'Armadura', mejorar_armadura: 'Mejorar armadura', armadura_sube: 'Nivel {n}: +{v}% vida, +{d}% defensa',
     armadura_max: 'Armadura al máximo ★★★', defensa: 'Defensa', armadura_lista: '🛡️ ¡Armadura de {t} nivel {n}! Se nota en tus tropas.',
+    b_conquista: 'CONQUISTA', b_heroes: 'HÉROES', b_mochila: 'MOCHILA', b_tienda: 'TIENDA',
+    p_conquista: 'Conquista', p_heroes: 'Héroes', p_mochila: 'Mochila', p_tienda: 'Tienda', sub_tropas: 'Tropas', sub_invocar: 'Invocar',
+    conquista_txt: 'Defiende el reino de cada oleada. Al ganarla recibes gemas.', oleada_curso: 'Oleada en curso: quedan {n} enemigos.',
+    vienen: 'Vienen:', oleadas_ganadas: 'Oleadas ganadas',
+    diario_titulo: 'Cofre diario', diario_txt: 'Entra cada día para un cofre mejor. Si faltas un día, la racha vuelve a empezar.',
+    diario_dia: 'Día {n}', diario_reclamar: '🎁 Reclamar cofre del día {n}', diario_listo: 'Ya lo reclamaste hoy. Vuelve mañana por el día {n}.',
+    diario_racha: '🔥 Racha: {n} días seguidos', mochila_vacia: 'Tu mochila está vacía. Consigue cofres con el cofre diario o en la Tienda.',
+    mis_objetos: 'Tus objetos', usar: 'Usar', abrir: 'Abrir', recibiste: '🎁 Recibiste: {t}', tropas_regalo: '{n} tropas',
+    tienda_txt: 'Compra con gemas. Lo que compras se guarda en tu Mochila 🎒. Las gemas se ganan en las oleadas y en el cofre diario.',
+    tienda_real: 'Compras con dinero real: llegarán con la versión de la App Store.', comprar: 'Comprar', comprado: '{n}: guardado en tu Mochila 🎒',
+    acelerador_usado: '⏩ ¡Obras y entrenamiento terminados!', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
+    p_investigar: 'Investigación', investigar: 'Investigar', rama_crecimiento: 'Crecimiento', rama_economia: 'Economía', rama_batalla: 'Batalla',
+    inv_txt: 'Cada tecnología mejora algo de verdad en tu reino. Solo se investiga una a la vez.', inv_ahora: 'Ahora', inv_siguiente: 'Siguiente',
+    inv_en_curso: 'Investigando: {n} (nivel {l})', inv_falta: 'Faltan {s} s', inv_ocupada: 'La Academia ya está investigando.',
+    inv_tope: 'Mejora la Academia para pasar del nivel {n}.', inv_lista: '📜 ¡{n} nivel {l} lista!', inv_necesitas: 'Construye una Academia para investigar.',
+    inv_abrir: '📜 Abrir investigación', c_academia: 'Consejo: construye una Academia para investigar mejoras.',
     b_mundo: 'MUNDO', b_alianza: 'ALIANZA', p_mundo: 'Mapa del mundo', p_alianza: 'Alianza',
     mundo_cuenta: 'Crea una cuenta para aparecer en el mapa del mundo y unirte a una alianza.',
     mundo_cargando: 'Cargando el mapa...', mundo_error: 'No se pudo cargar el mapa. Revisa tu internet.',
@@ -212,6 +228,22 @@ var TEXTOS = {
     t_lenta: 'Speed', t_ritmo: 'Attacks every {s} s', t_oro: 'Drops {n} gold when defeated', t_hambre: 'Hungry: hits weaker',
     armadura: 'Armor', mejorar_armadura: 'Upgrade armor', armadura_sube: 'Level {n}: +{v}% health, +{d}% defense',
     armadura_max: 'Armor at max ★★★', defensa: 'Defense', armadura_lista: '🛡️ {t} armor level {n}! You can see it on your troops.',
+    b_conquista: 'CONQUEST', b_heroes: 'HEROES', b_mochila: 'BAG', b_tienda: 'SHOP',
+    p_conquista: 'Conquest', p_heroes: 'Heroes', p_mochila: 'Bag', p_tienda: 'Shop', sub_tropas: 'Troops', sub_invocar: 'Summon',
+    conquista_txt: 'Defend the kingdom from each wave. Win it to earn gems.', oleada_curso: 'Wave in progress: {n} enemies left.',
+    vienen: 'Coming:', oleadas_ganadas: 'Waves won',
+    diario_titulo: 'Daily chest', diario_txt: 'Come back every day for a better chest. Miss a day and the streak starts over.',
+    diario_dia: 'Day {n}', diario_reclamar: '🎁 Claim day {n} chest', diario_listo: 'Already claimed today. Come back tomorrow for day {n}.',
+    diario_racha: '🔥 Streak: {n} days in a row', mochila_vacia: 'Your bag is empty. Get chests from the daily chest or the Shop.',
+    mis_objetos: 'Your items', usar: 'Use', abrir: 'Open', recibiste: '🎁 You got: {t}', tropas_regalo: '{n} troops',
+    tienda_txt: 'Buy with gems. What you buy goes to your Bag 🎒. Gems are won in waves and from the daily chest.',
+    tienda_real: 'Real-money purchases: coming with the App Store version.', comprar: 'Buy', comprado: '{n}: saved in your Bag 🎒',
+    acelerador_usado: '⏩ Building and training finished!', nada_acelerar: 'Nothing is being built or trained.',
+    p_investigar: 'Research', investigar: 'Research', rama_crecimiento: 'Growth', rama_economia: 'Economy', rama_batalla: 'Battle',
+    inv_txt: 'Each technology really improves something in your kingdom. Only one at a time.', inv_ahora: 'Now', inv_siguiente: 'Next',
+    inv_en_curso: 'Researching: {n} (level {l})', inv_falta: '{s} s left', inv_ocupada: 'The Academy is already researching.',
+    inv_tope: 'Upgrade the Academy to go past level {n}.', inv_lista: '📜 {n} level {l} done!', inv_necesitas: 'Build an Academy to research.',
+    inv_abrir: '📜 Open research', c_academia: 'Tip: build an Academy to research upgrades.',
     b_mundo: 'WORLD', b_alianza: 'ALLIANCE', p_mundo: 'World map', p_alianza: 'Alliance',
     mundo_cuenta: 'Create an account to appear on the world map and join an alliance.',
     mundo_cargando: 'Loading the map...', mundo_error: 'Could not load the map. Check your internet.',
@@ -278,6 +310,26 @@ var NOMBRES = {
                 des_es: 'Rápido y valiente. Pelea cuerpo a cuerpo.', des_en: 'Fast and brave. Fights up close.' },
   arquero:    { es: 'Arquero',      en: 'Archer',
                 des_es: 'Dispara desde lejos. Poca vida.', des_en: 'Shoots from afar. Low health.' },
+  cofre_madera: { es: 'Cofre de madera', en: 'Wooden chest', des_es: 'Trae oro, comida y madera.', des_en: 'Gives gold, food and wood.' },
+  cofre_plata:  { es: 'Cofre de plata', en: 'Silver chest', des_es: 'Trae oro, madera, piedra y gemas.', des_en: 'Gives gold, wood, stone and gems.' },
+  cofre_oro:    { es: 'Cofre de oro', en: 'Golden chest', des_es: 'Un gran premio de todos los recursos y gemas.', des_en: 'A big prize of every resource and gems.' },
+  bolsa_oro:    { es: 'Bolsa de oro', en: 'Bag of gold', des_es: '+250 de oro.', des_en: '+250 gold.' },
+  saco_comida:  { es: 'Saco de comida', en: 'Sack of food', des_es: '+300 de comida.', des_en: '+300 food.' },
+  saco_madera:  { es: 'Montón de madera', en: 'Pile of wood', des_es: '+300 de madera.', des_en: '+300 wood.' },
+  saco_piedra:  { es: 'Carreta de piedra', en: 'Cart of stone', des_es: '+200 de piedra.', des_en: '+200 stone.' },
+  acelerador:   { es: 'Acelerador', en: 'Speed-up', des_es: 'Termina al momento las obras y el entrenamiento.', des_en: 'Instantly finishes building and training.' },
+  academia:   { es: 'Academia', en: 'Academy', des_es: 'Centro de investigación: mejora tus tropas, edificios y economía.', des_en: 'Research center: improves your troops, buildings and economy.' },
+  inv_obras:     { es: 'Construcción rápida', en: 'Fast building', des_es: 'Las obras tardan {v}% menos.', des_en: 'Buildings take {v}% less time.' },
+  inv_cuarteles: { es: 'Cuarteles grandes', en: 'Big barracks', des_es: '+{v} lugares para tropas.', des_en: '+{v} troop spots.' },
+  inv_entreno:   { es: 'Entrenamiento rápido', en: 'Fast training', des_es: 'Entrenas {v}% más rápido.', des_en: 'You train {v}% faster.' },
+  inv_cosecha:   { es: 'Cosecha', en: 'Harvest', des_es: 'Las Granjas dan {v}% más comida.', des_en: 'Farms give {v}% more food.' },
+  inv_lenadores: { es: 'Leñadores', en: 'Lumberjacks', des_es: 'Los Aserraderos dan {v}% más madera.', des_en: 'Sawmills give {v}% more wood.' },
+  inv_canteros:  { es: 'Canteros', en: 'Stonecutters', des_es: 'Las Minas dan {v}% más piedra.', des_en: 'Mines give {v}% more stone.' },
+  inv_impuestos: { es: 'Impuestos', en: 'Taxes', des_es: 'El castillo cobra {v}% más oro.', des_en: 'The castle collects {v}% more gold.' },
+  inv_espadas:   { es: 'Espadas afiladas', en: 'Sharp swords', des_es: 'Tus tropas pegan {v}% más.', des_en: 'Your troops hit {v}% harder.' },
+  inv_escudos:   { es: 'Escudos fuertes', en: 'Strong shields', des_es: 'Tus tropas tienen {v}% más vida.', des_en: 'Your troops have {v}% more health.' },
+  inv_flechas:   { es: 'Flechas de hierro', en: 'Iron arrows', des_es: 'Las Torres pegan {v}% más.', des_en: 'Towers hit {v}% harder.' },
+  inv_muros:     { es: 'Muros fuertes', en: 'Strong walls', des_es: 'Muralla y barricadas con {v}% más vida.', des_en: 'Wall and barricades get {v}% more health.' },
   caballeria: { es: 'Caballería',   en: 'Cavalry',
                 des_es: 'Soldado a caballo: el más rápido, llega primero al enemigo.', des_en: 'Soldier on horseback: the fastest, reaches the enemy first.' },
   guardian:   { es: 'Guardián',     en: 'Guardian',
@@ -307,6 +359,8 @@ var EDIFICIOS = {
   cuartel:    { costo: [50, 80, 130],  madera: [50, 100, 160], piedra: [0, 30, 60],  tiempo: [3, 5, 7], capacidad: [6, 10, 15], rapidez: [1, 1.3, 1.6], icono: '⚔️' },
   torre:      { costo: [50, 90, 140],  madera: [40, 80, 120], piedra: [30, 60, 100], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [10, 11, 12.5], ritmo: 0.9, icono: '🏹' },
   // Enfermería: camas = cuántas tropas caídas puede salvar por oleada
+  // Academia: centro de investigación. Su nivel deja investigar más alto y más rápido.
+  academia:   { costo: [70, 120, 200], madera: [80, 140, 220], piedra: [20, 60, 120], tiempo: [4, 6, 8], rapidez: [1, 1.3, 1.6], tope: [2, 4, 6], icono: '📜' },
   enfermeria: { costo: [60, 100, 160], madera: [60, 110, 160], piedra: [0, 40, 80],  tiempo: [4, 5, 7], capacidad: [4, 8, 14], icono: '💚' }
 };
 // Muralla: una sola, alrededor del castillo. Da vida extra al castillo. Nivel 1 de madera, 2 y 3 de piedra.
@@ -319,6 +373,50 @@ var CAMPAMENTOS = [
   { x: 12, y: 18, nivel: 3 }, { x: 80, y: 14, nivel: 6 }, { x: 47, y: 52, nivel: 9 },
   { x: 20, y: 78, nivel: 5 }, { x: 74, y: 70, nivel: 12 }, { x: 55, y: 88, nivel: 7 }
 ];
+// Cofre diario: 7 días de racha (al día 8 vuelve a empezar el ciclo pero la racha sigue contando)
+var COFRE_DIARIO = [
+  { oro: 150, comida: 100 }, { madera: 150, piedra: 60 }, { gemas: 5, objeto: 'cofre_madera' },
+  { oro: 250, comida: 200 }, { tropas: { espadachin: 2 } }, { gemas: 10, piedra: 120 }, { gemas: 20, objeto: 'cofre_oro' }
+];
+// Objetos de la mochila
+var OBJETOS = {
+  cofre_madera: { icono: '📦', cofre: { oro: [80, 150], comida: [60, 120], madera: [60, 120] } },
+  cofre_plata:  { icono: '🎁', cofre: { oro: [150, 300], madera: [100, 200], piedra: [60, 120], gemas: [2, 5] } },
+  cofre_oro:    { icono: '💰', cofre: { oro: [300, 600], comida: [200, 400], madera: [200, 400], piedra: [150, 300], gemas: [8, 15] } },
+  bolsa_oro:    { icono: '👝', da: { oro: 250 } },
+  saco_comida:  { icono: '🌾', da: { comida: 300 } },
+  saco_madera:  { icono: '🪵', da: { madera: 300 } },
+  saco_piedra:  { icono: '🪨', da: { piedra: 200 } },
+  acelerador:   { icono: '⏩', acelera: true }
+};
+// Tienda: se paga con gemas (las compras con dinero real llegarán con la App Store)
+var TIENDA = [
+  { id: 'bolsa_oro', gemas: 5 }, { id: 'saco_comida', gemas: 4 }, { id: 'saco_madera', gemas: 4 }, { id: 'saco_piedra', gemas: 5 },
+  { id: 'acelerador', gemas: 3 }, { id: 'cofre_plata', gemas: 15 }, { id: 'cofre_oro', gemas: 40 }
+];
+// Investigación: 3 ramas. 'cada' = cuánto mejora cada nivel.
+var INVESTIGACION = {
+  crecimiento: [
+    { id: 'obras', icono: '🔨', max: 6, cada: 0.08 },     // obras más rápidas
+    { id: 'cuarteles', icono: '⚔️', max: 5, cada: 2 },    // +2 de capacidad
+    { id: 'entreno', icono: '⏱️', max: 6, cada: 0.1 }     // entrenar más rápido
+  ],
+  economia: [
+    { id: 'cosecha', icono: '🌾', max: 6, cada: 0.1 },
+    { id: 'lenadores', icono: '🪵', max: 6, cada: 0.1 },
+    { id: 'canteros', icono: '🪨', max: 6, cada: 0.1 },
+    { id: 'impuestos', icono: '🪙', max: 6, cada: 0.1 }
+  ],
+  batalla: [
+    { id: 'espadas', icono: '🗡️', max: 6, cada: 0.05 },   // tropas pegan más
+    { id: 'escudos', icono: '🛡️', max: 6, cada: 0.05 },   // tropas con más vida
+    { id: 'flechas', icono: '🏹', max: 6, cada: 0.1 },    // torres pegan más
+    { id: 'muros', icono: '🧱', max: 6, cada: 0.1 }       // muralla y barricadas con más vida
+  ]
+};
+// Costo y tiempo del nivel L (1, 2, 3...)
+function costoInvestigacion(L) { return { oro: 50 * L + 20 * L * L, madera: 40 * L + 15 * L * L, piedra: L >= 3 ? 25 * L : 0 }; }
+function tiempoInvestigacion(L) { return 8 * L; }
 var PUNTOS_BARRICADA = [0.40, 0.53, 0.66, 0.79]; // en qué parte del camino (0 = bosque, 1 = castillo)
 
 // El castillo también dispara (para que la primera oleada sea posible)

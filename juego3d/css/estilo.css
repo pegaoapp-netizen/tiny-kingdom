@@ -575,3 +575,58 @@ button:active { transform: scale(.93); filter: brightness(1.12); }
   .carta.compacta .costo-r .emo { font-size: 12px; }
   .carta.compacta { padding: 7px; }
 }
+
+/* =====================================================================
+   MENÚ DE ABAJO (6 secciones) Y BOTÓN FLOTANTE DE CONSTRUIR
+   ===================================================================== */
+#abajo { grid-template-columns: repeat(6, 1fr); height: calc(74px + env(safe-area-inset-bottom)); z-index: 35; }
+.pestana { position: relative; height: 72px; justify-content: center; gap: 3px; padding: 6px 0 4px; font-size: 11px; }
+.pestana .icono { font-size: 28px; width: auto; height: 34px; }
+.pestana.activo { background: radial-gradient(ellipse at 50% 100%, rgba(255, 220, 120, .35), transparent 70%); }
+.pestana.activo .txt { color: #ffe27a; }
+.badge {
+  position: absolute; top: 4px; left: calc(50% + 8px); min-width: 19px; height: 19px; border-radius: 10px; padding: 0 5px;
+  background: #e0302a; color: #fff; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff; box-shadow: 0 2px 0 rgba(0,0,0,.4); text-shadow: none;
+}
+.badge:empty { display: none; }
+.flotante-construir {
+  position: fixed; z-index: 24; left: calc(12px + env(safe-area-inset-left)); bottom: calc(88px + env(safe-area-inset-bottom));
+  width: 76px; height: 76px; border-radius: 50%; border: 4px solid #7a4200;
+  background: radial-gradient(circle at 40% 30%, #ffe27a, #f09a12 70%); box-shadow: 0 5px 0 #3a2414, 0 0 0 3px #f2c45a;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; color: #fff;
+  font-weight: 900; font-size: 9px; text-shadow: 0 1px 0 rgba(0,0,0,.6);
+}
+.flotante-construir .icono { font-size: 32px; line-height: 1; }
+.flotante-construir.activo { outline: 4px solid #fff; outline-offset: 2px; }
+body.panel-abierto .flotante-construir, body.colocando .flotante-construir { display: none; }
+#panel { bottom: calc(74px + env(safe-area-inset-bottom)); max-height: calc(100vh - 160px - env(safe-area-inset-bottom)); }
+#btn-oleada { bottom: calc(90px + env(safe-area-inset-bottom)); }
+#barra-colocar { bottom: calc(86px + env(safe-area-inset-bottom)); }
+/* Pestañas dentro de un panel (Héroes: Tropas / Invocar) */
+.subtabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.subtabs button { flex: 1; padding: 8px; border-radius: 12px; border: 3px solid #c99a4a; background: #fffaf0; color: #6b4a20; font-weight: 900; font-size: 15px; }
+.subtabs button.activo { background: linear-gradient(#ffe27a, #e09a10); color: #4a2a00; border-color: #7a4a00; }
+/* Cofre diario */
+.diario { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin: 8px 0; }
+.diario .dia { border: 2px solid #c99a4a; border-radius: 10px; background: #fffaf0; text-align: center; padding: 4px 2px; font-size: 11px; font-weight: 800; color: #6b4a20; }
+.diario .dia .ic { font-size: 20px; display: block; }
+.diario .dia.hecho { background: #d8f5c8; border-color: #3a9a3a; }
+.diario .dia.hoy { background: linear-gradient(#ffe27a, #f0b030); border-color: #7a4a00; animation: latido 1.4s infinite; }
+.oleada-puntos { display: flex; gap: 6px; margin: 6px 0; }
+.oleada-puntos span { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 13px; background: #e5cf9f; color: #6b4a20; border: 2px solid #c99a4a; }
+.oleada-puntos span.hecha { background: #3fbf6a; color: #fff; border-color: #2a8a48; }
+.oleada-puntos span.ahora { background: #e0302a; color: #fff; border-color: #6b0f0b; }
+.boton-oleada-grande { font-size: 20px !important; padding: 12px !important; margin-top: 8px; width: 100%; }
+@media (max-width: 600px) {
+  .pestana { font-size: 9px; letter-spacing: 0; }
+  .pestana .icono { font-size: 24px; height: 30px; }
+  .flotante-construir { width: 66px; height: 66px; }
+  .flotante-construir .icono { font-size: 28px; }
+  .diario .dia { font-size: 9px; }
+  .diario .dia .ic { font-size: 16px; }
+}
+
+#abajo { height: calc(72px + env(safe-area-inset-bottom)); }
+.pestana { height: 70px; }
+#panel { bottom: calc(72px + env(safe-area-inset-bottom)); }

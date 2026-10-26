@@ -70,3 +70,13 @@ ARCHIVOS
                       (para subir reglas: en la carpeta nube, firebase deploy --only firestore:rules)
   sw.js               hace que funcione sin internet (subir VERSION al publicar cambios)
   iconos/             ícono de la app
+
+NOVEDADES (versiones 1.1 a 1.6)
+  - Recursos: oro, comida, madera, piedra y gemas (tocar cada uno en la barra explica qué es).
+  - Edificios: Granja, Aserradero, Mina, Cuartel, Torre, Enfermería, Academia, Muralla y Barricadas.
+  - Tropas: Espadachín, Caballería, Arquero, Guardián y Héroe; armaduras hasta nivel 3.
+  - Menú de abajo: Conquista (oleadas), Héroes (tropas e invocar), Mochila (cofres y cofre
+    diario con racha), Tienda (con gemas), Alianza y Mundo (mapa con los demás reinos).
+  - Investigación en la Academia: ramas Crecimiento, Economía y Batalla.
+  - Tocar una tropa o un enemigo muestra su ficha.
+  Reglas de la nube (aldeas y alianzas): juego3d\nube\firestore.rules

@@ -403,6 +403,28 @@ var M = (function () {
     return g;
   }
 
+  // Academia: torre de piedra con cúpula azul, telescopio y libros
+  function academia(nivel) {
+    var g = new THREE.Group();
+    g.add(caja(3.0, 0.25, 2.4, C.piedraOsc, 0, 0.12, -0.3));
+    g.add(caja(2.6, 1.7, 2.0, 0xe9e0cc, 0, 1.1, -0.3));
+    g.add(cil(0.95, 1.05, 1.0, 10, C.piedra, 0, 2.45, -0.3));
+    var cupula = malla(geo('cupula', function () { return new THREE.SphereGeometry(1.05, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2); }), mat(nivel >= 3 ? C.oro : 0x3a5fc8), 0, 2.95, -0.3);
+    g.add(cupula);
+    // telescopio
+    var tel = cil(0.1, 0.16, 1.2, 8, C.oro, 0.5, 3.6, -0.3); tel.rotation.z = -0.9; g.add(tel);
+    // ventanas en arco y puerta
+    [-0.8, 0.8].forEach(function (x) { g.add(caja(0.4, 0.6, 0.06, 0x8fd8ff, x, 1.3, 0.72)); });
+    g.add(caja(0.6, 0.95, 0.06, C.maderaOsc, 0, 0.72, 0.72));
+    // estandarte con un libro
+    g.add(caja(0.9, 0.6, 0.05, 0x7a4fc0, 0, 1.85, 0.74));
+    g.add(caja(0.45, 0.3, 0.06, 0xf6f3ea, 0, 1.85, 0.76));
+    // pila de libros y pergamino afuera (más con nivel)
+    for (var i = 0; i < 2 + nivel; i++) g.add(caja(0.5, 0.12, 0.35, [0xd8432f, 0x3fbf6a, 0x3a5fc8, 0xf5c542][i % 4], 1.2, 0.08 + i * 0.13, 1.1).rotateY(i * 0.3));
+    g.add(cil(0.12, 0.12, 0.6, 8, 0xf3ead8, -1.2, 0.12, 1.1).rotateZ(Math.PI / 2));
+    return g;
+  }
+
   // Muralla alrededor del castillo: nivel 1 madera, 2 piedra, 3 piedra con torres y techos
   function muralla(nivel) {
     var g = new THREE.Group();
@@ -797,7 +819,7 @@ var M = (function () {
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
-    granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada,
+    granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
     unidad: unidad, animarUnidad: animarUnidad,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, nube: nube, flor: flor, moneda: moneda,
