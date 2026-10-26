@@ -94,7 +94,7 @@
 
   var escena = new THREE.Scene();
   escena.background = new THREE.Color(0xf1e4c8);
-  escena.fog = new THREE.Fog(0xf1e4c8, 95, 210);
+  escena.fog = new THREE.Fog(0xf1e4c8, 140, 300);
   // cielo: un domo con degradado (azul arriba, claro en el horizonte)
   (function cielo() {
     var g = new THREE.SphereGeometry(390, 24, 12);
@@ -124,9 +124,10 @@
 
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
-  function distInicial() { return window.innerWidth < window.innerHeight ? 62 : 46; }
+  function distInicial() { return window.innerWidth < window.innerHeight ? 84 : 62; }
   var CENTRO_REINO = new V3(-5, 0, -2);
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
+  var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
   var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
 
   var hemi = new THREE.HemisphereLight(0xe6e2d4, 0x6a5a3a, 0.56);
@@ -227,7 +228,7 @@
   //  SUELO, CAMINO, BOSQUE, AGUA, NUBES
   // ------------------------------------------------------------------
   var rnd = (function (a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })(7);
-  var ESTANQUE = { x: 27, z: -25, r: 5 };
+  var ESTANQUE = { x: 25, z: -22, r: 5 };
 
   function altura(x, z) {
     var r = Math.sqrt(x * x + z * z);
@@ -356,15 +357,17 @@
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
       return true;
     }
-    for (var i = 0; i < 2600 && arboles.length < 620; i++) {
-      var x = (rnd() - 0.5) * 230, z = (rnd() - 0.5) * 230;
+    for (var i = 0; i < 3400 && arboles.length < 680; i++) {
+      var x = (rnd() - 0.5) * 270, z = (rnd() - 0.5) * 270;
       var bosqueDensidad = Math.max(0, 1 - Math.hypot(x + 50, z + 30) / 26);
-      var borde = Math.hypot(x, z) > 40 ? 0.45 : 0.04;
+      var borde = Math.hypot(x, z) > 52 ? 0.45 : 0.04;
       if (x < -32 && z < 0) borde = 0.75;
       if (rnd() > Math.max(bosqueDensidad, borde)) continue;
       if (!libre(x, z, 0)) continue;
+      var mex = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mez = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
+      if (mex * mex + mez * mez < 1.15 && rnd() > 0.05) continue;
       // mezcla de especies: pinos en el bosque oscuro, palmeras cerca del pueblo y del estanque
-      var cerca = Math.hypot(x, z) < 45 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
+      var cerca = Math.hypot(x, z) < 58 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
       var enBosque = bosqueDensidad > 0.2 || (x < -32 && z < 0);
       var u = rnd(), tipo;
       if (enBosque) tipo = u < 0.55 ? 0 : u < 0.8 ? 2 : 1;
@@ -380,11 +383,11 @@
     escena.add(M.bosque(arboles));
     var arb = [], matas = [];
     for (var ia = 0; ia < 1600 && arb.length < 230; ia++) {
-      var bx = (rnd() - 0.5) * 150, bz = (rnd() - 0.5) * 150;
+      var bx = (rnd() - 0.5) * 190, bz = (rnd() - 0.5) * 190;
       if (libre(bx, bz, 0.3)) arb.push({ x: bx, z: bz, s: 0.7 + rnd() * 0.6, rot: rnd() * 6 });
     }
     for (var im2 = 0; im2 < 4000 && matas.length < 1100; im2++) {
-      var mx = (rnd() - 0.5) * 140, mz = (rnd() - 0.5) * 140;
+      var mx = (rnd() - 0.5) * 180, mz = (rnd() - 0.5) * 180;
       if (libre(mx, mz, -1.2) || (Math.hypot(mx, mz) > 6 && distCamino(mx, mz) > 2.3 && Math.hypot(mx, mz) < 15)) matas.push({ x: mx, z: mz, rot: rnd() * 6 });
     }
     escena.add(M.arbustos(arb));
@@ -393,15 +396,15 @@
     // rocas grandes y flores (todo en un grupo que se fusiona)
     var deco2 = new THREE.Group();
     for (var r = 0; r < 75; r++) {
-      var rx = (rnd() - 0.5) * 140, rz = (rnd() - 0.5) * 140;
+      var rx = (rnd() - 0.5) * 180, rz = (rnd() - 0.5) * 180;
       if (!libre(rx, rz, 0.5)) continue;
       var ro = M.roca(0.6 + rnd() * 1.4);
       ro.position.x = rx; ro.position.z = rz; ro.position.y += altura(rx, rz);
       deco2.add(ro);
     }
     var colFlor = [0xf4efe2, 0xe8c85a, 0xe49aac, 0xb89ad8];
-    for (var f = 0; f < 160; f++) {
-      var fx = (rnd() - 0.5) * 90, fz = (rnd() - 0.5) * 90;
+    for (var f = 0; f < 240; f++) {
+      var fx = (rnd() - 0.5) * 115, fz = (rnd() - 0.5) * 115;
       if (!libre(fx, fz, -1.5) || Math.hypot(fx, fz) < 7) continue;
       var fl = M.flor(colFlor[f % 4]);
       fl.position.set(fx, 0, fz);
@@ -1245,10 +1248,40 @@
     };
     u.barra.visible = false;
     escena.add(u.barra);
+    u.casa = casaTropa();
+    u.volviendo = !oleadaActiva;
     tropas.push(u);
     asignarPuestos();
     return u;
   }
+  // ---- TROPAS DENTRO DEL CUARTEL ----
+  // Fuera de las oleadas las tropas no se ven: están guardadas en su cuartel.
+  // Al empezar la oleada salen una por una por la puerta; al terminar vuelven a entrar.
+  var turnoCasa = 0;
+  function puertaDe(c) { return c.pos.clone().add(new V3(Math.sin(c.grupo.rotation.y), 0, Math.cos(c.grupo.rotation.y)).multiplyScalar(1.9)); }
+  function casaTropa() {
+    var cs = cuartelesListos();
+    if (!cs.length) return reunion.clone();
+    return puertaDe(cs[turnoCasa++ % cs.length]);
+  }
+  function guardarDentro(u) {
+    u.dentro = true; u.volviendo = false; u.salida = undefined;
+    u.m.grupo.visible = false; u.barra.visible = false;
+    u.pos.copy(u.casa);
+  }
+  function sacarTropas() {
+    var k = 0;
+    tropas.forEach(function (u) {
+      u.volviendo = false;
+      if (u.dentro) u.salida = (k++) * 0.22;
+    });
+  }
+  function tropasFuera() { return tropas.filter(function (u) { return !u.dentro; }); }
+  function tropasDentroDe(c) {
+    var p = puertaDe(c);
+    return tropas.filter(function (u) { return u.dentro && u.casa.distanceTo(p) < 1; }).length;
+  }
+
   function crearEnemigo(tipo, n) {
     var d = ENEMIGOS[tipo], f = fuerzaOleada(n);
     var m = M.unidad(tipo);
@@ -1437,6 +1470,10 @@
     spawnCd = 1.5;
     oleadaActual = n;
     oleadaActiva = true;
+    sacarTropas();
+    camSigue = true;
+    cam.meta.copy(puntoCamino(largoCamino * 0.5).p); cam.vel.set(0, 0, 0);
+    cam.distMeta = Math.min(cam.distMeta, window.innerWidth < window.innerHeight ? 42 : 32);
     $('btn-oleada').classList.add('oculto');
     avisoGrande(T('aviso_oleada', { n: n }));
     sonar('cuerno');
@@ -1445,6 +1482,8 @@
   }
   function oleadaTerminada() {
     oleadaActiva = false;
+    camSigue = false;
+    cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     var n = oleadaActual;
     var ultima = n === OLEADAS.length && !estado.infinito;
     var g = GEMAS_POR_OLEADA + (ultima ? GEMAS_VICTORIA : 0);
@@ -1638,6 +1677,26 @@
     // ---- tropas ----
     tropas.slice().forEach(function (u) {
       var d = u.d, caminando = false;
+      if (u.dentro) {
+        if (oleadaActiva && u.salida !== undefined) {
+          u.salida -= dt;
+          if (u.salida <= 0) {
+            u.dentro = false; u.salida = undefined;
+            u.casa = casaTropa(); u.pos.copy(u.casa);
+            u.m.grupo.visible = true;
+            bocanada(u.pos.clone().setY(0.2), true);
+          }
+        }
+        return;
+      }
+      if (!oleadaActiva && !enemigos.length && !u.volviendo) u.volviendo = true;
+      if (u.volviendo) {
+        u.barra.visible = false;
+        var llego = moverHacia(u, u.casa.x, u.casa.z, d.vel * 1.3, dt) || Math.hypot(u.pos.x - u.casa.x, u.pos.z - u.casa.z) < 1.2;
+        M.animarUnidad(u.m, tiempo + u.radio * 10, !llego, 0);
+        if (llego) guardarDentro(u);
+        return;
+      }
       u.cd -= dt;
       u.ataque = Math.max(0, u.ataque - dt * 3);
       if (d.cura && u.vida < u.max) { u.vida = Math.min(u.max, u.vida + d.cura * dt); M.ponerVida(u.barra, u.vida / u.max); }
@@ -1666,11 +1725,12 @@
     });
 
     // ---- enemigos ----
+    var afuera = tropasFuera();
     enemigos.slice().forEach(function (e) {
       var d = e.d, caminando = false, bb = null;
       e.cd -= dt;
       e.ataque = Math.max(0, e.ataque - dt * 2.5);
-      var victima = masCercano(tropas, e.pos, d.alcance + e.radio + 0.5);
+      var victima = masCercano(afuera, e.pos, d.alcance + e.radio + 0.5);
       if (victima) {
         encararHacia(e, victima.pos.x, victima.pos.z, dt);
         if (e.cd <= 0) { e.cd = d.ritmo; e.ataque = 1; danar(victima, e.dano, e); sonar('golpe'); }
@@ -1715,7 +1775,7 @@
     });
 
     // ---- separar unidades para que no se encimen ----
-    var todos = tropas.concat(enemigos);
+    var todos = tropasFuera().concat(enemigos);
     for (var a = 0; a < todos.length; a++) {
       var A = todos[a];
       for (var b = a + 1; b < todos.length; b++) {
@@ -1793,21 +1853,25 @@
     // zoom y desplazamiento se deslizan (sin saltos); al soltar el dedo sigue un poco por inercia
     var kz = 1 - Math.exp(-dt * 7), kp = 1 - Math.exp(-dt * 11);
     cam.dist += (cam.distMeta - cam.dist) * kz;
+    if (camSigue && oleadaActiva && enemigos.length && !arrastre) {
+      var delante = enemigos.reduce(function (a, e) { return e.dist > a.dist ? e : a; });
+      cam.meta.lerp(delante.pos, Math.min(1, dt * 0.9));
+    }
     if (!arrastre) {
       cam.meta.addScaledVector(cam.vel, dt);
       cam.vel.multiplyScalar(Math.exp(-dt * 4.5));
     }
-    cam.meta.x = Math.max(-55, Math.min(25, cam.meta.x));
-    cam.meta.z = Math.max(-38, Math.min(25, cam.meta.z));
+    cam.meta.x = Math.max(-70, Math.min(38, cam.meta.x));
+    cam.meta.z = Math.max(-52, Math.min(38, cam.meta.z));
     cam.objetivo.lerp(cam.meta, kp);
     // de cerca la cámara baja (más cinematográfica); de lejos sube para ver el reino entero
-    var u = Math.max(0, Math.min(1, (cam.dist - 16) / 54));
-    cam.polar = 1.17 - u * 0.21;
+    var u = Math.max(0, Math.min(1, (cam.dist - 16) / 94));
+    cam.polar = 1.17 - u * 0.37;
     var o = cam.objetivo, s = Math.sin(cam.polar);
     camara.position.set(o.x + cam.dist * s * Math.cos(cam.az), o.y + cam.dist * Math.cos(cam.polar), o.z + cam.dist * s * Math.sin(cam.az));
     camara.lookAt(o.x, o.y + (1 - u) * 1.2, o.z);
     // la caja de sombras sigue a la cámara y crece con el zoom
-    var ts = Math.max(28, Math.min(62, cam.dist * 0.85));
+    var ts = Math.max(28, Math.min(88, cam.dist * 0.8));
     if (Math.abs(ts - tamSombra) > 2) { tamSombra = ts; sc.left = -ts; sc.right = ts; sc.top = ts; sc.bottom = -ts; sc.updateProjectionMatrix(); }
     sol.position.set(o.x + DIR_SOL.x, DIR_SOL.y, o.z + DIR_SOL.z);
     sol.target.position.copy(o);
@@ -1822,6 +1886,7 @@
     lienzo.setPointerCapture(ev.pointerId);
     punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var ids = Object.keys(punteros);
+    if (oleadaActiva && ids.length === 1) camSigue = false;
     if (ids.length === 1) { arrastre = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, t: performance.now(), movio: false }; cam.vel.set(0, 0, 0); }
     if (ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
@@ -1836,7 +1901,8 @@
     if (pellizco && ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       var d = Math.hypot(a.x - b.x, a.y - b.y);
-      cam.distMeta = Math.max(16, Math.min(70, pellizco.dist * pellizco.d / Math.max(20, d)));
+      cam.distMeta = Math.max(16, Math.min(110, pellizco.dist * pellizco.d / Math.max(20, d)));
+      camSigue = false;
       return;
     }
     if (!arrastre) return;
@@ -1867,7 +1933,8 @@
   lienzo.addEventListener('pointercancel', function (ev) { delete punteros[ev.pointerId]; arrastre = null; pellizco = null; });
   lienzo.addEventListener('wheel', function (ev) {
     ev.preventDefault();
-    cam.distMeta = Math.max(16, Math.min(70, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
+    cam.distMeta = Math.max(16, Math.min(110, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
+    camSigue = false;
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') { if (enMundo) cerrarMundo(); else if (modoColocar) salirModoColocar(); else cerrarPanel(); }
@@ -1880,7 +1947,7 @@
     rayo.setFromCamera(mouse, camara);
     // primero miramos si tocó una tropa o un enemigo (se ven más arriba que el suelo)
     if (!modoColocar) {
-      var gente = tropas.concat(enemigos);
+      var gente = tropasFuera().concat(enemigos);
       var hitsG = rayo.intersectObjects(gente.map(function (u) { return u.m.grupo; }), true);
       if (hitsG.length) {
         var og = hitsG[0].object;
@@ -2272,6 +2339,10 @@
         var cu = cuartelesListos()[0];
         if (cu) ponerReloj('entreno', cu.pos.clone().setY(6.4), '⚔️ ' + fmtTiempo(faltaEntreno()) + ' ×' + colaEntreno.length);
       }
+      if (!oleadaActiva) cuartelesListos().forEach(function (c) {
+        var n = tropasDentroDe(c);
+        if (n) ponerReloj('tropas' + c.i, c.pos.clone().setY(4.6), '🛡️ ' + n);
+      });
       if (estado.investigando) {
         var ac = academiaLista();
         if (ac) ponerReloj('inv', ac.pos.clone().setY(6.6), '📜 ' + fmtTiempo(faltaInvestigacion()));
@@ -3109,7 +3180,7 @@
       var iv = g.invocadas || {};
       Object.keys(iv).forEach(function (tipo) { for (var k = 0; k < iv[tipo]; k++) crearTropa(tipo, reunion.clone(), true); });
       if (g.heroe) crearTropa('heroe', reunion.clone());
-      tropas.forEach(function (u) { u.pos.copy(u.puesto); });
+      tropas.forEach(guardarDentro);
     }
     ponerCastillo();
     andamiosDelCastillo(!!estado.obraCastillo);

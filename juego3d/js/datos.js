@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '2.2';
+var VERSION_JUEGO = '2.3';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🏰 <b>El castillo sube de nivel</b> (1 a 12). Los demás edificios no pueden pasar el nivel del castillo.</li><li>🗼 <b>Torre fortaleza nueva</b>: tu torre cambia en el nivel 5 y en el nivel 9 se vuelve la fortaleza dorada con techo rojo.</li><li>🧱 <b>Dos torres con arquero</b> cuidan la puerta de la muralla.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🛡️ <b>Las tropas viven dentro del cuartel.</b> Encima ves cuántas hay. Salen cuando empieza la oleada y vuelven al terminar.</li><li>🗺️ <b>Reino más grande</b>: los terrenos están más separados y la muralla es más grande.</li><li>🎥 <b>Cámara</b>: con dos dedos alejas mucho más para ver todo el reino, y en el ataque se acerca sola a la pelea.</li><li>🏰 <b>Cuartel y torres nuevos</b>, de piedra con techo rojo.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🏰 <b>The castle levels up</b> (1 to 12). Other buildings can\'t go above the castle level.</li><li>🗼 <b>New fortress tower</b>: your tower changes at level 5, and at level 9 it becomes the golden fortress with a red roof.</li><li>🧱 <b>Two archer towers</b> guard the wall gate.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🛡️ <b>Troops live inside the barracks.</b> The number on top shows how many. They come out when a wave starts and go back when it ends.</li><li>🗺️ <b>Bigger kingdom</b>: plots are further apart and the wall is bigger.</li><li>🎥 <b>Camera</b>: pinch to zoom out much further and see the whole kingdom; during attacks it moves close to the fight.</li><li>🏰 <b>New barracks and towers</b>, made of stone with red roofs.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
@@ -395,7 +395,7 @@ var EDIFICIOS = {
   aserradero: { costo: [30, 55, 90],   madera: [0, 50, 90],   piedra: [0, 15, 35],  tiempo: [3, 4, 6], produce: [3, 6, 10], recurso: 'madera', cada: 4, icono: '🪵' },
   mina:       { costo: [40, 70, 110],  madera: [50, 80, 130], piedra: [0, 0, 0],    tiempo: [4, 5, 7], produce: [2, 4, 7],  recurso: 'piedra', cada: 5, icono: '🪨' },
   cuartel:    { costo: [50, 80, 130],  madera: [50, 100, 160], piedra: [0, 30, 60],  tiempo: [3, 5, 7], capacidad: [6, 10, 15], rapidez: [1, 1.3, 1.6], icono: '⚔️' },
-  torre:      { costo: [50, 90, 140],  madera: [40, 80, 120], piedra: [30, 60, 100], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [10, 11, 12.5], ritmo: 0.9, icono: '🏹' },
+  torre:      { costo: [50, 90, 140],  madera: [40, 80, 120], piedra: [30, 60, 100], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [12, 13, 14.5], ritmo: 0.9, icono: '🏹' },
   // Enfermería: camas = cuántas tropas caídas puede salvar por oleada
   // Academia: centro de investigación. Su nivel deja investigar más alto y más rápido.
   academia:   { costo: [70, 120, 200], madera: [80, 140, 220], piedra: [20, 60, 120], tiempo: [4, 6, 8], rapidez: [1, 1.3, 1.6], tope: [2, 4, 6], icono: '📜' },
@@ -420,7 +420,7 @@ var NIVEL_MAX = 12;
   }
   var reglas = {
     costo: ['x', 1.35], madera: ['x', 1.35], piedra: ['x', 1.35], tiempo: ['+', 2],
-    produce: ['x', 1.25], capacidad: ['+', 3], rapidez: ['+', 0.15], dano: ['x', 1.2], alcance: ['+', 0.4, 17], tope: ['=', 6]
+    produce: ['x', 1.25], capacidad: ['+', 3], rapidez: ['+', 0.15], dano: ['x', 1.2], alcance: ['+', 0.4, 19], tope: ['=', 6]
   };
   for (var t in EDIFICIOS) for (var c in reglas) if (Array.isArray(EDIFICIOS[t][c])) extender(EDIFICIOS[t][c], reglas[c]);
   extender(MURALLA.costo, ['x', 1.3]); extender(MURALLA.madera, ['=', 0]); extender(MURALLA.piedra, ['x', 1.3]);
@@ -438,11 +438,13 @@ var MEJORA_CASTILLO = (function () {
   return m;
 })();
 // Torres de la puerta de la muralla (dañan más con el nivel de la muralla)
-var TORRES_PUERTA = { dano: 12, danoNivel: 4, alcance: 12, ritmo: 1.0 };
+var TORRES_PUERTA = { dano: 12, danoNivel: 4, alcance: 14, ritmo: 1.0 };
 // Cómo se ve cada nivel: 1-4 normal, 5-8 mejorado, 9-12 dorado
 function nivelVisual(n) { return n <= 4 ? 1 : n <= 8 ? 2 : 3; }
 // La muralla rodea TODO el reino (óvalo con todos los terrenos adentro)
-var MURALLA_FORMA = { cx: -4, cz: -1, rx: 30, rz: 29 };
+// El reino es más grande: todo se separa del castillo por este número
+var ESCALA_REINO = 1.35;
+var MURALLA_FORMA = { cx: -4 * ESCALA_REINO, cz: -1 * ESCALA_REINO, rx: 30 * ESCALA_REINO, rz: 29 * ESCALA_REINO };
 
 // Barricada: se pone en los puntos marcados del camino. Los enemigos se paran a romperla.
 // Nivel 1 de madera, nivel 2 de piedra. Se arregla sola al terminar cada oleada.
@@ -554,6 +556,6 @@ var TERRENOS = [
   [-11, -9], [-12, 9], [-22, -19], [7.5, 8], [8, -7.5], [0, 11.5], [-1, -12], [-24, 5],
   // terrenos nuevos para que la ciudad crezca
   [16, 1], [14, 13], [13, -12], [3, 21], [5, -21], [-7, 20]
-];
+].map(function (p) { return [p[0] * ESCALA_REINO, p[1] * ESCALA_REINO]; });
 // Punto donde esperan las tropas
 var PUNTO_REUNION = [-12.5, 2.5];

@@ -423,42 +423,70 @@ var M = (function () {
     return g;
   }
 
+  // Cuartel: fortaleza de piedra con portón grande (por ahí salen las tropas),
+  // dos torrecitas con techo rojo y banderas. Nivel 9+: adornos de oro.
   function cuartel(nivel) {
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
-    g.add(caja(3.4, 0.3, 2.4, C.piedraOsc, 0, 0.25, -0.4));
-    g.add(caja(3.2, 1.6, 2.2, 0xe8d8b8, 0, 1.2, -0.4));
-    // vigas
-    [-1.55, 0, 1.55].forEach(function (x) { g.add(caja(0.15, 1.6, 0.06, C.maderaOsc, x, 1.2, 0.72)); });
-    g.add(caja(3.25, 0.15, 0.06, C.maderaOsc, 0, 1.95, 0.72));
-    var techo = malla(geo('techoCuartel', function () {
-      var s = new THREE.Shape(); s.moveTo(-1.4, 0); s.lineTo(1.4, 0); s.lineTo(0, 1.1); s.lineTo(-1.4, 0);
-      var e = new THREE.ExtrudeGeometry(s, { depth: 3.6, bevelEnabled: false }); e.translate(0, 0, -1.8); e.rotateY(Math.PI / 2); return e;
-    }), mat(nivel >= 3 ? C.techoNoble : C.techoRojo), 0, 2.0, -0.4);
+    var oro = nivel >= 3, adorno = oro ? C.oro : C.metalOsc;
+    var gris = 0xa3a6ad, grisOsc = 0x7c8089, grisClaro = 0xbfc2c8, viga = 0x8a5a32, vigaOsc = 0x5e3d24, rojo = nivel >= 2 ? 0xb8402e : 0xb85a36;
+    // base de piedra con borde de madera
+    g.add(caja(3.8, 0.25, 3.0, grisOsc, 0, 0.12, -0.35));
+    g.add(caja(3.9, 0.1, 3.1, vigaOsc, 0, 0.28, -0.35));
+    // salón de piedra
+    g.add(caja(3.0, 1.8, 2.2, gris, 0, 1.2, -0.45));
+    for (var y = 0.6; y < 2.0; y += 0.45) { var fr = caja(3.04, 0.05, 2.24, grisOsc, 0, y, -0.45); fr.castShadow = false; g.add(fr); }
+    // vigas de madera en el frente
+    [-1.45, 1.45].forEach(function (x) { g.add(caja(0.18, 1.8, 0.14, viga, x, 1.2, 0.68)); });
+    g.add(caja(3.1, 0.16, 0.14, viga, 0, 2.08, 0.68));
+    // techo a dos aguas con tejas
+    var techo = malla(geo('techoCuartel2', function () {
+      var s = new THREE.Shape(); s.moveTo(-1.35, 0); s.lineTo(1.35, 0); s.lineTo(0, 1.05); s.lineTo(-1.35, 0);
+      var e = new THREE.ExtrudeGeometry(s, { depth: 3.4, bevelEnabled: false }); e.translate(0, 0, -1.7); e.rotateY(Math.PI / 2); return e;
+    }), mat(rojo), 0, 2.1, -0.45);
     g.add(techo);
-    tejas(g, 0, 2.0, -0.4, 1.4, 1.1, 3.6, nivel >= 3 ? C.oro : 0x6a2618, 'z2');
-    esquinas(g, 0, -0.4, 3.2, 2.2, 0.4, 2.0, 0xc9b896);
-    chimenea(g, 1.1, 2.75, -0.9);
-    g.add(caja(0.8, 1.1, 0.08, C.maderaOsc, 0, 0.85, 0.74));
-    g.add(esfera(0.3, C.oro, 0, 1.75, 0.76, 8, 6));
-    [-0.9, 0.9].forEach(function (x) { g.add(ventana(0.4, 0.4, 0.06, x, 1.35, 0.74)); brillo(g, x, 1.35, 0.95, 1.2, true); });
-    antorcha(g, -0.6, 1.5, 0.82); antorcha(g, 0.6, 1.5, 0.82);
-    barril(g, -1.75, -1.2); barril(g, -1.85, -0.6, 0.85);
-    // banderas
-    var b1 = bandera(C.telaRoja, 3.2 + nivel * 0.3); b1.userData.noFusionar = true; b1.position.set(-1.7, 0, 0.9); g.add(b1);
-    g.userData.banderas = [b1.userData.tela];
-    if (nivel >= 2) { var b2 = bandera(C.telaMar, 3.4 + nivel * 0.3); b2.userData.noFusionar = true; b2.position.set(1.7, 0, 0.9); g.add(b2); g.userData.banderas.push(b2.userData.tela); }
-    // muñeco de práctica
+    tejas(g, 0, 2.1, -0.45, 1.35, 1.05, 3.4, oro ? C.oro : 0x7a2a1a, 'z2');
+    g.add(caja(3.5, 0.1, 0.1, oro ? C.oro : vigaOsc, 0, 3.15, -0.45));
+    chimenea(g, 0.9, 2.8, -1.0);
+    // PORTÓN grande de dos hojas con arco de piedra
+    g.add(caja(1.5, 1.45, 0.2, grisClaro, 0, 0.98, 0.72));
+    g.add(caja(1.1, 1.15, 0.1, 0x2a1d14, 0, 0.88, 0.8));
+    [-0.28, 0.28].forEach(function (x, i) {
+      var hoja = caja(0.54, 1.1, 0.08, C.maderaOsc, x + (i ? 0.12 : -0.12), 0.86, 0.95);
+      hoja.rotation.y = i ? -0.5 : 0.5; g.add(hoja);
+      [0.55, 1.15].forEach(function (yy) { var tira = caja(0.56, 0.07, 0.1, adorno, x + (i ? 0.12 : -0.12), yy, 0.96); tira.rotation.y = hoja.rotation.y; g.add(tira); });
+    });
+    g.add(caja(1.6, 0.18, 0.26, oro ? C.oro : grisOsc, 0, 1.72, 0.74));
+    // escudo sobre el portón
+    g.add(cil(0.26, 0.26, 0.08, 6, oro ? C.oro : C.telaRoja, 0, 1.95, 0.84).rotateX(Math.PI / 2));
+    // ventanas
+    [-0.95, 0.95].forEach(function (x) { g.add(ventana(0.3, 0.42, 0.06, x, 1.5, 0.66)); brillo(g, x, 1.5, 0.9, 1.1, true); });
+    antorcha(g, -0.95, 1.05, 0.82); antorcha(g, 0.95, 1.05, 0.82);
+    // dos torrecitas en las esquinas del frente
+    var altoT = 2.7 + nivel * 0.35;
+    g.userData.banderas = [];
+    [-1.55, 1.55].forEach(function (x) {
+      g.add(caja(0.95, altoT, 0.95, gris, x, altoT / 2 + 0.25, 0.55));
+      g.add(caja(1.05, 0.08, 1.05, grisOsc, x, altoT * 0.5, 0.55));
+      g.add(caja(1.15, 0.16, 1.15, viga, x, altoT + 0.25, 0.55));
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { g.add(caja(0.26, 0.26, 0.26, grisClaro, x + q[0] * 0.43, altoT + 0.46, 0.55 + q[1] * 0.43)); });
+      var tc = cono(0.78, 0.85, 4, rojo, x, altoT + 1.0, 0.55); tc.rotation.y = Math.PI / 4; g.add(tc);
+      g.add(esfera(0.09, oro ? C.oro : vigaOsc, x, altoT + 1.47, 0.55, 6, 4));
+      g.add(ventana(0.08, 0.36, 0.06, x, altoT * 0.72, 1.04));
+      var b = bandera(x < 0 ? C.telaRoja : C.azul, 1.4); b.userData.noFusionar = true; b.position.set(x, altoT + 1.4, 0.55); b.scale.set(0.7, 0.8, 0.7); g.add(b);
+      g.userData.banderas.push(b.userData.tela);
+    });
+    // patio: muñeco de práctica, armero y barriles
     var m = new THREE.Group();
     m.add(cil(0.07, 0.07, 1.2, 5, C.madera, 0, 0.6, 0));
     m.add(cil(0.25, 0.25, 0.6, 7, C.paja, 0, 1.1, 0));
     m.add(esfera(0.22, C.paja, 0, 1.6, 0, 7, 5));
     m.add(caja(0.9, 0.1, 0.1, C.madera, 0, 1.2, 0));
-    m.position.set(1.2, 0, 1.5);
+    m.position.set(1.45, 0, 1.75);
     g.add(m);
-    // armero
-    g.add(caja(0.9, 0.08, 0.2, C.madera, -1.0, 0.9, 1.5));
-    for (var i = 0; i < 3; i++) g.add(caja(0.06, 1.0, 0.06, C.metal, -1.3 + i * 0.3, 0.6, 1.5));
+    g.add(caja(0.9, 0.08, 0.2, C.madera, -1.35, 0.9, 1.6));
+    for (var i = 0; i < 3; i++) g.add(caja(0.06, 1.0, 0.06, C.metal, -1.65 + i * 0.3, 0.6, 1.6));
+    barril(g, -1.75, -1.5); barril(g, -1.2, -1.7, 0.85);
     return g;
   }
 
@@ -466,7 +494,7 @@ var M = (function () {
   // almenas, cuerpo con puertas y techo rojo tipo pagoda. Nivel 9+: adornos de oro.
   function torreFortaleza(nivel) {
     var g = new THREE.Group(), t = new THREE.Group();
-    var S = 1.15; t.scale.setScalar(S); g.add(t);
+    var S = nivel <= 1 ? 1.0 : 1.15; t.scale.setScalar(S); g.add(t);
     var oro = nivel >= 3, adorno = oro ? C.oro : C.maderaOsc;
     var gris = 0xa3a6ad, grisOsc = 0x7c8089, grisClaro = 0xbfc2c8, viga = 0x8a5a32, vigaOsc = 0x5e3d24;
     var R2 = Math.SQRT2;
@@ -563,7 +591,7 @@ var M = (function () {
 
     // 5. TECHO DE PAGODA: rojo con tejas, aristas y puntas curvas
     var y4 = y3 + hA, R = 1.05, hT = 0.95;
-    var techo = cono(R * R2, hT, 4, 0xb8402e, 0, y4 + hT / 2, 0); techo.rotation.y = Math.PI / 4; t.add(techo);
+    var techo = cono(R * R2, hT, 4, nivel <= 1 ? 0xb85a36 : 0xb8402e, 0, y4 + hT / 2, 0); techo.rotation.y = Math.PI / 4; t.add(techo);
     // filas de tejas (escalones un poco más oscuros)
     for (var f = 0; f < 3; f++) {
       var rf = R * (1 - (f + 0.5) / 3.4) + 0.04;
@@ -605,7 +633,7 @@ var M = (function () {
 
   function torre(nivel) {
     nivel = Math.min(3, nivel);
-    if (nivel >= 2) return torreFortaleza(nivel);
+    if (nivel >= 1) return torreFortaleza(nivel);
     var g = new THREE.Group();
     var alto = 3.6 + nivel * 0.8;
     g.add(cil(1.3, 1.5, 0.5, 8, C.piedraOsc, 0, 0.25, 0));
