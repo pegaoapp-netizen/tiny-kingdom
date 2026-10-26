@@ -25,7 +25,7 @@ PASO 2 — Subir el proyecto a GitHub   ✅ HECHO: https://github.com/pegaoapp-n
   -> botón "Publish repository" -> deja marcado "Keep this code private" -> Publish.
 
 PASO 3 — Conectar en Codemagic  (codemagic.io)
-  a) Add application -> GitHub -> elige el repositorio "pegao_clash"
+  a) Add application -> GitHub -> elige el repositorio "tiny-kingdom"
      -> tipo de proyecto: "Other" / usar codemagic.yaml.
   b) Team settings -> Integrations -> Developer Portal: usa la clave de App Store
      Connect que ya tienes de WalkCheck (o crea una). Anota su NOMBRE.
