@@ -17,6 +17,7 @@
       monedas: INICIO.monedas, gemas: INICIO.gemas, comida: INICIO.comida, madera: INICIO.madera, piedra: INICIO.piedra, oleada: 1, vidaCastillo: INICIO.vidaCastillo,
       edificios: TERRENOS.map(function () { return null; }),
       tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {}, castillo: 1, obraCastillo: null,
+      heroes: { sol: { nivel: 1, estrellas: 1, frag: 0 } }, equipo: ['sol'], reclutaGratis: '',
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -431,9 +432,9 @@
   })();
 
   var nubes = [];
-  for (var nn = 0; nn < 9; nn++) {
+  for (var nn = 0; nn < 14; nn++) {
     var nu = M.nube();
-    nu.position.set((rnd() - 0.5) * 160, 24 + rnd() * 8, (rnd() - 0.5) * 120);
+    nu.position.set((rnd() - 0.5) * 220, 30 + rnd() * 10, (rnd() - 0.5) * 170);
     nu.userData.v = 0.6 + rnd() * 0.8;
     escena.add(nu);
     nubes.push(nu);
@@ -1140,43 +1141,153 @@
   // ------------------------------------------------------------------
   //  SONIDO (sintetizado, original)
   // ------------------------------------------------------------------
-  var audio = null, ultimoSonido = {};
-  function tono(f1, f2, dur, tipo, vol, retraso) {
-    var t0 = audio.currentTime + (retraso || 0);
-    var o = audio.createOscillator(), g = audio.createGain();
-    o.type = tipo; o.frequency.setValueAtTime(f1, t0);
-    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t0 + dur);
-    g.gain.setValueAtTime(vol, t0);
-    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
-    o.connect(g); g.connect(audio.destination);
-    o.start(t0); o.stop(t0 + dur + 0.02);
+  var audio = null, ultimoSonido = {}, salida = null, ecoEnvio = null, bufRuido = null;
+  var musicaOn = leerPref().musica !== false;
+  // Prepara el audio: volumen general con compresor (suena lleno sin saturar) y un eco suave de sala de castillo
+  function prepararAudio() {
+    if (audio) return;
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+    var comp = audio.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
+    salida = audio.createGain(); salida.gain.value = 0.9;
+    salida.connect(comp); comp.connect(audio.destination);
+    // eco: respuesta de una sala grande hecha con ruido que se apaga
+    var largo = Math.floor(audio.sampleRate * 2.2), imp = audio.createBuffer(2, largo, audio.sampleRate);
+    for (var c = 0; c < 2; c++) { var d = imp.getChannelData(c); for (var i = 0; i < largo; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / largo, 3.2); }
+    var conv = audio.createConvolver(); conv.buffer = imp;
+    ecoEnvio = audio.createGain(); ecoEnvio.gain.value = 0.32;
+    ecoEnvio.connect(conv); conv.connect(salida);
+    bufRuido = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+    var r = bufRuido.getChannelData(0); for (var j = 0; j < r.length; j++) r[j] = Math.random() * 2 - 1;
+  }
+  // Una nota: oscilador con ataque y caída, filtro opcional y algo de eco
+  function nota(fr, cuando, dur, o) {
+    o = o || {};
+    var t0 = audio.currentTime + (cuando || 0);
+    var osc = audio.createOscillator(), g = audio.createGain(), ultimo = osc;
+    osc.type = o.tipo || 'sine';
+    osc.frequency.setValueAtTime(fr, t0);
+    if (o.hasta) osc.frequency.exponentialRampToValueAtTime(o.hasta, t0 + dur);
+    if (o.detune) osc.detune.value = o.detune;
+    if (o.vibrato) { var lfo = audio.createOscillator(), lg = audio.createGain(); lfo.frequency.value = 5.5; lg.gain.value = fr * 0.012; lfo.connect(lg); lg.connect(osc.frequency); lfo.start(t0); lfo.stop(t0 + dur + 0.1); }
+    if (o.filtro) { var fi = audio.createBiquadFilter(); fi.type = 'lowpass'; fi.frequency.setValueAtTime(o.filtro, t0); if (o.filtroHasta) fi.frequency.exponentialRampToValueAtTime(o.filtroHasta, t0 + dur); fi.Q.value = o.q || 0.8; ultimo.connect(fi); ultimo = fi; }
+    var vol = o.vol || 0.1, at = o.ataque || 0.005;
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(vol, t0 + at);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    ultimo.connect(g); g.connect(o.destino || salida);
+    if (o.eco) { var ge = audio.createGain(); ge.gain.value = o.eco; g.connect(ge); ge.connect(ecoEnvio); }
+    osc.start(t0); osc.stop(t0 + dur + 0.05);
+  }
+  // Ruido filtrado (golpes, silbidos, platillos)
+  function sruido(cuando, dur, o) {
+    o = o || {};
+    var t0 = audio.currentTime + (cuando || 0);
+    var s = audio.createBufferSource(); s.buffer = bufRuido; s.loop = true;
+    var fi = audio.createBiquadFilter(); fi.type = o.tipo || 'bandpass';
+    fi.frequency.setValueAtTime(o.fr || 1000, t0); if (o.hasta) fi.frequency.exponentialRampToValueAtTime(o.hasta, t0 + dur);
+    fi.Q.value = o.q || 1;
+    var g = audio.createGain(), vol = o.vol || 0.1;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + (o.ataque || 0.003)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    s.connect(fi); fi.connect(g); g.connect(o.destino || salida);
+    if (o.eco) { var ge = audio.createGain(); ge.gain.value = o.eco; g.connect(ge); ge.connect(ecoEnvio); }
+    s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.05);
+  }
+  // Cuerda pulsada (como un laúd)
+  function laud(fr, cuando, dur, vol, destino) {
+    nota(fr, cuando, dur, { tipo: 'sawtooth', vol: vol, ataque: 0.004, filtro: fr * 6, filtroHasta: fr * 1.2, destino: destino, eco: 0.25 });
+    nota(fr * 2, cuando, dur * 0.5, { tipo: 'triangle', vol: vol * 0.35, ataque: 0.003, destino: destino });
+  }
+  // Metal (espadas, monedas): varias frecuencias que no son armónicas
+  function metal(fr, cuando, dur, vol) {
+    [1, 2.76, 5.4, 8.93].forEach(function (k, i) { nota(fr * k, cuando, dur / (1 + i * 0.6), { vol: vol / (1 + i), eco: 0.35 }); });
+  }
+  function bombo(cuando, vol, destino) {
+    nota(110, cuando, 0.35, { hasta: 42, vol: vol, ataque: 0.002, destino: destino });
+    sruido(cuando, 0.06, { tipo: 'lowpass', fr: 900, vol: vol * 0.5, destino: destino });
+  }
+  function metales(acorde, cuando, dur, vol) { // fanfarria de trompetas
+    acorde.forEach(function (fr) {
+      [-7, 7].forEach(function (dt) { nota(fr, cuando, dur, { tipo: 'sawtooth', vol: vol, ataque: 0.04, filtro: 600, filtroHasta: 2600, detune: dt, eco: 0.4, vibrato: true }); });
+    });
   }
   function sonar(cual) {
     if (!estado.sonido) return;
     try {
-      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      prepararAudio();
       if (audio.state === 'suspended') audio.resume();
       var ahora = performance.now();
       if (ultimoSonido[cual] && ahora - ultimoSonido[cual] < 70) return;
       ultimoSonido[cual] = ahora;
+      arrancarMusica();
       switch (cual) {
-        case 'click': tono(600, 900, 0.06, 'square', 0.05); break;
-        case 'moneda': tono(988, 0, 0.07, 'triangle', 0.08); tono(1319, 0, 0.12, 'triangle', 0.08, 0.06); break;
-        case 'martillo': tono(220, 120, 0.07, 'square', 0.06); tono(220, 120, 0.07, 'square', 0.06, 0.15); break;
-        case 'listo': [523, 659, 784, 1047].forEach(function (f, i) { tono(f, 0, 0.14, 'triangle', 0.09, i * 0.08); }); break;
-        case 'golpe': tono(190, 70, 0.09, 'sawtooth', 0.07); break;
-        case 'flecha': tono(1400, 500, 0.09, 'triangle', 0.035); break;
-        case 'muerte': tono(320, 60, 0.25, 'square', 0.05); break;
-        case 'cuerno': tono(196, 0, 0.7, 'sawtooth', 0.07); tono(294, 0, 0.7, 'sawtooth', 0.05, 0.05); break;
-        case 'victoria': [523, 659, 784, 659, 784, 1047].forEach(function (f, i) { tono(f, 0, 0.2, 'triangle', 0.1, i * 0.13); }); break;
-        case 'derrota': [392, 330, 262, 196].forEach(function (f, i) { tono(f, 0, 0.3, 'triangle', 0.1, i * 0.22); }); break;
-        case 'error': tono(220, 150, 0.15, 'square', 0.06); break;
-        case 'entrenado': tono(660, 0, 0.08, 'triangle', 0.08); tono(990, 0, 0.12, 'triangle', 0.08, 0.07); break;
-        case 'magia': [784, 988, 1175, 1568].forEach(function (f, i) { tono(f, f * 1.5, 0.18, 'sine', 0.07, i * 0.06); }); break;
-        case 'gemas': tono(1568, 0, 0.1, 'sine', 0.08); tono(2093, 0, 0.18, 'sine', 0.08, 0.08); break;
+        case 'click': sruido(0, 0.04, { fr: 2600, q: 3, vol: 0.12 }); nota(1100, 0, 0.05, { tipo: 'triangle', vol: 0.05 }); break;
+        case 'error': nota(196, 0, 0.16, { tipo: 'square', vol: 0.06, filtro: 700 }); nota(147, 0.09, 0.22, { tipo: 'square', vol: 0.06, filtro: 600 }); break;
+        case 'moneda': metal(1568, 0, 0.35, 0.07); metal(2093, 0.07, 0.45, 0.06); break;
+        case 'gemas': [1760, 2217, 2637, 3520].forEach(function (fr, i) { nota(fr, i * 0.05, 0.5, { vol: 0.05, eco: 0.6 }); }); sruido(0, 0.4, { tipo: 'highpass', fr: 7000, vol: 0.03, eco: 0.5 }); break;
+        case 'martillo':
+          [0, 0.17].forEach(function (d) { bombo(d, 0.12); sruido(d, 0.08, { fr: 1800, q: 2, vol: 0.12 }); metal(1240, d, 0.25, 0.04); }); break;
+        case 'listo': metales([523, 659, 784], 0, 0.28, 0.035); metales([659, 784, 1047], 0.22, 0.55, 0.04); bombo(0, 0.12); break;
+        case 'golpe': sruido(0, 0.07, { tipo: 'highpass', fr: 3200, vol: 0.09 }); metal(1900 + Math.random() * 400, 0, 0.18, 0.045); bombo(0, 0.06); break;
+        case 'flecha': sruido(0, 0.18, { fr: 3800, hasta: 700, q: 4, vol: 0.07 }); break;
+        case 'muerte': sruido(0, 0.3, { tipo: 'lowpass', fr: 1600, hasta: 200, vol: 0.08 }); nota(330, 0, 0.3, { hasta: 90, tipo: 'triangle', vol: 0.05 }); break;
+        case 'cuerno':
+          [146.8, 220, 293.7].forEach(function (fr, i) { nota(fr, 0, 1.25, { tipo: 'sawtooth', vol: 0.05 - i * 0.01, ataque: 0.12, filtro: 500, filtroHasta: 1400, vibrato: true, eco: 0.6, detune: i * 4 }); });
+          bombo(0, 0.1); break;
+        case 'victoria':
+          metales([523, 659, 784], 0, 0.3, 0.035); metales([587, 740, 880], 0.3, 0.3, 0.035); metales([659, 831, 988, 1319], 0.6, 1.2, 0.04);
+          [0, 0.3, 0.6].forEach(function (d) { bombo(d, 0.14); }); sruido(0.6, 1.2, { tipo: 'highpass', fr: 6000, vol: 0.05, eco: 0.6 }); break;
+        case 'derrota':
+          metales([392, 466], 0, 0.6, 0.03); metales([349, 415], 0.55, 0.6, 0.03); metales([294, 349], 1.1, 1.3, 0.03); bombo(0, 0.1); bombo(1.1, 0.12); break;
+        case 'entrenado': metales([440], 0, 0.12, 0.03); metales([659], 0.1, 0.22, 0.03); sruido(0, 0.05, { fr: 1500, vol: 0.06 }); break;
+        case 'magia': [784, 988, 1175, 1568, 1976].forEach(function (fr, i) { nota(fr, i * 0.05, 0.6, { vol: 0.045, eco: 0.7, detune: (i % 2 ? 8 : -8) }); }); sruido(0, 0.6, { tipo: 'highpass', fr: 5000, hasta: 9000, vol: 0.03, eco: 0.6 }); break;
+        case 'poder':
+          sruido(0, 0.35, { fr: 400, hasta: 3000, q: 1.5, vol: 0.08 }); bombo(0.25, 0.16); nota(70, 0.25, 0.6, { hasta: 35, vol: 0.12 });
+          metales([392, 587], 0.25, 0.4, 0.03); break;
       }
     } catch (e) { /* sin audio */ }
   }
+  // ---------- MÚSICA DE FONDO (medieval, hecha con código) ----------
+  // Re dórico: laúd con arpegios, un bordón grave y tambor. En la batalla va más rápida y con redoblante.
+  var musica = { on: false, gan: null, sig: 0, paso: 0, timer: null };
+  var ACORDES = [[146.8, 174.6, 220], [130.8, 164.8, 196], [146.8, 174.6, 220], [110, 130.8, 164.8], [174.6, 220, 261.6], [130.8, 164.8, 196], [146.8, 174.6, 220], [146.8, 220, 293.7]];
+  var ESCALA = [293.7, 329.6, 349.2, 392, 440, 493.9, 523.3, 587.3];
+  function arrancarMusica() {
+    if (musica.on || !musicaOn || !estado.sonido || !audio || enMenu) return;
+    musica.on = true;
+    musica.gan = audio.createGain(); musica.gan.gain.value = 0.0001; musica.gan.connect(salida);
+    musica.gan.gain.exponentialRampToValueAtTime(0.55, audio.currentTime + 2);
+    musica.sig = audio.currentTime + 0.1; musica.paso = 0;
+    musica.timer = setInterval(programarMusica, 120);
+  }
+  function pararMusica() {
+    if (!musica.on) return;
+    musica.on = false; clearInterval(musica.timer);
+    var g = musica.gan; try { g.gain.cancelScheduledValues(audio.currentTime); g.gain.setValueAtTime(g.gain.value, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.6); } catch (e) {}
+    setTimeout(function () { try { g.disconnect(); } catch (e) {} }, 800);
+  }
+  function programarMusica() {
+    if (!musica.on || !audio) return;
+    var batalla = oleadaActiva, negra = 60 / (batalla ? 112 : 84), corchea = negra / 2, dest = musica.gan;
+    while (musica.sig < audio.currentTime + 0.5) {
+      var p = musica.paso, compas = Math.floor(p / 8) % ACORDES.length, tiempoC = p % 8, ac = ACORDES[compas], cu = musica.sig - audio.currentTime;
+      if (tiempoC === 0) { // bordón grave del acorde
+        nota(ac[0] / 2, cu, negra * 4.1, { tipo: 'triangle', vol: 0.05, ataque: 0.3, filtro: 380, destino: dest });
+        nota(ac[0] / 2 * 1.5, cu, negra * 4.1, { tipo: 'sine', vol: 0.025, ataque: 0.4, destino: dest });
+      }
+      // laúd: arpegio del acorde, y a veces una nota de la melodía
+      var fr = (tiempoC % 2 === 0) ? ac[(tiempoC / 2) % 3] * 2 : (Math.random() < 0.45 ? ESCALA[Math.floor(Math.random() * ESCALA.length)] : 0);
+      if (fr) laud(fr, cu, corchea * 2.2, tiempoC % 2 === 0 ? 0.035 : 0.025, dest);
+      // tambor
+      if (tiempoC === 0 || tiempoC === 4) bombo(cu, batalla ? 0.11 : 0.07, dest);
+      if (tiempoC === 2 || tiempoC === 6) sruido(cu, 0.09, { tipo: 'lowpass', fr: 700, vol: 0.05, destino: dest });
+      if (batalla && tiempoC % 2 === 1) sruido(cu, 0.05, { tipo: 'highpass', fr: 2500, vol: 0.03, destino: dest });
+      musica.sig += corchea; musica.paso++;
+    }
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) pararMusica(); else if (audio) arrancarMusica(); });
+  // el navegador solo deja sonar después del primer toque
+  window.addEventListener('pointerdown', function () { if (estado.sonido && musicaOn && !enMenu) { try { prepararAudio(); if (audio.state === 'suspended') audio.resume(); arrancarMusica(); } catch (e) {} } }, true);
 
   // ------------------------------------------------------------------
   //  TEXTOS FLOTANTES Y PARTÍCULAS
@@ -1373,7 +1484,8 @@
   function cuartelesListos() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; }); }
   function capacidad() {
     var c = cuartelesListos().reduce(function (a, s) { return a + EDIFICIOS.cuartel.capacidad[s.edificio.nivel - 1]; }, 0);
-    return c ? c + bono('cuarteles') : 0;
+    // sin tope: se entrena mientras haya materiales (el límite es la comida, porque las tropas comen)
+    return c ? 100000 : 0;
   }
   function rapidezEntreno() {
     return cuartelesListos().reduce(function (a, s) { return Math.max(a, EDIFICIOS.cuartel.rapidez[s.edificio.nivel - 1]); }, 1) * (1 + bono('entreno'));
@@ -1413,20 +1525,21 @@
 
   function vidaTropa(tipo, na) { return TROPAS[tipo].vida * (1 + ARMADURA.vida * (na || 0) + bono('escudos')); }
   function nivelArmadura(tipo) { return (estado.armadura && estado.armadura[tipo]) || 0; }
-  function crearTropa(tipo, desde, invocada) {
-    var d = TROPAS[tipo];
+  function crearTropa(tipo, desde, invocada, heroeId) {
+    var hd = heroeId ? HEROE[heroeId] : null;
+    var d = hd ? statsHeroe(heroeId) : TROPAS[tipo];
     var na = tipo === 'heroe' ? 0 : nivelArmadura(tipo);
-    var m = M.unidad(tipo, undefined, na);
+    var m = hd ? M.unidad('heroe', undefined, 0, hd.look) : M.unidad(tipo, undefined, na);
     m.grupo.position.copy(desde);
     escena.add(m.grupo);
     var u = {
-      tipo: tipo, d: d, vida: vidaTropa(tipo, na), max: vidaTropa(tipo, na), defensa: ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
+      tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
       barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: 1.75 * m.escala
     };
     u.barra.visible = false;
     escena.add(u.barra);
-    u.casa = casaTropa();
+    u.casa = heroeId ? puertaCastillo() : casaTropa();
     u.volviendo = !oleadaActiva;
     tropas.push(u);
     asignarPuestos();
@@ -1512,6 +1625,7 @@
   function danar(obj, n, desde) {
     if (obj.vida <= 0) return;
     if (obj.defensa) n *= (1 - obj.defensa);
+    if (obj.escudoHasta && obj.escudoHasta > tiempo) n *= 0.5;
     obj.vida -= n;
     obj.barra.visible = true;
     M.ponerVida(obj.barra, obj.vida / obj.max);
@@ -1568,7 +1682,7 @@
   }
   // cuántas se pueden entrenar ahora (por espacio y por recursos)
   function maxEntrenar(tipo) {
-    var libre = Math.max(0, capacidad() - tropasOcupadas()), c = costoTropa(tipo), n = libre;
+    var libre = Math.min(500, Math.max(0, capacidad() - tropasOcupadas())), c = costoTropa(tipo), n = libre;
     if (!estado.oroInfinito) RECURSOS.forEach(function (r) { if (c[r]) n = Math.min(n, Math.floor(cantidad(r) / c[r])); });
     return Math.max(0, n);
   }
@@ -1677,6 +1791,7 @@
   function oleadaTerminada() {
     oleadaActiva = false;
     informarBajasRefuerzos();
+    setTimeout(ponerEquipo, 1500);
     camSigue = false;
     cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     var n = oleadaActual;
@@ -1878,7 +1993,7 @@
           u.salida -= dt;
           if (u.salida <= 0) {
             u.dentro = false; u.salida = undefined;
-            u.casa = casaTropa(); u.pos.copy(u.casa);
+            u.casa = u.heroeId ? puertaCastillo() : casaTropa(); u.pos.copy(u.casa);
             u.m.grupo.visible = true;
             bocanada(u.pos.clone().setY(0.2), true);
           }
@@ -1886,6 +2001,10 @@
         return;
       }
       if (!oleadaActiva && !enemigos.length && !u.volviendo) u.volviendo = true;
+      if (u.heroeId && oleadaActiva && enemigos.length && !u.volviendo) {
+        u.cdHab = (u.cdHab === undefined ? 3 : u.cdHab) - dt;
+        if (u.cdHab <= 0 && usarHabilidad(u)) u.cdHab = HABILIDADES[HEROE[u.heroeId].hab].cd;
+      }
       if (u.volviendo) {
         u.barra.visible = false;
         var llego = moverHacia(u, u.casa.x, u.casa.z, d.vel * 1.3, dt) || Math.hypot(u.pos.x - u.casa.x, u.pos.z - u.casa.z) < 1.2;
@@ -1901,7 +2020,7 @@
         obj = masCercano(enemigos, u.pos, d.alcance);
         if (obj) {
           encararHacia(u, obj.pos.x, obj.pos.z, dt);
-          if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')), Math.random() < 0.5); }
+          if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u), Math.random() < 0.5); }
         } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
       } else {
         var correa = u.tipo === 'heroe' ? 13 : 9.5;
@@ -1911,7 +2030,7 @@
           if (dist > d.alcance - 0.3) caminando = !moverHacia(u, obj.pos.x, obj.pos.z, d.vel, dt);
           else {
             encararHacia(u, obj.pos.x, obj.pos.z, dt);
-            if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')), u); sonar('golpe'); }
+            if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u), u); sonar('golpe'); }
           }
         } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
         if (!obj && !caminando) encararHacia(u, u.pos.x + dirFrente.x, u.pos.z + dirFrente.z, dt);
@@ -1924,6 +2043,7 @@
     var afuera = tropasFuera();
     enemigos.slice().forEach(function (e) {
       var d = e.d, caminando = false, bb = null;
+      if (e.aturdido > 0) { e.aturdido -= dt; if (Math.random() < dt * 5) chispas(e.pos.clone().setY(e.altoBarra + 0.2), 0xffe14a, 1, 0.8); return; }
       e.cd -= dt;
       e.ataque = Math.max(0, e.ataque - dt * 2.5);
       var victima = masCercano(afuera, e.pos, d.alcance + e.radio + 0.5);
@@ -2249,6 +2369,7 @@
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
       ['aserradero', 'mina', 'academia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
+      HEROES.forEach(function (h) { var hu = M.unidad('heroe', undefined, 0, h.look); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 2.3 * hu.escala, 0.95 * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
         var gc = new THREE.Group();
@@ -2329,7 +2450,7 @@
   function statsEdificio(tipo, nivel) {
     var d = EDIFICIOS[tipo], i = nivel - 1;
     if (d.recurso) return '<span>' + ICONO_RECURSO[d.recurso] + ' ' + T('produce_txt', { n: d.produce[i], r: T('r_' + d.recurso), s: d.cada }) + '</span>';
-    if (tipo === 'cuartel') return '<span>' + T('capacidad') + ': ' + d.capacidad[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
+    if (tipo === 'cuartel') return '<span>⚔️ ' + T('sin_tope') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
     if (tipo === 'academia') return '<span>📜 ' + T('nivel') + ' máx. ' + d.tope[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>⏱ x' + d.rapidez[i] + '</span>' : '');
     return '<span>' + T('dano') + ': ' + d.dano[i] + '</span><span>' + T('alcance') + ': ' + d.alcance[i] + '</span>';
@@ -2394,9 +2515,7 @@
     var html = subtabsHeroes('invocar') + '<div class="lista">' +
       '<div class="carta compacta"><div class="cab"><div class="foto">✨</div><div><h3>' + T('invocar3') + '</h3><p>' + T('invocar3_txt') + '</p></div></div>' +
       botonGemas(INVOCAR.tres, 'invocar3', '', T('p_invocar')) + '</div>' +
-      '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('heroe', '👑') + '</div><div><h3>' + N('heroe') + '</h3><p>' + T('heroe_txt') + '</p></div></div>' +
-      '<div class="stats"><span>❤ ' + T('vida') + ' ' + d.vida + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>✚ ' + T('cura') + ' ' + d.cura + '/s</span></div>' +
-      botonGemas(INVOCAR.heroe, 'heroe', '', T('p_invocar')) + '</div></div>';
+      '</div>';
     abrirPanel(T('p_heroes'), html, { tipo: 'invocar' });
   }
 
@@ -2425,12 +2544,13 @@
 
   function abrirPanelUnidad(u) {
     unidadSel = u;
-    var d = u.d, nombre = N(u.tipo), aliado = u.aliado;
+    var d = u.d, nombre = u.heroeId ? NH(u.heroeId) : N(u.tipo), aliado = u.aliado;
     var dano = aliado ? d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) : u.dano;
-    var foto = retratos[u.tipo] ? '<img src="' + retratos[u.tipo] + '" alt="">' : (aliado ? '🛡️' : '👹');
+    var clFoto = u.heroeId ? 'h_' + u.heroeId : u.tipo;
+    var foto = retratos[clFoto] ? '<img src="' + retratos[clFoto] + '" alt="">' : (aliado ? '🛡️' : '👹');
     var frac = Math.max(0, u.vida / u.max);
     var html = '<div class="carta"><div class="ficha"><div class="foto">' + foto + '</div><div style="flex:1">' +
-      '<h3>' + nombre + '</h3><p>' + (aliado ? T('t_aliada') : T('t_enemigo')) + (NOMBRES[u.tipo].des_es ? ' — ' + D(u.tipo) : '') + '</p>' +
+      '<h3>' + nombre + '</h3><p>' + (u.heroeId ? '🦸 ' + HB(HEROE[u.heroeId].hab).nombre + ': ' + HB(HEROE[u.heroeId].hab).des : (aliado ? T('t_aliada') : T('t_enemigo')) + (NOMBRES[u.tipo].des_es ? ' — ' + D(u.tipo) : '')) + '</p>' +
       '<div class="vida-grande' + (aliado ? '' : ' enemigo') + '"><div style="width:' + (frac * 100) + '%"></div></div>' +
       '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(u.vida) + ' / ' + Math.ceil(u.max) + '</span>' +
       '<span>⚔ ' + T('dano') + ' ' + Math.round(dano) + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span>' +
@@ -2443,6 +2563,179 @@
       '</div></div></div>';
     abrirPanel(nombre, html, { tipo: 'unidad' });
   }
+  // ---------- HÉROES ----------
+  function NH(id) { return (NOMBRES_HEROES[id] || {})[estado.idioma] || id; }
+  function HB(hab) { var h = HABILIDADES[hab]; return { nombre: h.icono + ' ' + h[estado.idioma], des: h['des_' + estado.idioma] }; }
+  function hoyTexto() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function reclutaGratisHoy() { return estado.reclutaGratis !== hoyTexto(); }
+  function puertaCastillo() { return puntoCamino(largoCamino).p.clone().add(new V3(-0.6, 0, 0.6)); }
+  function furia(u) { return u.furia && u.furia > tiempo ? 1.4 : 1; }
+  function statsHeroe(id) {
+    var h = HEROE[id], e = estado.heroes[id] || { nivel: 1, estrellas: 1 };
+    var f = (1 + 0.06 * (e.nivel - 1)) * (1 + 0.2 * (e.estrellas - 1));
+    return { vida: Math.round(h.vida * f), dano: Math.round(h.dano * f), alcance: h.alcance, vel: 3.4, ritmo: h.distancia ? 1.1 : 0.8,
+      cura: Math.round(6 * f), distancia: !!h.distancia, icono: CLASES_HEROE[h.clase] };
+  }
+  function topeNivel(id) { return Math.min(HEROE_NIVEL_MAX, (estado.heroes[id].estrellas || 1) * 10); }
+  function costoNivelHeroe(id) { var e = estado.heroes[id]; return { oro: Math.round(40 * e.nivel * RAREZAS[HEROE[id].rareza].costoNivel) }; }
+  function fragParaEstrella(id) { var e = estado.heroes[id]; return e.estrellas >= 5 ? 0 : HEROE_FRAGMENTOS[e.estrellas - 1]; }
+  function heroeMejorable(id) {
+    var e = estado.heroes[id]; if (!e) return false;
+    return (e.nivel < topeNivel(id) && puedePagar(costoNivelHeroe(id))) || (e.estrellas < 5 && e.frag >= fragParaEstrella(id));
+  }
+  // Pone en el reino a los héroes del equipo (guardados en el castillo) y quita los que ya no están
+  function ponerEquipo() {
+    if (oleadaActiva) return;
+    tropas.filter(function (u) { return u.heroeId && estado.equipo.indexOf(u.heroeId) < 0; }).forEach(function (u) { var i = tropas.indexOf(u); if (i >= 0) tropas.splice(i, 1); escena.remove(u.m.grupo); escena.remove(u.barra); });
+    tropas.filter(function (u) { return u.tipo === 'heroe' && !u.heroeId; }).forEach(function (u) { var i = tropas.indexOf(u); if (i >= 0) tropas.splice(i, 1); escena.remove(u.m.grupo); escena.remove(u.barra); });
+    estado.equipo.forEach(function (id) {
+      var u = tropas.filter(function (x) { return x.heroeId === id; })[0];
+      if (u) { var s = statsHeroe(id), fr = u.vida / u.max; u.d = s; u.max = s.vida; u.vida = Math.max(1, fr) * s.vida; return; }
+      u = crearTropa('heroe', puertaCastillo(), false, id);
+      guardarDentro(u);
+    });
+    asignarPuestos();
+  }
+  function usarHabilidad(u) {
+    var h = HEROE[u.heroeId], hab = HABILIDADES[h.hab], dano = u.d.dano * furia(u);
+    var cerca = enemigos.filter(function (e) { return e.pos.distanceTo(u.pos) < hab.rango; }).sort(function (a, b) { return a.pos.distanceTo(u.pos) - b.pos.distanceTo(u.pos); });
+    var amigos = tropasFuera().filter(function (t) { return t.pos.distanceTo(u.pos) < hab.rango; });
+    var alto = u.pos.clone().setY(1.6 * u.m.escala);
+    switch (h.hab) {
+      case 'grito':
+        if (!cerca.length) return false;
+        amigos.forEach(function (t) { t.furia = tiempo + 5; chispas(t.pos.clone().setY(1.2), 0xff7a3a, 3, 2); });
+        chispas(alto, 0xff7a3a, 24, 5); break;
+      case 'rayo':
+        if (!cerca.length) return false;
+        cerca.slice(0, 4).forEach(function (e, i) { setTimeout(function () { if (e.vida > 0) { danar(e, dano * 2.5, u); chispas(e.pos.clone().setY(1.2), 0xb48cff, 14, 4); } }, i * 120); });
+        chispas(alto, 0xb48cff, 16, 4); break;
+      case 'canon':
+        if (!cerca.length) return false;
+        var fuerte = cerca.slice().sort(function (a, b) { return b.vida - a.vida; })[0];
+        enemigos.filter(function (e) { return e !== fuerte && e.pos.distanceTo(fuerte.pos) < 2.5; }).forEach(function (e) { danar(e, dano * 2, u); });
+        danar(fuerte, dano * 6, u);
+        chispas(fuerte.pos.clone().setY(1), 0xffa030, 34, 6); chispas(fuerte.pos.clone().setY(0.5), 0x5a5048, 16, 3); break;
+      case 'lluvia':
+        if (!cerca.length) return false;
+        var centro = cerca[0].pos;
+        enemigos.filter(function (e) { return e.pos.distanceTo(centro) < 3.5; }).forEach(function (e, i) { setTimeout(function () { if (e.vida > 0) disparar(u.pos.clone().setY(3.5), e, dano * 2.5, i === 0); }, i * 60); });
+        break;
+      case 'bomba':
+        if (!cerca.length) return false;
+        var c2 = cerca[0].pos.clone();
+        enemigos.filter(function (e) { return e.pos.distanceTo(c2) < 3; }).forEach(function (e) { danar(e, dano * 4, u); });
+        chispas(c2.clone().setY(0.8), 0xffb020, 36, 6); chispas(c2.clone().setY(0.4), 0x4a4440, 18, 3); break;
+      case 'escudo':
+        if (!cerca.length) return false;
+        amigos.forEach(function (t) { t.escudoHasta = tiempo + 5; chispas(t.pos.clone().setY(1), 0x6fb7ff, 4, 2); });
+        chispas(alto, 0x6fb7ff, 22, 4); break;
+      case 'golpe':
+        if (!cerca.length) return false;
+        cerca.forEach(function (e) { danar(e, dano * 2, u); e.aturdido = 2; });
+        chispas(u.pos.clone().setY(0.3), 0xffe14a, 30, 5); break;
+      case 'curar':
+        var heridos = amigos.filter(function (t) { return t.vida < t.max * 0.95; });
+        if (!heridos.length || !cerca.length && !heridos.length) return false;
+        heridos.forEach(function (t) { t.vida = Math.min(t.max, t.vida + t.max * 0.25); M.ponerVida(t.barra, t.vida / t.max); chispas(t.pos.clone().setY(1.1), 0x7fe39a, 6, 2); });
+        break;
+    }
+    u.ataque = 1;
+    flotar(HB(h.hab).nombre, u.pos.clone().setY(u.altoBarra + 0.9), 'gema');
+    sonar('poder');
+    return true;
+  }
+  function tarjetaHeroe(h) {
+    var e = estado.heroes[h.id], est = '';
+    for (var i = 1; i <= 5; i++) est += i <= (e ? e.estrellas : 0) ? '★' : '☆';
+    return '<button class="hcard ' + h.rareza + (e ? '' : ' bloq') + '" data-accion="heroe-ver" data-id="' + h.id + '">' +
+      '<span class="clase">' + CLASES_HEROE[h.clase] + '</span>' + (e && heroeMejorable(h.id) ? '<span class="sube">⬆</span>' : '') +
+      fotoHTML('h_' + h.id, '🦸') + (e && estado.equipo.indexOf(h.id) >= 0 ? '<span class="eq">' + T('en_equipo') + '</span>' : '') +
+      '<span class="nom">' + NH(h.id) + '</span><span class="nv">' + (e ? T('nivel_corto') + ' ' + e.nivel : '🔒') + '</span><span class="est">' + est + '</span></button>';
+  }
+  function abrirPanelHeroes() {
+    var orden = { legendario: 0, raro: 1, comun: 2 };
+    var lista = HEROES.slice().sort(function (a, b) { return (estado.heroes[b.id] ? 1 : 0) - (estado.heroes[a.id] ? 1 : 0) || orden[a.rareza] - orden[b.rareza]; });
+    var html = subtabsHeroes('heroes') + '<p class="nota">' + T('heroes_txt') + ' <b>' + T('equipo_n', { n: estado.equipo.length }) + '</b></p>' +
+      '<div class="heroes-grid">' + lista.map(tarjetaHeroe).join('') + '</div>' +
+      '<div class="carta" style="margin-top:10px"><h3>🦸 ' + T('reclutar') + '</h3><p class="nota">' + T('reclutar_txt') + '</p><div class="stats">' +
+      (reclutaGratisHoy() ? '<button class="comprar naranja" data-accion="reclutar" data-n="gratis">' + T('reclutar_gratis') + '</button>' : botonGemas(RECLUTAR.uno, 'reclutar', 'data-n="1"', '×1')) +
+      botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>';
+    abrirPanel(T('p_heroes'), html, { tipo: 'heroes' });
+  }
+  function abrirPanelHeroe(id) {
+    var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab), est = '';
+    for (var i = 1; i <= 5; i++) est += i <= (e ? e.estrellas : 0) ? '★' : '☆';
+    var html = '<button class="comprar mini" data-accion="sub-heroes" style="width:auto;margin-bottom:8px">' + T('volver') + '</button>' +
+      '<div class="carta heroe-ficha ' + h.rareza + '"><div class="heroe-grande">' + fotoHTML('h_' + id, '🦸') + '</div><div style="flex:1;min-width:0">' +
+      '<h3>' + NH(id) + '</h3><p class="nota">' + T('rareza_' + h.rareza) + ' · ' + CLASES_HEROE[h.clase] + ' ' + T('clase_' + h.clase) + '</p>' +
+      '<p class="estrellas-grandes">' + est + '</p>' +
+      (e ? '<p><b>' + T('nivel') + ' ' + e.nivel + ' / ' + topeNivel(id) + '</b></p>' : '<p class="nota">' + T('bloqueado') + '</p>') + '</div></div>' +
+      '<div class="carta" style="margin-top:8px"><div class="stats"><span>❤ ' + T('vida') + ' ' + s.vida + '</span><span>⚔ ' + T('dano') + ' ' + s.dano + '</span><span>🎯 ' + T('alcance') + ' ' + s.alcance + '</span><span>✚ ' + T('cura') + ' ' + s.cura + '/s</span></div>' +
+      '<p style="margin-top:8px"><b>' + T('poder_heroe') + ': ' + hb.nombre + '</b> <span class="nota">(' + T('cada_s', { s: HABILIDADES[h.hab].cd }) + ')</span><br>' + hb.des + '</p></div>';
+    if (e) {
+      html += '<div class="carta" style="margin-top:8px">';
+      if (e.nivel < topeNivel(id)) html += botonCosto(costoNivelHeroe(id), 'heroe-nivel', 'data-id="' + id + '"', '⬆️ ' + T('subir_nivel') + ' ');
+      else if (e.nivel < HEROE_NIVEL_MAX) html += '<p class="nota">' + T('nivel_tope', { n: topeNivel(id) }) + '</p>';
+      if (e.estrellas < 5) {
+        var nf = fragParaEstrella(id);
+        html += '<p class="nota" style="margin-top:8px">🧩 ' + T('fragmentos') + ': ' + e.frag + ' / ' + nf + '</p><div class="cola"><div class="barra"><div style="width:' + Math.min(100, Math.round(e.frag / nf * 100)) + '%"></div></div></div>' +
+          '<button class="comprar naranja" data-accion="heroe-estrella" data-id="' + id + '"' + (e.frag >= nf ? '' : ' disabled') + '>' + T('subir_estrella') + '</button>';
+      } else html += '<p class="nota">' + T('estrellas_max') + '</p>';
+      var enEq = estado.equipo.indexOf(id) >= 0;
+      html += '<button class="comprar ' + (enEq ? 'rojo' : '') + '" data-accion="heroe-equipo" data-id="' + id + '" style="margin-top:8px">' + (enEq ? T('quitar_equipo') : T('poner_equipo')) + '</button></div>';
+    }
+    abrirPanel(NH(id), html, { tipo: 'heroe', id: id });
+  }
+  function subirNivelHeroe(id) {
+    var e = estado.heroes[id]; if (!e || e.nivel >= topeNivel(id)) return;
+    if (!pagar(costoNivelHeroe(id))) return;
+    e.nivel++;
+    sonar('listo'); consejoTemporal(T('heroe_sube', { n: NH(id), v: e.nivel }));
+    ponerEquipo(); guardar(); abrirPanelHeroe(id);
+  }
+  function subirEstrellaHeroe(id) {
+    var e = estado.heroes[id]; if (!e || e.estrellas >= 5) return;
+    var nf = fragParaEstrella(id); if (e.frag < nf) return;
+    e.frag -= nf; e.estrellas++;
+    sonar('victoria'); consejoTemporal(T('heroe_estrella', { n: NH(id), v: e.estrellas }));
+    ponerEquipo(); guardar(true); abrirPanelHeroe(id);
+  }
+  function cambiarEquipo(id) {
+    var i = estado.equipo.indexOf(id);
+    if (i >= 0) estado.equipo.splice(i, 1);
+    else { if (estado.equipo.length >= 3) { consejoTemporal(T('equipo_lleno')); sonar('error'); return; } estado.equipo.push(id); }
+    sonar('click'); ponerEquipo(); guardar(); abrirPanelHeroe(id);
+  }
+  function sacarHeroeAlAzar(mejor) {
+    var tot = 0, k;
+    for (k in RAREZAS) if (!mejor || k !== 'comun') tot += RAREZAS[k].peso;
+    var r = Math.random() * tot, rz = 'comun';
+    for (k in RAREZAS) { if (mejor && k === 'comun') continue; r -= RAREZAS[k].peso; if (r <= 0) { rz = k; break; } }
+    var de = HEROES.filter(function (h) { return h.rareza === rz; });
+    return de[Math.floor(Math.random() * de.length)].id;
+  }
+  function reclutar(n) {
+    if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    var cuantos = n === '10' ? 10 : 1;
+    if (n === 'gratis') { if (!reclutaGratisHoy()) return; estado.reclutaGratis = hoyTexto(); }
+    else if (!pagar(0, cuantos === 10 ? RECLUTAR.diez : RECLUTAR.uno)) return;
+    var res = [];
+    for (var i = 0; i < cuantos; i++) res.push(sacarHeroeAlAzar(cuantos === 10 && i === 9 && !res.some(function (id) { return HEROE[id].rareza !== 'comun'; })));
+    var html = '<div class="heroes-grid reclutados">';
+    res.forEach(function (id) {
+      var nuevo = !estado.heroes[id];
+      if (nuevo) estado.heroes[id] = { nivel: 1, estrellas: 1, frag: 0 }; else estado.heroes[id].frag += RECLUTAR.repetido;
+      html += '<div class="reclutado">' + tarjetaHeroe(HEROE[id]).replace('data-accion="heroe-ver"', 'data-accion="heroe-ver" tabindex="-1"') +
+        '<p class="nota">' + (nuevo ? '<b>' + T('heroe_nuevo', { n: NH(id) }) + '</b>' : T('heroe_frag', { f: RECLUTAR.repetido, n: NH(id) })) + '</p></div>';
+    });
+    html += '</div><button class="comprar naranja boton-oleada-grande" data-accion="sub-heroes">' + T('volver') + '</button>';
+    sonar('magia');
+    chispas(castilloPos.clone().setY(8), 0xffe14a, 30, 5);
+    guardar(true);
+    abrirPanel(T('resultado'), html, { tipo: 'reclutado' });
+  }
+
   // ---------- INVESTIGACIÓN ----------
   var ramaInv = 'crecimiento';
   function academiaLista() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'academia'; }).sort(function (a, b) { return b.edificio.nivel - a.edificio.nivel; })[0]; }
@@ -2680,6 +2973,7 @@
   $('pill-escudo').addEventListener('click', function () { consejoTemporal(T('escudo_info')); });
   function subtabsHeroes(cual) {
     return '<div class="subtabs"><button data-accion="sub-tropas" class="' + (cual === 'tropas' ? 'activo' : '') + '">⚔️ ' + T('sub_tropas') + '</button>' +
+      '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
       '<button data-accion="sub-invocar" class="' + (cual === 'invocar' ? 'activo' : '') + '">✨ ' + T('sub_invocar') + '</button></div>';
   }
   // ---------- CONQUISTA (oleadas) ----------
@@ -2842,12 +3136,12 @@
   function actualizarBadges() {
     ponerBadge('badge-conquista', !oleadaActiva && !enMenu ? '!' : '');
     var puedeEntrenar = cuartelesListos().length && tropasOcupadas() < capacidad() && !colaEntreno.length && puedePagar(costoTropa('espadachin'));
-    ponerBadge('badge-heroes', puedeEntrenar ? '+' : '');
+    ponerBadge('badge-heroes', reclutaGratisHoy() ? '1' : puedeEntrenar ? '+' : '');
     var objetos = 0; for (var k in estado.mochila) objetos += estado.mochila[k] || 0;
     ponerBadge('badge-mochila', (diarioDisponible() ? 1 : 0) + objetos || '');
     ponerBadge('badge-alianza', hayCuenta() && !estado.alianza ? '!' : '');
     // pestaña activa
-    var act = enMundo ? 'btn-mundo' : !panelActual ? '' : ({ conquista: 'btn-conquista', tropas: 'btn-heroes', invocar: 'btn-heroes', mochila: 'btn-mochila', tienda: 'btn-tienda', alianza: 'btn-alianza' })[panelActual.tipo] || '';
+    var act = enMundo ? 'btn-mundo' : !panelActual ? '' : ({ conquista: 'btn-conquista', tropas: 'btn-heroes', invocar: 'btn-heroes', heroes: 'btn-heroes', heroe: 'btn-heroes', reclutado: 'btn-heroes', mochila: 'btn-mochila', tienda: 'btn-tienda', alianza: 'btn-alianza' })[panelActual.tipo] || '';
     document.querySelectorAll('#abajo .pestana').forEach(function (p) { p.classList.toggle('activo', p.id === act); });
   }
   function abrirPanelPoder() {
@@ -2960,6 +3254,7 @@
       '<button class="comprar' + (estado.idioma === 'es' ? '' : ' morado') + '" data-accion="idioma" data-valor="es">Español</button>' +
       '<button class="comprar' + (estado.idioma === 'en' ? '' : ' morado') + '" data-accion="idioma" data-valor="en">English</button></div></div>' +
       '<div class="carta"><h3>' + T('sonido') + '</h3><button class="comprar" data-accion="sonido">' + (estado.sonido ? '🔊 ON' : '🔇 OFF') + '</button></div>' +
+      '<div class="carta"><h3>' + T('musica') + '</h3><button class="comprar" data-accion="musica">' + (musicaOn ? '🎵 ON' : '🔇 OFF') + '</button></div>' +
       '<div class="carta"><h3>' + T('velocidad') + '</h3><button class="comprar" data-accion="velocidad">x' + velocidad + '</button></div>' +
       '<div class="carta"><h3>' + T('calidad') + '</h3><div class="stats"><button class="comprar' + (calidad === 'alta' ? '' : ' morado') + '" data-accion="calidad" data-valor="alta">' + T('calidad_alta') + '</button><button class="comprar' + (calidad === 'baja' ? '' : ' morado') + '" data-accion="calidad" data-valor="baja">' + T('calidad_baja') + '</button></div><p class="nota">' + T('calidad_txt') + '</p></div>' +
       '</div>';
@@ -3025,6 +3320,12 @@
     else if (a === 'investigacion') abrirPanelInvestigacion(b.getAttribute('data-rama') || ramaInv);
     else if (a === 'investigar') empezarInvestigacion(b.getAttribute('data-id'));
     else if (a === 'sub-invocar') abrirPanelInvocar();
+    else if (a === 'sub-heroes') abrirPanelHeroes();
+    else if (a === 'heroe-ver') abrirPanelHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-nivel') subirNivelHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-equipo') cambiarEquipo(b.getAttribute('data-id'));
+    else if (a === 'reclutar') reclutar(b.getAttribute('data-n'));
     else if (a === 'empezar-oleada') { cerrarPanel(); empezarOleada(); }
     else if (a === 'diario') reclamarDiario();
     else if (a === 'usar') usarObjeto(b.getAttribute('data-obj'));
@@ -3034,6 +3335,7 @@
     else if (a === 'heroe') invocarHeroe();
     else if (a === 'idioma') { estado.idioma = b.getAttribute('data-valor'); aplicarIdioma(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'sonido') { cambiarSonido(); reabrirPanel(); }
+    else if (a === 'musica') { musicaOn = !musicaOn; if (musicaOn) { sonar('click'); arrancarMusica(); } else pararMusica(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'velocidad') { cambiarVelocidad(); reabrirPanel(); }
     else if (a === 'calidad') { calidad = b.getAttribute('data-valor'); aplicarCalidad(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'cerrar-sesion') { guardar(true); cerrarPanel(); Cuentas.salir(); }
@@ -3117,7 +3419,7 @@
   function textoTropas() {
     var inv = tropas.filter(function (u) { return u.invocada || u.tipo === 'heroe'; }).length;
     var her = totalHeridos();
-    return (tropasNormales() + her) + '/' + capacidad() + (inv ? ' +' + inv + '✨' : '') + (her ? ' 💚' + her : '');
+    return (tropasNormales() + her) + (inv ? ' +' + inv + '✨' : '') + (her ? ' 💚' + her : '');
   }
   function textoOleada() {
     var n = oleadaActiva ? oleadaActual : estado.oleada;
@@ -3184,7 +3486,7 @@
     });
   }
   botonMenu('btn-conquista', ['conquista'], function () { abrirPanelConquista(); });
-  botonMenu('btn-heroes', ['tropas', 'invocar'], function () { abrirPanelTropas(); });
+  botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { abrirPanelTropas(); });
   botonMenu('btn-mochila', ['mochila'], function () { abrirPanelMochila(); });
   botonMenu('btn-tienda', ['tienda'], function () { abrirPanelTienda(); });
   $('btn-ajustes').addEventListener('click', function () { sonar('click'); abrirPanelAjustes(); });
@@ -3212,13 +3514,14 @@
   }
   function cambiarSonido() {
     estado.sonido = !estado.sonido;
+    if (!estado.sonido) pararMusica();
     $('btn-sonido').innerHTML = iconoSonido();
     guardarPreferencias();
     sonar('click');
   }
   function guardarPreferencias(sinPartida) {
     try {
-      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad }));
+      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad }));
     } catch (e) {}
     if (!enMenu && !sinPartida) guardar();
   }
@@ -3412,6 +3715,9 @@
       estado.mochila = g.mochila || {};
       estado.invest = g.invest || {};
       estado.escudoHasta = g.escudoHasta || 0;
+      estado.heroes = g.heroes || { sol: { nivel: 1, estrellas: 1, frag: 0 } };
+      estado.equipo = (g.equipo || ['sol']).filter(function (id) { return estado.heroes[id]; }).slice(0, 3);
+      estado.reclutaGratis = g.reclutaGratis || '';
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
       var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
@@ -3438,11 +3744,11 @@
       });
       var iv = g.invocadas || {};
       Object.keys(iv).forEach(function (tipo) { for (var k = 0; k < iv[tipo]; k++) crearTropa(tipo, reunion.clone(), true); });
-      if (g.heroe) crearTropa('heroe', reunion.clone());
       tropas.forEach(guardarDentro);
     }
     ponerCastillo();
     andamiosDelCastillo(!!estado.obraCastillo);
+    ponerEquipo();
     ponerMuralla(estado.muralla);
     estado.vidaCastillo = vidaMaxCastillo();
     curarHeridos();
@@ -3489,7 +3795,7 @@
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
     // nubes
-    nubes.forEach(function (n) { n.position.x += n.userData.v * dtReal; if (n.position.x > 90) n.position.x = -90; });
+    nubes.forEach(function (n) { n.position.x += n.userData.v * dtReal; if (n.position.x > 120) n.position.x = -120; });
     // brillo de terrenos libres
     var b = (Math.sin(performance.now() / 250) + 1) / 2;
     slots.forEach(function (s, i) {

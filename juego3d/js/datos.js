@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '2.7';
+var VERSION_JUEGO = '2.8';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -67,11 +67,11 @@ var TEXTOS = {
     cancelar: 'Cancelar',
     vida: 'Vida', dano: 'Daño', alcance: 'Alcance', produce: 'Produce', cada: 'cada {s}s',
     capacidad: 'Capacidad', velocidad_ent: 'Entrena más rápido',
-    tropas_vivas: 'Tropas en el campo: {a}/{b}',
+    tropas_vivas: 'Tropas: {a}', sin_tope: 'Entrena sin límite',
     invocar3: 'Invocar 3 tropas al azar', invocar3_txt: 'Aparecen al momento, sin esperar.',
     heroe_txt: 'Héroe muy fuerte que se cura solo. Solo uno a la vez.',
     heroe_vivo: 'Tu héroe ya está en el campo.',
-    sonido: 'Sonido', idioma: 'Idioma', velocidad: 'Velocidad',
+    sonido: 'Sonido', musica: 'Música', idioma: 'Idioma', velocidad: 'Velocidad',
     pruebas: 'Herramienta de pruebas (solo el dueño)',
     pruebas_txt: 'Botón para probar. No se puede vender ni dar a otros jugadores.',
     dar_gemas: '+100 gemas de prueba', dar_monedas: '+500 monedas de prueba',
@@ -114,7 +114,7 @@ var TEXTOS = {
     mis_objetos: 'Tus objetos', usar: 'Usar', abrir: 'Abrir', recibiste: '🎁 Recibiste: {t}', tropas_regalo: '{n} tropas',
     tienda_txt: 'Compra con gemas. Lo que compras se guarda en tu Baúl 🧳. Las gemas se ganan en las oleadas y en el cofre diario.',
     tienda_real: 'Compras con dinero real: llegarán con la versión de la App Store.', comprar: 'Comprar', comprado: '{n}: guardado en tu Baúl 🧳',
-    acelerador_usado: '⏩ ¡Le quitaste 1 hora a todas las obras!', ref_titulo: '📣 Refuerzos', ref_txt: 'Tus tropas pueden defender el reino de un aliado: pelean en sus oleadas y suman a su defensa. Las puedes retirar cuando quieras.', ref_pedir: '📣 Pedir refuerzos', ref_pedido_hecho: '📣 Pediste refuerzos a tu hermandad.', ref_quitar_pedido: 'Quitar pedido', ref_pedidos: 'Piden ayuda', ref_ninguno: 'Nadie está pidiendo ayuda ahora.', ref_reforzar: '🛡️ Reforzar', ref_en_reino: 'Refuerzos en tu reino', ref_enviados: 'Tus refuerzos enviados', ref_devolver: 'Devolver', ref_retirar: 'Retirar', ref_de: '{n} tropas de {q}', ref_a: '{n} tropas en el reino de {q}', ref_enviar_a: 'Enviar refuerzos a {q}', ref_tienes: 'Tienes {n}', ref_enviar: '🛡️ Enviar refuerzos', ref_enviado: '🛡️ ¡Refuerzos enviados a {q}!', ref_volvieron: '🛡️ Volvieron {n} tropas del reino de {q}', ref_error: 'No se pudo. Revisa tu internet y que los dos estén en la misma hermandad.', ref_en_oleada: 'Espera a que termine la oleada.', ref_nada: 'Elige al menos una tropa.', ref_llegaron: '🛡️ ¡Llegaron refuerzos de {q}!', ref_devueltos: 'Devolviste los refuerzos.', ref_retirados: 'Tus tropas vuelven a casa.', ref_nadie: 'Todavía no hay refuerzos.', toca_tu_castillo: '👑 Toca tu castillo para entrar a tu ciudad', entrar_ciudad: 'Entrar', bienvenido_ciudad: '🏰 ¡Bienvenido a tu ciudad!', armaduras_tienda: '🛡️ Armaduras', armaduras_tienda_txt: 'Ponle armadura a un tipo de tropa: todas las de ese tipo (y las que entrenes) la llevan puesta.', armadura_para: 'Armadura {n} — {t}', entrenando_n: '⚔️ Entrenando {n} tropas', maximo: 'Máx', terminar_ya: 'Terminar ya', terminado_gemas: '💎 ¡Terminado!', escudo_activo: '🛡️ Escudo activo: faltan {t}. Espera a que se acabe para poner otro.', escudo_activo_btn: 'Activo: {t}', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
+    acelerador_usado: '⏩ ¡Le quitaste 1 hora a todas las obras!', sub_heroes: 'Héroes', heroes_txt: 'Tus héroes salen del castillo en cada oleada y usan su poder. Lleva hasta 3 en tu equipo.', reclutar: 'Reclutar héroe', reclutar_gratis: '🎁 Gratis hoy', reclutar_txt: 'Recluta para conseguir héroes nuevos. Si sale uno que ya tienes, ganas fragmentos para subirle estrellas.', heroe_nuevo: '🎉 ¡Nuevo héroe: {n}!', heroe_frag: '+{f} fragmentos de {n}', equipo_n: 'Equipo: {n}/3', en_equipo: 'EQUIPO', poner_equipo: '➕ Poner en el equipo', quitar_equipo: '➖ Quitar del equipo', equipo_lleno: 'Tu equipo ya tiene 3 héroes. Quita uno primero.', subir_nivel: 'Subir nivel', subir_estrella: '⭐ Subir estrella', nivel_tope: 'Sube una estrella para pasar del nivel {n}.', fragmentos: 'Fragmentos', poder_heroe: 'Poder', bloqueado: '🔒 Consíguelo reclutando', rareza_comun: 'Común', rareza_raro: 'Raro', rareza_legendario: 'Legendario', clase_infanteria: 'Infantería', clase_arquero: 'Arquero', clase_magia: 'Magia', clase_guardian: 'Guardián', heroe_sube: '⬆️ ¡{n} subió al nivel {v}!', heroe_estrella: '⭐ ¡{n} ahora tiene {v} estrellas!', volver: '⬅ Volver', resultado: 'Resultado', estrellas_max: '★ Estrellas al máximo', cada_s: 'cada {s} s', ref_titulo: '📣 Refuerzos', ref_txt: 'Tus tropas pueden defender el reino de un aliado: pelean en sus oleadas y suman a su defensa. Las puedes retirar cuando quieras.', ref_pedir: '📣 Pedir refuerzos', ref_pedido_hecho: '📣 Pediste refuerzos a tu hermandad.', ref_quitar_pedido: 'Quitar pedido', ref_pedidos: 'Piden ayuda', ref_ninguno: 'Nadie está pidiendo ayuda ahora.', ref_reforzar: '🛡️ Reforzar', ref_en_reino: 'Refuerzos en tu reino', ref_enviados: 'Tus refuerzos enviados', ref_devolver: 'Devolver', ref_retirar: 'Retirar', ref_de: '{n} tropas de {q}', ref_a: '{n} tropas en el reino de {q}', ref_enviar_a: 'Enviar refuerzos a {q}', ref_tienes: 'Tienes {n}', ref_enviar: '🛡️ Enviar refuerzos', ref_enviado: '🛡️ ¡Refuerzos enviados a {q}!', ref_volvieron: '🛡️ Volvieron {n} tropas del reino de {q}', ref_error: 'No se pudo. Revisa tu internet y que los dos estén en la misma hermandad.', ref_en_oleada: 'Espera a que termine la oleada.', ref_nada: 'Elige al menos una tropa.', ref_llegaron: '🛡️ ¡Llegaron refuerzos de {q}!', ref_devueltos: 'Devolviste los refuerzos.', ref_retirados: 'Tus tropas vuelven a casa.', ref_nadie: 'Todavía no hay refuerzos.', toca_tu_castillo: '👑 Toca tu castillo para entrar a tu ciudad', entrar_ciudad: 'Entrar', bienvenido_ciudad: '🏰 ¡Bienvenido a tu ciudad!', armaduras_tienda: '🛡️ Armaduras', armaduras_tienda_txt: 'Ponle armadura a un tipo de tropa: todas las de ese tipo (y las que entrenes) la llevan puesta.', armadura_para: 'Armadura {n} — {t}', entrenando_n: '⚔️ Entrenando {n} tropas', maximo: 'Máx', terminar_ya: 'Terminar ya', terminado_gemas: '💎 ¡Terminado!', escudo_activo: '🛡️ Escudo activo: faltan {t}. Espera a que se acabe para poner otro.', escudo_activo_btn: 'Activo: {t}', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
     p_investigar: 'Investigación', investigar: 'Investigar', rama_crecimiento: 'Crecimiento', rama_economia: 'Economía', rama_batalla: 'Batalla',
     inv_txt: 'Cada tecnología mejora algo de verdad en tu reino. Solo se investiga una a la vez.', inv_ahora: 'Ahora', inv_siguiente: 'Siguiente',
     inv_en_curso: 'Investigando: {n} (nivel {l})', inv_falta: 'Faltan {s} s', inv_ocupada: 'La Academia ya está investigando.',
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>📣 <b>Refuerzos entre aliados</b>: en HERMANDAD pide refuerzos o manda tus tropas a un aliado. Defienden su reino en las oleadas y suman a su defensa.</li><li>↩️ Puedes <b>retirar</b> tus tropas cuando quieras, y quien las recibe las puede <b>devolver</b>. Vuelven las que sobrevivieron.</li><li>🗺️ En el mapa, toca el castillo de un aliado y pulsa <b>Reforzar</b>.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🦸 <b>8 héroes nuevos</b> con su poder especial. En GUARDIA → Héroes: recluta (¡1 gratis cada día!), sube de nivel y estrellas, y arma tu equipo de 3.</li><li>⚔️ <b>Entrena sin límite</b>: mientras tengas materiales. Ojo: las tropas comen.</li><li>🎵 <b>Sonido nuevo</b> y música medieval (se apaga en Ajustes).</li><li>☁️ Nubes más reales.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -209,11 +209,11 @@ var TEXTOS = {
     cancelar: 'Cancel',
     vida: 'Health', dano: 'Damage', alcance: 'Range', produce: 'Makes', cada: 'every {s}s',
     capacidad: 'Capacity', velocidad_ent: 'Trains faster',
-    tropas_vivas: 'Troops on the field: {a}/{b}',
+    tropas_vivas: 'Troops: {a}', sin_tope: 'Train without limit',
     invocar3: 'Summon 3 random troops', invocar3_txt: 'They appear right away, no waiting.',
     heroe_txt: 'A very strong hero who heals over time. Only one at a time.',
     heroe_vivo: 'Your hero is already on the field.',
-    sonido: 'Sound', idioma: 'Language', velocidad: 'Speed',
+    sonido: 'Sound', musica: 'Music', idioma: 'Language', velocidad: 'Speed',
     pruebas: 'Testing tool (owner only)',
     pruebas_txt: 'Button for testing. It cannot be sold or given to other players.',
     dar_gemas: '+100 test gems', dar_monedas: '+500 test coins',
@@ -256,7 +256,7 @@ var TEXTOS = {
     mis_objetos: 'Your items', usar: 'Use', abrir: 'Open', recibiste: '🎁 You got: {t}', tropas_regalo: '{n} troops',
     tienda_txt: 'Buy with gems. What you buy goes to your Chest 🧳. Gems are won in waves and from the daily chest.',
     tienda_real: 'Real-money purchases: coming with the App Store version.', comprar: 'Buy', comprado: '{n}: saved in your Chest 🧳',
-    acelerador_usado: '⏩ You took 1 hour off all buildings!', ref_titulo: '📣 Reinforcements', ref_txt: 'Your troops can defend an ally’s kingdom: they fight in their waves and add to their defense. You can call them back any time.', ref_pedir: '📣 Ask for reinforcements', ref_pedido_hecho: '📣 You asked your guild for reinforcements.', ref_quitar_pedido: 'Remove request', ref_pedidos: 'Asking for help', ref_ninguno: 'Nobody is asking for help right now.', ref_reforzar: '🛡️ Reinforce', ref_en_reino: 'Reinforcements in your kingdom', ref_enviados: 'Your reinforcements sent', ref_devolver: 'Send back', ref_retirar: 'Call back', ref_de: '{n} troops from {q}', ref_a: '{n} troops in {q}’s kingdom', ref_enviar_a: 'Send reinforcements to {q}', ref_tienes: 'You have {n}', ref_enviar: '🛡️ Send reinforcements', ref_enviado: '🛡️ Reinforcements sent to {q}!', ref_volvieron: '🛡️ {n} troops came back from {q}’s kingdom', ref_error: 'Could not do it. Check your internet and that you are both in the same guild.', ref_en_oleada: 'Wait until the wave ends.', ref_nada: 'Choose at least one troop.', ref_llegaron: '🛡️ Reinforcements arrived from {q}!', ref_devueltos: 'You sent the reinforcements back.', ref_retirados: 'Your troops are coming home.', ref_nadie: 'No reinforcements yet.', toca_tu_castillo: '👑 Tap your castle to enter your city', entrar_ciudad: 'Enter', bienvenido_ciudad: '🏰 Welcome to your city!', armaduras_tienda: '🛡️ Armor', armaduras_tienda_txt: 'Give armor to a troop type: every troop of that type (and new ones) wears it.', armadura_para: 'Armor {n} — {t}', entrenando_n: '⚔️ Training {n} troops', maximo: 'Max', terminar_ya: 'Finish now', terminado_gemas: '💎 Done!', escudo_activo: '🛡️ Shield active: {t} left. Wait until it ends to use another one.', escudo_activo_btn: 'Active: {t}', nada_acelerar: 'Nothing is being built or trained.',
+    acelerador_usado: '⏩ You took 1 hour off all buildings!', sub_heroes: 'Heroes', heroes_txt: 'Your heroes come out of the castle every wave and use their power. Take up to 3 in your team.', reclutar: 'Recruit hero', reclutar_gratis: '🎁 Free today', reclutar_txt: 'Recruit to get new heroes. If you get one you already have, you earn shards to raise its stars.', heroe_nuevo: '🎉 New hero: {n}!', heroe_frag: '+{f} {n} shards', equipo_n: 'Team: {n}/3', en_equipo: 'TEAM', poner_equipo: '➕ Add to team', quitar_equipo: '➖ Remove from team', equipo_lleno: 'Your team already has 3 heroes. Remove one first.', subir_nivel: 'Level up', subir_estrella: '⭐ Raise star', nivel_tope: 'Raise a star to go above level {n}.', fragmentos: 'Shards', poder_heroe: 'Power', bloqueado: '🔒 Get it by recruiting', rareza_comun: 'Common', rareza_raro: 'Rare', rareza_legendario: 'Legendary', clase_infanteria: 'Infantry', clase_arquero: 'Archer', clase_magia: 'Magic', clase_guardian: 'Guardian', heroe_sube: '⬆️ {n} reached level {v}!', heroe_estrella: '⭐ {n} now has {v} stars!', volver: '⬅ Back', resultado: 'Result', estrellas_max: '★ Max stars', cada_s: 'every {s} s', ref_titulo: '📣 Reinforcements', ref_txt: 'Your troops can defend an ally’s kingdom: they fight in their waves and add to their defense. You can call them back any time.', ref_pedir: '📣 Ask for reinforcements', ref_pedido_hecho: '📣 You asked your guild for reinforcements.', ref_quitar_pedido: 'Remove request', ref_pedidos: 'Asking for help', ref_ninguno: 'Nobody is asking for help right now.', ref_reforzar: '🛡️ Reinforce', ref_en_reino: 'Reinforcements in your kingdom', ref_enviados: 'Your reinforcements sent', ref_devolver: 'Send back', ref_retirar: 'Call back', ref_de: '{n} troops from {q}', ref_a: '{n} troops in {q}’s kingdom', ref_enviar_a: 'Send reinforcements to {q}', ref_tienes: 'You have {n}', ref_enviar: '🛡️ Send reinforcements', ref_enviado: '🛡️ Reinforcements sent to {q}!', ref_volvieron: '🛡️ {n} troops came back from {q}’s kingdom', ref_error: 'Could not do it. Check your internet and that you are both in the same guild.', ref_en_oleada: 'Wait until the wave ends.', ref_nada: 'Choose at least one troop.', ref_llegaron: '🛡️ Reinforcements arrived from {q}!', ref_devueltos: 'You sent the reinforcements back.', ref_retirados: 'Your troops are coming home.', ref_nadie: 'No reinforcements yet.', toca_tu_castillo: '👑 Tap your castle to enter your city', entrar_ciudad: 'Enter', bienvenido_ciudad: '🏰 Welcome to your city!', armaduras_tienda: '🛡️ Armor', armaduras_tienda_txt: 'Give armor to a troop type: every troop of that type (and new ones) wears it.', armadura_para: 'Armor {n} — {t}', entrenando_n: '⚔️ Training {n} troops', maximo: 'Max', terminar_ya: 'Finish now', terminado_gemas: '💎 Done!', escudo_activo: '🛡️ Shield active: {t} left. Wait until it ends to use another one.', escudo_activo_btn: 'Active: {t}', nada_acelerar: 'Nothing is being built or trained.',
     p_investigar: 'Research', investigar: 'Research', rama_crecimiento: 'Growth', rama_economia: 'Economy', rama_batalla: 'Battle',
     inv_txt: 'Each technology really improves something in your kingdom. Only one at a time.', inv_ahora: 'Now', inv_siguiente: 'Next',
     inv_en_curso: 'Researching: {n} (level {l})', inv_falta: '{s} s left', inv_ocupada: 'The Academy is already researching.',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>📣 <b>Reinforcements between allies</b>: in GUILD ask for reinforcements or send your troops to an ally. They defend their kingdom in waves and add to their defense.</li><li>↩️ You can <b>call back</b> your troops any time, and the receiver can <b>send them back</b>. Survivors return.</li><li>🗺️ On the map, tap an ally’s castle and press <b>Reinforce</b>.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🦸 <b>8 new heroes</b> with special powers. In GUARD → Heroes: recruit (1 free every day!), raise levels and stars, and build your team of 3.</li><li>⚔️ <b>Train without limit</b> while you have materials. Careful: troops eat.</li><li>🎵 <b>New sound</b> and medieval music (turn it off in Settings).</li><li>☁️ More realistic clouds.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
@@ -577,3 +577,53 @@ var ACELERADOR_SEG = 3600;
 // Cuarteles más grandes para tener ejércitos grandes: 10, 15, 20 y +4 por nivel (nivel 12 = 56 cada uno)
 EDIFICIOS.cuartel.capacidad = [10, 15, 20];
 while (EDIFICIOS.cuartel.capacidad.length < NIVEL_MAX) EDIFICIOS.cuartel.capacidad.push(EDIFICIOS.cuartel.capacidad[EDIFICIOS.cuartel.capacidad.length - 1] + 4);
+
+// =====================================================================
+//  HÉROES: personajes propios del juego (nombres y aspecto inventados).
+//  Salen del castillo en cada oleada (hasta 3 en el equipo) y usan su poder.
+// =====================================================================
+var RAREZAS = {
+  comun:      { peso: 60, costoNivel: 1.0 },
+  raro:       { peso: 30, costoNivel: 1.4 },
+  legendario: { peso: 10, costoNivel: 2.0 }
+};
+var CLASES_HEROE = { infanteria: '⚔️', arquero: '🏹', magia: '✨', guardian: '🛡️' };
+// look: cómo se ve el muñeco (colores, peinado, sombrero, barba, arma)
+var HEROES = [
+  { id: 'sol', rareza: 'legendario', clase: 'infanteria', hab: 'grito', vida: 950, dano: 42, alcance: 1.7,
+    look: { ropa: 0xe0b040, ropa2: 0xb8862a, sombrero: 'casco', arma: 'espada', capa: 0xd2463a } },
+  { id: 'luna', rareza: 'legendario', clase: 'magia', hab: 'rayo', vida: 620, dano: 40, alcance: 7, distancia: true,
+    look: { ropa: 0x6a3fb8, ropa2: 0x3f2672, pelo: 0x2a2030, peinado: 'largo', sombrero: 'bruja', arma: 'varita', capa: 0x3f2672 } },
+  { id: 'ancla', rareza: 'legendario', clase: 'infanteria', hab: 'canon', vida: 1100, dano: 46, alcance: 1.8,
+    look: { ropa: 0xb8302a, ropa2: 0x2a2320, pelo: 0xf0eee8, peinado: 'corto', barba: 0xf0eee8, sombrero: 'tricornio', arma: 'sable', capa: 0x7a1a14 } },
+  { id: 'brisa', rareza: 'raro', clase: 'arquero', hab: 'lluvia', vida: 560, dano: 30, alcance: 8, distancia: true,
+    look: { ropa: 0x2f8a5a, ropa2: 0x1f5a3a, pelo: 0xd2462a, peinado: 'trenza', arma: 'arco' } },
+  { id: 'chispa', rareza: 'raro', clase: 'infanteria', hab: 'bomba', vida: 700, dano: 32, alcance: 1.6,
+    look: { ropa: 0x3a6fc0, ropa2: 0x8a5a33, pelo: 0x6a3a1a, peinado: 'mono', sombrero: 'gafas', arma: 'martillo' } },
+  { id: 'roble', rareza: 'comun', clase: 'guardian', hab: 'escudo', vida: 1300, dano: 22, alcance: 1.5,
+    look: { ropa: 0x7a5434, ropa2: 0x4a3420, pelo: 0xd86a2a, peinado: 'calvo', barba: 0xd86a2a, arma: 'hacha', escudo: 0x8a5a33 } },
+  { id: 'trueno', rareza: 'comun', clase: 'infanteria', hab: 'golpe', vida: 900, dano: 30, alcance: 1.6,
+    look: { ropa: 0xffd3b0, ropa2: 0x5a4a40, pelo: 0x2a2320, peinado: 'calvo', barba: 0x2a2320, sombrero: 'panuelo', arma: 'hacha2' } },
+  { id: 'pluma', rareza: 'comun', clase: 'magia', hab: 'curar', vida: 600, dano: 18, alcance: 6, distancia: true,
+    look: { ropa: 0xf2ece0, ropa2: 0xc9b896, pelo: 0xf0c860, peinado: 'largo', sombrero: 'capucha', arma: 'baston' } }
+];
+var HEROE = {}; HEROES.forEach(function (h) { HEROE[h.id] = h; });
+var HEROE_NIVEL_MAX = 50;                 // cada estrella deja subir 10 niveles más
+var HEROE_FRAGMENTOS = [10, 20, 40, 80];  // fragmentos para pasar a 2, 3, 4 y 5 estrellas
+var RECLUTAR = { uno: 30, diez: 270, repetido: 10 }; // gemas, y fragmentos si sale uno que ya tienes
+// Poderes: cada cuánto se usan (segundos) y a qué distancia
+var HABILIDADES = {
+  grito:  { cd: 12, rango: 8,   icono: '📯', es: 'Grito de guerra', en: 'War cry', des_es: 'Las tropas cercanas hacen 40% más daño por 5 segundos.', des_en: 'Nearby troops deal 40% more damage for 5 seconds.' },
+  rayo:   { cd: 8,  rango: 12,  icono: '⚡', es: 'Rayo saltarín', en: 'Chain lightning', des_es: 'Un rayo que salta a 4 enemigos.', des_en: 'Lightning that jumps to 4 enemies.' },
+  canon:  { cd: 10, rango: 9,   icono: '💥', es: 'Cañonazo', en: 'Cannon blast', des_es: 'Golpe enorme al enemigo más fuerte y a los de al lado.', des_en: 'Huge hit on the strongest enemy and the ones next to it.' },
+  lluvia: { cd: 8,  rango: 14,  icono: '🏹', es: 'Lluvia de flechas', en: 'Arrow rain', des_es: 'Muchas flechas caen sobre un grupo de enemigos.', des_en: 'Many arrows fall on a group of enemies.' },
+  bomba:  { cd: 9,  rango: 7,   icono: '💣', es: 'Bomba', en: 'Bomb', des_es: 'Explota y daña a todos los enemigos de alrededor.', des_en: 'Explodes and hurts all enemies around.' },
+  escudo: { cd: 10, rango: 8,   icono: '🛡️', es: 'Muro de escudos', en: 'Shield wall', des_es: 'Las tropas cercanas reciben la mitad de daño por 5 segundos.', des_en: 'Nearby troops take half damage for 5 seconds.' },
+  golpe:  { cd: 9,  rango: 3.5, icono: '🌀', es: 'Golpe de trueno', en: 'Thunder slam', des_es: 'Golpea el suelo y deja a los enemigos mareados 2 segundos.', des_en: 'Slams the ground and stuns enemies for 2 seconds.' },
+  curar:  { cd: 8,  rango: 10,  icono: '💚', es: 'Luz sanadora', en: 'Healing light', des_es: 'Cura un 25% de vida a las tropas cercanas.', des_en: 'Heals nearby troops by 25%.' }
+};
+var NOMBRES_HEROES = {
+  sol: { es: 'Sir Sol', en: 'Sir Sol' }, luna: { es: 'Luna', en: 'Luna' }, ancla: { es: 'Capitán Ancla', en: 'Captain Anchor' },
+  brisa: { es: 'Brisa', en: 'Breeze' }, chispa: { es: 'Chispa', en: 'Spark' }, roble: { es: 'Roble', en: 'Oak' },
+  trueno: { es: 'Trueno', en: 'Thunder' }, pluma: { es: 'Pluma', en: 'Feather' }
+};

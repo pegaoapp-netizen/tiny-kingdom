@@ -812,3 +812,32 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .fila-ref-barra input[type=range] { flex: 1; min-width: 0; accent-color: #2fa86a; }
 .fila-ref-barra .num { min-width: 28px; text-align: right; }
 .fila-ref-barra .comprar.mini { width: auto; flex: 0 0 auto; padding: 4px 8px; font-size: 12px; }
+
+/* ---------- tarjetas de héroes ---------- */
+.heroes-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 360px) { .heroes-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.hcard { position: relative; display: flex; flex-direction: column; align-items: center; padding: 4px 3px 5px; border-radius: 12px; border: 2px solid rgba(0,0,0,.25);
+  background: linear-gradient(#6fb6f2, #2f6fc0); color: #fff; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.25); font: inherit; min-width: 0; }
+.hcard.raro { background: linear-gradient(#b48cf0, #6a3fb8); }
+.hcard.legendario { background: linear-gradient(#ffd36a, #d98a10); }
+.hcard.bloq { filter: grayscale(1) brightness(.75); }
+.hcard img { width: 100%; aspect-ratio: 1; display: block; border-radius: 8px; background: rgba(255,255,255,.18); }
+.hcard .clase { position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; line-height: 20px; font-size: 12px; border-radius: 50%; background: rgba(0,0,0,.35); z-index: 1; }
+.hcard .sube { position: absolute; top: 2px; right: 5px; color: #5dff7a; font-weight: 900; text-shadow: 0 1px 0 #000; z-index: 1; }
+.hcard .eq { position: absolute; top: 52%; left: 0; right: 0; background: #e09a10; color: #3a2414; font-size: 9px; font-weight: 900; letter-spacing: .5px; }
+.hcard .nom { font-size: 11px; font-weight: 800; line-height: 1.1; margin-top: 3px; text-shadow: 0 1px 0 rgba(0,0,0,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.hcard .nv { font-size: 11px; font-weight: 900; text-shadow: 0 1px 0 #000; }
+.hcard .est { font-size: 11px; color: #ffe14a; letter-spacing: -1px; text-shadow: 0 1px 0 rgba(0,0,0,.6); }
+.heroe-ficha { display: flex; gap: 10px; align-items: center; }
+.heroe-ficha.comun { background: linear-gradient(#e6f2ff, #c9e0fa); }
+.heroe-ficha.raro { background: linear-gradient(#f1e8ff, #dcc9fa); }
+.heroe-ficha.legendario { background: linear-gradient(#fff4d6, #ffe0a0); }
+.heroe-grande { width: 120px; flex: 0 0 120px; }
+.heroe-grande img { width: 100%; display: block; }
+.estrellas-grandes { color: #e0a020; font-size: 20px; letter-spacing: 1px; margin: 2px 0; text-shadow: 0 1px 0 rgba(0,0,0,.2); }
+.reclutados .reclutado { text-align: center; min-width: 0; animation: aparecer .4s ease-out both; }
+.reclutados .reclutado .nota { font-size: 10px; margin: 2px 0 0; }
+.reclutados .reclutado:nth-child(2) { animation-delay: .08s; } .reclutados .reclutado:nth-child(3) { animation-delay: .16s; }
+.reclutados .reclutado:nth-child(4) { animation-delay: .24s; } .reclutados .reclutado:nth-child(5) { animation-delay: .32s; }
+.reclutados .reclutado:nth-child(n+6) { animation-delay: .4s; }
+@keyframes aparecer { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }

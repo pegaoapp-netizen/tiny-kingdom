@@ -939,7 +939,7 @@ var M = (function () {
   var MAT_BLOB = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false });
   // Colores de la armadura por nivel: 1 metal, 2 acero azul, 3 oro
   var COLOR_ARMADURA = [0, 0xd6dde5, 0x6f8fb5, 0xf5c542];
-  function unidad(tipo, tam, armadura) {
+  function unidad(tipo, tam, armadura, look) {
     armadura = armadura || 0;
     var g = new THREE.Group();     // grupo principal (posición en el mundo)
     var cuerpo = new THREE.Group(); // todo lo que se balancea al caminar
@@ -954,7 +954,8 @@ var M = (function () {
     if (tipo === 'ogro') { piel = C.ogro; ropa = 0x6a3a2a; ropa2 = 0x3a1a10; escala = 2.5; }
     if (tipo === 'aldeano') { ropa = 0xb5835a; ropa2 = 0x6a4a30; escala = 0.85; }
     if (tipo === 'caballeria') { ropa = 0x7a4fc0; ropa2 = 0x3f2a72; escala = 0.95; }
-    var esCaballero = tipo === 'espadachin' || tipo === 'guardian' || tipo === 'heroe' || tipo === 'caballeria';
+    if (look) { ropa = look.ropa; ropa2 = look.ropa2; if (look.piel) piel = look.piel; escala = 1.3; }
+    var esCaballero = tipo === 'espadachin' || tipo === 'guardian' || (tipo === 'heroe' && (!look || look.sombrero === 'casco')) || tipo === 'caballeria';
     var colArm = COLOR_ARMADURA[armadura] || C.metal;
 
     // piernas
@@ -969,7 +970,7 @@ var M = (function () {
     // tronco
     cuerpo.add(cil(0.27, 0.33, 0.46, 8, ropa, 0, 0.54, 0));
     cuerpo.add(cil(0.335, 0.335, 0.08, 8, C.maderaOsc, 0, 0.4, 0));
-    if (tipo !== 'trasgo' && tipo !== 'bruto' && tipo !== 'ogro' && tipo !== 'aldeano' && (tipo !== 'arquero' || armadura > 0))
+    if (tipo !== 'trasgo' && tipo !== 'bruto' && tipo !== 'ogro' && tipo !== 'aldeano' && (tipo !== 'arquero' || armadura > 0) && (!look || look.sombrero === 'casco'))
       cuerpo.add(cil(0.22, 0.28, 0.3, 8, armadura >= 2 ? colArm : C.metal, 0, 0.62, 0.06).rotateX(0.05));
     // hombreras desde el nivel 1 de armadura; capa desde el nivel 3
     if (armadura >= 1) {
@@ -987,6 +988,7 @@ var M = (function () {
     cuerpo.add(cabeza);
     p.cabeza = cabeza;
 
+    if (look) accesoriosHeroe(cabeza, cuerpo, look);
     // ---- casco / pelo según el tipo ----
     if (esCaballero) {
       var casco = malla(geo('casco', function () { return new THREE.SphereGeometry(0.41, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2); }),
@@ -1039,7 +1041,9 @@ var M = (function () {
     brazo.add(esfera(0.08, piel, 0, -0.3, 0, 6, 5));
     var arma = new THREE.Group();
     arma.position.set(0, -0.3, 0.05);
-    if (tipo === 'espadachin' || tipo === 'heroe') {
+    if (look && look.arma !== 'espada') {
+      armaHeroe(arma, cuerpo, look);
+    } else if (tipo === 'espadachin' || tipo === 'heroe') {
       var largo = tipo === 'heroe' ? 0.95 : 0.7;
       arma.add(caja(0.07, largo, 0.025, C.metal, 0, largo / 2 + 0.08, 0));
       arma.add(caja(0.26, 0.05, 0.06, C.oro, 0, 0.08, 0));
@@ -1077,9 +1081,9 @@ var M = (function () {
     izq.position.set(-0.33, 0.68, 0);
     izq.add(caja(0.13, 0.32, 0.13, ropa, 0, -0.12, 0));
     izq.add(esfera(0.08, piel, 0, -0.3, 0, 6, 5));
-    if (esCaballero) {
-      var r = tipo === 'guardian' ? 0.42 : 0.28;
-      var escudo = cil(r, r, 0.07, 10, tipo === 'heroe' ? C.oro : C.azul, -0.06, -0.15, 0.12);
+    if (esCaballero || (look && look.escudo)) {
+      var r = tipo === 'guardian' || (look && look.escudo) ? 0.42 : 0.28;
+      var escudo = cil(r, r, 0.07, 10, look && look.escudo ? look.escudo : tipo === 'heroe' ? C.oro : C.azul, -0.06, -0.15, 0.12);
       escudo.rotation.z = Math.PI / 2;
       escudo.rotation.y = Math.PI / 2;
       izq.add(escudo);
@@ -1090,8 +1094,8 @@ var M = (function () {
     p.izq = izq;
 
     // capa del héroe
-    if (tipo === 'heroe') {
-      var capa = caja(0.6, 0.75, 0.04, C.rojo, 0, 0.55, -0.34);
+    if (tipo === 'heroe' && (!look || look.capa)) {
+      var capa = caja(0.6, 0.75, 0.04, look ? look.capa : C.rojo, 0, 0.55, -0.34);
       capa.rotation.x = 0.15;
       cuerpo.add(capa);
     }
@@ -1140,6 +1144,83 @@ var M = (function () {
     escala *= (tam || TAM_UNIDAD);
     g.scale.setScalar(escala);
     return { grupo: g, cuerpo: cuerpo, p: p, escala: escala, baseY: baseY };
+  }
+
+  // ---- piezas de los héroes: pelo, barba, sombreros y armas ----
+  function accesoriosHeroe(cabeza, cuerpo, k) {
+    var pe = k.pelo;
+    if (pe !== undefined && k.peinado !== 'calvo') {
+      cabeza.add(malla(geo('peloCap', function () { return new THREE.SphereGeometry(0.405, 14, 8, 0, Math.PI * 2, 0, Math.PI * 0.42); }), mat(pe), 0, 0.03, -0.02));
+      if (k.peinado === 'largo') { cabeza.add(caja(0.66, 0.6, 0.18, pe, 0, -0.18, -0.28)); [-1, 1].forEach(function (s) { cabeza.add(caja(0.12, 0.45, 0.2, pe, s * 0.36, -0.15, -0.05)); }); }
+      if (k.peinado === 'trenza') { cabeza.add(caja(0.6, 0.3, 0.14, pe, 0, 0.0, -0.3)); for (var i = 0; i < 4; i++) cabeza.add(esfera(0.1 - i * 0.012, pe, 0.3, -0.18 - i * 0.16, -0.22 + i * 0.03, 6, 5)); }
+      if (k.peinado === 'mono') cabeza.add(esfera(0.17, pe, 0, 0.36, -0.2, 8, 6));
+      if (k.peinado === 'corto') [-1, 1].forEach(function (s) { cabeza.add(caja(0.1, 0.22, 0.24, pe, s * 0.37, -0.02, -0.04)); });
+    }
+    if (k.barba !== undefined) {
+      var b = esfera(0.3, k.barba, 0, -0.24, 0.14, 10, 8); b.scale.set(1.05, 0.95, 0.7); cabeza.add(b);
+      cabeza.add(caja(0.34, 0.07, 0.1, k.barba, 0, -0.1, 0.34));
+    }
+    if (k.sombrero === 'bruja') {
+      cabeza.add(cil(0.62, 0.62, 0.04, 14, k.ropa2, 0, 0.26, 0));
+      var pico = cono(0.33, 0.8, 10, k.ropa, 0, 0.66, -0.06); pico.rotation.x = -0.25; cabeza.add(pico);
+      cabeza.add(cil(0.34, 0.34, 0.07, 12, C.oro, 0, 0.32, 0));
+    }
+    if (k.sombrero === 'tricornio') {
+      var tc = cil(0.6, 0.6, 0.12, 3, 0x1a1614, 0, 0.3, 0); tc.rotation.y = Math.PI / 6; cabeza.add(tc);
+      cabeza.add(cil(0.34, 0.38, 0.26, 10, 0x1a1614, 0, 0.44, 0));
+      cabeza.add(esfera(0.07, C.blanco, 0, 0.42, 0.36, 6, 4));
+      cabeza.add(cil(0.39, 0.39, 0.04, 10, C.oro, 0, 0.36, 0));
+    }
+    if (k.sombrero === 'gafas') {
+      cabeza.add(cil(0.41, 0.41, 0.07, 14, 0x5a3a20, 0, 0.2, 0));
+      [-1, 1].forEach(function (s) {
+        var ar = cil(0.11, 0.11, 0.08, 10, 0xc9a040, s * 0.14, 0.24, 0.34); ar.rotation.x = Math.PI / 2 - 0.3; cabeza.add(ar);
+        var vi = cil(0.08, 0.08, 0.09, 10, 0x7fd0f0, s * 0.14, 0.24, 0.35); vi.rotation.x = Math.PI / 2 - 0.3; cabeza.add(vi);
+      });
+    }
+    if (k.sombrero === 'capucha') {
+      cabeza.add(malla(geo('capuchaH', function () { return new THREE.SphereGeometry(0.44, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.6); }), mat(k.ropa), 0, 0.01, -0.04));
+      cabeza.add(cono(0.16, 0.36, 6, k.ropa, 0, 0.28, -0.28).rotateX(-1.0));
+    }
+    if (k.sombrero === 'panuelo') {
+      cabeza.add(malla(geo('panuelo', function () { return new THREE.SphereGeometry(0.41, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.32); }), mat(0x8a96a6), 0, 0.04, 0));
+      cabeza.add(caja(0.08, 0.2, 0.12, 0x8a96a6, 0.1, 0.05, -0.42).rotateZ(0.5));
+    }
+  }
+  function armaHeroe(arma, cuerpo, k) {
+    if (k.arma === 'arco') {
+      var arco = malla(geo('arco', function () { return new THREE.TorusGeometry(0.34, 0.03, 4, 10, Math.PI); }), mat(C.madera), 0, 0.05, 0.05);
+      arco.rotation.set(0, Math.PI / 2, Math.PI / 2); arma.add(arco);
+      cuerpo.add(cil(0.08, 0.08, 0.45, 6, C.cuero, -0.12, 0.65, -0.3).rotateZ(0.4));
+      return;
+    }
+    if (k.arma === 'varita' || k.arma === 'baston') {
+      var lg = k.arma === 'baston' ? 1.2 : 0.6;
+      arma.add(cil(0.03, 0.04, lg, 6, k.arma === 'baston' ? C.madera : 0x2a2030, 0, lg / 2, 0));
+      var gema = malla(geo('gemaHeroe' + k.arma, function () { return new THREE.OctahedronGeometry(k.arma === 'baston' ? 0.13 : 0.09, 0); }),
+        new THREE.MeshBasicMaterial({ color: k.arma === 'baston' ? 0x7fe39a : 0xc79bff }), 0, lg + 0.06, 0, false);
+      arma.add(gema);
+      arma.rotation.x = 0.4;
+      return;
+    }
+    if (k.arma === 'sable') {
+      var hoja = caja(0.06, 0.8, 0.025, C.metal, 0.04, 0.5, 0); hoja.rotation.z = -0.12; arma.add(hoja);
+      arma.add(cil(0.1, 0.1, 0.04, 8, C.oro, 0, 0.1, 0));
+      arma.add(caja(0.05, 0.12, 0.05, C.maderaOsc, 0, 0.02, 0));
+      arma.rotation.x = 1.3; return;
+    }
+    if (k.arma === 'martillo') {
+      arma.add(cil(0.035, 0.035, 0.7, 6, C.madera, 0, 0.32, 0));
+      arma.add(caja(0.34, 0.2, 0.2, 0x8d99a6, 0, 0.68, 0));
+      arma.add(caja(0.08, 0.22, 0.22, 0xc9a040, 0.18, 0.68, 0));
+      arma.rotation.x = 1.25; return;
+    }
+    // hachas
+    var doble = k.arma === 'hacha2';
+    arma.add(cil(0.035, 0.035, 0.8, 6, C.maderaOsc, 0, 0.36, 0));
+    arma.add(caja(0.05, 0.3, 0.3, C.metal, 0, 0.68, 0.14));
+    if (doble) arma.add(caja(0.05, 0.3, 0.3, C.metal, 0, 0.68, -0.14));
+    arma.rotation.x = 1.2;
   }
 
   // Animación de caminar / atacar
@@ -1379,17 +1460,35 @@ var M = (function () {
     return r;
   }
 
-  var matNube = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, transparent: true, opacity: 0.92 });
+  // Nubes suaves: una textura esponjosa pintada en el momento (sin imágenes externas)
+  var texNube = (function () {
+    var T = 256, c = document.createElement('canvas'); c.width = T; c.height = T;
+    var x = c.getContext('2d');
+    var bolitas = [[128, 150, 70], [80, 160, 52], [176, 162, 56], [110, 112, 58], [158, 118, 50], [60, 176, 36], [200, 178, 38], [130, 182, 60]];
+    bolitas.forEach(function (b) {
+      var g = x.createRadialGradient(b[0], b[1], 0, b[0], b[1], b[2]);
+      g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.55, 'rgba(255,255,255,0.75)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.fillRect(0, 0, T, T);
+    });
+    // la parte de abajo un poco gris, como las nubes de verdad
+    x.globalCompositeOperation = 'source-atop';
+    var v = x.createLinearGradient(0, 90, 0, 230);
+    v.addColorStop(0, 'rgba(255,255,255,0)'); v.addColorStop(1, 'rgba(150,160,180,0.55)');
+    x.fillStyle = v; x.fillRect(0, 0, T, T);
+    var tx = new THREE.CanvasTexture(c);
+    return tx;
+  })();
+  var matNube = new THREE.SpriteMaterial({ map: texNube, color: 0xffffff, transparent: true, opacity: 0.88, depthWrite: false });
   function nube() {
     var g = new THREE.Group();
-    var m = matNube;
-    var gi = geo('nube', function () { return new THREE.IcosahedronGeometry(1, 0); });
-    var n = 3 + Math.floor(Math.random() * 3);
+    var n = 4 + Math.floor(Math.random() * 4);
     for (var i = 0; i < n; i++) {
-      var b = new THREE.Mesh(gi, m);
-      b.position.set(i * 1.5 - n * 0.7, Math.random() * 0.6, Math.random() * 1.2);
-      b.scale.setScalar(1.2 + Math.random() * 1.1);
-      g.add(b);
+      var s = new THREE.Sprite(matNube);
+      var k = 7 + Math.random() * 6;
+      s.position.set((i - n / 2) * 3.2 + Math.random() * 1.5, Math.random() * 1.6, (Math.random() - 0.5) * 4);
+      s.scale.set(k, k * 0.62, 1);
+      s.renderOrder = 3;
+      g.add(s);
     }
     return g;
   }
