@@ -80,3 +80,16 @@ NOVEDADES (versiones 1.1 a 1.6)
   - Investigación en la Academia: ramas Crecimiento, Economía y Batalla.
   - Tocar una tropa o un enemigo muestra su ficha.
   Reglas de la nube (aldeas y alianzas): juego3d\nube\firestore.rules
+
+NOVEDADES VISUALES (versión 2.1) — solo cambia cómo se ve, no las reglas
+  - Suelo con textura de pasto (manchas, tierra, florecitas); estacas solo al construir.
+  - Sol de tarde con sombras en todos los modos de calidad; luz cálida.
+  - 4 tipos de árbol (pino, redondo, frondoso, palmera), más arbustos, rocas y hierba alta.
+  - Techos de teja terracota, piedra clara, antorchas, barriles, cajas, almenas en la muralla.
+  - Gallinas y cabras sueltas, 10 aldeanos, humo suave en las chimeneas.
+  - Ciclo de día y noche (8 minutos): de noche se encienden ventanas y antorchas.
+    Para probar desde la consola: __juego.hora(0.82) = noche, __juego.hora(0.3) = día,
+    __juego.hora(null) = vuelve al ciclo normal.
+  - Cámara suave con inercia; más baja al acercarse.
+  - Barra de abajo propia: Frontera, Guardia, Baúl, CONSTRUIR (centro), Colmado, Hermandad, Islas.
+  - Copia de los archivos de antes: ..\respaldo_visual_2026-10-26

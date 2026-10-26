@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tiny Kingdom">
+<meta name="theme-color" content="#3a2414">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="iconos/icono-192.png">
+<script>
+// Si algo falla al arrancar, lo mostramos en pantalla (para poder arreglarlo)
+window.__errores = [];
+window.addEventListener("error", function (e) {
+  window.__errores.push((e.message || "error") + (e.filename ? " @ " + e.filename.split("/").pop() + ":" + e.lineno : ""));
+  var t = document.getElementById("pantalla-texto");
+  if (t && !window.__juegoListo) {
+    t.innerHTML = "<b style=\"color:#b3261e\">El juego no pudo arrancar / The game could not start</b><br><small style=\"word-break:break-all\">" +
+      window.__errores.join("<br>").replace(/</g, "&lt;") + "</small>";
+  }
+});
+</script>
+<title>Tiny Kingdom</title>
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+<div id="juego"></div>
+<div id="flotantes"></div>
+<div id="relojes"></div>
+
+<!-- Barra de arriba: perfil y recursos -->
+<div id="arriba">
+  <div id="perfil">
+    <div class="avatar" id="avatar">👑<span class="nivel-rey" id="nivel-rey">1</span></div>
+    <div class="poder"><span data-t="poder">Poder</span><b id="poder">0</b></div>
+  </div>
+  <div class="espacio"></div>
+  <div id="recursos">
+    <div class="pill r" id="pill-monedas" title="Oro"><span class="ico moneda"></span><b id="monedas">0</b></div>
+    <div class="pill r" id="pill-comida" title="Comida"><span class="ico emo">🍞</span><b id="comida">0</b></div>
+    <div class="pill r" id="pill-madera" title="Madera"><span class="ico emo">🪵</span><b id="madera">0</b></div>
+    <div class="pill r" id="pill-piedra" title="Piedra"><span class="ico emo">🪨</span><b id="piedra">0</b></div>
+    <div class="pill r" id="pill-gemas" title="Gemas"><span class="ico gema"></span><b id="gemas">0</b></div>
+  </div>
+</div>
+
+<!-- Columna derecha -->
+<div id="lateral">
+  <div class="pill oleada"><span data-t="oleada">Oleada</span><b id="oleada">1/5</b></div>
+  <div class="pill oculto-pill" id="pill-escudo" title="Protección"><span>🛡️</span><b id="escudo-t">0:00</b></div>
+  <div class="pill" id="pill-tropas"><span class="ico casco"></span><b id="tropas">0/0</b></div>
+  <button class="redondo" id="btn-idioma" title="Idioma / Language">ES</button>
+  <button class="redondo" id="btn-velocidad" title="Velocidad">x1</button>
+  <button class="redondo" id="btn-pausa" title="Pausa">⏸</button>
+  <button class="redondo" id="btn-sonido" title="Sonido"></button>
+  <button class="redondo" id="btn-ajustes" title="Ajustes"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#4a2a00" d="M19.4 13a7.7 7.7 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.5L6.5 11a7.7 7.7 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.3 7.3 0 0 0 1.7 1L11 21h4l.4-2.7a7.3 7.3 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
+</div>
+
+<!-- Vida del castillo -->
+<div id="vida-castillo">
+  <div class="etq" data-t="castillo">Castillo</div>
+  <div class="barra"><div id="vida-castillo-fill"></div></div>
+</div>
+
+<!-- Consejo / tutorial -->
+<div id="consejo"></div>
+
+<!-- Botón de oleada -->
+<button id="btn-oleada"><span class="espadas">⚔️</span><span class="txts"><span id="btn-oleada-txt">¡Empezar oleada 1!</span><small id="btn-oleada-sub"></small></span></button>
+<div id="aviso-oleada"></div>
+<div id="aviso-hambre" class="oculto"></div>
+<div id="aviso-pausa" class="oculto"><b data-t="pausa">PAUSA</b><span data-t="pausa_txt">Toca ▶ para seguir</span></div>
+<div id="barra-colocar" class="oculto"><span id="barra-colocar-txt"></span><button class="comprar rojo" id="btn-cancelar-colocar" data-t="cancelar">Cancelar</button></div>
+
+<!-- Barra de abajo -->
+<!-- Construir: botón redondo que flota sobre la barra -->
+<button id="btn-construir" class="flotante-construir"><span class="icono">🔨</span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
+
+<!-- Menú de abajo: siempre visible -->
+<div id="abajo">
+  <button class="pestana" id="btn-conquista"><span class="icono">⚔️</span><span class="txt" data-t="b_conquista">CONQUISTA</span><span class="badge" id="badge-conquista"></span></button>
+  <button class="pestana" id="btn-heroes"><span class="icono">👑</span><span class="txt" data-t="b_heroes">HÉROES</span><span class="badge" id="badge-heroes"></span></button>
+  <button class="pestana" id="btn-mochila"><span class="icono">🎒</span><span class="txt" data-t="b_mochila">MOCHILA</span><span class="badge" id="badge-mochila"></span></button>
+  <button class="pestana" id="btn-tienda"><span class="icono">🏪</span><span class="txt" data-t="b_tienda">TIENDA</span><span class="badge" id="badge-tienda"></span></button>
+  <button class="pestana" id="btn-alianza"><span class="icono">🛡️</span><span class="txt" data-t="b_alianza">ALIANZA</span><span class="badge" id="badge-alianza"></span></button>
+  <button class="pestana" id="btn-mundo"><span class="icono">🗺️</span><span class="txt" data-t="b_mundo">MUNDO</span><span class="badge" id="badge-mundo"></span></button>
+</div>
+
+<!-- Mapa del mundo -->
+<div id="mundo" class="oculto">
+  <div class="mundo-cab">
+    <h2 data-t="p_mundo">Mapa del mundo</h2>
+    <button class="cerrar" id="mundo-cerrar">✕</button>
+  </div>
+  <div id="mundo-estado"></div>
+  <div id="mundo-mapa"><canvas id="mundo-fondo" width="600" height="600"></canvas><div id="mundo-aldeas"></div></div>
+  <div id="mundo-leyenda"></div>
+  <div id="mundo-info"></div>
+</div>
+
+<!-- Panel genérico (hoja de abajo) -->
+<div id="panel" class="oculto">
+  <div class="panel-cab">
+    <h2 id="panel-titulo">Panel</h2>
+    <button class="cerrar" id="panel-cerrar">✕</button>
+  </div>
+  <div id="panel-cuerpo"></div>
+</div>
+
+<!-- Pantalla de inicio / fin -->
+<div id="pantalla">
+  <div class="tarjeta">
+    <div class="logo" id="pantalla-logo">🏰</div>
+    <h1 id="pantalla-titulo">Tiny Kingdom</h1>
+    <p id="pantalla-texto">Construye tu reino, entrena caballeros y defiende el camino del bosque.</p>
+    <div id="pantalla-form"></div>
+    <div id="pantalla-botones"></div>
+  </div>
+</div>
+
+<script src="js/three.min.js"></script>
+<script src="js/datos.js"></script>
+<script src="js/modelos.js"></script>
+<script src="js/firebase-app-compat.js"></script>
+<script src="js/firebase-auth-compat.js"></script>
+<script src="js/firebase-firestore-compat.js"></script>
+<script src="js/cuentas.js"></script>
+<script src="js/juego.js"></script>
+</body>
+</html>

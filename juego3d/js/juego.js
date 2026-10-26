@@ -93,14 +93,14 @@
   $('juego').appendChild(render.domElement);
 
   var escena = new THREE.Scene();
-  escena.background = new THREE.Color(0xbfe3ff);
-  escena.fog = new THREE.Fog(0xc6e6ff, 90, 200);
+  escena.background = new THREE.Color(0xf1e4c8);
+  escena.fog = new THREE.Fog(0xf1e4c8, 95, 210);
   // cielo: un domo con degradado (azul arriba, claro en el horizonte)
   (function cielo() {
     var g = new THREE.SphereGeometry(390, 24, 12);
     var mt = new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
-      uniforms: { arriba: { value: new THREE.Color(0x4f9fe8) }, horizonte: { value: new THREE.Color(0xd6eeff) } },
+      uniforms: { arriba: { value: new THREE.Color(0x6aa6d8) }, horizonte: { value: new THREE.Color(0xf1e4c8) } },
       vertexShader: 'varying vec3 vP; void main(){ vP = (modelMatrix * vec4(position,1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vP,1.0); }',
       fragmentShader: 'uniform vec3 arriba; uniform vec3 horizonte; varying vec3 vP; void main(){ float h = clamp(normalize(vP - cameraPosition).y * 1.6 + 0.1, 0.0, 1.0); gl_FragColor = vec4(mix(horizonte, arriba, h), 1.0); }'
     });
@@ -109,32 +109,99 @@
     domo.frustumCulled = false;
     escena.add(domo);
     escena.userData.domo = domo;
+    // estrellas: solo se ven de noche
+    var pe = [];
+    for (var i = 0; i < 420; i++) {
+      var a = Math.random() * Math.PI * 2, el = 0.12 + Math.pow(Math.random(), 0.7) * 1.35;
+      pe.push(Math.cos(a) * Math.cos(el) * 370, Math.sin(el) * 370, Math.sin(a) * Math.cos(el) * 370);
+    }
+    var gE = new THREE.BufferGeometry(); gE.setAttribute('position', new THREE.Float32BufferAttribute(pe, 3));
+    var estrellas = new THREE.Points(gE, new THREE.PointsMaterial({ color: 0xfff6e0, size: 2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+    estrellas.renderOrder = -9; estrellas.frustumCulled = false;
+    escena.add(estrellas);
+    escena.userData.estrellas = estrellas;
   })();
 
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   function distInicial() { return window.innerWidth < window.innerHeight ? 62 : 46; }
   var CENTRO_REINO = new V3(-5, 0, -2);
-  var cam = { objetivo: CENTRO_REINO.clone(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
+  // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
+  var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
 
-  var hemi = new THREE.HemisphereLight(0xd8ecff, 0x5a7a3a, 0.6);
+  var hemi = new THREE.HemisphereLight(0xe6e2d4, 0x6a5a3a, 0.56);
   escena.add(hemi);
-  var sol = new THREE.DirectionalLight(0xffd8a0, 0.95);
+  // Sol de la tarde: dirección fija, luz cálida y sombras suaves
+  // viene de atrás a la izquierda de la cámara: las sombras se ven hacia la derecha
+  var DIR_SOL = new V3(-18, 44, 36);
+  var sol = new THREE.DirectionalLight(0xffdcae, 1.12);
   sol.castShadow = true;
   sol.shadow.mapSize.set(2048, 2048);
   var sc = sol.shadow.camera;
-  sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 160;
-  sol.shadow.bias = -0.0008;
-  sol.shadow.normalBias = 0.03;
+  sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 170;
+  sol.shadow.bias = -0.0006;
+  sol.shadow.normalBias = 0.04;
   escena.add(sol);
   escena.add(sol.target);
+  var tamSombra = 45;
   function aplicarCalidad() {
     var alta = calidad === 'alta';
     render.setPixelRatio(alta ? Math.min(window.devicePixelRatio || 1, 2) : 1);
     render.setSize(window.innerWidth, window.innerHeight);
-    render.shadowMap.enabled = alta;
-    sol.castShadow = alta;
+    // las sombras siempre están: en calidad baja con un mapa más chico (rápido en teléfonos)
+    render.shadowMap.enabled = true;
+    render.shadowMap.type = alta ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    sol.castShadow = true;
+    var tam = alta ? 2048 : 1024;
+    if (sol.shadow.mapSize.x !== tam) { sol.shadow.mapSize.set(tam, tam); if (sol.shadow.map) { sol.shadow.map.dispose(); sol.shadow.map = null; } }
     escena.traverse(function (o) { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { m.needsUpdate = true; }); } });
+  }
+
+  // ------------------------------------------------------------------
+  //  CICLO DE DÍA Y NOCHE (solo visual: no cambia nada del juego)
+  // ------------------------------------------------------------------
+  var DURACION_DIA = 480;          // segundos reales por día completo (8 min)
+  var horaForzada = null;           // para pruebas: window.__juego.hora(0.8)
+  function faseDia() { return horaForzada !== null ? horaForzada : ((performance.now() / 1000) / DURACION_DIA + 0.12) % 1; }
+  function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
+  // 0..0.62 día · 0.62..0.72 atardecer · 0.72..0.92 noche · 0.92..1 amanecer
+  function nocheDe(p) { if (p < 0.62) return 0; if (p < 0.72) return suave((p - 0.62) / 0.1); if (p < 0.92) return 1; return 1 - suave((p - 0.92) / 0.08); }
+  function doradaDe(p) { var a = 1 - Math.abs(p - 0.665) / 0.06, b = 1 - Math.abs(p - 0.95) / 0.05; return suave(Math.max(a, b, 0)); }
+  var CIELO = {
+    arriba: [new THREE.Color(0x6aa6d8), new THREE.Color(0x0b1633), new THREE.Color(0x5a6aa0)],
+    horizonte: [new THREE.Color(0xf1e4c8), new THREE.Color(0x1d2a4e), new THREE.Color(0xf2a466)],
+    sol: [new THREE.Color(0xffdcae), new THREE.Color(0x8fa6e0), new THREE.Color(0xff9a5a)],
+    hemiCielo: [new THREE.Color(0xe6e2d4), new THREE.Color(0x5a6ea8), new THREE.Color(0xf0c8a0)],
+    hemiSuelo: [new THREE.Color(0x6a5a3a), new THREE.Color(0x1c2234), new THREE.Color(0x6a4a3a)],
+    nube: [new THREE.Color(0xffffff), new THREE.Color(0x46557a), new THREE.Color(0xffc8a0)]
+  };
+  // dos luces cálidas que solo se prenden de noche: la puerta del castillo y la plaza
+  var lucesNoche = [[-5.2, 2.6, 0, 16], [6, 2.2, 5, 13]].map(function (q) {
+    var l = new THREE.PointLight(0xffa34a, 0, q[3], 1.6);
+    l.position.set(q[0], q[1], q[2]);
+    escena.add(l);
+    return l;
+  });
+  var cTmp = new THREE.Color();
+  function mezcla(lista, k, d) { return cTmp.copy(lista[0]).lerp(lista[1], k).lerp(lista[2], d * (1 - k * 0.5)); }
+  var nocheActual = 0;
+  function actualizarCielo(t) {
+    var p = faseDia(), k = nocheDe(p), d = doradaDe(p);
+    nocheActual = k;
+    var domo = escena.userData.domo.material.uniforms;
+    domo.arriba.value.copy(mezcla(CIELO.arriba, k, d));
+    domo.horizonte.value.copy(mezcla(CIELO.horizonte, k, d));
+    escena.fog.color.copy(domo.horizonte.value);
+    escena.background.copy(domo.horizonte.value);
+    sol.color.copy(mezcla(CIELO.sol, k, d));
+    sol.intensity = 1.12 - k * 0.8 - d * 0.14;
+    hemi.color.copy(mezcla(CIELO.hemiCielo, k, d));
+    hemi.groundColor.copy(mezcla(CIELO.hemiSuelo, k, d));
+    hemi.intensity = 0.56 - k * 0.18;
+    M.matNube.color.copy(mezcla(CIELO.nube, k, d));
+    escena.userData.estrellas.material.opacity = Math.max(0, k * 1.1 - 0.1);
+    M.luzNoche(k, t);
+    lucesNoche.forEach(function (l, i) { l.intensity = k * (1.5 + Math.sin(t * 9 + i * 2) * 0.12); });
   }
 
   // ------------------------------------------------------------------
@@ -169,27 +236,71 @@
     return k * 0.32 * (0.7 + 0.5 * Math.sin(x * 0.11) * Math.cos(z * 0.09)) + Math.sin(x * 0.4 + z * 0.3) * 0.3;
   }
 
+  // Textura de pasto pintada en el momento (original, sin imágenes externas):
+  // matas claras y oscuras, briznas, manchitas de tierra y florecitas.
+  function texturaPasto() {
+    var T = 512, c = document.createElement('canvas'); c.width = c.height = T;
+    var x = c.getContext('2d'), r = (function (a) { return function () { a = (a * 16807) % 2147483647; return a / 2147483647; }; })(4242);
+    x.fillStyle = '#7d8f52'; x.fillRect(0, 0, T, T);
+    function mancha(px, py, rad, col, alfa) {
+      for (var ox = -1; ox <= 1; ox++) for (var oy = -1; oy <= 1; oy++) {
+        var gr = x.createRadialGradient(px + ox * T, py + oy * T, 0, px + ox * T, py + oy * T, rad);
+        gr.addColorStop(0, col.replace('A', alfa)); gr.addColorStop(1, col.replace('A', 0));
+        x.fillStyle = gr; x.fillRect(px + ox * T - rad, py + oy * T - rad, rad * 2, rad * 2);
+      }
+    }
+    var i;
+    for (i = 0; i < 70; i++) mancha(r() * T, r() * T, 30 + r() * 70, r() < 0.5 ? 'rgba(96,118,60,A)' : 'rgba(150,158,88,A)', 0.35 + r() * 0.3);
+    for (i = 0; i < 18; i++) mancha(r() * T, r() * T, 8 + r() * 16, 'rgba(128,104,68,A)', 0.35 + r() * 0.25);
+    // briznas de pasto
+    for (i = 0; i < 9000; i++) {
+      var bx = r() * T, by = r() * T, l = 3 + r() * 6, a = -Math.PI / 2 + (r() - 0.5) * 0.9;
+      var tono = r();
+      x.strokeStyle = tono < 0.33 ? 'rgba(70,92,44,.55)' : tono < 0.66 ? 'rgba(122,144,76,.5)' : 'rgba(168,176,104,.45)';
+      x.lineWidth = 1 + r() * 0.8;
+      x.beginPath(); x.moveTo(bx, by); x.lineTo(bx + Math.cos(a) * l, by + Math.sin(a) * l); x.stroke();
+    }
+    // tierrita y piedritas
+    for (i = 0; i < 260; i++) { x.fillStyle = r() < 0.6 ? 'rgba(120,98,66,.6)' : 'rgba(176,164,140,.6)'; x.fillRect(r() * T, r() * T, 1.5 + r() * 2, 1.5 + r() * 2); }
+    // florecitas dispersas (blancas, amarillas, rosadas)
+    var colF = ['#f4efe2', '#e8cf5a', '#e7a4b4', '#f4efe2'];
+    for (i = 0; i < 70; i++) {
+      var fx = r() * T, fy = r() * T; x.fillStyle = colF[i % 4];
+      x.beginPath(); x.arc(fx, fy, 1.6 + r() * 1.2, 0, Math.PI * 2); x.fill();
+    }
+    var tx = new THREE.CanvasTexture(c);
+    tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
+    tx.repeat.set(36, 36);
+    tx.anisotropy = Math.min(8, render.capabilities.getMaxAnisotropy());
+    return tx;
+  }
+  // ruido suave (para manchas grandes de pasto seco / húmedo)
+  function ruido(x, z) {
+    return Math.sin(x * 0.071 + 1.3) * Math.cos(z * 0.063 - 0.7) * 0.5 + Math.sin(x * 0.17 + z * 0.13) * 0.3 + Math.sin(x * 0.41 - z * 0.37 + 2.1) * 0.2;
+  }
+
   (function crearSuelo() {
-    var g = new THREE.PlaneGeometry(320, 320, 110, 110).toNonIndexed();
+    var g = new THREE.PlaneGeometry(320, 320, 120, 120);
     g.rotateX(-Math.PI / 2);
     var pos = g.attributes.position, colores = [];
+    var seco = new THREE.Color(1.12, 1.06, 0.84), humedo = new THREE.Color(0.82, 0.92, 0.8), tierra = new THREE.Color(1.15, 0.98, 0.78);
     for (var i = 0; i < pos.count; i++) {
       var x = pos.getX(i), z = pos.getZ(i);
-      var y = altura(x, z) + (rnd() - 0.5) * 0.12;
+      var y = altura(x, z) + (rnd() - 0.5) * 0.1;
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 0.5) y -= 0.6;
       pos.setY(i, y);
-    }
-    for (var t = 0; t < pos.count; t += 3) {
-      var cx = (pos.getX(t) + pos.getX(t + 1) + pos.getX(t + 2)) / 3;
-      var cz = (pos.getZ(t) + pos.getZ(t + 1) + pos.getZ(t + 2)) / 3;
-      var c = new THREE.Color().setHSL(0.27 + rnd() * 0.05, 0.45, 0.38 + rnd() * 0.05);
-      var dc = distCamino(cx, cz);
-      if (dc < 3.4) c.lerp(new THREE.Color(0x9a8a4a), 0.25);
-      for (var j = 0; j < 3; j++) colores.push(c.r, c.g, c.b);
+      var n = ruido(x, z);
+      var c = new THREE.Color(1, 1, 1);
+      if (n > 0) c.lerp(seco, Math.min(1, n * 1.3)); else c.lerp(humedo, Math.min(1, -n * 1.3));
+      var dc = distCamino(x, z);
+      if (dc < 4.2) c.lerp(tierra, (1 - dc / 4.2) * 0.55);
+      if (Math.hypot(x, z) < 11) c.lerp(tierra, 0.25 * (1 - Math.hypot(x, z) / 11));
+      if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 3) c.lerp(humedo, 0.5);
+      colores.push(c.r, c.g, c.b);
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(colores, 3));
     g.computeVertexNormals();
-    var suelo = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+    var suelo = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: texturaPasto(), vertexColors: true }));
     suelo.receiveShadow = true;
     escena.add(suelo);
   })();
@@ -207,7 +318,7 @@
     g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
     g.setIndex(idx);
     g.computeVertexNormals();
-    var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xcf8c5e, side: THREE.DoubleSide }));
+    var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xc09a70, side: THREE.DoubleSide }));
     m.receiveShadow = true;
     escena.add(m);
     // borde más oscuro, un poco más ancho, debajo del camino
@@ -219,13 +330,13 @@
       if (j < n) { var a2 = j * 2; ib.push(a2, a2 + 1, a2 + 2, a2 + 1, a2 + 3, a2 + 2); }
     }
     var gb = new THREE.BufferGeometry(); gb.setAttribute('position', new THREE.Float32BufferAttribute(vb, 3)); gb.setIndex(ib); gb.computeVertexNormals();
-    var mb = new THREE.Mesh(gb, new THREE.MeshLambertMaterial({ color: 0x9a6a40, side: THREE.DoubleSide })); mb.receiveShadow = true; escena.add(mb);
+    var mb = new THREE.Mesh(gb, new THREE.MeshLambertMaterial({ color: 0x8a7050, side: THREE.DoubleSide })); mb.receiveShadow = true; escena.add(mb);
     // piedritas a los lados del camino
     var deco = new THREE.Group();
     for (var k = 0; k < 90; k++) {
       var uu = rnd(), pp = curva.getPointAt(uu), tt = curva.getTangentAt(uu);
       var lado = rnd() < 0.5 ? -1 : 1, pe = new V3(tt.z, 0, -tt.x).normalize().multiplyScalar(lado * (1.9 + rnd() * 0.4));
-      var r = M.roca(0.25 + rnd() * 0.2, 0xb59a86);
+      var r = M.roca(0.25 + rnd() * 0.2, 0xb4a68c);
       r.position.x = pp.x + pe.x; r.position.z = pp.z + pe.z;
       r.castShadow = false;
       deco.add(r);
@@ -252,21 +363,28 @@
       if (x < -32 && z < 0) borde = 0.75;
       if (rnd() > Math.max(bosqueDensidad, borde)) continue;
       if (!libre(x, z, 0)) continue;
-      var pino = rnd() < 0.62;
+      // mezcla de especies: pinos en el bosque oscuro, palmeras cerca del pueblo y del estanque
+      var cerca = Math.hypot(x, z) < 45 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
+      var enBosque = bosqueDensidad > 0.2 || (x < -32 && z < 0);
+      var u = rnd(), tipo;
+      if (enBosque) tipo = u < 0.55 ? 0 : u < 0.8 ? 2 : 1;
+      else if (cerca) tipo = u < 0.38 ? 3 : u < 0.62 ? 2 : u < 0.85 ? 1 : 0;
+      else tipo = u < 0.3 ? 0 : u < 0.55 ? 2 : u < 0.8 ? 1 : 3;
+      var TONOS = [[0.31, 0.04, 0.32, 0.24, 0.06], [0.22, 0.06, 0.38, 0.33, 0.08], [0.27, 0.04, 0.34, 0.26, 0.07], [0.23, 0.04, 0.42, 0.33, 0.07]][tipo];
       arboles.push({
-        x: x, z: z, s: 0.8 + rnd() * 0.7, rot: rnd() * 6, tipo: pino ? 0 : 1,
-        tono: new THREE.Color().setHSL(pino ? 0.36 + rnd() * 0.04 : 0.26 + rnd() * 0.06, 0.55, pino ? 0.32 + rnd() * 0.06 : 0.42 + rnd() * 0.08).getHex()
+        x: x, z: z, s: (tipo === 3 ? 0.85 : 0.75) + rnd() * (tipo === 2 ? 0.6 : 0.75), rot: rnd() * 6, tipo: tipo, lean: rnd(),
+        tono: new THREE.Color().setHSL(TONOS[0] + rnd() * TONOS[1], TONOS[2], TONOS[3] + rnd() * TONOS[4]).getHex()
       });
     }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
     var arb = [], matas = [];
-    for (var ia = 0; ia < 700 && arb.length < 110; ia++) {
-      var bx = (rnd() - 0.5) * 120, bz = (rnd() - 0.5) * 120;
+    for (var ia = 0; ia < 1600 && arb.length < 230; ia++) {
+      var bx = (rnd() - 0.5) * 150, bz = (rnd() - 0.5) * 150;
       if (libre(bx, bz, 0.3)) arb.push({ x: bx, z: bz, s: 0.7 + rnd() * 0.6, rot: rnd() * 6 });
     }
-    for (var im2 = 0; im2 < 1500 && matas.length < 380; im2++) {
-      var mx = (rnd() - 0.5) * 90, mz = (rnd() - 0.5) * 90;
+    for (var im2 = 0; im2 < 4000 && matas.length < 1100; im2++) {
+      var mx = (rnd() - 0.5) * 140, mz = (rnd() - 0.5) * 140;
       if (libre(mx, mz, -1.2) || (Math.hypot(mx, mz) > 6 && distCamino(mx, mz) > 2.3 && Math.hypot(mx, mz) < 15)) matas.push({ x: mx, z: mz, rot: rnd() * 6 });
     }
     escena.add(M.arbustos(arb));
@@ -274,16 +392,16 @@
 
     // rocas grandes y flores (todo en un grupo que se fusiona)
     var deco2 = new THREE.Group();
-    for (var r = 0; r < 40; r++) {
-      var rx = (rnd() - 0.5) * 120, rz = (rnd() - 0.5) * 120;
+    for (var r = 0; r < 75; r++) {
+      var rx = (rnd() - 0.5) * 140, rz = (rnd() - 0.5) * 140;
       if (!libre(rx, rz, 0.5)) continue;
       var ro = M.roca(0.6 + rnd() * 1.4);
       ro.position.x = rx; ro.position.z = rz; ro.position.y += altura(rx, rz);
       deco2.add(ro);
     }
-    var colFlor = [0xffffff, 0xffe14a, 0xff7aa8, 0xb08aff];
-    for (var f = 0; f < 110; f++) {
-      var fx = (rnd() - 0.5) * 80, fz = (rnd() - 0.5) * 80;
+    var colFlor = [0xf4efe2, 0xe8c85a, 0xe49aac, 0xb89ad8];
+    for (var f = 0; f < 160; f++) {
+      var fx = (rnd() - 0.5) * 90, fz = (rnd() - 0.5) * 90;
       if (!libre(fx, fz, -1.5) || Math.hypot(fx, fz) < 7) continue;
       var fl = M.flor(colFlor[f % 4]);
       fl.position.set(fx, 0, fz);
@@ -292,12 +410,12 @@
     escena.add(M.fusionar(deco2));
     // estanque
     var agua = new THREE.Mesh(new THREE.CircleGeometry(ESTANQUE.r + 0.3, 20),
-      new THREE.MeshLambertMaterial({ color: 0x4ab8f0, transparent: true, opacity: 0.85 }));
+      new THREE.MeshLambertMaterial({ color: 0x3f8fa0, transparent: true, opacity: 0.88 }));
     agua.rotation.x = -Math.PI / 2;
     agua.position.set(ESTANQUE.x, -0.15, ESTANQUE.z);
     escena.add(agua);
     for (var h = 0; h < 4; h++) {
-      var hoja = M.cil(0.45, 0.45, 0.04, 8, 0x5bbf4a, ESTANQUE.x + (rnd() - 0.5) * 6, -0.1, ESTANQUE.z + (rnd() - 0.5) * 6);
+      var hoja = M.cil(0.45, 0.45, 0.04, 8, 0x5a8a48, ESTANQUE.x + (rnd() - 0.5) * 6, -0.1, ESTANQUE.z + (rnd() - 0.5) * 6);
       hoja.castShadow = false;
       escena.add(hoja);
     }
@@ -763,7 +881,7 @@
     }
     return new V3(6, 0, 6);
   }
-  for (var al = 0; al < 6; al++) {
+  for (var al = 0; al < 10; al++) {
     var ma = M.unidad('aldeano'), pa = puntoPueblo();
     ma.grupo.position.copy(pa);
     escena.add(ma.grupo);
@@ -786,6 +904,47 @@
         }
       }
       M.animarUnidad(a.m, t + i * 3, camina, 0);
+    });
+    moverAnimales(dt, t);
+  }
+  // Gallinas cerca del pueblo y cabras pastando en los prados (solo decoración)
+  var animales = [];
+  function puntoAnimal(tipo) {
+    for (var k = 0; k < 40; k++) {
+      var a = Math.random() * Math.PI * 2, r = tipo === 'gallina' ? 7 + Math.random() * 10 : 18 + Math.random() * 18;
+      var x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if (distCamino(x, z) > 3 && Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) > ESTANQUE.r + 1.5) return new V3(x, 0, z);
+    }
+    return new V3(8, 0, 8);
+  }
+  ['gallina', 'gallina', 'gallina', 'gallina', 'gallina', 'cabra', 'cabra', 'cabra', 'cabra'].forEach(function (tipo) {
+    var an = M.animal(tipo), p0 = puntoAnimal(tipo);
+    an.grupo.position.copy(p0);
+    an.grupo.rotation.y = Math.random() * 6;
+    escena.add(an.grupo);
+    animales.push({ a: an, meta: puntoAnimal(tipo), espera: Math.random() * 5, vel: tipo === 'gallina' ? 1.1 : 0.6 });
+  });
+  function moverAnimales(dt, t) {
+    animales.forEach(function (o, i) {
+      var g = o.a.grupo, camina = false;
+      if (o.espera > 0) o.espera -= dt;
+      else {
+        var dx = o.meta.x - g.position.x, dz = o.meta.z - g.position.z, d = Math.hypot(dx, dz);
+        if (d < 0.2) {
+          // pasos cortos: no cruzan todo el mapa
+          var cerca = puntoAnimal(o.a.tipo);
+          o.meta = g.position.clone().lerp(cerca, o.a.tipo === 'gallina' ? 0.25 : 0.2);
+          o.espera = 1.5 + Math.random() * 5;
+        } else {
+          var paso = Math.min(d, o.vel * dt);
+          g.position.x += dx / d * paso; g.position.z += dz / d * paso;
+          var dif = ((Math.atan2(dx, dz) - g.rotation.y) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+          g.rotation.y += dif * Math.min(1, dt * 6);
+          camina = true;
+          if (Math.hypot(g.position.x, g.position.z) < 6) { o.meta = puntoAnimal(o.a.tipo); }
+        }
+      }
+      M.animarAnimal(o.a, t + i * 1.7, camina);
     });
   }
 
@@ -854,12 +1013,20 @@
     setTimeout(function () { d.remove(); }, 1150);
   }
   var geoParticula = new THREE.BoxGeometry(0.16, 0.16, 0.16);
-  var bocanadas = [], geoHumo = new THREE.IcosahedronGeometry(0.35, 0);
-  var matHumo = new THREE.MeshLambertMaterial({ color: 0xe8e4dc, transparent: true, opacity: 0.55, depthWrite: false, flatShading: true });
-  var matPolvo = new THREE.MeshLambertMaterial({ color: 0xd8b98a, transparent: true, opacity: 0.5, depthWrite: false, flatShading: true });
+  var bocanadas = [];
+  var texHumo = (function () {
+    var c = document.createElement('canvas'); c.width = c.height = 64;
+    var x = c.getContext('2d'), gr = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(0.5, 'rgba(255,255,255,.45)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, 64, 64);
+    return new THREE.CanvasTexture(c);
+  })();
   function bocanada(pos, polvo) {
-    if (calidad !== 'alta' || bocanadas.length > 140) return;
-    var m = new THREE.Mesh(geoHumo, polvo ? matPolvo : matHumo);
+    if (bocanadas.length > (calidad === 'alta' ? 140 : 50)) return;
+    if (calidad !== 'alta' && polvo) return;
+    // cada bocanada tiene su material (se desvanece sola); el humo se oscurece de noche
+    var tono = polvo ? 0xcbb08a : new THREE.Color(0xd8d4cc).lerp(new THREE.Color(0x4a5068), nocheActual * 0.7).getHex();
+    var m = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHumo, color: tono, transparent: true, depthWrite: false, opacity: polvo ? 0.5 : 0.6 }));
     m.position.copy(pos);
     m.scale.setScalar(polvo ? 0.5 : 0.6);
     escena.add(m);
@@ -870,9 +1037,9 @@
       b.vida -= dt;
       b.m.position.addScaledVector(b.deriva, dt);
       var k = 1 - b.vida / b.max;
-      b.m.scale.setScalar((b.polvo ? 0.45 : 0.55) + k * (b.polvo ? 0.6 : 1.4));
-      b.m.rotation.y += dt;
-      if (b.vida <= 0) { escena.remove(b.m); return false; }
+      b.m.scale.setScalar(((b.polvo ? 0.45 : 0.55) + k * (b.polvo ? 0.6 : 1.4)) * 1.6);
+      b.m.material.opacity = (b.polvo ? 0.5 : 0.6) * (1 - k) * Math.min(1, k * 6 + 0.3);
+      if (b.vida <= 0) { escena.remove(b.m); b.m.material.dispose(); return false; }
       return true;
     });
   }
@@ -1420,6 +1587,7 @@
       tp.cd -= dt;
       var arq = tp.modelo.userData.arquero;
       var ob = masCercano(enemigos, tp.pos, TORRES_PUERTA.alcance);
+      if (tp.modelo.userData.banderas) tp.modelo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
       if (ob) {
         arq.grupo.rotation.y = Math.atan2(ob.pos.x - tp.pos.x, ob.pos.z - tp.pos.z) - tp.grupo.rotation.y;
         if (tp.cd <= 0) {
@@ -1622,13 +1790,26 @@
   //  CÁMARA
   // ------------------------------------------------------------------
   function actualizarCamara(dt) {
-    cam.dist += (cam.distMeta - cam.dist) * Math.min(1, dt * 8);
-    cam.objetivo.x = Math.max(-55, Math.min(25, cam.objetivo.x));
-    cam.objetivo.z = Math.max(-38, Math.min(25, cam.objetivo.z));
+    // zoom y desplazamiento se deslizan (sin saltos); al soltar el dedo sigue un poco por inercia
+    var kz = 1 - Math.exp(-dt * 7), kp = 1 - Math.exp(-dt * 11);
+    cam.dist += (cam.distMeta - cam.dist) * kz;
+    if (!arrastre) {
+      cam.meta.addScaledVector(cam.vel, dt);
+      cam.vel.multiplyScalar(Math.exp(-dt * 4.5));
+    }
+    cam.meta.x = Math.max(-55, Math.min(25, cam.meta.x));
+    cam.meta.z = Math.max(-38, Math.min(25, cam.meta.z));
+    cam.objetivo.lerp(cam.meta, kp);
+    // de cerca la cámara baja (más cinematográfica); de lejos sube para ver el reino entero
+    var u = Math.max(0, Math.min(1, (cam.dist - 16) / 54));
+    cam.polar = 1.17 - u * 0.21;
     var o = cam.objetivo, s = Math.sin(cam.polar);
     camara.position.set(o.x + cam.dist * s * Math.cos(cam.az), o.y + cam.dist * Math.cos(cam.polar), o.z + cam.dist * s * Math.sin(cam.az));
-    camara.lookAt(o);
-    sol.position.set(o.x + 30, 55, o.z + 18);
+    camara.lookAt(o.x, o.y + (1 - u) * 1.2, o.z);
+    // la caja de sombras sigue a la cámara y crece con el zoom
+    var ts = Math.max(28, Math.min(62, cam.dist * 0.85));
+    if (Math.abs(ts - tamSombra) > 2) { tamSombra = ts; sc.left = -ts; sc.right = ts; sc.top = ts; sc.bottom = -ts; sc.updateProjectionMatrix(); }
+    sol.position.set(o.x + DIR_SOL.x, DIR_SOL.y, o.z + DIR_SOL.z);
     sol.target.position.copy(o);
   }
 
@@ -1641,7 +1822,7 @@
     lienzo.setPointerCapture(ev.pointerId);
     punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var ids = Object.keys(punteros);
-    if (ids.length === 1) arrastre = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, t: performance.now(), movio: false };
+    if (ids.length === 1) { arrastre = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, t: performance.now(), movio: false }; cam.vel.set(0, 0, 0); }
     if (ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       pellizco = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.distMeta };
@@ -1666,13 +1847,20 @@
     var k = cam.dist / window.innerHeight * 1.1;
     var adelante = new V3(-Math.cos(cam.az), 0, -Math.sin(cam.az));
     var derecha = new V3(-adelante.z, 0, adelante.x);
-    cam.objetivo.addScaledVector(derecha, -dx * k).addScaledVector(adelante, dy * k * 1.3);
+    var antes = cam.meta.clone();
+    cam.meta.addScaledVector(derecha, -dx * k).addScaledVector(adelante, dy * k * 1.3);
+    // velocidad del arrastre (para la inercia al soltar)
+    var ahora = performance.now(), dtm = Math.max(8, ahora - (arrastre.tm || ahora - 16)) / 1000;
+    arrastre.tm = ahora;
+    cam.vel.copy(cam.meta).sub(antes).divideScalar(dtm).clampLength(0, 60);
   });
   function soltar(ev) {
     var era = punteros[ev.pointerId];
     delete punteros[ev.pointerId];
     if (Object.keys(punteros).length < 2) pellizco = null;
     if (arrastre && era && !arrastre.movio && performance.now() - arrastre.t < 600) tocar(ev.clientX, ev.clientY);
+    // si el dedo se quedó quieto antes de soltar, no hay inercia
+    if (arrastre && arrastre.tm && performance.now() - arrastre.tm > 90) cam.vel.set(0, 0, 0);
     if (!Object.keys(punteros).length) arrastre = null;
   }
   lienzo.addEventListener('pointerup', soltar);
@@ -2480,7 +2668,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v2.0</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v2.1</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -2918,7 +3106,7 @@
     estado.vidaCastillo = vidaMaxCastillo();
     curarHeridos();
     tiempoJuego = 0;
-    cam.objetivo.copy(CENTRO_REINO); cam.distMeta = distInicial();
+    cam.objetivo.copy(CENTRO_REINO); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
     actualizarHUD();
@@ -2957,6 +3145,7 @@
     }
     if (!enMenu) cam.az += (0.52 - cam.az) * Math.min(1, dtReal * 3);
     actualizarCamara(dtReal);
+    actualizarCielo(performance.now() / 1000);
     // nubes
     nubes.forEach(function (n) { n.position.x += n.userData.v * dtReal; if (n.position.x > 90) n.position.x = -90; });
     // brillo de terrenos libres
@@ -2964,7 +3153,9 @@
     slots.forEach(function (s, i) {
       var libre = !s.edificio && !s.obra;
       var on = (modoColocar && libre) || slotElegido === i;
-      s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : (libre && !enMenu ? 0.12 : 0);
+      s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
+      // estacas y cuerda: solo en modo construcción
+      if (s.terreno.userData.marcas) s.terreno.userData.marcas.visible = !!on;
     });
     slots.forEach(function (s) { if (s.fantasma) s.fantasma.position.y = 0.15 + Math.sin(performance.now() / 300) * 0.12; });
     barricadas.forEach(function (bq) { bq.marca.material.opacity = (modoColocar === 'barricada' && !bq.nivel) ? 0.3 + b * 0.4 : 0; if (bq.fantasma) bq.fantasma.position.y = 0.1 + Math.sin(performance.now() / 300) * 0.1; });
@@ -2989,6 +3180,7 @@
 
   // Para pruebas desde la consola del navegador
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+    hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
