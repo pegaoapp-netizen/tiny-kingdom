@@ -458,7 +458,10 @@ var M = (function () {
 
   // Tamaño general de la gente en el reino (más grande = se distinguen mejor)
   var TAM_UNIDAD = 1.6;
-  function unidad(tipo, tam) {
+  // Colores de la armadura por nivel: 1 metal, 2 acero azul, 3 oro
+  var COLOR_ARMADURA = [0, 0xd6dde5, 0x6f8fb5, 0xf5c542];
+  function unidad(tipo, tam, armadura) {
+    armadura = armadura || 0;
     var g = new THREE.Group();     // grupo principal (posición en el mundo)
     var cuerpo = new THREE.Group(); // todo lo que se balancea al caminar
     g.add(cuerpo);
@@ -471,6 +474,9 @@ var M = (function () {
     if (tipo === 'bruto') { piel = C.bruto; ropa = 0x6a4a3a; ropa2 = 0x3a2a20; escala = 1.3; }
     if (tipo === 'ogro') { piel = C.ogro; ropa = 0x6a3a2a; ropa2 = 0x3a1a10; escala = 2.5; }
     if (tipo === 'aldeano') { ropa = 0xb5835a; ropa2 = 0x6a4a30; escala = 0.85; }
+    if (tipo === 'caballeria') { ropa = 0x7a4fc0; ropa2 = 0x3f2a72; escala = 0.95; }
+    var esCaballero = tipo === 'espadachin' || tipo === 'guardian' || tipo === 'heroe' || tipo === 'caballeria';
+    var colArm = COLOR_ARMADURA[armadura] || C.metal;
 
     // piernas
     [-1, 1].forEach(function (s) {
@@ -484,8 +490,14 @@ var M = (function () {
     // tronco
     cuerpo.add(cil(0.27, 0.33, 0.46, 8, ropa, 0, 0.54, 0));
     cuerpo.add(cil(0.335, 0.335, 0.08, 8, C.maderaOsc, 0, 0.4, 0));
-    if (tipo !== 'trasgo' && tipo !== 'bruto' && tipo !== 'ogro' && tipo !== 'arquero')
-      cuerpo.add(cil(0.22, 0.28, 0.3, 8, C.metal, 0, 0.62, 0.06).rotateX(0.05));
+    if (tipo !== 'trasgo' && tipo !== 'bruto' && tipo !== 'ogro' && tipo !== 'aldeano' && (tipo !== 'arquero' || armadura > 0))
+      cuerpo.add(cil(0.22, 0.28, 0.3, 8, armadura >= 2 ? colArm : C.metal, 0, 0.62, 0.06).rotateX(0.05));
+    // hombreras desde el nivel 1 de armadura; capa desde el nivel 3
+    if (armadura >= 1) {
+      [-1, 1].forEach(function (s) { var h = esfera(0.16, colArm, s * 0.33, 0.78, 0, 8, 6); h.scale.set(1.1, 0.6, 1.1); cuerpo.add(h); });
+      if (armadura >= 2) cuerpo.add(cil(0.34, 0.34, 0.06, 8, colArm, 0, 0.41, 0));
+      if (armadura >= 3) { var cp = caja(0.55, 0.7, 0.04, ropa, 0, 0.55, -0.33); cp.rotation.x = 0.15; cuerpo.add(cp); }
+    }
     // cabeza
     var cabeza = new THREE.Group();
     cabeza.position.y = 1.08;
@@ -497,9 +509,9 @@ var M = (function () {
     p.cabeza = cabeza;
 
     // ---- casco / pelo según el tipo ----
-    if (tipo === 'espadachin' || tipo === 'guardian' || tipo === 'heroe') {
+    if (esCaballero) {
       var casco = malla(geo('casco', function () { return new THREE.SphereGeometry(0.41, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2); }),
-        mat(tipo === 'heroe' ? C.oro : C.metal), 0, 0.02, 0);
+        mat(tipo === 'heroe' ? C.oro : (armadura >= 2 ? colArm : C.metal)), 0, 0.02, 0);
       cabeza.add(casco);
       cabeza.add(cil(0.42, 0.42, 0.07, 14, tipo === 'heroe' ? 0xb8862a : C.metalOsc, 0, 0.03, 0));
       if (tipo === 'guardian') cabeza.add(caja(0.06, 0.3, 0.06, C.metalOsc, 0, -0.05, 0.4));
@@ -510,7 +522,7 @@ var M = (function () {
         }
         [-1, 1].forEach(function (s) { var ala = caja(0.05, 0.3, 0.22, C.blanco, s * 0.42, 0.2, -0.05); ala.rotation.z = -s * 0.4; cabeza.add(ala); });
       } else {
-        var penacho = cono(0.1, 0.4, 5, tipo === 'guardian' ? C.azul : C.rojo, 0, 0.5, -0.05);
+        var penacho = cono(0.1, 0.4, 5, tipo === 'guardian' ? C.azul : tipo === 'caballeria' ? 0xffd35a : C.rojo, 0, 0.5, -0.05);
         cabeza.add(penacho);
       }
     }
@@ -554,6 +566,11 @@ var M = (function () {
       arma.add(caja(0.26, 0.05, 0.06, C.oro, 0, 0.08, 0));
       arma.add(caja(0.05, 0.12, 0.05, C.maderaOsc, 0, 0.01, 0));
       arma.rotation.x = 1.3;
+    } else if (tipo === 'caballeria') {
+      arma.add(cil(0.035, 0.045, 1.6, 6, C.madera, 0, 0.6, 0));
+      arma.add(cono(0.08, 0.3, 6, C.metal, 0, 1.5, 0));
+      arma.add(caja(0.25, 0.18, 0.02, 0xffd35a, 0.12, 1.25, 0));
+      arma.rotation.x = 1.45;
     } else if (tipo === 'guardian') {
       arma.add(cil(0.035, 0.035, 0.6, 5, C.maderaOsc, 0, 0.25, 0));
       arma.add(caja(0.2, 0.2, 0.2, C.metalOsc, 0, 0.58, 0));
@@ -581,7 +598,7 @@ var M = (function () {
     izq.position.set(-0.33, 0.68, 0);
     izq.add(caja(0.13, 0.32, 0.13, ropa, 0, -0.12, 0));
     izq.add(esfera(0.08, piel, 0, -0.3, 0, 6, 5));
-    if (tipo === 'espadachin' || tipo === 'guardian' || tipo === 'heroe') {
+    if (esCaballero) {
       var r = tipo === 'guardian' ? 0.42 : 0.28;
       var escudo = cil(r, r, 0.07, 10, tipo === 'heroe' ? C.oro : C.azul, -0.06, -0.15, 0.12);
       escudo.rotation.z = Math.PI / 2;
@@ -600,18 +617,57 @@ var M = (function () {
       cuerpo.add(capa);
     }
 
+    var baseY = 0;
+    if (tipo === 'caballeria') {
+      var caballo = new THREE.Group();
+      var pelo = 0x8a5a33, crin = 0x3a2414;
+      caballo.add(caja(0.62, 0.55, 1.25, pelo, 0, 0.75, 0));
+      var cuello = caja(0.32, 0.6, 0.35, pelo, 0, 1.1, 0.55); cuello.rotation.x = -0.5; caballo.add(cuello);
+      caballo.add(caja(0.3, 0.3, 0.55, pelo, 0, 1.38, 0.8));
+      caballo.add(caja(0.26, 0.2, 0.2, 0x6a4024, 0, 1.3, 1.08));
+      [-1, 1].forEach(function (s) { caballo.add(cono(0.06, 0.16, 4, pelo, s * 0.1, 1.6, 0.68)); caballo.add(esfera(0.04, C.negro, s * 0.16, 1.42, 0.92, 5, 4)); });
+      var melena = caja(0.08, 0.5, 0.42, crin, 0, 1.3, 0.48); melena.rotation.x = -0.5; caballo.add(melena);
+      var cola = caja(0.1, 0.55, 0.1, crin, 0, 0.75, -0.7); cola.rotation.x = 0.5; caballo.add(cola);
+      // manta con el color del equipo y armadura del caballo desde el nivel 2
+      caballo.add(caja(0.66, 0.08, 0.6, ropa, 0, 1.05, -0.05));
+      if (armadura >= 2) caballo.add(caja(0.66, 0.3, 0.32, colArm, 0, 1.25, 0.7));
+      p.patas = [];
+      [[-0.2, 0.45], [0.2, 0.45], [-0.2, -0.45], [0.2, -0.45]].forEach(function (q, k) {
+        var pata = new THREE.Group();
+        pata.position.set(q[0], 0.55, q[1]);
+        pata.add(caja(0.14, 0.55, 0.14, pelo, 0, -0.27, 0));
+        pata.add(caja(0.16, 0.1, 0.18, 0x2a2320, 0, -0.52, 0.02));
+        caballo.add(pata);
+        p.patas.push(pata);
+      });
+      g.add(caballo);
+      p.caballo = caballo;
+      // el jinete va sentado sobre el caballo, con las piernas abiertas
+      baseY = 0.72;
+      cuerpo.position.y = baseY;
+      p.piernaI.rotation.z = 0.7; p.piernaD.rotation.z = -0.7;
+    }
     escala *= (tam || TAM_UNIDAD);
     g.scale.setScalar(escala);
-    return { grupo: g, cuerpo: cuerpo, p: p, escala: escala };
+    return { grupo: g, cuerpo: cuerpo, p: p, escala: escala, baseY: baseY };
   }
 
   // Animación de caminar / atacar
   function animarUnidad(u, t, caminando, ataque) {
     var p = u.p, v = caminando ? 1 : 0;
     var s = Math.sin(t * 11);
-    p.piernaI.rotation.x = s * 0.7 * v;
-    p.piernaD.rotation.x = -s * 0.7 * v;
-    u.cuerpo.position.y = Math.abs(s) * 0.07 * v + (caminando ? 0 : Math.sin(t * 2.5) * 0.015);
+    if (p.patas) {
+      var g2 = Math.sin(t * 14);
+      p.patas[0].rotation.x = g2 * 0.8 * v; p.patas[3].rotation.x = g2 * 0.8 * v;
+      p.patas[1].rotation.x = -g2 * 0.8 * v; p.patas[2].rotation.x = -g2 * 0.8 * v;
+      p.caballo.position.y = Math.abs(g2) * 0.08 * v;
+      p.caballo.rotation.x = g2 * 0.05 * v;
+      u.cuerpo.position.y = (u.baseY || 0) + Math.abs(g2) * 0.1 * v + (caminando ? 0 : Math.sin(t * 2.5) * 0.015);
+    } else {
+      p.piernaI.rotation.x = s * 0.7 * v;
+      p.piernaD.rotation.x = -s * 0.7 * v;
+      u.cuerpo.position.y = Math.abs(s) * 0.07 * v + (caminando ? 0 : Math.sin(t * 2.5) * 0.015);
+    }
     p.izq.rotation.x = -s * 0.4 * v;
     if (ataque > 0) {
       // ataque: el brazo sube y baja

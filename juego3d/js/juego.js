@@ -16,7 +16,7 @@
     return {
       monedas: INICIO.monedas, gemas: INICIO.gemas, comida: INICIO.comida, madera: INICIO.madera, piedra: INICIO.piedra, oleada: 1, vidaCastillo: INICIO.vidaCastillo,
       edificios: TERRENOS.map(function () { return null; }),
-      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null,
+      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {},
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -877,13 +877,15 @@
   })();
   var reunion = new V3(PUNTO_REUNION[0], 0, PUNTO_REUNION[1]);
 
+  function nivelArmadura(tipo) { return (estado.armadura && estado.armadura[tipo]) || 0; }
   function crearTropa(tipo, desde, invocada) {
     var d = TROPAS[tipo];
-    var m = M.unidad(tipo);
+    var na = tipo === 'heroe' ? 0 : nivelArmadura(tipo);
+    var m = M.unidad(tipo, undefined, na);
     m.grupo.position.copy(desde);
     escena.add(m.grupo);
     var u = {
-      tipo: tipo, d: d, vida: d.vida, max: d.vida, pos: m.grupo.position, m: m, aliado: true,
+      tipo: tipo, d: d, vida: d.vida * (1 + ARMADURA.vida * na), max: d.vida * (1 + ARMADURA.vida * na), defensa: ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
       barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: 1.75 * m.escala
     };
@@ -911,7 +913,7 @@
 
   function asignarPuestos() {
     var cuerpo = tropas.filter(function (u) { return !u.d.distancia; });
-    var orden = { heroe: 0, guardian: 1, espadachin: 2 };
+    var orden = { heroe: 0, guardian: 1, caballeria: 2, espadachin: 3 };
     cuerpo.sort(function (a, b) { return orden[a.tipo] - orden[b.tipo]; });
     var lejos = tropas.filter(function (u) { return u.d.distancia; });
     function poner(lista, base, paso, sep) {
@@ -943,6 +945,7 @@
 
   function danar(obj, n, desde) {
     if (obj.vida <= 0) return;
+    if (obj.defensa) n *= (1 - obj.defensa);
     obj.vida -= n;
     obj.barra.visible = true;
     M.ponerVida(obj.barra, obj.vida / obj.max);
@@ -1006,11 +1009,37 @@
     actualizarHUD();
     actualizarPanel();
   }
+  function costoArmadura(n) { return { oro: ARMADURA.costo[n], piedra: ARMADURA.piedra[n] }; }
+  function mejorarArmadura(tipo) {
+    var n = nivelArmadura(tipo);
+    if (n >= ARMADURA.max) return;
+    if (!pagar(costoArmadura(n))) return;
+    estado.armadura[tipo] = n + 1;
+    // las tropas que ya tienes también se ponen la armadura nueva
+    tropas.forEach(function (u) {
+      if (u.tipo !== tipo) return;
+      var viejo = u.m.grupo, nuevo = M.unidad(tipo, undefined, n + 1);
+      nuevo.grupo.position.copy(viejo.position);
+      nuevo.grupo.rotation.copy(viejo.rotation);
+      escena.remove(viejo); escena.add(nuevo.grupo);
+      var frac = u.vida / u.max;
+      u.m = nuevo; u.pos = nuevo.grupo.position;
+      u.armadura = n + 1; u.defensa = ARMADURA.defensa * (n + 1);
+      u.max = u.d.vida * (1 + ARMADURA.vida * (n + 1)); u.vida = frac * u.max;
+      chispas(u.pos.clone().setY(1.2), COLOR_ARM_EFECTO[n + 1], 8, 2.5);
+    });
+    sonar('listo');
+    consejoTemporal(T('armadura_lista', { t: N(tipo), n: n + 1 }));
+    actualizarHUD();
+    guardar();
+    reabrirPanel();
+  }
+  var COLOR_ARM_EFECTO = [0xffffff, 0xd6dde5, 0x6f8fb5, 0xf5c542];
   function invocarTres() {
     if (!pagar(0, INVOCAR.tres)) return;
-    var tipos = ['espadachin', 'arquero', 'guardian'], salieron = [];
+    var tipos = ['espadachin', 'arquero', 'guardian', 'caballeria'], salieron = [];
     for (var i = 0; i < 3; i++) {
-      var tipo = tipos[Math.floor(Math.random() * 3)];
+      var tipo = tipos[Math.floor(Math.random() * tipos.length)];
       var p = reunion.clone().add(new V3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3));
       crearTropa(tipo, p, true);
       chispas(p.clone().setY(0.8), 0xd59bff, 14, 3);
@@ -1529,7 +1558,7 @@
         e.remove(obj);
         return url;
       }
-      ['espadachin', 'arquero', 'guardian', 'heroe'].forEach(function (t) {
+      ['espadachin', 'arquero', 'guardian', 'heroe', 'caballeria'].forEach(function (t) {
         var u = M.unidad(t); u.grupo.rotation.y = 0.3;
         var s = u.escala;
         retratos[t] = foto(u.grupo, 2.9 * s, 0.8 * s);
@@ -1651,11 +1680,14 @@
     var html = '';
     if (!cuartelesListos().length) html += '<p class="nota aviso-rojo">' + T('necesitas_cuartel') + '</p>';
     html += '<div class="lista">';
-    ['espadachin', 'arquero', 'guardian'].forEach(function (t) {
-      var d = TROPAS[t];
+    ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
+      var d = TROPAS[t], na = nivelArmadura(t);
       html += '<div class="carta compacta" title="' + D(t) + '"><div class="cab"><div class="foto">' + fotoHTML(t, d.icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
-        '<div class="stats"><span>❤ ' + T('vida') + ' ' + d.vida + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span></div>' +
-        botonCosto(costoTropa(t), 'entrenar', 'data-tipo="' + t + '"', T('entrenar')) + '</div>';
+        '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * na)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span>' +
+        (na ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * na) + '%</span>' : '') + '</div>' +
+        '<div class="botones">' + botonCosto(costoTropa(t), 'entrenar', 'data-tipo="' + t + '"', T('entrenar')) +
+        (na < ARMADURA.max ? botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '" title="' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '"', '🛡️ ' + T('armadura') + ' ' + (na + 1) + ' ').replace('class="comprar"', 'class="comprar armadura"')
+          : '<span class="nivel-arm">' + T('armadura_max') + '</span>') + '</div></div>';
     });
     html += '</div><div class="cola" id="cola"></div>';
     abrirPanel(T('p_tropas'), html, { tipo: 'tropas' });
@@ -1704,6 +1736,7 @@
       '<span>⚔ ' + T('dano') + ' ' + Math.round(dano) + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span>' +
       '<span>⏱ ' + T('t_ritmo', { s: d.ritmo }) + '</span><span>👟 ' + T('t_lenta') + ' ' + d.vel + '</span>' +
       (!aliado && d.oro ? '<span>🪙 ' + T('t_oro', { n: d.oro }) + '</span>' : '') + '</div>' +
+      (u.armadura ? '<p class="nota nivel-arm">🛡️ ' + T('armadura') + ' ' + u.armadura + ' — ' + T('defensa') + ' ' + Math.round(u.defensa * 100) + '%</p>' : '') +
       (u.invocada ? '<p class="nota">✨ ' + T('t_invocada') + '</p>' : '') +
       (u.tipo === 'heroe' ? '<p class="nota">👑 ' + T('t_heroe') + '</p>' : '') +
       (aliado && hambre ? '<p class="nota aviso-rojo">🍞 ' + T('t_hambre') + '</p>' : '') +
@@ -1831,7 +1864,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.4</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.5</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -1853,6 +1886,7 @@
     else if (a === 'al-mapa') { cerrarPanel(); abrirMundo(); }
     else if (a === 'mejorar-barricada') { var bi = +b.getAttribute('data-barr'); if (pagar(costoBarricada(1))) { ponerBarricada(bi, 2); sonar('listo'); cerrarPanel(); guardar(); } }
     else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'));
+    else if (a === 'armadura') mejorarArmadura(b.getAttribute('data-tipo'));
     else if (a === 'invocar3') invocarTres();
     else if (a === 'heroe') invocarHeroe();
     else if (a === 'idioma') { estado.idioma = b.getAttribute('data-valor'); aplicarIdioma(); guardarPreferencias(); reabrirPanel(); }
@@ -2210,6 +2244,7 @@
       estado.infinito = !!g.infinito;
       estado.muralla = g.muralla || 0;
       estado.alianza = g.alianza || null;
+      estado.armadura = g.armadura || {};
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
       estado.heridos = g.heridos || {};

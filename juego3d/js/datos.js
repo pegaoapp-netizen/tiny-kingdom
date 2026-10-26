@@ -101,6 +101,8 @@ var TEXTOS = {
     madera_nivel: 'de madera', piedra_nivel: 'de piedra',
     t_aliada: 'Tu tropa', t_enemigo: 'Enemigo', t_invocada: 'Invocada con gemas (no ocupa lugar en el cuartel)', t_heroe: 'Héroe: se cura solo poco a poco',
     t_lenta: 'Velocidad', t_ritmo: 'Ataca cada {s} s', t_oro: 'Suelta {n} de oro al caer', t_hambre: 'Con hambre: pega más débil',
+    armadura: 'Armadura', mejorar_armadura: 'Mejorar armadura', armadura_sube: 'Nivel {n}: +{v}% vida, +{d}% defensa',
+    armadura_max: 'Armadura al máximo ★★★', defensa: 'Defensa', armadura_lista: '🛡️ ¡Armadura de {t} nivel {n}! Se nota en tus tropas.',
     b_mundo: 'MUNDO', b_alianza: 'ALIANZA', p_mundo: 'Mapa del mundo', p_alianza: 'Alianza',
     mundo_cuenta: 'Crea una cuenta para aparecer en el mapa del mundo y unirte a una alianza.',
     mundo_cargando: 'Cargando el mapa...', mundo_error: 'No se pudo cargar el mapa. Revisa tu internet.',
@@ -208,6 +210,8 @@ var TEXTOS = {
     madera_nivel: 'wooden', piedra_nivel: 'stone',
     t_aliada: 'Your troop', t_enemigo: 'Enemy', t_invocada: 'Summoned with gems (does not use a barracks spot)', t_heroe: 'Hero: heals slowly over time',
     t_lenta: 'Speed', t_ritmo: 'Attacks every {s} s', t_oro: 'Drops {n} gold when defeated', t_hambre: 'Hungry: hits weaker',
+    armadura: 'Armor', mejorar_armadura: 'Upgrade armor', armadura_sube: 'Level {n}: +{v}% health, +{d}% defense',
+    armadura_max: 'Armor at max ★★★', defensa: 'Defense', armadura_lista: '🛡️ {t} armor level {n}! You can see it on your troops.',
     b_mundo: 'WORLD', b_alianza: 'ALLIANCE', p_mundo: 'World map', p_alianza: 'Alliance',
     mundo_cuenta: 'Create an account to appear on the world map and join an alliance.',
     mundo_cargando: 'Loading the map...', mundo_error: 'Could not load the map. Check your internet.',
@@ -274,6 +278,8 @@ var NOMBRES = {
                 des_es: 'Rápido y valiente. Pelea cuerpo a cuerpo.', des_en: 'Fast and brave. Fights up close.' },
   arquero:    { es: 'Arquero',      en: 'Archer',
                 des_es: 'Dispara desde lejos. Poca vida.', des_en: 'Shoots from afar. Low health.' },
+  caballeria: { es: 'Caballería',   en: 'Cavalry',
+                des_es: 'Soldado a caballo: el más rápido, llega primero al enemigo.', des_en: 'Soldier on horseback: the fastest, reaches the enemy first.' },
   guardian:   { es: 'Guardián',     en: 'Guardian',
                 des_es: 'Escudo enorme. Aguanta muchos golpes.', des_en: 'Huge shield. Takes lots of hits.' },
   heroe:      { es: 'Héroe Paladín', en: 'Paladin Hero' },
@@ -322,10 +328,13 @@ var CASTILLO = { dano: 12, alcance: 9.5, ritmo: 1.1 };
 var TROPAS = {
   espadachin: { costo: 15, comida: 20, tiempo: 3, vida: 150, dano: 18, alcance: 1.3, vel: 3.2, ritmo: 0.9, icono: '🗡️' },
   arquero:    { costo: 20, comida: 20, tiempo: 4, vida: 85,  dano: 12, alcance: 7.5, vel: 3.0, ritmo: 1.1, distancia: true, icono: '🏹' },
+  caballeria: { costo: 30, comida: 30, tiempo: 5, vida: 200, dano: 20, alcance: 1.6, vel: 5.2, ritmo: 1.0, icono: '🐎' },
   guardian:   { costo: 30, comida: 35, tiempo: 6, vida: 390, dano: 11, alcance: 1.4, vel: 2.4, ritmo: 1.2, icono: '🛡️' },
   heroe:      { costo: 0,  tiempo: 0, vida: 950, dano: 42, alcance: 1.7, vel: 3.4, ritmo: 0.8, cura: 10, icono: '👑' }
 };
 var INVOCAR = { tres: 10, heroe: 30 }; // precio en gemas
+// Armaduras: cada nivel (hasta 3) da +20% de vida y +10% de defensa (recibe menos daño)
+var ARMADURA = { costo: [60, 120, 200], piedra: [20, 50, 90], vida: 0.2, defensa: 0.1, max: 3 };
 
 // ---------------- Enemigos ----------------
 var ENEMIGOS = {

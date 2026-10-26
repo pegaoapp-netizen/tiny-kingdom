@@ -560,3 +560,18 @@ button:active { transform: scale(.93); filter: brightness(1.12); }
 .ficha > div { min-width: 0; }
 .ficha .stats { flex-wrap: wrap; }
 .ficha .stats span { white-space: normal; }
+
+/* Dos botones en la carta de tropa: entrenar y mejorar armadura */
+.carta.compacta .botones { grid-area: boton; display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.carta.compacta .botones .comprar { width: 100%; margin-top: 0; }
+.comprar.armadura { background: linear-gradient(#c9d6e6, #6f8fb5); border-color: #2f4a6a; box-shadow: 0 4px 0 #2f4a6a; font-size: 13px; }
+.nivel-arm { color: #2f4a6a; font-weight: 800; }
+/* Botones con varios costos: nunca se salen de la carta */
+.carta.compacta .comprar { flex-wrap: wrap; white-space: normal; line-height: 1.15; min-width: 0; overflow: hidden; }
+.carta.compacta .costo-r { margin-left: 3px; }
+@media (max-width: 600px) {
+  .carta.compacta .comprar { font-size: 12px; padding: 5px 4px; gap: 2px; }
+  .carta.compacta .costo-r .ico { width: 14px; height: 14px; }
+  .carta.compacta .costo-r .emo { font-size: 12px; }
+  .carta.compacta { padding: 7px; }
+}
