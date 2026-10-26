@@ -630,3 +630,18 @@ body.panel-abierto .flotante-construir, body.colocando .flotante-construir { dis
 #abajo { height: calc(72px + env(safe-area-inset-bottom)); }
 .pestana { height: 70px; }
 #panel { bottom: calc(72px + env(safe-area-inset-bottom)); }
+
+/* Relojes que flotan sobre lo que se está construyendo, entrenando o investigando */
+#relojes { position: fixed; inset: 0; pointer-events: none; z-index: 8; overflow: hidden; }
+.reloj {
+  position: absolute; transform: translate(-50%, -100%); white-space: nowrap;
+  background: rgba(30, 20, 10, .85); color: #ffe9b0; border: 2px solid #f2c45a; border-radius: 10px;
+  padding: 2px 8px; font-size: 13px; font-weight: 900; box-shadow: 0 2px 0 rgba(0,0,0,.4);
+}
+.reloj.oculto { display: none; }
+.reloj-panel { font-weight: 900; color: #2f4a6a; }
+
+/* Protección activa */
+#pill-escudo { background: linear-gradient(#2a7fe0, #174a9a); border-color: #9fd0ff; font-size: 14px; padding: 3px 10px; cursor: pointer; }
+#pill-escudo.oculto-pill { display: none; }
+.aldea .esc { position: absolute; top: -10px; left: -10px; font-size: 16px; filter: drop-shadow(0 0 4px #6fb7ff); }

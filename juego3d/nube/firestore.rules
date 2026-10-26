@@ -18,7 +18,9 @@ service cloud.firestore {
     match /aldeas/{uid} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['nombre', 'nivel', 'poder', 'x', 'y', 'alianza', 'actualizado'])
+        && request.resource.data.keys().hasOnly(['nombre', 'nivel', 'poder', 'x', 'y', 'alianza', 'actualizado', 'escudo', 'defensa'])
+        && (!('escudo' in request.resource.data) || request.resource.data.escudo is int)
+        && (!('defensa' in request.resource.data) || (request.resource.data.defensa is int && request.resource.data.defensa >= 0 && request.resource.data.defensa <= 100000000))
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
         && request.resource.data.nivel is int && request.resource.data.nivel >= 1 && request.resource.data.nivel <= 100000
@@ -48,6 +50,35 @@ service cloud.firestore {
         && request.resource.data.creada is int;
       allow delete: if request.auth != null && resource.data.lider == request.auth.uid;
       allow update: if false;
+    }
+
+    // Ataques entre jugadores: el atacante crea el reporte; el defensor lo lee y lo marca como visto.
+    // No se puede atacar a uno mismo, ni a un reino protegido, ni llevarse más de 5.000 de cada recurso.
+    match /ataques/{id} {
+      allow read: if request.auth != null
+        && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto'])
+        && request.resource.data.atacante == request.auth.uid
+        && request.resource.data.defensor is string
+        && request.resource.data.defensor != request.auth.uid
+        && request.resource.data.atacanteNombre is string && request.resource.data.atacanteNombre.size() <= 30
+        && request.resource.data.defensorNombre is string && request.resource.data.defensorNombre.size() <= 30
+        && request.resource.data.gano is bool
+        && request.resource.data.visto == false
+        && request.resource.data.fecha is int
+        && request.resource.data.fuerza is int && request.resource.data.defensa is int
+        && request.resource.data.botin.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
+        && request.resource.data.botin.oro is int && request.resource.data.botin.oro >= 0 && request.resource.data.botin.oro <= 5000
+        && request.resource.data.botin.comida is int && request.resource.data.botin.comida >= 0 && request.resource.data.botin.comida <= 5000
+        && request.resource.data.botin.madera is int && request.resource.data.botin.madera >= 0 && request.resource.data.botin.madera <= 5000
+        && request.resource.data.botin.piedra is int && request.resource.data.botin.piedra >= 0 && request.resource.data.botin.piedra <= 5000
+        && exists(/databases/$(database)/documents/aldeas/$(request.resource.data.defensor))
+        && get(/databases/$(database)/documents/aldeas/$(request.resource.data.defensor)).data.get('escudo', 0) < request.time.toMillis();
+      allow update: if request.auth != null && resource.data.defensor == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visto'])
+        && request.resource.data.visto == true;
+      allow delete: if false;
     }
 
     // Todo lo demás está cerrado.

@@ -141,6 +141,18 @@ var TEXTOS = {
     info_piedra: 'Piedra 🪨: la da la Mina. Sirve para torres, muralla de piedra y mejoras.',
     info_gemas: 'Gemas 💎: se ganan al superar oleadas. Sirven para invocar.',
     camas: 'Camas', a_enfermeria: '💚 A la enfermería', curados: '💚 Se curaron {n} tropas', en_enfermeria: 'En la enfermería: {n} (vuelven al terminar la oleada)',
+    atacar: '⚔️ Atacar', atacar_ya: '⚔️ ¡Atacar con todas mis tropas!', at_titulo: 'Atacar a {n}',
+    at_fuerza: 'Tu ejército', at_defensa: 'Su defensa (aprox.)', at_botin: 'Botín si ganas (hasta)', at_facil: '😀 Fácil', at_parejo: '😐 Parejo', at_dificil: '😬 Difícil',
+    at_nota: 'Atacar quita tu protección. Las tropas que caen pueden ir a tu Enfermería.', at_sin_tropas: 'No tienes tropas para atacar. Entrena en Héroes.',
+    at_dueno: 'En modo dueño no se puede atacar a otros jugadores (sería injusto).', at_protegido: 'Ese reino está protegido. Faltan {t}.',
+    at_aliado: 'No puedes atacar a alguien de tu alianza.', at_espera: 'Ya atacaste ese reino hace poco. Espera {t}.', at_cuenta: 'Necesitas una cuenta para atacar.',
+    at_batalla: '⚔️ ¡Batalla en curso!', at_gano: '🏆 ¡Ganaste! Te llevaste: {b}', at_perdio: '💔 Perdiste la batalla. Su defensa resistió.',
+    at_bajas: 'Tropas caídas: {n}', at_error: 'No se pudo atacar (sin internet o el reino se protegió).',
+    rep_titulo: 'Reporte de ataques', rep_te_ataco: '⚔️ {n} atacó tu reino', rep_perdiste: 'Se llevó: {b}', rep_resististe: '🛡️ ¡Tu defensa resistió!',
+    rep_escudo: 'Recibiste una protección de 30 minutos.', rep_ok: 'Entendido', defensa_txt: 'Defensa',
+    escudo_usado: '🛡️ ¡Reino protegido! Faltan {t}', protegido_falta: '🛡️ Protegido: faltan {t}', escudo_info: 'Mientras dure la protección, ningún jugador podrá atacar tu reino (para cuando lleguen los ataques entre jugadores). En el mapa se ve un escudo sobre tu aldea.',
+    faltan_t: 'Faltan {t}', proximo_cofre: '⏰ Próximo cofre en {t}', entrenando_t: 'Faltan {t} para terminar el entrenamiento',
+    nivel_de: 'Nivel {n} de {m}', sube_a: 'Al subir al nivel {n}:', nivel_corto: 'Nv',
     vida_extra: 'Vida extra del castillo', muralla_nivel: 'Muralla nivel {n}', sin_muralla: 'Todavía no tienes Muralla.',
     c_enfermeria: 'Consejo: una Enfermería salva a las tropas que caen en batalla.', c_muralla: 'Consejo: construye la Muralla para que el castillo aguante más.',
     muralla_lista: '🧱 ¡Muralla nivel {n} lista! El castillo tiene más vida.',
@@ -266,6 +278,18 @@ var TEXTOS = {
     info_piedra: 'Stone 🪨: the Mine makes it. Used for towers, the stone wall and upgrades.',
     info_gemas: 'Gems 💎: won by clearing waves. Used to summon.',
     camas: 'Beds', a_enfermeria: '💚 To the infirmary', curados: '💚 {n} troops healed', en_enfermeria: 'In the infirmary: {n} (back when the wave ends)',
+    atacar: '⚔️ Attack', atacar_ya: '⚔️ Attack with all my troops!', at_titulo: 'Attack {n}',
+    at_fuerza: 'Your army', at_defensa: 'Their defense (approx.)', at_botin: 'Loot if you win (up to)', at_facil: '😀 Easy', at_parejo: '😐 Even', at_dificil: '😬 Hard',
+    at_nota: 'Attacking removes your protection. Fallen troops can go to your Infirmary.', at_sin_tropas: 'You have no troops to attack. Train in Heroes.',
+    at_dueno: 'In owner mode you cannot attack other players (it would be unfair).', at_protegido: 'That kingdom is protected. {t} left.',
+    at_aliado: 'You cannot attack someone in your alliance.', at_espera: 'You attacked that kingdom recently. Wait {t}.', at_cuenta: 'You need an account to attack.',
+    at_batalla: '⚔️ Battle in progress!', at_gano: '🏆 You won! You took: {b}', at_perdio: '💔 You lost the battle. Their defense held.',
+    at_bajas: 'Fallen troops: {n}', at_error: 'Could not attack (no internet or the kingdom got protected).',
+    rep_titulo: 'Attack report', rep_te_ataco: '⚔️ {n} attacked your kingdom', rep_perdiste: 'They took: {b}', rep_resististe: '🛡️ Your defense held!',
+    rep_escudo: 'You got a 30-minute protection.', rep_ok: 'Got it', defensa_txt: 'Defense',
+    escudo_usado: '🛡️ Kingdom protected! {t} left', protegido_falta: '🛡️ Protected: {t} left', escudo_info: 'While the protection lasts, no player can attack your kingdom (for when player attacks arrive). On the map your village shows a shield.',
+    faltan_t: '{t} left', proximo_cofre: '⏰ Next chest in {t}', entrenando_t: '{t} left to finish training',
+    nivel_de: 'Level {n} of {m}', sube_a: 'At level {n}:', nivel_corto: 'Lv',
     vida_extra: 'Extra castle health', muralla_nivel: 'Wall level {n}', sin_muralla: 'You do not have a Wall yet.',
     c_enfermeria: 'Tip: an Infirmary saves troops that fall in battle.', c_muralla: 'Tip: build the Wall so the castle lasts longer.',
     muralla_lista: '🧱 Wall level {n} ready! The castle has more health.',
@@ -305,7 +329,7 @@ var NOMBRES = {
   enfermeria: { es: 'Enfermería',   en: 'Infirmary',
                 des_es: 'Las tropas que caen se curan aquí y vuelven al terminar la oleada.', des_en: 'Fallen troops heal here and come back when the wave ends.' },
   muralla:    { es: 'Muralla',      en: 'Wall',
-                des_es: 'Rodea el castillo y le da más vida.', des_en: 'Surrounds the castle and gives it more health.' },
+                des_es: 'Rodea todo el reino y le da más vida al castillo.', des_en: 'Surrounds the whole kingdom and gives the castle more health.' },
   espadachin: { es: 'Espadachín',   en: 'Swordsman',
                 des_es: 'Rápido y valiente. Pelea cuerpo a cuerpo.', des_en: 'Fast and brave. Fights up close.' },
   arquero:    { es: 'Arquero',      en: 'Archer',
@@ -317,6 +341,9 @@ var NOMBRES = {
   saco_comida:  { es: 'Saco de comida', en: 'Sack of food', des_es: '+300 de comida.', des_en: '+300 food.' },
   saco_madera:  { es: 'Montón de madera', en: 'Pile of wood', des_es: '+300 de madera.', des_en: '+300 wood.' },
   saco_piedra:  { es: 'Carreta de piedra', en: 'Cart of stone', des_es: '+200 de piedra.', des_en: '+200 stone.' },
+  escudo_2h:    { es: 'Protección 2 horas', en: '2-hour protection', des_es: 'Tu reino queda protegido 2 horas.', des_en: 'Your kingdom is protected for 2 hours.' },
+  escudo_8h:    { es: 'Protección 8 horas', en: '8-hour protection', des_es: 'Tu reino queda protegido 8 horas.', des_en: 'Your kingdom is protected for 8 hours.' },
+  escudo_12h:   { es: 'Protección 12 horas', en: '12-hour protection', des_es: 'Tu reino queda protegido 12 horas.', des_en: 'Your kingdom is protected for 12 hours.' },
   acelerador:   { es: 'Acelerador', en: 'Speed-up', des_es: 'Termina al momento las obras y el entrenamiento.', des_en: 'Instantly finishes building and training.' },
   academia:   { es: 'Academia', en: 'Academy', des_es: 'Centro de investigación: mejora tus tropas, edificios y economía.', des_en: 'Research center: improves your troops, buildings and economy.' },
   inv_obras:     { es: 'Construcción rápida', en: 'Fast building', des_es: 'Las obras tardan {v}% menos.', des_en: 'Buildings take {v}% less time.' },
@@ -365,6 +392,34 @@ var EDIFICIOS = {
 };
 // Muralla: una sola, alrededor del castillo. Da vida extra al castillo. Nivel 1 de madera, 2 y 3 de piedra.
 var MURALLA = { costo: [80, 140, 220], madera: [100, 0, 0], piedra: [0, 150, 260], tiempo: [5, 7, 9], vida: [400, 900, 1500], icono: '🧱' };
+// ---------------- NIVELES HASTA EL 12 ----------------
+// Los valores de los niveles 1-3 están escritos arriba; del 4 al 12 se calculan solos.
+var NIVEL_MAX = 12;
+(function extenderNiveles() {
+  function redondear(v) { return v >= 100 ? Math.round(v / 5) * 5 : Math.round(v); }
+  function extender(arr, regla) {
+    while (arr.length < NIVEL_MAX) {
+      var u = arr[arr.length - 1], v;
+      if (regla[0] === 'x') v = redondear(u * regla[1]);
+      else if (regla[0] === '+') v = Math.round((u + regla[1]) * 100) / 100;
+      else v = regla[1];
+      if (regla[2] !== undefined) v = Math.min(regla[2], v);
+      arr.push(v);
+    }
+  }
+  var reglas = {
+    costo: ['x', 1.35], madera: ['x', 1.35], piedra: ['x', 1.35], tiempo: ['+', 2],
+    produce: ['x', 1.25], capacidad: ['+', 3], rapidez: ['+', 0.15], dano: ['x', 1.2], alcance: ['+', 0.4, 17], tope: ['=', 6]
+  };
+  for (var t in EDIFICIOS) for (var c in reglas) if (Array.isArray(EDIFICIOS[t][c])) extender(EDIFICIOS[t][c], reglas[c]);
+  extender(MURALLA.costo, ['x', 1.3]); extender(MURALLA.madera, ['=', 0]); extender(MURALLA.piedra, ['x', 1.3]);
+  extender(MURALLA.tiempo, ['+', 2]); extender(MURALLA.vida, ['+', 600]);
+})();
+// Cómo se ve cada nivel: 1-4 normal, 5-8 mejorado, 9-12 dorado
+function nivelVisual(n) { return n <= 4 ? 1 : n <= 8 ? 2 : 3; }
+// La muralla rodea TODO el reino (óvalo con todos los terrenos adentro)
+var MURALLA_FORMA = { cx: -4, cz: -1, rx: 30, rz: 29 };
+
 // Barricada: se pone en los puntos marcados del camino. Los enemigos se paran a romperla.
 // Nivel 1 de madera, nivel 2 de piedra. Se arregla sola al terminar cada oleada.
 var BARRICADA = { costo: [20, 40], madera: [40, 0], piedra: [0, 60], vida: [350, 900], tiempo: [2, 3], icono: '🚧' };
@@ -387,12 +442,16 @@ var OBJETOS = {
   saco_comida:  { icono: '🌾', da: { comida: 300 } },
   saco_madera:  { icono: '🪵', da: { madera: 300 } },
   saco_piedra:  { icono: '🪨', da: { piedra: 200 } },
-  acelerador:   { icono: '⏩', acelera: true }
+  acelerador:   { icono: '⏩', acelera: true },
+  escudo_2h:    { icono: '🛡️', escudo: 2 },
+  escudo_8h:    { icono: '🛡️', escudo: 8 },
+  escudo_12h:   { icono: '🛡️', escudo: 12 }
 };
 // Tienda: se paga con gemas (las compras con dinero real llegarán con la App Store)
 var TIENDA = [
   { id: 'bolsa_oro', gemas: 5 }, { id: 'saco_comida', gemas: 4 }, { id: 'saco_madera', gemas: 4 }, { id: 'saco_piedra', gemas: 5 },
-  { id: 'acelerador', gemas: 3 }, { id: 'cofre_plata', gemas: 15 }, { id: 'cofre_oro', gemas: 40 }
+  { id: 'acelerador', gemas: 3 }, { id: 'cofre_plata', gemas: 15 }, { id: 'cofre_oro', gemas: 40 },
+  { id: 'escudo_2h', gemas: 10 }, { id: 'escudo_8h', gemas: 30 }, { id: 'escudo_12h', gemas: 45 }
 ];
 // Investigación: 3 ramas. 'cada' = cuánto mejora cada nivel.
 var INVESTIGACION = {

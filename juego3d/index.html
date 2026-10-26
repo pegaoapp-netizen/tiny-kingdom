@@ -29,6 +29,7 @@ window.addEventListener("error", function (e) {
 <body>
 <div id="juego"></div>
 <div id="flotantes"></div>
+<div id="relojes"></div>
 
 <!-- Barra de arriba: perfil y recursos -->
 <div id="arriba">
@@ -49,6 +50,7 @@ window.addEventListener("error", function (e) {
 <!-- Columna derecha -->
 <div id="lateral">
   <div class="pill oleada"><span data-t="oleada">Oleada</span><b id="oleada">1/5</b></div>
+  <div class="pill oculto-pill" id="pill-escudo" title="Protección"><span>🛡️</span><b id="escudo-t">0:00</b></div>
   <div class="pill" id="pill-tropas"><span class="ico casco"></span><b id="tropas">0/0</b></div>
   <button class="redondo" id="btn-idioma" title="Idioma / Language">ES</button>
   <button class="redondo" id="btn-velocidad" title="Velocidad">x1</button>

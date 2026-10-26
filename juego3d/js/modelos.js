@@ -71,6 +71,24 @@ var M = (function () {
     return g;
   }
   // Hace ondear la tela (se llama cada cuadro)
+  var cacheInsignia = {};
+  function insigniaNivel(n) {
+    if (!cacheInsignia[n]) {
+      var c = document.createElement('canvas'); c.width = c.height = 64;
+      var x = c.getContext('2d');
+      x.fillStyle = n >= 9 ? '#f5c542' : n >= 5 ? '#6f8fb5' : '#3a2414';
+      x.beginPath(); x.arc(32, 32, 28, 0, Math.PI * 2); x.fill();
+      x.lineWidth = 5; x.strokeStyle = '#ffe9b0'; x.stroke();
+      x.fillStyle = n >= 9 ? '#3a2414' : '#ffffff'; x.font = 'bold 32px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+      x.fillText(String(n), 32, 34);
+      var tx = new THREE.CanvasTexture(c);
+      cacheInsignia[n] = new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true });
+    }
+    var s = new THREE.Sprite(cacheInsignia[n]);
+    s.scale.set(1.3, 1.3, 1);
+    s.renderOrder = 12;
+    return s;
+  }
   function ondear(tela, t) {
     var pos = tela.geometry.attributes.position;
     if (!tela.userData.base) { tela.geometry = tela.geometry.clone(); pos = tela.geometry.attributes.position; tela.userData.base = pos.array.slice(); }
@@ -179,6 +197,7 @@ var M = (function () {
   //  EDIFICIOS
   // =================================================================
   function granja(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     // casita
     g.add(caja(2, 1.4, 1.6, 0xf3e3c3, -0.6, 0.85, -0.6));
@@ -216,6 +235,7 @@ var M = (function () {
   }
 
   function cuartel(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     g.add(caja(3.4, 0.3, 2.4, C.piedraOsc, 0, 0.25, -0.4));
     g.add(caja(3.2, 1.6, 2.2, 0xe8d8b8, 0, 1.2, -0.4));
@@ -248,6 +268,7 @@ var M = (function () {
   }
 
   function torre(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     var alto = 3.6 + nivel * 0.8;
     g.add(cil(1.3, 1.5, 0.5, 8, C.piedraOsc, 0, 0.25, 0));
@@ -276,6 +297,7 @@ var M = (function () {
 
   // Enfermería: casa blanca con techo verde y cruz verde (no roja: la cruz roja es un símbolo protegido)
   function enfermeria(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     var verde = 0x3fbf6a, verdeOsc = 0x2a8a48, blanco = 0xf6f3ea;
     g.add(caja(3.2, 0.25, 2.4, C.piedraOsc, 0, 0.12, -0.3));
@@ -314,6 +336,7 @@ var M = (function () {
 
   // Aserradero: cabaña de madera, sierra redonda que gira y troncos apilados
   function aserradero(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     g.add(caja(2.6, 0.2, 2.0, C.piedraOsc, -0.4, 0.1, -0.6));
     // paredes de troncos
@@ -350,6 +373,7 @@ var M = (function () {
 
   // Mina: montaña de roca con entrada oscura, vigas, rieles y un carrito con piedras
   function mina(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     var roca = malla(geo('montana', function () { return new THREE.DodecahedronGeometry(1.6, 0); }), mat(0x9a948a), -0.3, 0.6, -0.7);
     roca.scale.set(1.25, 0.9, 1.0);
@@ -405,6 +429,7 @@ var M = (function () {
 
   // Academia: torre de piedra con cúpula azul, telescopio y libros
   function academia(nivel) {
+    nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     g.add(caja(3.0, 0.25, 2.4, C.piedraOsc, 0, 0.12, -0.3));
     g.add(caja(2.6, 1.7, 2.0, 0xe9e0cc, 0, 1.1, -0.3));
@@ -425,43 +450,47 @@ var M = (function () {
     return g;
   }
 
-  // Muralla alrededor del castillo: nivel 1 madera, 2 piedra, 3 piedra con torres y techos
-  function muralla(nivel) {
+  // Muralla alrededor de TODO el reino: un óvalo con una puerta donde entra el camino.
+  // nivel (visual) 1 madera, 2 piedra, 3 piedra con torres de techo azul.
+  // forma = { cx, cz, rx, rz, puerta (ángulo), hueco (medio ángulo) }
+  function muralla(nivel, forma) {
     var g = new THREE.Group();
-    var R = 7.4, N = 30, hueco = 0.5; // el hueco mira hacia el camino (lado -x)
-    var alto = nivel === 1 ? 1.4 : nivel === 2 ? 1.9 : 2.4;
+    var f = forma;
+    var alto = nivel === 1 ? 1.6 : nivel === 2 ? 2.2 : 2.8;
     var color = nivel === 1 ? C.madera : C.piedra;
-    var largo = 2 * Math.PI * R / N * 1.08;
+    var per = 2 * Math.PI * Math.sqrt((f.rx * f.rx + f.rz * f.rz) / 2);
+    var N = Math.round(per / 2.6);
+    function punto(t) { return { x: f.cx + Math.cos(t) * f.rx, z: f.cz + Math.sin(t) * f.rz }; }
+    function enPuerta(t) { var d = Math.abs(((t - f.puerta) + Math.PI * 3) % (Math.PI * 2) - Math.PI); return d < f.hueco; }
+    var torres = [];
     for (var i = 0; i < N; i++) {
-      var ang = i / N * Math.PI * 2;
-      var dif = Math.abs(((ang - Math.PI) + Math.PI * 3) % (Math.PI * 2) - Math.PI);
-      if (dif < hueco) continue;
-      var x = Math.cos(ang) * R, z = Math.sin(ang) * R;
-      var seg = caja(largo, alto, nivel === 1 ? 0.45 : 0.75, color, x, alto / 2, z);
-      seg.rotation.y = -ang + Math.PI / 2;
+      var t0 = i / N * Math.PI * 2, t1 = (i + 1) / N * Math.PI * 2, tm = (t0 + t1) / 2;
+      if (enPuerta(tm)) continue;
+      var a = punto(t0), b = punto(t1);
+      var dx = b.x - a.x, dz = b.z - a.z, largo = Math.hypot(dx, dz) * 1.08;
+      var seg = caja(largo, alto, nivel === 1 ? 0.5 : 0.85, color, (a.x + b.x) / 2, alto / 2, (a.z + b.z) / 2);
+      seg.rotation.y = -Math.atan2(dz, dx);
+      seg.castShadow = false;
       g.add(seg);
       if (nivel === 1) {
-        var punta = cono(0.22, 0.45, 4, C.maderaOsc, x, alto + 0.2, z);
-        g.add(punta);
-      } else {
-        var al = caja(0.45, 0.4, 0.8, C.piedraOsc, x, alto + 0.2, z);
-        al.rotation.y = -ang + Math.PI / 2;
-        g.add(al);
+        if (i % 2 === 0) { var pu = cono(0.25, 0.5, 4, C.maderaOsc, (a.x + b.x) / 2, alto + 0.22, (a.z + b.z) / 2); pu.castShadow = false; g.add(pu); }
+      } else if (i % 2 === 0) {
+        var al = caja(0.6, 0.45, 0.95, C.piedraOsc, (a.x + b.x) / 2, alto + 0.22, (a.z + b.z) / 2);
+        al.rotation.y = seg.rotation.y; al.castShadow = false; g.add(al);
       }
+      if (i % 7 === 0 && !enPuerta(t0 - 0.2) && !enPuerta(t0 + 0.2)) torres.push({ p: a, puerta: false });
     }
-    // torres: 6 alrededor y 2 en la entrada
-    var torres = [0.5, 1.55, 2.6, 3.7, 4.75, 5.8].map(function (k) { return k; });
-    torres.push(Math.PI - hueco - 0.08, Math.PI + hueco + 0.08);
-    torres.forEach(function (ang, i) {
-      var x = Math.cos(ang) * R, z = Math.sin(ang) * R, h = alto + 1.0;
-      var entrada = i >= 6;
-      g.add(cil(entrada ? 0.75 : 0.6, entrada ? 0.85 : 0.7, h, 8, nivel === 1 ? C.maderaOsc : C.piedra, x, h / 2, z));
-      if (nivel === 1) g.add(cono(0.75, 0.7, 8, C.maderaOsc, x, h + 0.35, z));
+    // torres grandes a los dos lados de la puerta
+    torres.push({ p: punto(f.puerta - f.hueco - 0.03), puerta: true }, { p: punto(f.puerta + f.hueco + 0.03), puerta: true });
+    torres.forEach(function (tq) {
+      var x = tq.p.x, z = tq.p.z, h = alto + (tq.puerta ? 1.8 : 1.1), r = tq.puerta ? 1.1 : 0.8;
+      g.add(cil(r, r + 0.12, h, 8, nivel === 1 ? C.maderaOsc : C.piedra, x, h / 2, z));
+      if (nivel === 1) g.add(cono(r + 0.2, 0.9, 8, C.maderaOsc, x, h + 0.45, z));
       else {
-        g.add(cil(entrada ? 0.9 : 0.75, entrada ? 0.9 : 0.75, 0.3, 8, C.piedraOsc, x, h + 0.15, z));
+        g.add(cil(r + 0.15, r + 0.15, 0.35, 8, C.piedraOsc, x, h + 0.17, z));
         if (nivel >= 3) {
-          g.add(cono(entrada ? 1.05 : 0.9, 1.2, 8, C.techoAzul, x, h + 0.9, z));
-          if (entrada) { var b = bandera(C.techoRojo, 1.6); b.position.set(x, h + 1.4, z); g.add(b); (g.userData.banderas = g.userData.banderas || []).push(b.userData.tela); }
+          g.add(cono(r + 0.3, 1.4, 8, C.techoAzul, x, h + 1.05, z));
+          if (tq.puerta) { var bd = bandera(C.techoRojo, 1.8); bd.position.set(x, h + 1.6, z); g.add(bd); (g.userData.banderas = g.userData.banderas || []).push(bd.userData.tela); }
         }
       }
     });
@@ -823,6 +852,6 @@ var M = (function () {
     unidad: unidad, animarUnidad: animarUnidad,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, nube: nube, flor: flor, moneda: moneda,
-    ondear: ondear
+    ondear: ondear, insigniaNivel: insigniaNivel
   };
 })();

@@ -137,7 +137,7 @@ var Cuentas = (function () {
       if (!usuario) return Promise.resolve();
       return db.collection('aldeas').doc(usuario.uid).set({
         nombre: d.nombre, nivel: d.nivel, poder: d.poder, x: d.x, y: d.y,
-        alianza: d.alianza || null, actualizado: Date.now()
+        alianza: d.alianza || null, actualizado: Date.now(), escudo: Math.floor(d.escudo || 0), defensa: Math.floor(d.defensa || 0)
       });
     },
     aldeas: function () {
@@ -165,6 +165,13 @@ var Cuentas = (function () {
       });
     },
     borrarAlianza: function (tag) { return db.collection('alianzas').doc(tag).delete(); },
+    atacar: function (r) { return db.collection('ataques').add(r); },
+    ataquesNuevos: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('ataques').where('defensor', '==', usuario.uid).where('visto', '==', false).limit(20).get()
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    marcarVisto: function (id) { return db.collection('ataques').doc(id).update({ visto: true }); },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
 })();
