@@ -47,7 +47,7 @@ var TEXTOS = {
     derrota: 'El castillo cayó', derrota_txt: 'Los trasgos llegaron a tus puertas en la oleada {n}. No pierdes nada: tus edificios, tropas, monedas y gemas se quedan. Puedes intentar esa oleada otra vez con el castillo curado.',
     reintentar: 'Intentar otra vez',
     // Consejos
-    c_granja: 'Toca CONSTRUIR y pon una Granja: te da monedas.',
+    c_granja: 'Toca CONSTRUIR y pon una Granja: da comida para tus tropas.',
     c_cuartel: 'Ahora construye un Cuartel para entrenar caballeros.',
     c_tropas: 'Toca TROPAS y entrena a tus primeros caballeros.',
     c_oleada: 'Cuando estés listo, toca "Empezar oleada". ¡Defiende el camino!',
@@ -90,6 +90,20 @@ var TEXTOS = {
     e_general: 'No se pudo. Inténtalo otra vez.', e_repetir: 'Las contraseñas no son iguales.',
     e_sin_nube: 'Las cuentas no están disponibles ahora (sin internet).',
     gemas_inf: 'Gemas infinitas',
+    r_oro: 'oro', r_comida: 'comida', r_madera: 'madera', r_piedra: 'piedra', r_gemas: 'gemas',
+    falta: 'Te falta {r}.', costo: 'Cuesta', produce_txt: 'Produce {n} {r} cada {s} s',
+    comen: 'Tus tropas comen {n} de comida por minuto.', sin_comida: '¡Sin comida! Tus tropas pelean más débiles. Construye Granjas.',
+    impuesto: 'El castillo cobra {n} de oro cada {s} s.', recursos_inf: 'Recursos infinitos',
+    c_aserradero: 'Ahora pon un Aserradero: da madera para construir.', c_mina: 'Consejo: una Mina da piedra para torres y muralla.',
+    c_barricada: 'Consejo: pon una Barricada en el camino para frenar a los enemigos.',
+    colocando_barr: 'Elige un punto del camino para la Barricada', punto_ocupado: 'Ya hay una Barricada ahí.',
+    barr_rota: '🚧 ¡Rompieron una Barricada!', barr_arreglo: 'Las barricadas se arreglan solas al terminar la oleada.',
+    madera_nivel: 'de madera', piedra_nivel: 'de piedra',
+    info_oro: 'Oro 🪙: lo cobra el castillo cada pocos segundos y lo sueltan los enemigos al caer.',
+    info_comida: 'Comida 🍞: la dan las Granjas. Sirve para entrenar y alimentar a tus tropas.',
+    info_madera: 'Madera 🪵: la da el Aserradero. Sirve para construir y mejorar.',
+    info_piedra: 'Piedra 🪨: la da la Mina. Sirve para torres, muralla de piedra y mejoras.',
+    info_gemas: 'Gemas 💎: se ganan al superar oleadas. Sirven para invocar.',
     camas: 'Camas', a_enfermeria: '💚 A la enfermería', curados: '💚 Se curaron {n} tropas', en_enfermeria: 'En la enfermería: {n} (vuelven al terminar la oleada)',
     vida_extra: 'Vida extra del castillo', muralla_nivel: 'Muralla nivel {n}', sin_muralla: 'Todavía no tienes Muralla.',
     c_enfermeria: 'Consejo: una Enfermería salva a las tropas que caen en batalla.', c_muralla: 'Consejo: construye la Muralla para que el castillo aguante más.',
@@ -123,7 +137,7 @@ var TEXTOS = {
     seguir_infinito: 'Keep playing (endless waves)',
     derrota: 'The castle has fallen', derrota_txt: 'The goblins reached your gates on wave {n}. You lose nothing: your buildings, troops, coins and gems stay. You can try that wave again with the castle healed.',
     reintentar: 'Try again',
-    c_granja: 'Tap BUILD and place a Farm: it gives you coins.',
+    c_granja: 'Tap BUILD and place a Farm: it gives food for your troops.',
     c_cuartel: 'Now build Barracks to train knights.',
     c_tropas: 'Tap TROOPS and train your first knights.',
     c_oleada: 'When you are ready, tap "Start wave". Defend the road!',
@@ -165,6 +179,20 @@ var TEXTOS = {
     e_general: 'Something went wrong. Try again.', e_repetir: 'Passwords do not match.',
     e_sin_nube: 'Accounts are not available right now (no internet).',
     gemas_inf: 'Infinite gems',
+    r_oro: 'gold', r_comida: 'food', r_madera: 'wood', r_piedra: 'stone', r_gemas: 'gems',
+    falta: 'You need more {r}.', costo: 'Costs', produce_txt: 'Makes {n} {r} every {s} s',
+    comen: 'Your troops eat {n} food per minute.', sin_comida: 'Out of food! Your troops fight weaker. Build Farms.',
+    impuesto: 'The castle collects {n} gold every {s} s.', recursos_inf: 'Infinite resources',
+    c_aserradero: 'Now place a Sawmill: it gives wood to build.', c_mina: 'Tip: a Mine gives stone for towers and the wall.',
+    c_barricada: 'Tip: place a Barricade on the road to slow enemies down.',
+    colocando_barr: 'Pick a spot on the road for the Barricade', punto_ocupado: 'There is already a Barricade there.',
+    barr_rota: '🚧 A Barricade was broken!', barr_arreglo: 'Barricades repair themselves when the wave ends.',
+    madera_nivel: 'wooden', piedra_nivel: 'stone',
+    info_oro: 'Gold 🪙: the castle collects it every few seconds and enemies drop it.',
+    info_comida: 'Food 🍞: Farms make it. Used to train and feed your troops.',
+    info_madera: 'Wood 🪵: the Sawmill makes it. Used to build and upgrade.',
+    info_piedra: 'Stone 🪨: the Mine makes it. Used for towers, the stone wall and upgrades.',
+    info_gemas: 'Gems 💎: won by clearing waves. Used to summon.',
     camas: 'Beds', a_enfermeria: '💚 To the infirmary', curados: '💚 {n} troops healed', en_enfermeria: 'In the infirmary: {n} (back when the wave ends)',
     vida_extra: 'Extra castle health', muralla_nivel: 'Wall level {n}', sin_muralla: 'You do not have a Wall yet.',
     c_enfermeria: 'Tip: an Infirmary saves troops that fall in battle.', c_muralla: 'Tip: build the Wall so the castle lasts longer.',
@@ -191,7 +219,13 @@ var TEXTOS = {
 // Nombres de edificios, tropas y enemigos en los dos idiomas
 var NOMBRES = {
   granja:     { es: 'Granja',       en: 'Farm',
-                des_es: 'Cultiva trigo y te da monedas.', des_en: 'Grows wheat and gives you coins.' },
+                des_es: 'Cultiva trigo: da comida para entrenar y alimentar a tus tropas.', des_en: 'Grows wheat: gives food to train and feed your troops.' },
+  aserradero: { es: 'Aserradero',   en: 'Sawmill',
+                des_es: 'Corta árboles: da madera para construir y mejorar.', des_en: 'Cuts trees: gives wood to build and upgrade.' },
+  mina:       { es: 'Mina',         en: 'Mine',
+                des_es: 'Saca piedra: para la muralla, las torres y mejoras grandes.', des_en: 'Digs stone: for the wall, towers and big upgrades.' },
+  barricada:  { es: 'Barricada',    en: 'Barricade',
+                des_es: 'Muro en el camino: los enemigos se paran a romperlo.', des_en: 'A wall on the road: enemies stop to break it.' },
   cuartel:    { es: 'Cuartel',      en: 'Barracks',
                 des_es: 'Permite entrenar caballeros.', des_en: 'Lets you train knights.' },
   torre:      { es: 'Torre',        en: 'Tower',
@@ -213,27 +247,41 @@ var NOMBRES = {
 };
 
 // ---------------- Recursos iniciales ----------------
-var INICIO = { monedas: 200, gemas: 20, vidaCastillo: 1200 };
+var INICIO = { monedas: 200, gemas: 20, comida: 120, madera: 120, piedra: 40, vidaCastillo: 1200 };
+// Recursos: oro (monedas), comida, madera, piedra y gemas
+var RECURSOS = ['oro', 'comida', 'madera', 'piedra'];
+var ICONO_RECURSO = { oro: '🪙', comida: '🍞', madera: '🪵', piedra: '🪨', gemas: '💎' };
+// El castillo cobra impuestos: da oro cada cierto tiempo
+var IMPUESTO = { oro: 5, cada: 3 };
+// Cada tropa come 1 de comida cada tantos segundos. Sin comida pelean más débiles.
+var COMIDA_TROPA = { cada: 15, debilidad: 0.7 };
 
 // ---------------- Edificios (valores por nivel 1, 2, 3) ----------------
+// costo = oro; madera y piedra = lo que piden además (por nivel 1, 2, 3)
 var EDIFICIOS = {
-  granja:  { costo: [50, 90, 160],  tiempo: [3, 4, 6], produce: [3, 6, 10], cada: 3, icono: '🌾' },
-  cuartel: { costo: [70, 120, 200], tiempo: [3, 5, 7], capacidad: [6, 10, 15], rapidez: [1, 1.3, 1.6], icono: '⚔️' },
-  torre:   { costo: [80, 140, 220], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [10, 11, 12.5], ritmo: 0.9, icono: '🏹' },
+  granja:     { costo: [30, 55, 90],   madera: [30, 60, 100], piedra: [0, 10, 30],   tiempo: [3, 4, 6], produce: [4, 8, 13], recurso: 'comida', cada: 3, icono: '🌾' },
+  aserradero: { costo: [30, 55, 90],   madera: [0, 50, 90],   piedra: [0, 15, 35],  tiempo: [3, 4, 6], produce: [3, 6, 10], recurso: 'madera', cada: 4, icono: '🪵' },
+  mina:       { costo: [40, 70, 110],  madera: [50, 80, 130], piedra: [0, 0, 0],    tiempo: [4, 5, 7], produce: [2, 4, 7],  recurso: 'piedra', cada: 5, icono: '🪨' },
+  cuartel:    { costo: [50, 80, 130],  madera: [50, 100, 160], piedra: [0, 30, 60],  tiempo: [3, 5, 7], capacidad: [6, 10, 15], rapidez: [1, 1.3, 1.6], icono: '⚔️' },
+  torre:      { costo: [50, 90, 140],  madera: [40, 80, 120], piedra: [30, 60, 100], tiempo: [4, 5, 7], dano: [14, 22, 34], alcance: [10, 11, 12.5], ritmo: 0.9, icono: '🏹' },
   // Enfermería: camas = cuántas tropas caídas puede salvar por oleada
-  enfermeria: { costo: [90, 150, 240], tiempo: [4, 5, 7], capacidad: [4, 8, 14], icono: '💚' }
+  enfermeria: { costo: [60, 100, 160], madera: [60, 110, 160], piedra: [0, 40, 80],  tiempo: [4, 5, 7], capacidad: [4, 8, 14], icono: '💚' }
 };
-// Muralla: una sola, alrededor del castillo. Da vida extra al castillo.
-var MURALLA = { costo: [120, 220, 360], tiempo: [5, 7, 9], vida: [400, 900, 1500], icono: '🧱' };
+// Muralla: una sola, alrededor del castillo. Da vida extra al castillo. Nivel 1 de madera, 2 y 3 de piedra.
+var MURALLA = { costo: [80, 140, 220], madera: [100, 0, 0], piedra: [0, 150, 260], tiempo: [5, 7, 9], vida: [400, 900, 1500], icono: '🧱' };
+// Barricada: se pone en los puntos marcados del camino. Los enemigos se paran a romperla.
+// Nivel 1 de madera, nivel 2 de piedra. Se arregla sola al terminar cada oleada.
+var BARRICADA = { costo: [20, 40], madera: [40, 0], piedra: [0, 60], vida: [350, 900], tiempo: [2, 3], icono: '🚧' };
+var PUNTOS_BARRICADA = [0.40, 0.53, 0.66, 0.79]; // en qué parte del camino (0 = bosque, 1 = castillo)
 
 // El castillo también dispara (para que la primera oleada sea posible)
 var CASTILLO = { dano: 12, alcance: 9.5, ritmo: 1.1 };
 
 // ---------------- Tropas ----------------
 var TROPAS = {
-  espadachin: { costo: 25, tiempo: 3, vida: 150, dano: 18, alcance: 1.3, vel: 3.2, ritmo: 0.9, icono: '🗡️' },
-  arquero:    { costo: 35, tiempo: 4, vida: 85,  dano: 12, alcance: 7.5, vel: 3.0, ritmo: 1.1, distancia: true, icono: '🏹' },
-  guardian:   { costo: 55, tiempo: 6, vida: 390, dano: 11, alcance: 1.4, vel: 2.4, ritmo: 1.2, icono: '🛡️' },
+  espadachin: { costo: 15, comida: 20, tiempo: 3, vida: 150, dano: 18, alcance: 1.3, vel: 3.2, ritmo: 0.9, icono: '🗡️' },
+  arquero:    { costo: 20, comida: 20, tiempo: 4, vida: 85,  dano: 12, alcance: 7.5, vel: 3.0, ritmo: 1.1, distancia: true, icono: '🏹' },
+  guardian:   { costo: 30, comida: 35, tiempo: 6, vida: 390, dano: 11, alcance: 1.4, vel: 2.4, ritmo: 1.2, icono: '🛡️' },
   heroe:      { costo: 0,  tiempo: 0, vida: 950, dano: 42, alcance: 1.7, vel: 3.4, ritmo: 0.8, cura: 10, icono: '👑' }
 };
 var INVOCAR = { tres: 10, heroe: 30 }; // precio en gemas

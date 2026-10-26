@@ -312,6 +312,97 @@ var M = (function () {
     return g;
   }
 
+  // Aserradero: cabaña de madera, sierra redonda que gira y troncos apilados
+  function aserradero(nivel) {
+    var g = new THREE.Group();
+    g.add(caja(2.6, 0.2, 2.0, C.piedraOsc, -0.4, 0.1, -0.6));
+    // paredes de troncos
+    for (var y = 0; y < 4; y++) {
+      g.add(cil(0.16, 0.16, 2.5, 6, y % 2 ? C.madera : 0xa9783f, -0.4, 0.35 + y * 0.3, 0.3).rotateZ(Math.PI / 2));
+      g.add(cil(0.16, 0.16, 2.5, 6, y % 2 ? C.madera : 0xa9783f, -0.4, 0.35 + y * 0.3, -1.5).rotateZ(Math.PI / 2));
+    }
+    g.add(caja(2.4, 1.2, 1.7, 0x9b6a3c, -0.4, 0.8, -0.6));
+    var techo = malla(geo('techoAserr', function () {
+      var s = new THREE.Shape(); s.moveTo(-1.45, 0); s.lineTo(1.45, 0); s.lineTo(0, 0.9); s.lineTo(-1.45, 0);
+      var e = new THREE.ExtrudeGeometry(s, { depth: 2.2, bevelEnabled: false }); e.translate(0, 0, -1.1); return e;
+    }), mat(nivel >= 3 ? C.oro : 0x5a8a3a), -0.4, 1.45, -0.6);
+    g.add(techo);
+    // mesa con sierra
+    g.add(caja(1.4, 0.15, 0.7, C.madera, 1.0, 0.75, 0.9));
+    [-0.5, 0.5].forEach(function (x) { g.add(caja(0.1, 0.7, 0.6, C.maderaOsc, 1.0 + x, 0.35, 0.9)); });
+    var sierra = cil(0.42, 0.42, 0.04, 14, C.metal, 1.0, 0.95, 0.9);
+    sierra.rotation.x = Math.PI / 2;
+    g.add(sierra);
+    g.userData.sierra = sierra;
+    g.add(cil(0.14, 0.14, 1.2, 6, 0xa9783f, 1.0, 0.92, 0.9).rotateZ(Math.PI / 2));
+    // pila de troncos (crece con el nivel)
+    var n = 3 + nivel * 2;
+    for (var i = 0; i < n; i++) {
+      var fila = i < 3 ? 0 : i < 5 ? 1 : 2, col = i < 3 ? i : i < 5 ? i - 3 : i - 5;
+      g.add(cil(0.2, 0.2, 1.6, 7, 0xa9783f, -1.3 + col * 0.42 + fila * 0.21, 0.2 + fila * 0.36, 1.3).rotateZ(Math.PI / 2).rotateY(Math.PI / 2));
+    }
+    // hacha clavada
+    g.add(cil(0.25, 0.3, 0.35, 8, C.madera, 1.5, 0.17, -1.3));
+    g.add(caja(0.05, 0.6, 0.05, C.maderaOsc, 1.5, 0.6, -1.3));
+    g.add(caja(0.25, 0.16, 0.04, C.metal, 1.6, 0.85, -1.3));
+    return g;
+  }
+
+  // Mina: montaña de roca con entrada oscura, vigas, rieles y un carrito con piedras
+  function mina(nivel) {
+    var g = new THREE.Group();
+    var roca = malla(geo('montana', function () { return new THREE.DodecahedronGeometry(1.6, 0); }), mat(0x9a948a), -0.3, 0.6, -0.7);
+    roca.scale.set(1.25, 0.9, 1.0);
+    g.add(roca);
+    var roca2 = malla(geo('montana2', function () { return new THREE.DodecahedronGeometry(0.9, 0); }), mat(0x8a847a), 1.0, 0.4, -1.1);
+    g.add(roca2);
+    // entrada
+    g.add(caja(0.95, 1.05, 0.3, 0x2a2320, -0.3, 0.55, 0.65));
+    g.add(caja(0.14, 1.2, 0.18, C.madera, -0.85, 0.6, 0.78));
+    g.add(caja(0.14, 1.2, 0.18, C.madera, 0.25, 0.6, 0.78));
+    g.add(caja(1.3, 0.16, 0.2, C.madera, -0.3, 1.22, 0.78));
+    // farol
+    g.add(esfera(0.1, 0xffd35a, 0.35, 1.05, 0.95, 6, 4));
+    // rieles
+    [-0.55, -0.05].forEach(function (x) { g.add(caja(0.06, 0.05, 1.6, C.metalOsc, x, 0.04, 1.5)); });
+    for (var k = 0; k < 4; k++) g.add(caja(0.8, 0.05, 0.12, C.maderaOsc, -0.3, 0.02, 0.9 + k * 0.4));
+    // carrito con piedras
+    var carro = new THREE.Group();
+    carro.add(caja(0.7, 0.35, 0.5, C.maderaOsc, 0, 0.3, 0));
+    for (var p = 0; p < 2 + nivel; p++) carro.add(esfera(0.13, 0xb5aea3, -0.2 + (p % 3) * 0.2, 0.52, -0.1 + Math.floor(p / 3) * 0.2, 5, 4));
+    [-0.25, 0.25].forEach(function (x) { [-0.18, 0.18].forEach(function (z) { var r = cil(0.1, 0.1, 0.06, 8, C.negro, x, 0.1, z); r.rotation.x = Math.PI / 2; carro.add(r); }); });
+    carro.position.set(-0.3, 0, 1.7);
+    g.add(carro);
+    g.userData.carro = carro;
+    // piedras sueltas y pico
+    for (var q = 0; q < nivel + 1; q++) g.add(esfera(0.22, 0xb5aea3, 1.2 - q * 0.3, 0.15, 0.9 + q * 0.2, 5, 4));
+    g.add(caja(0.05, 0.7, 0.05, C.madera, 1.2, 0.35, 0.3).rotateZ(0.5));
+    g.add(caja(0.5, 0.06, 0.06, C.metal, 1.05, 0.62, 0.3).rotateZ(0.2));
+    if (nivel >= 3) g.add(cono(0.2, 0.35, 4, C.oro, -0.3, 1.5, 0.78));
+    return g;
+  }
+
+  // Barricada: atraviesa el camino. Nivel 1 de madera con picos, nivel 2 de piedra.
+  function barricada(nivel) {
+    var g = new THREE.Group();
+    if (nivel <= 1) {
+      for (var i = 0; i < 7; i++) {
+        var x = -1.8 + i * 0.6;
+        var palo = cil(0.12, 0.14, 1.3, 6, i % 2 ? C.madera : 0xa9783f, x, 0.6, 0);
+        palo.rotation.x = (i % 2 ? 0.35 : -0.35);
+        g.add(palo);
+        g.add(cono(0.13, 0.3, 5, C.maderaOsc, x, 1.3, (i % 2 ? 0.22 : -0.22)));
+      }
+      g.add(cil(0.1, 0.1, 4.2, 6, C.maderaOsc, 0, 0.6, 0).rotateZ(Math.PI / 2));
+    } else {
+      g.add(caja(4.2, 1.1, 0.8, C.piedra, 0, 0.55, 0));
+      for (var j = 0; j < 6; j++) g.add(caja(0.5, 0.35, 0.85, C.piedraOsc, -1.75 + j * 0.7, 1.25, 0));
+      g.add(cil(0.45, 0.5, 1.6, 7, C.piedra, -2.2, 0.8, 0));
+      g.add(cil(0.45, 0.5, 1.6, 7, C.piedra, 2.2, 0.8, 0));
+    }
+    return g;
+  }
+
   // Muralla alrededor del castillo: nivel 1 madera, 2 piedra, 3 piedra con torres y techos
   function muralla(nivel) {
     var g = new THREE.Group();
@@ -647,7 +738,7 @@ var M = (function () {
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
-    granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla,
+    granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada,
     unidad: unidad, animarUnidad: animarUnidad,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, nube: nube, flor: flor, moneda: moneda,

@@ -449,3 +449,50 @@ button:active { transform: scale(.93); filter: brightness(1.12); }
 .carta.compacta { grid-template-columns: 54px minmax(0, 1fr) auto; }
 .carta.compacta .stats span { white-space: normal; }
 @media (max-width: 600px) { .carta.compacta { grid-template-columns: 46px minmax(0, 1fr) auto; } }
+
+/* =====================================================================
+   RECURSOS: oro, comida, madera, piedra y gemas en la barra de arriba
+   ===================================================================== */
+#recursos { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: calc(100vw - 200px); }
+.pill.r { font-size: 16px; padding: 3px 12px 3px 5px; cursor: pointer; }
+.pill.r b { min-width: 28px; }
+.ico.emo { width: auto; height: auto; background: none; border: none; border-radius: 0; font-size: 18px; line-height: 1; transform: none; }
+.pill.r.falta { animation: falta .5s 2; }
+@keyframes falta { 50% { background: #8a1a10; } }
+.costo-r { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; }
+.costo-r .ico { width: 18px; height: 18px; }
+.costo-r .emo { font-size: 15px; }
+.comprar .costo-r.no { color: #ffd0c8; text-decoration: line-through; }
+#aviso-hambre { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom)); z-index: 12;
+  background: #b3261e; color: #fff; font-weight: 800; padding: 6px 12px; border-radius: 12px; border: 3px solid #5a0f0b; pointer-events: none; text-align: center; max-width: calc(100vw - 40px); }
+#aviso-hambre.oculto { display: none; }
+@media (max-width: 600px) {
+  #recursos { gap: 4px; max-width: calc(100vw - 150px); }
+  .pill.r { font-size: 13px; padding: 2px 8px 2px 3px; gap: 3px; border-width: 2px; }
+  .pill.r b { min-width: 0; }
+  .pill.r .ico { width: 18px; height: 18px; }
+  .pill.r .ico.emo { font-size: 15px; width: auto; height: auto; }
+  #vida-castillo { left: 10px !important; transform: none !important; top: calc(66px + env(safe-area-inset-top)) !important; width: 44vw !important; text-align: left; }
+  #lateral { top: calc(80px + env(safe-area-inset-top)) !important; }
+  #consejo { top: calc(104px + env(safe-area-inset-top)) !important; }
+}
+/* Cartas con costos de varios recursos: la descripción va en el título (al pasar el dedo/ratón) */
+.carta.compacta p { display: none; }
+@media (min-width: 601px) {
+  .lista { grid-template-columns: 1fr 1fr; }
+  .carta.compacta { grid-template-columns: 54px minmax(0, 1fr); grid-template-areas: "foto info" "foto stats" "boton boton"; }
+  .carta.compacta .comprar { justify-self: stretch; margin-top: 4px; }
+}
+@media (max-width: 600px) {
+  .carta.compacta { grid-template-columns: 46px minmax(0, 1fr); grid-template-areas: "foto info" "foto stats" "boton boton"; }
+  .carta.compacta .comprar { justify-self: stretch; margin-top: 4px; padding: 5px 8px; }
+  .lista { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .carta.compacta .foto { width: 40px; height: 40px; }
+  .carta.compacta h3 { font-size: 14px; }
+}
+@media (min-width: 760px) {
+  #panel { width: min(860px, 100vw); }
+  .lista { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .carta.compacta { padding: 8px; }
+  .carta.compacta .comprar { font-size: 14px; padding: 6px 6px; }
+}

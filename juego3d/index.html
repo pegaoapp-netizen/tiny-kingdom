@@ -37,8 +37,13 @@ window.addEventListener("error", function (e) {
     <div class="poder"><span data-t="poder">Poder</span><b id="poder">0</b></div>
   </div>
   <div class="espacio"></div>
-  <div class="pill" id="pill-monedas"><span class="ico moneda"></span><b id="monedas">0</b></div>
-  <div class="pill" id="pill-gemas"><span class="ico gema"></span><b id="gemas">0</b></div>
+  <div id="recursos">
+    <div class="pill r" id="pill-monedas" title="Oro"><span class="ico moneda"></span><b id="monedas">0</b></div>
+    <div class="pill r" id="pill-comida" title="Comida"><span class="ico emo">🍞</span><b id="comida">0</b></div>
+    <div class="pill r" id="pill-madera" title="Madera"><span class="ico emo">🪵</span><b id="madera">0</b></div>
+    <div class="pill r" id="pill-piedra" title="Piedra"><span class="ico emo">🪨</span><b id="piedra">0</b></div>
+    <div class="pill r" id="pill-gemas" title="Gemas"><span class="ico gema"></span><b id="gemas">0</b></div>
+  </div>
 </div>
 
 <!-- Columna derecha -->
@@ -64,6 +69,7 @@ window.addEventListener("error", function (e) {
 <!-- Botón de oleada -->
 <button id="btn-oleada"><span class="espadas">⚔️</span><span class="txts"><span id="btn-oleada-txt">¡Empezar oleada 1!</span><small id="btn-oleada-sub"></small></span></button>
 <div id="aviso-oleada"></div>
+<div id="aviso-hambre" class="oculto"></div>
 <div id="aviso-pausa" class="oculto"><b data-t="pausa">PAUSA</b><span data-t="pausa_txt">Toca ▶ para seguir</span></div>
 <div id="barra-colocar" class="oculto"><span id="barra-colocar-txt"></span><button class="comprar rojo" id="btn-cancelar-colocar" data-t="cancelar">Cancelar</button></div>
 
