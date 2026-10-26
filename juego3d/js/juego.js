@@ -23,9 +23,10 @@
   }
   function guardar(ya) {
     try {
-      estado.edificios = slots.map(function (s) { return s.edificio ? { tipo: s.edificio.tipo, nivel: s.edificio.nivel } : (s.obra && s.obra.nivel === 1 ? null : null); });
-      // si algo se estaba construyendo, lo guardamos ya terminado
-      slots.forEach(function (s, i) { if (s.obra) estado.edificios[i] = { tipo: s.obra.tipo, nivel: s.obra.nivel }; });
+      // lo que se está construyendo se guarda con su nivel de antes y su obra aparte (con el tiempo que lleva)
+      estado.edificios = slots.map(function (s) { return s.edificio ? { tipo: s.edificio.tipo, nivel: s.edificio.nivel } : (s.obra && s.obra.nivel > 1 ? { tipo: s.obra.tipo, nivel: s.obra.nivel - 1 } : null); });
+      estado.obras = slots.map(function (s) { return s.obra ? { tipo: s.obra.tipo, nivel: s.obra.nivel, t: s.obra.t, total: s.obra.total } : null; });
+      estado.obraMuralla = obraMuralla ? { nivel: obraMuralla.nivel, t: obraMuralla.t, total: obraMuralla.total } : null;
       var t = {};
       var inv = {};
       tropas.forEach(function (u) { if (u.tipo === 'heroe') return; if (u.invocada) inv[u.tipo] = (inv[u.tipo] || 0) + 1; else t[u.tipo] = (t[u.tipo] || 0) + 1; });
@@ -37,7 +38,6 @@
       estado.actualizado = Date.now();
     } catch (e) {}
     var copia = JSON.parse(JSON.stringify(estado));
-    if (obraMuralla) copia.muralla = obraMuralla.nivel;
     try { localStorage.setItem(claveLocal(), JSON.stringify(copia)); } catch (e) { /* sin almacenamiento: se juega igual */ }
     // copia en la nube si hay cuenta
     try { if (window.Cuentas && Cuentas.usuario()) Cuentas.guardarPartida(copia, ya); } catch (e) {}
@@ -545,7 +545,13 @@
     var nivel = estado.muralla + 1;
     if (nivel > (estado.castillo || 1)) { consejoTemporal(T('castillo_bloquea', { n: nivel })); sonar('error'); return; }
     if (!pagar(costoMuralla(nivel - 1))) return;
-    obraMuralla = { nivel: nivel, t: 0, total: MURALLA.tiempo[nivel - 1] * (1 - bono('obras')) };
+    iniciarObraMuralla(nivel, 0, MURALLA.tiempo[nivel - 1] * (1 - bono('obras')));
+    sonar('martillo');
+    cerrarPanel();
+    guardar();
+  }
+  function iniciarObraMuralla(nivel, t, total) {
+    obraMuralla = { nivel: nivel, t: t, total: total };
     murallaBarra = M.barraVida(false, 3.2);
     murallaBarra.position.set(0, 10.5, 0);
     escena.add(murallaBarra);
@@ -557,9 +563,6 @@
       an.position.set(fm.cx + Math.cos(a) * fm.rx, 0, fm.cz + Math.sin(a) * fm.rz);
       escena.add(an); murallaAndamios.push(an);
     });
-    sonar('martillo');
-    cerrarPanel();
-    guardar();
   }
   function terminarMuralla() {
     var o = obraMuralla; obraMuralla = null;
@@ -1537,7 +1540,7 @@
     // ---- obras ----
     slots.forEach(function (s) {
       if (s.obra) {
-        s.obra.t += dt;
+        s.obra.t += dt * velObras() / velReal();
         M.ponerVida(s.barra, s.obra.t / s.obra.total);
         if (Math.random() < dt * 3) chispas(s.pos.clone().setY(2 + Math.random()), 0xc9a66a, 1, 1.5);
         if (s.obra.t >= s.obra.total) terminarObra(s);
@@ -1604,7 +1607,7 @@
     }
     // ---- muralla en construcción ----
     if (obraMuralla) {
-      obraMuralla.t += dt;
+      obraMuralla.t += dt * velObras() / velReal();
       M.ponerVida(murallaBarra, obraMuralla.t / obraMuralla.total);
       if (Math.random() < dt * 6) { var ta = Math.random() * Math.PI * 2, fz = formaMuralla(); chispas(new V3(fz.cx + Math.cos(ta) * fz.rx, 1.5, fz.cz + Math.sin(ta) * fz.rz), 0xc9a66a, 1, 1.5); }
       if (obraMuralla.t >= obraMuralla.total) terminarMuralla();
@@ -1616,7 +1619,7 @@
     if (murallaBarra) murallaBarra.quaternion.copy(camara.quaternion);
     // ---- mejora del castillo ----
     if (estado.obraCastillo) {
-      estado.obraCastillo.t += dt;
+      estado.obraCastillo.t += dt * velObras() / velReal();
       if (barraCastillo) { M.ponerVida(barraCastillo, estado.obraCastillo.t / estado.obraCastillo.total); barraCastillo.quaternion.copy(camara.quaternion); }
       if (Math.random() < dt * 4) chispas(new V3((Math.random() - 0.5) * 8, 3 + Math.random() * 4, (Math.random() - 0.5) * 8), 0xc9a66a, 1, 1.5);
       if (estado.obraCastillo.t >= estado.obraCastillo.total) terminarCastillo();
@@ -2131,10 +2134,10 @@
   function htmlMuralla() {
     var n = estado.muralla, sig = n + 1;
     var h = '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('muralla', MURALLA.icono) + '</div><div><h3>' + N('muralla') + (n ? ' — ' + T('nivel_corto') + ' ' + n + '/' + NIVEL_MAX : '') + '</h3><p>' + D('muralla') + '</p></div></div>';
-    if (obraMuralla) return h + '<div class="stats"><span>' + T('construyendo') + '</span></div></div>';
+    if (obraMuralla) return h + '<div class="stats"><span>' + T('construyendo') + ' ⏱ ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velObras()) + '</span></div>' + botonGemas(gemasParaTerminar((obraMuralla.total - obraMuralla.t) / velObras()), 'terminar-gemas', 'data-que="muralla"', '⏩ ' + T('terminar_ya')) + '</div>';
     if (n >= NIVEL_MAX) return h + '<div class="stats"><span>❤ +' + Math.round(MURALLA.vida[NIVEL_MAX - 1] * (1 + bono('muros'))) + '</span><span>' + T('nivel_max') + '</span></div></div>';
     if (sig > (estado.castillo || 1)) return h + '<div class="stats"><span class="aviso-rojo">' + T('castillo_bloquea', { n: sig }) + '</span></div></div>';
-    return h + '<div class="stats"><span>❤ ' + T('vida_extra') + ' +' + MURALLA.vida[sig - 1] + '</span></div>' +
+    return h + '<div class="stats"><span>❤ ' + T('vida_extra') + ' +' + MURALLA.vida[sig - 1] + '</span><span>⏱ ' + fmtTiempo(MURALLA.tiempo[sig - 1] * (1 - bono('obras'))) + '</span></div>' +
       botonCosto(costoMuralla(sig - 1), 'muralla', '', n ? T('mejorar') : T('construir')) + '</div>';
   }
 
@@ -2200,7 +2203,7 @@
     var nivel = s.edificio ? s.edificio.nivel : s.obra.nivel;
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</div><div><h3>' + N(tipo) + ' — ' + T('nivel_de', { n: nivel, m: NIVEL_MAX }) + '</h3><p>' + D(tipo) + '</p></div></div>';
     if (s.obra) {
-      html += '<p class="nota">' + T('construyendo') + ' <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo((s.obra.total - s.obra.t) / velReal()) + '</span></p>';
+      html += '<p class="nota">' + T('construyendo') + ' <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo((s.obra.total - s.obra.t) / velObras()) + '</span></p>' + botonGemas(gemasParaTerminar((s.obra.total - s.obra.t) / velObras()), 'terminar-gemas', 'data-que="obra:' + i + '"', '⏩ ' + T('terminar_ya'));
     } else {
       html += '<div class="stats">' + statsEdificio(tipo, nivel) + '</div>';
       if (tipo === 'enfermeria') html += '<p class="nota">' + T('en_enfermeria', { n: totalHeridos() }) + '</p>';
@@ -2208,7 +2211,7 @@
       if (nivel < NIVEL_MAX && nivel + 1 > (estado.castillo || 1)) {
         html += '<p class="nota aviso-rojo"><b>' + T('castillo_bloquea', { n: nivel + 1 }) + '</b></p>';
       } else if (nivel < NIVEL_MAX) {
-        html += '<p class="nota"><b>' + T('sube_a', { n: nivel + 1 }) + '</b></p><div class="stats">' + statsEdificio(tipo, nivel + 1) + '<span>⏱ ' + Math.round(EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'))) + 's</span></div>' +
+        html += '<p class="nota"><b>' + T('sube_a', { n: nivel + 1 }) + '</b></p><div class="stats">' + statsEdificio(tipo, nivel + 1) + '<span>⏱ ' + fmtTiempo(EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'))) + '</span></div>' +
           botonCosto(costoEdif(tipo, nivel), 'mejorar', 'data-slot="' + i + '"', T('mejorar'));
       } else html += '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
     }
@@ -2303,9 +2306,13 @@
   // ---------- RELOJES ----------
   function fmtTiempo(seg) {
     var s = Math.max(0, Math.ceil(seg)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60;
-    return (h ? h + ':' + ('0' + m).slice(-2) : m) + ':' + ('0' + ss).slice(-2);
+    if (h) return h + 'h ' + ('0' + m).slice(-2) + 'm';
+    return m + ':' + ('0' + ss).slice(-2);
   }
   function velReal() { return Math.max(velocidad, 0.0001); }
+  // Las obras van a tiempo real: el x2 del jugador no las acelera (solo el dueño con su x10)
+  function velObras() { return estado.dueno ? velReal() : 1; }
+  function gemasParaTerminar(seg) { return Math.max(1, Math.ceil(Math.max(0, seg) / 600) * GEMAS_POR_10MIN); }
   function faltaEntreno() {
     var r = rapidezEntreno() * velReal(), t = 0;
     colaEntreno.forEach(function (c) { t += (c.total - c.t) / r; });
@@ -2333,7 +2340,7 @@
     for (var k in relojesDiv) relojesDiv[k].dataset.vivo = '';
     if (!enMenu && !enMundo) {
       slots.forEach(function (s) {
-        if (s.obra) ponerReloj('obra' + s.i, s.pos.clone().setY(6), '🔨 ' + fmtTiempo((s.obra.total - s.obra.t) / velReal()));
+        if (s.obra) ponerReloj('obra' + s.i, s.pos.clone().setY(6), '🔨 ' + fmtTiempo((s.obra.total - s.obra.t) / velObras()));
       });
       if (colaEntreno.length) {
         var cu = cuartelesListos()[0];
@@ -2347,8 +2354,8 @@
         var ac = academiaLista();
         if (ac) ponerReloj('inv', ac.pos.clone().setY(6.6), '📜 ' + fmtTiempo(faltaInvestigacion()));
       }
-      if (estado.obraCastillo) ponerReloj('castillo', new V3(0, 13.6, 0), '🏰 ' + fmtTiempo((estado.obraCastillo.total - estado.obraCastillo.t) / velReal()));
-      if (obraMuralla) ponerReloj('muralla', new V3(0, 15, 0), '🧱 ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velReal()));
+      if (estado.obraCastillo) ponerReloj('castillo', new V3(0, 13.6, 0), '🏰 ' + fmtTiempo((estado.obraCastillo.total - estado.obraCastillo.t) / velObras()));
+      if (obraMuralla) ponerReloj('muralla', new V3(0, 15, 0), '🧱 ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velObras()));
     }
     for (var k2 in relojesDiv) if (!relojesDiv[k2].dataset.vivo) relojesDiv[k2].classList.add('oculto');
   }
@@ -2460,6 +2467,11 @@
     cupulaEscudo.visible = on;
     $('pill-escudo').classList.toggle('oculto-pill', !on);
     if (on) $('escudo-t').textContent = fmtTiempo((estado.escudoHasta - Date.now()) / 1000);
+    var bes = document.querySelectorAll('[data-escudo-boton]');
+    if (bes.length) {
+      if (!protegido()) reabrirPanel();
+      else bes.forEach(function (b) { b.textContent = '🛡️ ' + T('escudo_activo_btn', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) }); });
+    }
   }
   $('pill-escudo').addEventListener('click', function () { consejoTemporal(T('escudo_info')); });
   function subtabsHeroes(cual) {
@@ -2538,17 +2550,32 @@
       html += '<div class="lista">';
       objs.forEach(function (k) {
         html += '<div class="carta compacta" title="' + D(k) + '"><div class="cab"><div class="foto">' + OBJETOS[k].icono + '</div><div><h3>' + N(k) + ' ×' + estado.mochila[k] + '</h3></div></div>' +
-          '<div class="stats"><span>' + D(k) + '</span></div><button class="comprar" data-accion="usar" data-obj="' + k + '">' + (OBJETOS[k].cofre ? T('abrir') : T('usar')) + '</button></div>';
+          '<div class="stats"><span>' + D(k) + '</span></div>' + (OBJETOS[k].escudo && protegido() ?
+            '<button class="comprar" disabled data-escudo-boton="1">🛡️ ' + T('escudo_activo_btn', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) }) + '</button>' :
+            '<button class="comprar" data-accion="usar" data-obj="' + k + '">' + (OBJETOS[k].cofre ? T('abrir') : T('usar')) + '</button>') + '</div>';
       });
       html += '</div>';
     }
     abrirPanel(T('p_mochila'), html + '</div>', { tipo: 'mochila' });
   }
+  function terminarConGemas(que) {
+    var o = que === 'castillo' ? estado.obraCastillo : que === 'muralla' ? obraMuralla : (slots[+String(que).split(':')[1]] || {}).obra;
+    if (!o) return;
+    var g = gemasParaTerminar((o.total - o.t) / velObras());
+    if (!pagar(0, g)) return;
+    o.t = o.total;
+    sonar('magia');
+    consejoTemporal(T('terminado_gemas'));
+    actualizarHUD();
+    cerrarPanel();
+    guardar(true);
+  }
   function usarObjeto(k) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
     if (o.escudo) {
-      estado.escudoHasta = Math.max(Date.now(), estado.escudoHasta || 0) + o.escudo * 3600 * 1000;
+      if (protegido()) { consejoTemporal(T('escudo_activo', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) })); sonar('error'); return; }
+      estado.escudoHasta = Date.now() + o.escudo * 3600 * 1000;
       estado.mochila[k]--;
       sonar('magia');
       consejoTemporal(T('escudo_usado', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) }));
@@ -2558,11 +2585,12 @@
     }
     if (o.acelera) {
       var algo = slots.some(function (s) { return s.obra; }) || obraMuralla || colaEntreno.length || estado.investigando;
-      if (estado.investigando) estado.investigando.t = estado.investigando.total;
-      if (estado.obraCastillo) { algo = true; estado.obraCastillo.t = estado.obraCastillo.total; }
+      if (estado.obraCastillo) algo = true;
       if (!algo) { consejoTemporal(T('nada_acelerar')); sonar('error'); return; }
-      slots.forEach(function (s) { if (s.obra) s.obra.t = s.obra.total; });
-      if (obraMuralla) obraMuralla.t = obraMuralla.total;
+      if (estado.investigando) estado.investigando.t = Math.min(estado.investigando.total, estado.investigando.t + ACELERADOR_SEG);
+      if (estado.obraCastillo) estado.obraCastillo.t = Math.min(estado.obraCastillo.total, estado.obraCastillo.t + ACELERADOR_SEG);
+      slots.forEach(function (s) { if (s.obra) s.obra.t = Math.min(s.obra.total, s.obra.t + ACELERADOR_SEG); });
+      if (obraMuralla) obraMuralla.t = Math.min(obraMuralla.total, obraMuralla.t + ACELERADOR_SEG);
       colaEntreno.forEach(function (c) { c.t = c.total; });
       // el entrenamiento sale de a uno por cuadro: lo sacamos todo ya
       while (colaEntreno.length) { var c = colaEntreno.shift(); crearTropa(c.tipo, puertaCuartel()); }
@@ -2626,7 +2654,7 @@
   $('perfil').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'poder') cerrarPanel(); else abrirPanelPoder(); });
   function abrirPanelCastillo() {
     var nc = estado.castillo || 1, oc = estado.obraCastillo, mej = '';
-    if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velReal()) + '</p>';
+    if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velObras()) + '</p>' + botonGemas(gemasParaTerminar((oc.total - oc.t) / velObras()), 'terminar-gemas', 'data-que="castillo"', '⏩ ' + T('terminar_ya'));
     else if (nc < NIVEL_MAX) mej = '<p class="nota"><b>' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + '</b> ⏱ ' + fmtTiempo(tiempoCastillo(nc + 1)) + '</p>' + botonCosto(costoCastillo(nc + 1), 'mejorar-castillo', '', T('mejorar_castillo') + ' ');
     else mej = '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo_nivel', { n: nc, m: NIVEL_MAX }) + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
@@ -2745,6 +2773,7 @@
         '<button class="comprar morado" data-accion="dueno-gemas-inf">' + T('gemas_inf') + ': ' + (estado.gemasInfinitas ? T('encendido') : T('apagado')) + '</button>' +
         '<button class="comprar naranja" data-accion="dueno-vel">⏩ ' + T('vel10') + (velocidad === 10 ? ' ✓' : '') + '</button>' +
         '<button class="comprar" data-accion="dueno-oleada">⚔️ ' + T('saltar_oleada') + '</button>' +
+        '<button class="comprar naranja" data-accion="dueno-obras">🔨 ' + (estado.idioma === 'en' ? 'Finish all builds' : 'Terminar todas las obras') + '</button>' +
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
@@ -2780,6 +2809,7 @@
     else if (a === 'empezar-oleada') { cerrarPanel(); empezarOleada(); }
     else if (a === 'diario') reclamarDiario();
     else if (a === 'usar') usarObjeto(b.getAttribute('data-obj'));
+    else if (a === 'terminar-gemas') terminarConGemas(b.getAttribute('data-que'));
     else if (a === 'comprar') comprarTienda(+b.getAttribute('data-i'));
     else if (a === 'invocar3') invocarTres();
     else if (a === 'heroe') invocarHeroe();
@@ -2803,6 +2833,7 @@
     else if (a === 'dueno-oro') { estado.oroInfinito = !estado.oroInfinito; guardarPreferencias(); actualizarHUD(); sonar('moneda'); reabrirPanel(); }
     else if (a === 'dueno-vel') { cambiarVelocidad(velocidad === 10 ? 1 : 10); sonar('click'); reabrirPanel(); }
     else if (a === 'dueno-oleada') { cerrarPanel(); if (!oleadaActiva) empezarOleada(); }
+    else if (a === 'dueno-obras') { slots.forEach(function (s) { if (s.obra) s.obra.t = s.obra.total; }); if (obraMuralla) obraMuralla.t = obraMuralla.total; if (estado.obraCastillo) estado.obraCastillo.t = estado.obraCastillo.total; cerrarPanel(); }
     else if (a === 'dueno-salir') { salirModoDueno(); reabrirPanel(); }
     else if (a === 'borrar') { if (window.confirm(T('borrar_ok'))) { cerrarPanel(); empezarPartida(null); guardar(true); } }
   });
@@ -2828,8 +2859,8 @@
       $('inv-barra').style.width = Math.round(Math.min(1, ii.t / ii.total) * 100) + '%';
       $('inv-falta').textContent = '⏱ ' + T('faltan_t', { t: fmtTiempo(faltaInvestigacion()) });
     }
-    if ($('reloj-obra')) { var so = slots[+$('reloj-obra').dataset.slot]; if (so && so.obra) $('reloj-obra').textContent = '⏱ ' + fmtTiempo((so.obra.total - so.obra.t) / velReal()); else reabrirPanel(); }
-    if ($('reloj-castillo') && estado.obraCastillo) { var ob2 = estado.obraCastillo; $('reloj-castillo').textContent = '⏱ ' + fmtTiempo((ob2.total - ob2.t) / velReal()); $('castillo-barra').style.width = Math.round(ob2.t / ob2.total * 100) + '%'; }
+    if ($('reloj-obra')) { var so = slots[+$('reloj-obra').dataset.slot]; if (so && so.obra) $('reloj-obra').textContent = '⏱ ' + fmtTiempo((so.obra.total - so.obra.t) / velObras()); else reabrirPanel(); }
+    if ($('reloj-castillo') && estado.obraCastillo) { var ob2 = estado.obraCastillo; $('reloj-castillo').textContent = '⏱ ' + fmtTiempo((ob2.total - ob2.t) / velObras()); $('castillo-barra').style.width = Math.round(ob2.t / ob2.total * 100) + '%'; }
     if ($('reloj-diario')) $('reloj-diario').textContent = T('proximo_cofre', { t: fmtTiempo(segHastaManana()) });
     var cola = $('cola');
     if (cola) {
@@ -3173,6 +3204,15 @@
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
       estado.heridos = g.heridos || {};
       (g.edificios || []).forEach(function (e, i) { if (e && slots[i]) ponerEdificio(slots[i], e.tipo, e.nivel); });
+      // tiempo que pasó con el juego cerrado (máximo 14 días)
+      var cerrado = g.actualizado ? Math.max(0, Math.min(14 * 86400, (Date.now() - g.actualizado) / 1000)) : 0;
+      (g.obras || []).forEach(function (o, i) {
+        if (!o || !slots[i] || !EDIFICIOS[o.tipo]) return;
+        empezarObra(slots[i], o.tipo, o.nivel);
+        slots[i].obra.total = o.total; slots[i].obra.t = Math.min(o.total, (o.t || 0) + cerrado);
+      });
+      if (estado.obraCastillo) estado.obraCastillo.t = Math.min(estado.obraCastillo.total, estado.obraCastillo.t + cerrado);
+      if (g.obraMuralla && g.obraMuralla.nivel === estado.muralla + 1) iniciarObraMuralla(g.obraMuralla.nivel, Math.min(g.obraMuralla.total, (g.obraMuralla.t || 0) + cerrado), g.obraMuralla.total);
       var t = g.tropas || {};
       Object.keys(t).forEach(function (tipo) {
         for (var k = 0; k < t[tipo]; k++) crearTropa(tipo, reunion.clone().add(new V3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4)));

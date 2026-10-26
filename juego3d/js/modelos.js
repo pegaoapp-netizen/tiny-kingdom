@@ -196,6 +196,35 @@ var M = (function () {
   }
 
   // =================================================================
+  //  ESTILO PIEDRA: muros grises, vigas de madera y techo rojo de tejas
+  //  (lo usan cuartel, granja, aserradero, mina, enfermería y academia)
+  // =================================================================
+  var P = { gris: 0xa3a6ad, osc: 0x7c8089, claro: 0xbfc2c8, viga: 0x8a5a32, vigaOsc: 0x5e3d24 };
+  function rojoNivel(n) { return n >= 2 ? 0xb8402e : 0xb85a36; }
+  function adornoNivel(n) { return n >= 3 ? C.oro : P.vigaOsc; }
+  // casa de piedra centrada en (cx, cz), ancho w, fondo d, alto de muro h. El frente mira a +z.
+  // cumbreraX: la línea alta del techo va de lado a lado (si no, va de adelante hacia atrás).
+  function casaPiedra(g, cx, cz, w, d, h, nivel, cumbreraX) {
+    g.add(caja(w + 0.4, 0.22, d + 0.4, P.osc, cx, 0.11, cz));
+    g.add(caja(w + 0.5, 0.08, d + 0.5, P.vigaOsc, cx, 0.25, cz));
+    g.add(caja(w, h, d, P.gris, cx, 0.25 + h / 2, cz));
+    for (var y = 0.7; y < h + 0.1; y += 0.45) { var fr = caja(w + 0.04, 0.05, d + 0.04, P.osc, cx, y, cz); fr.castShadow = false; g.add(fr); }
+    esquinas(g, cx, cz, w, d, 0.25, 0.25 + h, P.claro);
+    [-1, 1].forEach(function (s) { g.add(caja(0.16, h, 0.12, P.viga, cx + s * (w / 2 - 0.1), 0.25 + h / 2, cz + d / 2 + 0.04)); });
+    g.add(caja(w + 0.1, 0.14, 0.12, P.viga, cx, 0.25 + h - 0.06, cz + d / 2 + 0.05));
+    var y0 = 0.25 + h, semi = (cumbreraX ? d : w) / 2 + 0.22, largo = (cumbreraX ? w : d) + 0.3, alto = semi * 0.78;
+    var techo = malla(geo('techoP' + semi.toFixed(2) + largo.toFixed(2) + (cumbreraX ? 'x' : 'z'), function () {
+      var s = new THREE.Shape(); s.moveTo(-semi, 0); s.lineTo(semi, 0); s.lineTo(0, alto); s.lineTo(-semi, 0);
+      var e = new THREE.ExtrudeGeometry(s, { depth: largo, bevelEnabled: false }); e.translate(0, 0, -largo / 2);
+      if (cumbreraX) e.rotateY(Math.PI / 2);
+      return e;
+    }), mat(rojoNivel(nivel)), cx, y0, cz);
+    g.add(techo);
+    tejas(g, cx, y0, cz, semi, alto, largo, nivel >= 3 ? C.oro : 0x7a2a1a, cumbreraX ? 'z2' : 'x');
+    return { arriba: y0, punta: y0 + alto };
+  }
+
+  // =================================================================
   //  BANDERA
   // =================================================================
   function bandera(color, alto) {
@@ -377,48 +406,46 @@ var M = (function () {
   function granja(nivel) {
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
-    // casita
-    g.add(caja(2, 1.4, 1.6, 0xeadcc0, -0.6, 0.85, -0.6));
-    var techo = malla(geo('techoGranja', function () {
-      var s = new THREE.Shape(); s.moveTo(-1.25, 0); s.lineTo(1.25, 0); s.lineTo(0, 1); s.lineTo(-1.25, 0);
-      var e = new THREE.ExtrudeGeometry(s, { depth: 1.9, bevelEnabled: false }); e.translate(0, 0, -0.95); return e;
-    }), mat(nivel >= 3 ? C.techoNoble : C.techoAzul), -0.6, 1.55, -0.6);
-    g.add(techo);
-    tejas(g, -0.6, 1.55, -0.6, 1.25, 1, 1.9, nivel >= 3 ? C.oro : C.tejaOsc, 'x');
-    esquinas(g, -0.6, -0.6, 2, 1.6, 0.15, 1.55, 0xc9b896);
-    chimenea(g, -1.1, 2.15, -0.9);
-    g.add(caja(0.45, 0.7, 0.06, C.maderaOsc, -0.6, 0.5, 0.21));
-    g.add(ventana(0.35, 0.35, 0.06, -1.2, 1.0, 0.21));
-    g.add(caja(0.45, 0.06, 0.12, C.maderaOsc, -1.2, 0.8, 0.24));
-    brillo(g, -1.2, 1.0, 0.45, 1.2, true);
-    barril(g, 0.0, 0.5, 0.8); cajas(g, -1.5, 0.6, 0.2);
+    // casa de piedra del granjero
+    casaPiedra(g, -0.6, -0.6, 2, 1.6, 1.3, nivel, false);
+    chimenea(g, -1.1, 2.15, -0.95);
+    g.add(caja(0.46, 0.75, 0.06, C.maderaOsc, -0.55, 0.62, 0.24));
+    g.add(caja(0.58, 0.09, 0.09, adornoNivel(nivel), -0.55, 1.03, 0.25));
+    g.add(ventana(0.3, 0.3, 0.06, -1.2, 1.05, 0.24));
+    g.add(caja(0.42, 0.06, 0.12, P.viga, -1.2, 0.86, 0.27));
+    brillo(g, -1.2, 1.05, 0.45, 1.2, true);
+    barril(g, 0.0, 0.5, 0.8); cajas(g, -1.5, 0.75, 0.2);
     // carretilla de heno
     g.add(caja(0.6, 0.25, 0.45, C.madera, 0.2, 0.35, 1.35));
     g.add(esfera(0.28, C.paja, 0.2, 0.55, 1.35, 7, 5));
     var rueda = cil(0.18, 0.18, 0.05, 8, C.maderaOsc, 0.55, 0.18, 1.35); rueda.rotation.x = Math.PI / 2; g.add(rueda);
     // campo de trigo
     var filas = 2 + nivel;
-    for (var i = 0; i < filas; i++) {
-      g.add(caja(0.35, 0.45, 1.5, C.paja, 0.6 + (i % 3) * 0.5, 0.3, 0.9 - Math.floor(i / 3) * 0 ));
-    }
+    for (var i = 0; i < filas; i++) g.add(caja(0.35, 0.45, 1.5, C.paja, 0.6 + (i % 3) * 0.5, 0.3, 0.9));
     for (var j = 0; j < 3; j++) g.add(caja(1.6, 0.45, 0.3, 0xd8b04a, 0.9, 0.3, -0.4 - j * 0.45));
-    // molino
+    // molino de piedra con techo rojo
     var molino = new THREE.Group();
-    molino.add(cil(0.35, 0.5, 2.4, 6, 0xf0e6d0, 0, 1.2, 0));
-    molino.add(cono(0.55, 0.7, 6, C.techoAzul, 0, 2.75, 0));
+    molino.add(cil(0.4, 0.55, 2.4, 8, P.gris, 0, 1.2, 0));
+    [0.6, 1.3, 2.0].forEach(function (y, k) { var an = cil(0.53 - k * 0.05, 0.53 - k * 0.05, 0.06, 8, P.osc, 0, y, 0); an.castShadow = false; molino.add(an); });
+    molino.add(cil(0.5, 0.5, 0.12, 8, P.viga, 0, 2.42, 0));
+    molino.add(cono(0.66, 0.85, 8, rojoNivel(nivel), 0, 2.9, 0));
+    molino.add(esfera(0.08, adornoNivel(nivel), 0, 3.37, 0, 6, 4));
+    molino.add(caja(0.22, 0.4, 0.06, C.maderaOsc, 0, 0.45, 0.52));
     var aspas = new THREE.Group();
     for (var k = 0; k < 4; k++) {
-      var a = caja(0.18, 1.3, 0.05, 0xfdf6e3, 0, 0.65, 0);
-      var p = new THREE.Group(); p.add(a); p.rotation.z = k * Math.PI / 2; aspas.add(p);
+      var p = new THREE.Group();
+      p.add(caja(0.06, 1.35, 0.05, P.viga, 0, 0.68, 0));
+      p.add(caja(0.2, 1.05, 0.03, 0xfdf6e3, 0.11, 0.78, 0));
+      p.rotation.z = k * Math.PI / 2; aspas.add(p);
     }
-    aspas.position.set(0, 2.3, 0.45);
+    aspas.position.set(0, 2.25, 0.5);
     molino.add(aspas);
     molino.position.set(1.4, 0, -1.3);
     g.add(molino);
     g.userData.aspas = aspas;
     aspas.userData.noFusionar = true;
     // valla
-    for (var f = -1.8; f <= 1.8; f += 0.6) g.add(caja(0.08, 0.4, 0.08, C.madera, f, 0.2, 1.9));
+    for (var fv = -1.8; fv <= 1.8; fv += 0.6) g.add(caja(0.08, 0.4, 0.08, C.madera, fv, 0.2, 1.9));
     g.add(caja(3.7, 0.06, 0.06, C.madera, 0, 0.3, 1.9));
     return g;
   }
@@ -672,41 +699,36 @@ var M = (function () {
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     var verde = 0x4a9a62, verdeOsc = 0x2f7246, blanco = 0xf2ece0;
-    g.add(caja(3.2, 0.25, 2.4, C.piedraOsc, 0, 0.12, -0.3));
-    g.add(caja(3.0, 1.5, 2.2, blanco, 0, 1.0, -0.3));
-    var techo = malla(geo('techoEnf', function () {
-      var s = new THREE.Shape(); s.moveTo(-1.35, 0); s.lineTo(1.35, 0); s.lineTo(0, 0.95); s.lineTo(-1.35, 0);
-      var e = new THREE.ExtrudeGeometry(s, { depth: 3.3, bevelEnabled: false }); e.translate(0, 0, -1.65); e.rotateY(Math.PI / 2); return e;
-    }), mat(nivel >= 3 ? C.techoNoble : C.techoAzul), 0, 1.75, -0.3);
-    g.add(techo);
-    tejas(g, 0, 1.75, -0.3, 1.35, 0.95, 3.3, nivel >= 3 ? C.oro : C.tejaOsc, 'z2');
-    esquinas(g, 0, -0.3, 3.0, 2.2, 0.25, 1.75, 0xd8d0c0);
-    // cruz verde en el frente y en el techo
-    g.add(caja(0.7, 0.22, 0.06, verde, 0, 1.25, 0.82));
-    g.add(caja(0.22, 0.7, 0.06, verde, 0, 1.25, 0.82));
+    var cp = casaPiedra(g, 0, -0.3, 3.0, 2.2, 1.4, nivel, true);
+    // cruz verde en el frente y en el techo (verde: la cruz roja es un símbolo protegido)
+    g.add(caja(0.66, 0.2, 0.06, verde, 0.3, 1.35, 0.84));
+    g.add(caja(0.2, 0.66, 0.06, verde, 0.3, 1.35, 0.84));
     var cruz = new THREE.Group();
-    cruz.add(caja(0.9, 0.28, 0.28, verdeOsc, 0, 0, 0));
-    cruz.add(caja(0.28, 0.9, 0.28, verdeOsc, 0, 0, 0));
-    cruz.position.set(0, 3.15, -0.3);
+    cruz.add(caja(0.8, 0.26, 0.26, verdeOsc, 0, 0, 0));
+    cruz.add(caja(0.26, 0.8, 0.26, verdeOsc, 0, 0, 0));
+    cruz.position.set(0, cp.punta + 0.45, -0.3);
     g.add(cruz);
+    g.add(caja(0.1, 0.3, 0.1, P.vigaOsc, 0, cp.punta + 0.1, -0.3));
     g.userData.cruz = cruz;
-    // puerta y ventanas
-    g.add(caja(0.6, 0.85, 0.06, C.maderaOsc, -0.9, 0.67, 0.82));
-    g.add(ventana(0.45, 0.4, 0.06, 0.95, 1.05, 0.82));
-    brillo(g, 0.95, 1.05, 1.05, 1.2, true);
-    barril(g, 1.75, -1.0, 0.8);
+    // puerta y ventana
+    g.add(caja(0.6, 0.85, 0.06, C.maderaOsc, -0.85, 0.68, 0.84));
+    g.add(caja(0.72, 0.1, 0.09, adornoNivel(nivel), -0.85, 1.14, 0.85));
+    g.add(ventana(0.4, 0.36, 0.06, 1.0, 1.15, 0.84));
+    brillo(g, 1.0, 1.15, 1.05, 1.2, true);
+    chimenea(g, 1.0, cp.arriba + 0.65, -0.9);
+    barril(g, 1.8, -1.2, 0.8);
     // camas afuera (más camas con más nivel)
     for (var i = 0; i < 1 + nivel; i++) {
       var x = -1.2 + i * 0.85;
-      g.add(caja(0.6, 0.18, 1.0, C.madera, x, 0.2, 1.65));
-      g.add(caja(0.56, 0.08, 0.95, blanco, x, 0.33, 1.65));
-      g.add(caja(0.5, 0.1, 0.25, 0x9fe0b0, x, 0.4, 1.3));
+      g.add(caja(0.6, 0.18, 1.0, C.madera, x, 0.2, 1.75));
+      g.add(caja(0.56, 0.08, 0.95, blanco, x, 0.33, 1.75));
+      g.add(caja(0.5, 0.1, 0.25, 0x9fe0b0, x, 0.4, 1.4));
     }
-    // toldo
-    var toldo = caja(3.2, 0.06, 1.3, verde, 0, 1.25, 1.55);
+    // toldo verde
+    var toldo = caja(3.2, 0.06, 1.3, verde, 0, 1.3, 1.6);
     toldo.rotation.x = -0.15;
     g.add(toldo);
-    [-1.5, 1.5].forEach(function (x) { g.add(cil(0.05, 0.05, 1.2, 5, C.madera, x, 0.6, 2.15)); });
+    [-1.5, 1.5].forEach(function (x) { g.add(cil(0.05, 0.05, 1.25, 5, C.madera, x, 0.62, 2.2)); });
     return g;
   }
 
@@ -714,22 +736,14 @@ var M = (function () {
   function aserradero(nivel) {
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
-    g.add(caja(2.6, 0.2, 2.0, C.piedraOsc, -0.4, 0.1, -0.6));
-    // paredes de troncos
-    for (var y = 0; y < 4; y++) {
-      g.add(cil(0.16, 0.16, 2.5, 6, y % 2 ? C.madera : 0xa9783f, -0.4, 0.35 + y * 0.3, 0.3).rotateZ(Math.PI / 2));
-      g.add(cil(0.16, 0.16, 2.5, 6, y % 2 ? C.madera : 0xa9783f, -0.4, 0.35 + y * 0.3, -1.5).rotateZ(Math.PI / 2));
-    }
-    g.add(caja(2.4, 1.2, 1.7, 0x9b6a3c, -0.4, 0.8, -0.6));
-    var techo = malla(geo('techoAserr', function () {
-      var s = new THREE.Shape(); s.moveTo(-1.45, 0); s.lineTo(1.45, 0); s.lineTo(0, 0.9); s.lineTo(-1.45, 0);
-      var e = new THREE.ExtrudeGeometry(s, { depth: 2.2, bevelEnabled: false }); e.translate(0, 0, -1.1); return e;
-    }), mat(nivel >= 3 ? C.techoNoble : 0x7a5434), -0.4, 1.45, -0.6);
-    g.add(techo);
-    tejas(g, -0.4, 1.45, -0.6, 1.45, 0.9, 2.2, nivel >= 3 ? C.oro : 0x55381f, 'x');
+    var cp = casaPiedra(g, -0.4, -0.6, 2.4, 1.7, 1.15, nivel, false);
+    // portón abierto con tablones
+    g.add(caja(0.85, 0.85, 0.06, 0x2a1d14, -0.4, 0.68, 0.27));
+    g.add(caja(1.0, 0.1, 0.1, adornoNivel(nivel), -0.4, 1.14, 0.29));
+    var hoja = caja(0.42, 0.85, 0.06, C.maderaOsc, -0.95, 0.68, 0.45); hoja.rotation.y = 0.9; g.add(hoja);
+    chimenea(g, -1.15, cp.arriba + 0.6, -1.05);
     cajas(g, 1.6, -0.2, 0.4);
     antorcha(g, 0.95, 1.45, 0.45, true);
-    chimenea(g, -1.1, 2.0, -1.0);
     // mesa con sierra
     g.add(caja(1.4, 0.15, 0.7, C.madera, 1.0, 0.75, 0.9));
     [-0.5, 0.5].forEach(function (x) { g.add(caja(0.1, 0.7, 0.6, C.maderaOsc, 1.0 + x, 0.35, 0.9)); });
@@ -743,8 +757,11 @@ var M = (function () {
     var n = 3 + nivel * 2;
     for (var i = 0; i < n; i++) {
       var fila = i < 3 ? 0 : i < 5 ? 1 : 2, col = i < 3 ? i : i < 5 ? i - 3 : i - 5;
-      g.add(cil(0.2, 0.2, 1.6, 7, 0xa9783f, -1.3 + col * 0.42 + fila * 0.21, 0.2 + fila * 0.36, 1.3).rotateZ(Math.PI / 2).rotateY(Math.PI / 2));
+      g.add(cil(0.2, 0.2, 1.6, 7, 0xa9783f, -1.3 + col * 0.42 + fila * 0.21, 0.2 + fila * 0.36, 1.35).rotateZ(Math.PI / 2).rotateY(Math.PI / 2));
     }
+    // tejadito de madera sobre los troncos
+    [-1.75, -0.45].forEach(function (x) { g.add(caja(0.1, 1.3, 0.1, P.viga, x, 0.65, 1.95)); });
+    var tej = caja(1.6, 0.07, 1.0, rojoNivel(nivel), -1.1, 1.3, 1.5); tej.rotation.x = 0.25; g.add(tej);
     // hacha clavada
     g.add(cil(0.25, 0.3, 0.35, 8, C.madera, 1.5, 0.17, -1.3));
     g.add(caja(0.05, 0.6, 0.05, C.maderaOsc, 1.5, 0.6, -1.3));
@@ -756,38 +773,45 @@ var M = (function () {
   function mina(nivel) {
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
-    var roca = malla(geo('montana', function () { return new THREE.DodecahedronGeometry(1.6, 0); }), mat(0x9a948a), -0.3, 0.6, -0.7);
-    roca.scale.set(1.25, 0.9, 1.0);
+    var roca = malla(geo('montana', function () { return new THREE.DodecahedronGeometry(1.6, 0); }), mat(0x9a948a), -0.5, 0.6, -0.8);
+    roca.scale.set(1.15, 0.95, 0.95);
     g.add(roca);
-    var roca2 = malla(geo('montana2', function () { return new THREE.DodecahedronGeometry(0.9, 0); }), mat(0x8a847a), 1.0, 0.4, -1.1);
-    g.add(roca2);
-    // entrada
-    g.add(caja(0.95, 1.05, 0.3, 0x2a2320, -0.3, 0.55, 0.65));
-    g.add(caja(0.14, 1.2, 0.18, C.madera, -0.85, 0.6, 0.78));
-    g.add(caja(0.14, 1.2, 0.18, C.madera, 0.25, 0.6, 0.78));
-    g.add(caja(1.3, 0.16, 0.2, C.madera, -0.3, 1.22, 0.78));
+    // casita de piedra del minero, pegada a la montaña
+    casaPiedra(g, 1.2, -0.95, 1.1, 1.1, 0.95, nivel, true);
+    g.add(caja(0.36, 0.6, 0.06, C.maderaOsc, 1.2, 0.55, -0.37));
+    // entrada con portal de piedra y techito rojo
+    g.add(caja(0.95, 1.05, 0.3, 0x2a2320, -0.4, 0.55, 0.6));
+    [-1.0, 0.2].forEach(function (x) { g.add(caja(0.28, 1.3, 0.36, P.gris, x, 0.65, 0.72)); g.add(caja(0.34, 0.12, 0.42, P.osc, x, 0.06, 0.72)); });
+    g.add(caja(1.6, 0.24, 0.44, P.claro, -0.4, 1.36, 0.72));
+    var techito = malla(geo('techoMina', function () {
+      var s = new THREE.Shape(); s.moveTo(-0.5, 0); s.lineTo(0.5, 0); s.lineTo(0, 0.42); s.lineTo(-0.5, 0);
+      var e = new THREE.ExtrudeGeometry(s, { depth: 1.9, bevelEnabled: false }); e.translate(0, 0, -0.95); e.rotateY(Math.PI / 2); return e;
+    }), mat(rojoNivel(nivel)), -0.4, 1.48, 0.72);
+    g.add(techito);
+    tejas(g, -0.4, 1.48, 0.72, 0.5, 0.42, 1.9, nivel >= 3 ? C.oro : 0x7a2a1a, 'z2');
     // farol
-    g.add(malla(geo('farol', function () { return new THREE.SphereGeometry(0.1, 6, 4); }), matLlama, 0.35, 1.05, 0.95, false));
-    brillo(g, 0.35, 1.05, 1.0, 2.2);
-    cajas(g, 1.4, -0.2, -0.3);
+    g.add(malla(geo('farol', function () { return new THREE.SphereGeometry(0.1, 6, 4); }), matLlama, 0.42, 1.05, 0.98, false));
+    brillo(g, 0.42, 1.05, 1.05, 2.2);
+    cajas(g, 1.55, 0.3, -0.3);
     // rieles
-    [-0.55, -0.05].forEach(function (x) { g.add(caja(0.06, 0.05, 1.6, C.metalOsc, x, 0.04, 1.5)); });
-    for (var k = 0; k < 4; k++) g.add(caja(0.8, 0.05, 0.12, C.maderaOsc, -0.3, 0.02, 0.9 + k * 0.4));
+    [-0.65, -0.15].forEach(function (x) { g.add(caja(0.06, 0.05, 1.6, C.metalOsc, x, 0.04, 1.5)); });
+    for (var k = 0; k < 4; k++) g.add(caja(0.8, 0.05, 0.12, C.maderaOsc, -0.4, 0.02, 0.9 + k * 0.4));
     // carrito con piedras
     var carro = new THREE.Group();
     carro.add(caja(0.7, 0.35, 0.5, C.maderaOsc, 0, 0.3, 0));
-    for (var p = 0; p < 2 + nivel; p++) carro.add(esfera(0.13, 0xb5aea3, -0.2 + (p % 3) * 0.2, 0.52, -0.1 + Math.floor(p / 3) * 0.2, 5, 4));
+    carro.add(caja(0.74, 0.06, 0.54, C.metalOsc, 0, 0.47, 0));
+    for (var p = 0; p < 2 + nivel; p++) carro.add(esfera(0.13, 0xb5aea3, -0.2 + (p % 3) * 0.2, 0.55, -0.1 + Math.floor(p / 3) * 0.2, 5, 4));
     [-0.25, 0.25].forEach(function (x) { [-0.18, 0.18].forEach(function (z) { var r = cil(0.1, 0.1, 0.06, 8, C.negro, x, 0.1, z); r.rotation.x = Math.PI / 2; carro.add(r); }); });
-    carro.position.set(-0.3, 0, 1.7);
+    carro.position.set(-0.4, 0, 1.7);
     g.add(carro);
     g.userData.carro = carro;
     carro.userData.noFusionar = true;
     // piedras sueltas y pico
-    for (var q = 0; q < nivel + 1; q++) g.add(esfera(0.22, 0xb5aea3, 1.2 - q * 0.3, 0.15, 0.9 + q * 0.2, 5, 4));
-    g.add(caja(0.05, 0.7, 0.05, C.madera, 1.2, 0.35, 0.3).rotateZ(0.5));
-    g.add(caja(0.5, 0.06, 0.06, C.metal, 1.05, 0.62, 0.3).rotateZ(0.2));
-    if (nivel >= 3) g.add(cono(0.2, 0.35, 4, C.oro, -0.3, 1.5, 0.78));
-    roca.material = matPlano(0x9a948a); roca2.material = matPlano(0x8a847a);
+    for (var q = 0; q < nivel + 1; q++) g.add(esfera(0.22, 0xb5aea3, 1.2 - q * 0.3, 0.15, 0.95 + q * 0.2, 5, 4));
+    g.add(caja(0.05, 0.7, 0.05, C.madera, 1.25, 0.35, 0.45).rotateZ(0.5));
+    g.add(caja(0.5, 0.06, 0.06, C.metal, 1.1, 0.62, 0.45).rotateZ(0.2));
+    if (nivel >= 3) g.add(cono(0.2, 0.35, 4, C.oro, -0.4, 2.05, 0.72));
+    roca.material = matPlano(0x9a948a);
     return g;
   }
 
@@ -816,23 +840,31 @@ var M = (function () {
   function academia(nivel) {
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
-    g.add(caja(3.0, 0.25, 2.4, C.piedraOsc, 0, 0.12, -0.3));
-    g.add(caja(2.6, 1.7, 2.0, 0xe9e0cc, 0, 1.1, -0.3));
-    g.add(cil(0.95, 1.05, 1.0, 10, C.piedra, 0, 2.45, -0.3));
-    var cupula = malla(geo('cupula', function () { return new THREE.SphereGeometry(1.05, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2); }), mat(nivel >= 3 ? C.oro : C.cobre), 0, 2.95, -0.3);
-    g.add(cupula);
-    // telescopio
-    var tel = cil(0.1, 0.16, 1.2, 8, C.oro, 0.5, 3.6, -0.3); tel.rotation.z = -0.9; g.add(tel);
+    var cp = casaPiedra(g, 0.3, -0.2, 2.3, 1.9, 1.5, nivel, true);
+    // torre cuadrada de los sabios con techo rojo puntiagudo
+    var tx = -1.15, tz = -0.75, alto = 3.0 + nivel * 0.3;
+    g.add(caja(1.1, alto, 1.1, P.gris, tx, 0.25 + alto / 2, tz));
+    for (var y = 0.9; y < alto; y += 0.6) { var fr = caja(1.14, 0.05, 1.14, P.osc, tx, y, tz); fr.castShadow = false; g.add(fr); }
+    g.add(caja(1.3, 0.14, 1.3, P.viga, tx, 0.25 + alto + 0.07, tz));
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { g.add(caja(0.26, 0.26, 0.26, P.claro, tx + q[0] * 0.5, 0.25 + alto + 0.27, tz + q[1] * 0.5)); });
+    var tc = cono(0.9, 1.3, 4, rojoNivel(nivel), tx, 0.25 + alto + 0.8, tz); tc.rotation.y = Math.PI / 4; g.add(tc);
+    g.add(esfera(0.1, adornoNivel(nivel), tx, 0.25 + alto + 1.5, tz, 6, 4));
+    g.add(ventana(0.3, 0.45, 0.06, tx, 0.25 + alto * 0.7, tz + 0.56));
+    brillo(g, tx, 0.25 + alto * 0.7, tz + 0.8, 1.2, true);
+    // telescopio asomado por la torre
+    var tel = cil(0.08, 0.13, 1.1, 8, C.oro, tx + 0.65, 0.25 + alto * 0.62, tz + 0.2); tel.rotation.z = -1.0; g.add(tel);
     // ventanas en arco y puerta
-    [-0.8, 0.8].forEach(function (x) { g.add(ventana(0.4, 0.6, 0.06, x, 1.3, 0.72)); brillo(g, x, 1.3, 0.95, 1.3, true); });
-    antorcha(g, -1.45, 1.4, 0.9, true);
-    g.add(caja(0.6, 0.95, 0.06, C.maderaOsc, 0, 0.72, 0.72));
+    [-0.35, 1.0].forEach(function (x) { g.add(ventana(0.32, 0.5, 0.06, x, 1.2, 0.77)); brillo(g, x, 1.2, 1.0, 1.2, true); });
+    g.add(caja(0.55, 0.9, 0.06, C.maderaOsc, 0.35, 0.7, 0.77));
+    g.add(caja(0.68, 0.1, 0.09, adornoNivel(nivel), 0.35, 1.18, 0.78));
+    antorcha(g, 1.75, 1.4, 1.0, true);
     // estandarte con un libro
-    g.add(caja(0.9, 0.6, 0.05, C.telaMar, 0, 1.85, 0.74));
-    g.add(caja(0.45, 0.3, 0.06, 0xf6f3ea, 0, 1.85, 0.76));
+    g.add(caja(0.8, 0.5, 0.05, C.telaMar, 0.35, 1.5, 0.8));
+    g.add(caja(0.4, 0.26, 0.06, 0xf6f3ea, 0.35, 1.5, 0.82));
+    chimenea(g, 1.1, cp.arriba + 0.6, -0.7);
     // pila de libros y pergamino afuera (más con nivel)
-    for (var i = 0; i < 2 + nivel; i++) g.add(caja(0.5, 0.12, 0.35, [0xa8322a, 0x4a8a5a, 0x3a5a8a, 0xc9a040][i % 4], 1.2, 0.08 + i * 0.13, 1.1).rotateY(i * 0.3));
-    g.add(cil(0.12, 0.12, 0.6, 8, 0xf3ead8, -1.2, 0.12, 1.1).rotateZ(Math.PI / 2));
+    for (var i = 0; i < 2 + nivel; i++) g.add(caja(0.5, 0.12, 0.35, [0xa8322a, 0x4a8a5a, 0x3a5a8a, 0xc9a040][i % 4], 1.25, 0.08 + i * 0.13, 1.3).rotateY(i * 0.3));
+    g.add(cil(0.12, 0.12, 0.6, 8, 0xf3ead8, -0.9, 0.12, 1.2).rotateZ(Math.PI / 2));
     return g;
   }
 

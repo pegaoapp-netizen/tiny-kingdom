@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '2.3';
+var VERSION_JUEGO = '2.4';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -114,7 +114,7 @@ var TEXTOS = {
     mis_objetos: 'Tus objetos', usar: 'Usar', abrir: 'Abrir', recibiste: '🎁 Recibiste: {t}', tropas_regalo: '{n} tropas',
     tienda_txt: 'Compra con gemas. Lo que compras se guarda en tu Baúl 🧳. Las gemas se ganan en las oleadas y en el cofre diario.',
     tienda_real: 'Compras con dinero real: llegarán con la versión de la App Store.', comprar: 'Comprar', comprado: '{n}: guardado en tu Baúl 🧳',
-    acelerador_usado: '⏩ ¡Obras y entrenamiento terminados!', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
+    acelerador_usado: '⏩ ¡Le quitaste 1 hora a todas las obras!', terminar_ya: 'Terminar ya', terminado_gemas: '💎 ¡Terminado!', escudo_activo: '🛡️ Escudo activo: faltan {t}. Espera a que se acabe para poner otro.', escudo_activo_btn: 'Activo: {t}', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
     p_investigar: 'Investigación', investigar: 'Investigar', rama_crecimiento: 'Crecimiento', rama_economia: 'Economía', rama_batalla: 'Batalla',
     inv_txt: 'Cada tecnología mejora algo de verdad en tu reino. Solo se investiga una a la vez.', inv_ahora: 'Ahora', inv_siguiente: 'Siguiente',
     inv_en_curso: 'Investigando: {n} (nivel {l})', inv_falta: 'Faltan {s} s', inv_ocupada: 'La Academia ya está investigando.',
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🛡️ <b>Las tropas viven dentro del cuartel.</b> Encima ves cuántas hay. Salen cuando empieza la oleada y vuelven al terminar.</li><li>🗺️ <b>Reino más grande</b>: los terrenos están más separados y la muralla es más grande.</li><li>🎥 <b>Cámara</b>: con dos dedos alejas mucho más para ver todo el reino, y en el ataque se acerca sola a la pelea.</li><li>🏰 <b>Cuartel y torres nuevos</b>, de piedra con techo rojo.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🏠 <b>Granja, aserradero, mina, enfermería y academia nuevos</b>: de piedra con techo rojo.</li><li>⏱️ <b>Las obras tardan de verdad</b>: de 2 minutos (nivel 2) hasta 1 día (nivel 11 y 12). Siguen avanzando aunque cierres el juego.</li><li>💎 <b>Terminar ya</b>: toca una obra y termínala con gemas (1 gema cada 10 minutos).</li><li>🛡️ <b>Escudo</b>: mientras uno está activo no puedes poner otro.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -256,7 +256,7 @@ var TEXTOS = {
     mis_objetos: 'Your items', usar: 'Use', abrir: 'Open', recibiste: '🎁 You got: {t}', tropas_regalo: '{n} troops',
     tienda_txt: 'Buy with gems. What you buy goes to your Chest 🧳. Gems are won in waves and from the daily chest.',
     tienda_real: 'Real-money purchases: coming with the App Store version.', comprar: 'Buy', comprado: '{n}: saved in your Chest 🧳',
-    acelerador_usado: '⏩ Building and training finished!', nada_acelerar: 'Nothing is being built or trained.',
+    acelerador_usado: '⏩ You took 1 hour off all buildings!', terminar_ya: 'Finish now', terminado_gemas: '💎 Done!', escudo_activo: '🛡️ Shield active: {t} left. Wait until it ends to use another one.', escudo_activo_btn: 'Active: {t}', nada_acelerar: 'Nothing is being built or trained.',
     p_investigar: 'Research', investigar: 'Research', rama_crecimiento: 'Growth', rama_economia: 'Economy', rama_batalla: 'Battle',
     inv_txt: 'Each technology really improves something in your kingdom. Only one at a time.', inv_ahora: 'Now', inv_siguiente: 'Next',
     inv_en_curso: 'Researching: {n} (level {l})', inv_falta: '{s} s left', inv_ocupada: 'The Academy is already researching.',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🛡️ <b>Troops live inside the barracks.</b> The number on top shows how many. They come out when a wave starts and go back when it ends.</li><li>🗺️ <b>Bigger kingdom</b>: plots are further apart and the wall is bigger.</li><li>🎥 <b>Camera</b>: pinch to zoom out much further and see the whole kingdom; during attacks it moves close to the fight.</li><li>🏰 <b>New barracks and towers</b>, made of stone with red roofs.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🏠 <b>New farm, sawmill, mine, infirmary and academy</b>: stone with red roofs.</li><li>⏱️ <b>Building takes real time</b>: from 2 minutes (level 2) up to 1 day (levels 11 and 12). It keeps going even when the game is closed.</li><li>💎 <b>Finish now</b>: tap a building and finish it with gems (1 gem per 10 minutes).</li><li>🛡️ <b>Shield</b>: while one is active you cannot use another.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
@@ -355,7 +355,7 @@ var NOMBRES = {
   escudo_2h:    { es: 'Protección 2 horas', en: '2-hour protection', des_es: 'Tu reino queda protegido 2 horas.', des_en: 'Your kingdom is protected for 2 hours.' },
   escudo_8h:    { es: 'Protección 8 horas', en: '8-hour protection', des_es: 'Tu reino queda protegido 8 horas.', des_en: 'Your kingdom is protected for 8 hours.' },
   escudo_12h:   { es: 'Protección 12 horas', en: '12-hour protection', des_es: 'Tu reino queda protegido 12 horas.', des_en: 'Your kingdom is protected for 12 hours.' },
-  acelerador:   { es: 'Acelerador', en: 'Speed-up', des_es: 'Termina al momento las obras y el entrenamiento.', des_en: 'Instantly finishes building and training.' },
+  acelerador:   { es: 'Acelerador', en: 'Speed-up', des_es: 'Quita 1 hora a todas las obras y termina el entrenamiento.', des_en: 'Takes 1 hour off all buildings and finishes training.' },
   academia:   { es: 'Academia', en: 'Academy', des_es: 'Centro de investigación: mejora tus tropas, edificios y economía.', des_en: 'Research center: improves your troops, buildings and economy.' },
   inv_obras:     { es: 'Construcción rápida', en: 'Fast building', des_es: 'Las obras tardan {v}% menos.', des_en: 'Buildings take {v}% less time.' },
   inv_cuarteles: { es: 'Cuarteles grandes', en: 'Big barracks', des_es: '+{v} lugares para tropas.', des_en: '+{v} troop spots.' },
@@ -559,3 +559,16 @@ var TERRENOS = [
 ].map(function (p) { return [p[0] * ESCALA_REINO, p[1] * ESCALA_REINO]; });
 // Punto donde esperan las tropas
 var PUNTO_REUNION = [-12.5, 2.5];
+
+// Tiempos de construcción (segundos) para llegar a cada nivel. Nada es instantáneo:
+// el que quiera rápido usa gemas o el Acelerador.
+//   nivel 1 = 1 min · 2 = 2 min · 3 = 5 min · 4 = 15 min · 5 = 30 min · 6 = 1 h
+//   7 = 3 h · 8 = 8 h · 9 = 12 h · 10 = 18 h · 11 = 1 día · 12 = 1 día
+var TIEMPOS_OBRA = [60, 120, 300, 900, 1800, 3600, 10800, 28800, 43200, 64800, 86400, 86400];
+Object.keys(EDIFICIOS).forEach(function (k) { EDIFICIOS[k].tiempo = TIEMPOS_OBRA.slice(); });
+MURALLA.tiempo = TIEMPOS_OBRA.slice();
+MEJORA_CASTILLO.tiempo = [0].concat(TIEMPOS_OBRA.slice(1));
+// Terminar ya con gemas: 1 gema por cada 10 minutos que falten
+var GEMAS_POR_10MIN = 1;
+// El Acelerador quita este tiempo (segundos) a todas las obras
+var ACELERADOR_SEG = 3600;
