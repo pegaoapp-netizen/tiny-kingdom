@@ -790,3 +790,7 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
   .pestana { font-size: 7.5px; }
   .pestana .icono { width: 32px; height: 32px; font-size: 17px; }
 }
+
+/* entrenar varias tropas de una vez */
+.multi { display: flex; gap: 6px; margin-top: 6px; }
+.multi .comprar.mini { flex: 1; min-width: 0; padding: 6px 4px; font-size: 13px; }

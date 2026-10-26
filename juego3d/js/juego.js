@@ -1276,7 +1276,7 @@
     var k = 0;
     tropas.forEach(function (u) {
       u.volviendo = false;
-      if (u.dentro) u.salida = (k++) * 0.22;
+      if (u.dentro) u.salida = (k++) * Math.max(0.05, Math.min(0.22, 6 / Math.max(1, tropas.length)));
     });
   }
   function tropasFuera() { return tropas.filter(function (u) { return !u.dentro; }); }
@@ -1308,8 +1308,9 @@
     var lejos = tropas.filter(function (u) { return u.d.distancia; });
     function poner(lista, base, paso, sep) {
       lista.forEach(function (u, k) {
-        var fila = Math.floor(k / 5), col = k % 5;
-        var enFila = Math.min(5, lista.length - fila * 5);
+        var ancho = lista.length > 40 ? 10 : lista.length > 15 ? 7 : 5;
+        var fila = Math.floor(k / ancho), col = k % ancho;
+        var enFila = Math.min(ancho, lista.length - fila * ancho);
         u.puesto = reunion.clone()
           .addScaledVector(dirFrente, base - fila * paso)
           .addScaledVector(dirLado, (col - (enFila - 1) / 2) * sep);
@@ -1390,20 +1391,35 @@
     if (!c) return new V3(-6.5, 0, 0);
     return c.pos.clone().add(new V3(Math.sin(c.grupo.rotation.y), 0, Math.cos(c.grupo.rotation.y)).multiplyScalar(1.8));
   }
-  function entrenar(tipo) {
+  // cuántas se pueden entrenar ahora (por espacio y por recursos)
+  function maxEntrenar(tipo) {
+    var libre = Math.max(0, capacidad() - tropasOcupadas()), c = costoTropa(tipo), n = libre;
+    if (!estado.oroInfinito) RECURSOS.forEach(function (r) { if (c[r]) n = Math.min(n, Math.floor(cantidad(r) / c[r])); });
+    return Math.max(0, n);
+  }
+  function entrenar(tipo, cuantas) {
     if (!cuartelesListos().length) { consejoTemporal(T('necesitas_cuartel')); sonar('error'); return; }
     if (tropasOcupadas() >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
-    if (!pagar(costoTropa(tipo))) return;
-    colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
+    var n = cuantas === 'max' ? maxEntrenar(tipo) : Math.max(1, cuantas || 1);
+    var hechas = 0;
+    for (var k = 0; k < n; k++) {
+      if (tropasOcupadas() >= capacidad()) break;
+      if (!(hechas ? puedePagar(costoTropa(tipo)) : true)) break;
+      if (!pagar(costoTropa(tipo))) break;
+      colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
+      hechas++;
+    }
+    if (!hechas) return;
+    if (hechas > 1) consejoTemporal(T('entrenando_n', { n: hechas }));
     sonar('click');
     actualizarHUD();
     actualizarPanel();
   }
   function costoArmadura(n) { return { oro: ARMADURA.costo[n], piedra: ARMADURA.piedra[n] }; }
-  function mejorarArmadura(tipo) {
+  function mejorarArmadura(tipo, conGemas) {
     var n = nivelArmadura(tipo);
     if (n >= ARMADURA.max) return;
-    if (!pagar(costoArmadura(n))) return;
+    if (!(conGemas ? pagar(0, ARMADURA.gemas[n]) : pagar(costoArmadura(n)))) return;
     estado.armadura[tipo] = n + 1;
     // las tropas que ya tienes también se ponen la armadura nueva
     tropas.forEach(function (u) {
@@ -2178,7 +2194,8 @@
         '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * na)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span>' +
         (na ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * na) + '%</span>' : '') + '</div>' +
         '<div class="botones">' + botonCosto(costoTropa(t), 'entrenar', 'data-tipo="' + t + '"', T('entrenar')) +
-        (na < ARMADURA.max ? botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '" title="' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '"', '🛡️ ' + T('armadura') + ' ' + (na + 1) + ' ').replace('class="comprar"', 'class="comprar armadura"')
+        '<div class="multi">' + [5, 10].map(function (n) { return '<button class="comprar mini" data-accion="entrenar" data-n="' + n + '" data-tipo="' + t + '" data-costo=\'' + JSON.stringify(costoTropa(t)) + '\'>×' + n + '</button>'; }).join('') + '<button class="comprar mini naranja" data-accion="entrenar" data-n="max" data-tipo="' + t + '" data-costo=\'' + JSON.stringify(costoTropa(t)) + '\'>' + T('maximo') + '</button></div>' +
+        (na < ARMADURA.max ? botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '" title="' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '"', '🛡️ ' + T('armadura') + ' ' + (na + 1) + ' ').replace('class="comprar"', 'class="comprar armadura"') + botonGemas(ARMADURA.gemas[na], 'armadura-gemas', 'data-tipo="' + t + '"', '🛡️ ' + (na + 1))
           : '<span class="nivel-arm">' + T('armadura_max') + '</span>') + '</div></div>';
     });
     html += '</div><div class="cola" id="cola"></div>';
@@ -2614,6 +2631,13 @@
       html += '<div class="carta compacta" title="' + D(it.id) + '"><div class="cab"><div class="foto">' + OBJETOS[it.id].icono + '</div><div><h3>' + N(it.id) + '</h3></div></div>' +
         '<div class="stats"><span>' + D(it.id) + '</span></div>' + botonGemas(it.gemas, 'comprar', 'data-i="' + i + '"', T('comprar')) + '</div>';
     });
+    html += '</div><h3 style="margin:12px 0 4px">' + T('armaduras_tienda') + '</h3><p class="nota">' + T('armaduras_tienda_txt') + '</p><div class="lista">';
+    ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
+      var na = nivelArmadura(t);
+      html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, TROPAS[t].icono) + '</div><div><h3>' + (na < ARMADURA.max ? T('armadura_para', { n: na + 1, t: N(t) }) : N(t)) + '</h3></div></div>' +
+        (na < ARMADURA.max ? '<div class="stats"><span>❤ +' + Math.round(ARMADURA.vida * 100 * (na + 1)) + '%</span><span>🛡️ ' + Math.round(ARMADURA.defensa * 100 * (na + 1)) + '%</span></div>' + botonGemas(ARMADURA.gemas[na], 'armadura-gemas', 'data-tipo="' + t + '"', T('comprar'))
+          : '<div class="stats"><span class="nivel-arm">' + T('armadura_max') + '</span></div>') + '</div>';
+    });
     html += '</div><p class="nota" style="opacity:.75">💳 ' + T('tienda_real') + '</p>';
     abrirPanel(T('p_tienda'), html, { tipo: 'tienda' });
   }
@@ -2800,8 +2824,9 @@
     else if (a === 'al-salir') salirAlianza(b);
     else if (a === 'al-mapa') { cerrarPanel(); abrirMundo(); }
     else if (a === 'mejorar-barricada') { var bi = +b.getAttribute('data-barr'); if (pagar(costoBarricada(1))) { ponerBarricada(bi, 2); sonar('listo'); cerrarPanel(); guardar(); } }
-    else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'));
+    else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'), b.getAttribute('data-n') === 'max' ? 'max' : +(b.getAttribute('data-n') || 1));
     else if (a === 'armadura') mejorarArmadura(b.getAttribute('data-tipo'));
+    else if (a === 'armadura-gemas') mejorarArmadura(b.getAttribute('data-tipo'), true);
     else if (a === 'sub-tropas') abrirPanelTropas();
     else if (a === 'investigacion') abrirPanelInvestigacion(b.getAttribute('data-rama') || ramaInv);
     else if (a === 'investigar') empezarInvestigacion(b.getAttribute('data-id'));
