@@ -1,6 +1,6 @@
 // Guarda los archivos del juego en el teléfono para que funcione sin internet.
 // Cambia VERSION cada vez que publiques una versión nueva del juego.
-var VERSION = 'tinykingdom-v2.1';
+var VERSION = 'tinykingdom-v2.2';
 var ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'js/three.min.js', 'js/datos.js', 'js/cuentas.js',
@@ -24,7 +24,7 @@ self.addEventListener('activate', function (e) {
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request).then(function (r) {
+    fetch(e.request, new URL(e.request.url).origin === location.origin ? { cache: 'no-cache' } : undefined).then(function (r) {
       var copia = r.clone();
       caches.open(VERSION).then(function (c) { c.put(e.request, copia); });
       return r;

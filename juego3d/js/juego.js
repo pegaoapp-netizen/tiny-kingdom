@@ -522,7 +522,7 @@
       var g = new THREE.Group(); g.position.set(x, 0, z);
       // mira hacia afuera (hacia el bosque)
       g.rotation.y = Math.atan2(Math.cos(t), Math.sin(t));
-      var mo = crearModeloBase('torre', nivelVisual(nivel));
+      var mo = crearModeloBase('torre', Math.max(2, nivelVisual(nivel)));
       mo.scale.setScalar(ESCALA_EDIFICIO * 1.15);
       g.add(mo); g.userData.castillo = true;
       escena.add(g);
@@ -2635,6 +2635,15 @@
     }
     return H.map(function (x) { return ('00000000' + (x >>> 0).toString(16)).slice(-8); }).join('');
   }
+  function mostrarNovedades() {
+    var visto = null;
+    try { visto = localStorage.getItem('tinykingdom_novedades'); } catch (e) {}
+    if (visto === VERSION_JUEGO || enMenu) return;
+    try { localStorage.setItem('tinykingdom_novedades', VERSION_JUEGO); } catch (e) {}
+    abrirPanel(T('novedades') + ' v' + VERSION_JUEGO, '<div class="carta"><ul style="margin:0;padding-left:18px;line-height:1.5">' + T('novedades_lista') + '</ul>' +
+      '<button class="comprar" data-accion="cerrar-panel" style="margin-top:10px">' + T('novedades_ok') + '</button></div>', { tipo: 'novedades' });
+  }
+
   function abrirPanelAjustes() {
     var html = '<div class="lista">' +
       '<div class="carta"><h3>' + T('idioma') + '</h3><div class="stats">' +
@@ -2668,7 +2677,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v2.1</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v' + VERSION_JUEGO + '</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -2677,6 +2686,7 @@
     var b = ev.target.closest('[data-accion]');
     if (!b || b.disabled) return;
     var a = b.getAttribute('data-accion');
+    if (a === 'cerrar-panel') { cerrarPanel(); return; }
     if (a === 'construir') {
       var tipo = b.getAttribute('data-tipo');
       if (slotElegido !== null && !slots[slotElegido].edificio && !slots[slotElegido].obra) construir(slotElegido, tipo);
@@ -2918,6 +2928,7 @@
     $('pantalla-logo').textContent = logo;
     $('pantalla-titulo').textContent = titulo;
     $('pantalla-texto').textContent = texto;
+    $('pantalla-version').textContent = 'v' + VERSION_JUEGO;
     $('pantalla-form').innerHTML = formulario || '';
     var cont = $('pantalla-botones');
     cont.innerHTML = '';
@@ -3109,6 +3120,7 @@
     cam.objetivo.copy(CENTRO_REINO); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
+    setTimeout(mostrarNovedades, 700);
     actualizarHUD();
     guardar();
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada

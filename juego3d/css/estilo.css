@@ -179,6 +179,7 @@ button { font-family: inherit; cursor: pointer; }
 }
 #pantalla.oculto { display: none; }
 .tarjeta {
+  position: relative;
   width: min(440px, 100%); text-align: center;
   background: linear-gradient(#fff6dc, #f3dfae); border: 5px solid #7a4a00; border-radius: 26px;
   padding: 22px 20px; box-shadow: 0 8px 0 rgba(0,0,0,.3); color: #4a2a00;
