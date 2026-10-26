@@ -1,0 +1,56 @@
+# =====================================================================
+#  Codemagic: arma la app de iPhone de Tiny Kingdom y la sube a TestFlight.
+#  Antes de la primera build, cambia los 2 valores marcados con  <-- CAMBIAR
+# =====================================================================
+workflows:
+  ios-app-store:
+    name: Tiny Kingdom - iPhone (App Store)
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+
+    integrations:
+      # Nombre de tu clave de App Store Connect en Codemagic
+      # (Codemagic -> Team settings -> Integrations -> Developer Portal).
+      app_store_connect: NOMBRE_DE_TU_CLAVE_API          # <-- CAMBIAR
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.pegao.tinykingdom
+      vars:
+        # "Apple ID" de la app: App Store Connect -> tu app -> Información de la app.
+        APP_STORE_APPLE_ID: 0000000000                     # <-- CAMBIAR
+        XCODE_PROJECT: app/ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+      node: 20
+      xcode: latest
+
+    scripts:
+      - name: Instalar Capacitor
+        script: |
+          cd app
+          npm ci
+      - name: Copiar el juego dentro de la app
+        script: |
+          cd app
+          npm run sync
+      - name: Poner las firmas de Apple
+        script: |
+          xcode-project use-profiles
+      - name: Subir el número de build
+        script: |
+          ULTIMO=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" || echo 0)
+          cd app/ios/App
+          agvtool new-version -all $(($ULTIMO + 1))
+      - name: Construir la app (.ipa)
+        script: |
+          xcode-project build-ipa --project "$XCODE_PROJECT" --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true

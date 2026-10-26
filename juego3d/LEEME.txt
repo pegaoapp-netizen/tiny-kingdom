@@ -1,0 +1,72 @@
+TINY KINGDOM  (nombre provisional: se cambia en js/datos.js, línea NOMBRE_JUEGO)
+==========================================================================
+
+CÓMO JUGAR EN LA COMPUTADORA
+  1. Abre la carpeta  C:\Users\maike\pegao_clash\juego3d
+  2. Doble clic en  index.html  (se abre en Chrome o Edge).
+  3. Toca "¡Jugar!".
+
+CONTROLES
+  - Arrastra con el mouse (o el dedo) para mover la cámara.
+  - Rueda del mouse (o pellizcar) para acercar / alejar.
+  - Toca un terreno vacío para construir. Toca un edificio para mejorarlo.
+  - CONSTRUIR: Granja (da monedas), Cuartel (permite entrenar), Torre (dispara flechas).
+  - TROPAS: Espadachín, Arquero, Guardián.
+  - INVOCAR: gasta gemas (3 tropas al momento o el Héroe Paladín).
+  - "¡Empezar oleada!": los trasgos salen del bosque. Ganas al pasar las 5 oleadas
+    (la 5 trae al Ogro Jefe). Después puedes seguir con oleadas infinitas.
+  - Botón ES/EN: cambia entre español e inglés.
+  - La partida se guarda sola.
+
+CUENTAS (usuario y contraseña)
+  Al abrir el juego aparece: Entrar / Crear cuenta nueva / Jugar sin cuenta.
+  - Con cuenta, la partida se guarda en la nube y se puede seguir en otro teléfono.
+  - Sin cuenta, solo se guarda en ese teléfono. Si después crea cuenta, se lleva
+    esa partida a la nube.
+  - Usuario: 3 a 20 letras o números (o un correo). Contraseña: 6 o más.
+  - Las cuentas y partidas están en el proyecto de Firebase "Tiny Kingdom"
+    (tiny-kingdom-pegao), separado de PEGAO y de WalkCheck.
+  - Cada jugador solo puede leer y cambiar SU partida (reglas en nube/firestore.rules).
+  - Con usuario (no correo) no se puede recuperar la contraseña olvidada.
+
+MENÚ SECRETO DEL DUEÑO (solo para pruebas)
+  Se activa de dos formas:
+   - Entrando con la cuenta del dueño (el correo del dueño): es automático, o
+   - Tocando 5 veces seguidas el oro (arriba a la derecha).
+  Da oro infinito, gemas infinitas y velocidad x10. Al cerrar sesión se apaga. En Ajustes aparece el
+  "Menú del dueño" con botones para cada cosa y para saltar a la siguiente oleada.
+  Tu correo NO está escrito en el código: solo se guarda su huella cifrada.
+  IMPORTANTE: como el juego no tiene servidor, cualquiera que toque 5 veces el oro
+  también lo abre. Antes de subir a la tienda, en js/datos.js pon:
+      var MODO_DUENO_ACTIVO = false;
+  No se debe vender ni dar cuentas "chetadas" a otros jugadores: Apple y Google
+  lo prohíben y pueden borrar el juego.
+
+IPHONE
+  El juego es una PWA: se instala como app desde Safari y funciona sin internet
+  después de abrirlo una vez (archivo sw.js).
+  ENLACE DEL JUEGO:  https://tinykingdom-pegao.web.app
+  (sitio de Firebase Hosting dentro del proyecto PEGAO, separado de WalkCheck)
+  En el iPhone: abre el enlace en SAFARI -> botón Compartir (cuadro con flecha)
+  -> "Agregar a pantalla de inicio" -> Agregar.
+  Para publicar cambios: abre una terminal en esta carpeta y escribe
+      firebase deploy --only hosting --project pegao-5ac07
+  (antes sube el número VERSION en sw.js).
+  Cuando cambies el juego, sube el número VERSION dentro de sw.js.
+  Para la App Store hay que empaquetarlo (por ejemplo con Capacitor) y
+  compilarlo con Codemagic. Las compras con dinero real (gemas) deben usar
+  In-App Purchase de Apple/Google.
+
+ARCHIVOS
+  index.html          pantalla y botones
+  css/estilo.css      colores y diseño de botones
+  js/datos.js         textos ES/EN, precios, fuerza de tropas, enemigos y oleadas
+  js/modelos.js       figuras 3D (castillo, edificios, caballeros, bosque)
+  js/juego.js         reglas del juego, cámara, oleadas, menús
+  js/three.min.js     motor 3D Three.js (licencia MIT, ver three-LICENSE.txt)
+  js/cuentas.js       entrar, crear cuenta, guardar partida en la nube
+  js/firebase-*.js    librerías de Firebase (licencia Apache 2.0)
+  nube/               reglas de seguridad y configuración del proyecto Tiny Kingdom
+                      (para subir reglas: en la carpeta nube, firebase deploy --only firestore:rules)
+  sw.js               hace que funcione sin internet (subir VERSION al publicar cambios)
+  iconos/             ícono de la app

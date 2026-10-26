@@ -1,0 +1,14 @@
+# Dependencias y archivos que se generan solos
+app/node_modules/
+app/www/
+app/ios/App/App/public/
+app/ios/App/App/capacitor.config.json
+app/ios/App/App/config.xml
+app/ios/DerivedData/
+app/ios/App/build/
+build/
+juego3d/.firebase/
+juego3d/nube/.firebase/
+*.log
+.DS_Store
+Thumbs.db

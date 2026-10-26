@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cada jugador solo puede leer y escribir SU propia partida.
+    match /jugadores/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['usuario', 'partida', 'actualizado', 'version'])
+        && request.resource.data.partida is string
+        && request.resource.data.partida.size() < 20000
+        && request.resource.data.actualizado is int;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+    // Todo lo demás está cerrado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

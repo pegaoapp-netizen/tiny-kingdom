@@ -1,0 +1,11 @@
+{
+  "appId": "com.pegao.tinykingdom",
+  "appName": "Tiny Kingdom",
+  "webDir": "www",
+  "backgroundColor": "#2a1a10",
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#2a1a10",
+    "scrollEnabled": false
+  }
+}
