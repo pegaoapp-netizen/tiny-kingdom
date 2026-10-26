@@ -1,0 +1,64 @@
+PASOS PARA SUBIR TINY KINGDOM A LA APP STORE (con Codemagic)
+==============================================================
+Todo el proyecto ya está listo en  C:\Users\maike\pegao_clash
+  - juego3d\        el juego
+  - app\            la app de iPhone (Capacitor)
+  - codemagic.yaml  instrucciones para Codemagic
+Identificador de la app (Bundle ID):  com.pegao.tinykingdom
+
+PASO 1 — Registrar la app con Apple  (developer.apple.com y App Store Connect)
+  a) developer.apple.com -> Certificates, IDs & Profiles -> Identifiers -> (+)
+     -> App IDs -> App -> Bundle ID "Explicit": com.pegao.tinykingdom
+     Descripción: Tiny Kingdom. No hace falta marcar ninguna capacidad extra.
+  b) appstoreconnect.apple.com -> Apps -> (+) -> Nueva app
+     Plataforma: iOS · Nombre: Tiny Kingdom (si está ocupado, usa otro nombre)
+     Idioma: Español · Bundle ID: com.pegao.tinykingdom · SKU: tinykingdom
+  c) Dentro de la app: "Información de la app" -> copia el número "Apple ID"
+     (son unos 10 números). Lo vas a necesitar en el paso 4.
+
+PASO 2 — Subir el proyecto a GitHub  (con GitHub Desktop, que ya tienes)
+  File -> Add local repository -> C:\Users\maike\pegao_clash -> Add repository
+  -> botón "Publish repository" -> deja marcado "Keep this code private" -> Publish.
+
+PASO 3 — Conectar en Codemagic  (codemagic.io)
+  a) Add application -> GitHub -> elige el repositorio "pegao_clash"
+     -> tipo de proyecto: "Other" / usar codemagic.yaml.
+  b) Team settings -> Integrations -> Developer Portal: usa la clave de App Store
+     Connect que ya tienes de WalkCheck (o crea una). Anota su NOMBRE.
+  c) Team settings -> Code signing identities:
+     - iOS certificates: usa tu certificado "Apple Distribution" (el de WalkCheck sirve).
+     - iOS provisioning profiles -> "Fetch profiles": trae o crea el perfil
+       "App Store" para com.pegao.tinykingdom.
+
+PASO 4 — Poner tus 2 datos en codemagic.yaml
+  Cambia estas dos líneas (o mándamelas y lo hago yo):
+     app_store_connect: NOMBRE_DE_TU_CLAVE_API   -> el nombre del paso 3b
+     APP_STORE_APPLE_ID: 0000000000              -> el número del paso 1c
+  Guarda, y en GitHub Desktop: Commit -> Push.
+
+PASO 5 — Construir
+  Codemagic -> tu app -> Start new build -> workflow "Tiny Kingdom - iPhone".
+  Tarda unos 10-15 minutos. Al terminar, la app aparece en TestFlight
+  (App Store Connect -> TestFlight) y la puedes instalar en tu iPhone.
+
+PASO 6 — Enviar a revisión de Apple  (App Store Connect)
+  - Capturas de pantalla de iPhone 6.9" (1320 x 2868): mínimo 3.
+  - Descripción, palabras clave, categoría: Juegos -> Estrategia.
+  - URL de política de privacidad:  https://tinykingdom-pegao.web.app/privacidad.html
+  - URL de soporte: puede ser la misma página o tu correo de soporte.
+  - Privacidad de la app ("App Privacy"): se recopila
+      * Información de contacto: correo (solo si el jugador usa correo) — para la cuenta
+      * Identificadores: ID de usuario — para la cuenta
+      * Contenido del juego (partida) — funcionalidad de la app
+    Todo vinculado al usuario, NADA usado para rastreo (tracking).
+  - Clasificación por edad: responde el cuestionario (violencia caricaturesca leve).
+  - Cuenta de prueba para Apple: crea un usuario normal (NO el de dueño) y
+    ponlo en "Información para la revisión de la app".
+
+IMPORTANTE
+  - En la app de la tienda los 5 toques al oro están APAGADOS.
+    Tu cuenta de dueño (maikelramirez55) sigue teniendo todo infinito.
+  - Las compras de gemas con dinero real todavía no están: cuando se agreguen,
+    tienen que ser con In-App Purchase de Apple.
+  - Para una versión nueva: cambia el juego, Commit + Push en GitHub Desktop,
+    y vuelve a correr la build en Codemagic (el número de build sube solo).
