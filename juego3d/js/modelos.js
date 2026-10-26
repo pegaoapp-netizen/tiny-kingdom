@@ -977,7 +977,7 @@ var M = (function () {
     if (armadura >= 1) {
       [-1, 1].forEach(function (s) { var h = esfera(0.16, colArm, s * 0.33, 0.78, 0, 8, 6); h.scale.set(1.1, 0.6, 1.1); cuerpo.add(h); });
       if (armadura >= 2) cuerpo.add(cil(0.34, 0.34, 0.06, 8, colArm, 0, 0.41, 0));
-      if (armadura >= 3) { var cp = caja(0.55, 0.7, 0.04, ropa, 0, 0.55, -0.33); cp.rotation.x = 0.15; cuerpo.add(cp); }
+      if (armadura >= 3) { var cp = caja(0.55, 0.7, 0.04, ropa, 0, 0.55, -0.33); cp.rotation.x = 0.15; cuerpo.add(cp); cuerpo.add(cil(0.3, 0.37, 0.2, 8, colArm, 0, 0.36, 0)); }
     }
     // cabeza
     var cabeza = new THREE.Group();
@@ -986,6 +986,11 @@ var M = (function () {
     ojos(cabeza, 0, 0.34, 0.13, (tipo === 'trasgo' || tipo === 'bruto' || tipo === 'ogro') ? 0x8a1010 : C.negro);
     cabeza.add(esfera(0.06, 0xffa090, -0.22, -0.1, 0.28, 5, 4));
     cabeza.add(esfera(0.06, 0xffa090, 0.22, -0.1, 0.28, 5, 4));
+    if (tipo !== 'trasgo' && tipo !== 'bruto' && tipo !== 'ogro') {
+      var narizT = cono(0.035, 0.08, 6, 0xe8a882, 0, -0.02, 0.36); narizT.rotation.x = Math.PI / 2; cabeza.add(narizT);
+      cabeza.add(caja(0.09, 0.016, 0.012, 0xa84848, 0, -0.16, 0.34));
+      [-1, 1].forEach(function (s) { var cejaT = caja(0.09, 0.02, 0.02, 0x3a2a20, s * 0.13, 0.12, 0.35); cejaT.rotation.z = -s * 0.1; cabeza.add(cejaT); });
+    }
     cuerpo.add(cabeza);
     p.cabeza = cabeza;
 
@@ -1356,6 +1361,167 @@ var M = (function () {
     g.scale.setScalar(escala);
     return { grupo: g, cuerpo: cuerpo, p: p, escala: escala, baseY: 0, alto: 2.2 * escala, cabezaY: 1.7, tier: tier };
   }
+  // =====================================================================
+  //  HÉROES MEJORADOS (parche de Muse para Maikel): la armadura cambia por etapas
+  // =====================================================================
+  // Tamaño del héroe (antes 1.3). Si se solapan en formación, bajar a 1.35.
+  var HEROE_TAM = 1.45;
+  // Etapa de armadura por nivel: la armadura CAMBIA mientras mejora.
+  //   0 = nivel 1-4:  tela, cinturón y hombreras chicas
+  //   1 = nivel 5-9:  hombreras más grandes
+  //   2 = nivel 10-19: pechera de metal + borde en hombreras
+  //   3 = nivel 20-29: capa con borde + grebas + cresta más alta
+  //   4 = nivel 30+: emblema en el pecho + escudo grande + alas/cresta grandes
+  // El COLOR sigue siendo el de siempre: bronce (1-9), plata (10-24), oro (25+).
+  function etapaArmadura(nivel) {
+    nivel = nivel || 1;
+    if (nivel >= 30) return 4;
+    if (nivel >= 20) return 3;
+    if (nivel >= 10) return 2;
+    if (nivel >= 5) return 1;
+    return 0;
+  }
+
+  function heroeModelo2(k, tam, nivel, rareza) {
+    var g = new THREE.Group(), cuerpo = new THREE.Group(), p = {};
+    g.add(cuerpo);
+    var tier = tierHeroe(nivel), etapa = etapaArmadura(nivel), metalN = ARMADURA_HEROE[tier];
+    var piel = k.piel || C.piel, pielOsc = 0xe8a882, borde = metalN, cuero = 0x5a3418, bota = 0x4a2e1a;
+    var esCasco = k.sombrero === 'casco';
+    // ---- piernas: pantalón, botas y grebas desde la etapa 3 ----
+    [-1, 1].forEach(function (s) {
+      var pv = new THREE.Group(); pv.position.set(s * 0.1, 0.78, 0);
+      pv.add(cil(0.088, 0.072, 0.6, 10, k.ropa2, 0, -0.32, 0));
+      pv.add(cil(0.092, 0.092, 0.06, 10, 0x6a4228, 0, -0.56, 0));
+      pv.add(caja(0.15, 0.2, 0.25, bota, 0, -0.68, 0.03));
+      pv.add(caja(0.16, 0.04, 0.27, 0x2a1c12, 0, -0.77, 0.035));
+      if (etapa >= 3) pv.add(cil(0.095, 0.085, 0.3, 10, metalN, 0, -0.42, 0)); // greba
+      cuerpo.add(pv); p[s < 0 ? 'piernaI' : 'piernaD'] = pv;
+    });
+    // ---- túnica, cinturón y torso ----
+    cuerpo.add(cil(0.2, 0.28, 0.34, 14, k.ropa, 0, 0.8, 0));
+    cuerpo.add(cil(0.285, 0.285, 0.035, 14, borde, 0, 0.64, 0));
+    cuerpo.add(cil(0.208, 0.208, 0.075, 14, cuero, 0, 0.98, 0));
+    cuerpo.add(caja(0.08, 0.065, 0.025, C.oro, 0, 0.98, 0.21));
+    cuerpo.add(caja(0.1, 0.11, 0.07, cuero, -0.16, 0.9, 0.16));
+    cuerpo.add(cil(0.24, 0.2, 0.44, 14, k.ropa, 0, 1.22, 0));
+    cuerpo.add(cil(0.155, 0.17, 0.035, 14, borde, 0, 1.43, 0));
+    // cuello de la túnica en V con borde
+    [-1, 1].forEach(function (s) { var v = caja(0.035, 0.22, 0.02, borde, s * 0.05, 1.33, 0.215); v.rotation.z = s * 0.35; cuerpo.add(v); });
+    // pechera: oro para el caballero, metal del nivel para el resto (desde etapa 2)
+    if (esCasco || etapa >= 2) {
+      var colP = esCasco ? C.oro : metalN, rP = 0.22 + etapa * 0.008;
+      cuerpo.add(cil(rP, rP + 0.03, 0.3, 14, colP, 0, 1.2, 0.02));
+      cuerpo.add(cil(rP + 0.035, rP + 0.035, 0.04, 14, esCasco ? 0xb8862a : metalN, 0, 1.05, 0.02));
+    }
+    // hombreras: crecen con la etapa; el borde aparece en la etapa 2
+    var rH = 0.13 + etapa * 0.014;
+    [-1, 1].forEach(function (s) {
+      var h = esfera(rH, esCasco ? C.oro : metalN, s * 0.25, 1.38, 0, 14, 8); h.scale.set(1.15, 0.65, 1.1); cuerpo.add(h);
+      if (etapa >= 2) { var rb = esfera(rH + 0.005, esCasco ? 0xb8862a : (tier === 2 ? 0xb8862a : 0x6a5a4a), s * 0.25, 1.355, 0, 14, 8); rb.scale.set(1.17, 0.18, 1.12); cuerpo.add(rb); }
+    });
+    if (!esCasco) { var corr = caja(0.06, 0.62, 0.03, cuero, 0, 1.2, 0.2); corr.rotation.z = 0.62; cuerpo.add(corr); cuerpo.add(caja(0.07, 0.07, 0.035, metalN, 0.07, 1.26, 0.215)); }
+    cuerpo.add(cil(0.065, 0.075, 0.12, 10, piel, 0, 1.47, 0));
+    // emblema en el pecho desde la etapa 4
+    if (etapa >= 4) {
+      var emb = cil(0.09, 0.09, 0.03, 12, metalN, 0, 1.25, 0.215); emb.rotation.x = Math.PI / 2; cuerpo.add(emb);
+      cuerpo.add(esfera(0.035, C.oro, 0, 1.25, 0.235, 8, 6));
+    }
+    // capa: más larga con la etapa, borde en la etapa 3, broches en los hombros
+    if (k.capa) {
+      var hC = 0.95 + etapa * 0.07;
+      var capa = caja(0.52, hC, 0.03, k.capa, 0, 1.42 - hC / 2, -0.25); capa.rotation.x = 0.13; cuerpo.add(capa);
+      cuerpo.add(caja(0.5, 0.09, 0.14, k.capa, 0, 1.42, -0.15));
+      if (etapa >= 3) cuerpo.add(caja(0.54, 0.04, 0.04, borde, 0, 1.42 - hC + 0.02, -0.32));
+      [-1, 1].forEach(function (s) { cuerpo.add(esfera(0.04, C.oro, s * 0.18, 1.42, 0.19, 8, 6)); });
+    }
+    // carcaj de flechas a la espalda
+    if (k.arma === 'arco') {
+      var cj = cil(0.065, 0.06, 0.46, 8, cuero, 0.1, 1.2, -0.25); cj.rotation.z = 0.35; cuerpo.add(cj);
+      for (var fl = 0; fl < 3; fl++) cuerpo.add(caja(0.03, 0.12, 0.03, 0xf0eee8, 0.18 + fl * 0.03, 1.47, -0.25 + fl * 0.02));
+    }
+    // ---- cabeza con cara completa: cabeza más grande, ojos más grandes y sonrisa ----
+    var cab = new THREE.Group(); cab.position.y = 1.7;
+    var craneo = esfera(0.245, piel, 0, 0, 0, 18, 14); craneo.scale.set(0.95, 1.05, 0.98); cab.add(craneo);
+    cab.scale.setScalar(1.2);
+    var menton = esfera(0.19, piel, 0, -0.08, 0.04, 14, 10); menton.scale.set(1, 0.8, 1); cab.add(menton);
+    [-1, 1].forEach(function (s) {
+      var oreja = esfera(0.055, piel, s * 0.235, -0.01, 0, 8, 6); oreja.scale.set(0.5, 1, 0.8); cab.add(oreja);
+      // ojo: blanco, iris de color, pupila y brillo (más grandes que antes)
+      var blanco = esfera(0.056, 0xffffff, s * 0.085, 0.015, 0.2, 12, 8); blanco.scale.set(1, 1.1, 0.55); cab.add(blanco);
+      cab.add(esfera(0.037, k.ojos || 0x3a5a7a, s * 0.085, 0.012, 0.222, 10, 8));
+      cab.add(esfera(0.019, 0x101010, s * 0.085, 0.012, 0.236, 8, 6));
+      cab.add(esfera(0.008, 0xffffff, s * 0.085 + 0.01, 0.025, 0.244, 4, 3));
+      var ceja = caja(0.09, 0.022, 0.02, k.pelo !== undefined ? k.pelo : 0x5a3a20, s * 0.088, 0.085, 0.215); ceja.rotation.z = -s * 0.12; cab.add(ceja);
+      cab.add(esfera(0.035, 0xf2a094, s * 0.13, -0.06, 0.18, 6, 5));
+    });
+    var nariz = cono(0.03, 0.075, 8, pielOsc, 0, -0.025, 0.245); nariz.rotation.x = Math.PI / 2; cab.add(nariz);
+    // sonrisa: arco en vez de raya recta
+    var sonrisa = malla(geo('sonrisa2', function () { return new THREE.TorusGeometry(0.05, 0.011, 4, 10, Math.PI); }), mat(0xa84848), 0, -0.095, 0.21);
+    sonrisa.rotation.z = Math.PI; cab.add(sonrisa);
+    // pelo, barba y sombreros (las mismas piezas de antes, a la medida de esta cabeza)
+    var adorno = new THREE.Group(); adorno.scale.setScalar(0.68); adorno.position.y = 0.01; cab.add(adorno);
+    accesoriosHeroe(adorno, cuerpo, k);
+    if (esCasco) {
+      adorno.add(malla(geo('cascoH', function () { return new THREE.SphereGeometry(0.42, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2); }), mat(C.oro), 0, 0.04, 0));
+      adorno.add(cil(0.43, 0.43, 0.08, 16, 0xb8862a, 0, 0.05, 0));
+      adorno.add(caja(0.06, 0.3, 0.06, 0xb8862a, 0, -0.02, 0.42));
+      var altCresta = 0.22 + etapa * 0.04; // la cresta crece con la armadura
+      for (var i = 0; i < 5; i++) { var a = i / 5 * Math.PI * 2; adorno.add(cono(0.07, altCresta, 4, C.oro, Math.cos(a) * 0.3, 0.44, Math.sin(a) * 0.3)); }
+      var larAla = 0.32 + etapa * 0.02; // las alas del casco crecen con la armadura
+      [-1, 1].forEach(function (s) { var ala = caja(0.05, larAla, 0.24, C.blanco, s * 0.44, 0.22, -0.05); ala.rotation.z = -s * 0.4; adorno.add(ala); });
+    }
+    cuerpo.add(cab); p.cabeza = cab;
+    // ---- brazo derecho con arma ----
+    var falso = new THREE.Group();
+    var br = new THREE.Group(); br.position.set(0.3, 1.36, 0);
+    br.add(cil(0.068, 0.056, 0.42, 10, k.ropa, 0, -0.2, 0));
+    br.add(cil(0.064, 0.06, 0.13, 10, esCasco ? C.oro : metalN, 0, -0.34, 0));
+    br.add(esfera(0.062, piel, 0, -0.45, 0, 10, 8));
+    var arma = new THREE.Group(); arma.position.set(0, -0.45, 0.04); arma.scale.setScalar(0.9);
+    if (k.arma === 'espada') {
+      var larEsp = 1.0 + etapa * 0.05; // la espada crece con la armadura
+      arma.add(caja(0.075, larEsp, 0.025, C.metal, 0, 0.6 + (larEsp - 1.0) / 2, 0));
+      arma.add(cono(0.045, 0.1, 4, C.metal, 0, 1.15 + (larEsp - 1.0), 0));
+      arma.add(caja(0.3, 0.055, 0.07, C.oro, 0, 0.1, 0));
+      arma.add(caja(0.05, 0.14, 0.05, cuero, 0, 0.01, 0));
+      arma.add(esfera(0.04, C.oro, 0, -0.07, 0, 6, 5));
+      arma.rotation.x = 1.3;
+    } else armaHeroe(arma, falso, k);
+    br.add(arma); cuerpo.add(br); p.brazo = br;
+    // ---- brazo izquierdo (con escudo si tiene: más grande con la etapa) ----
+    var iz = new THREE.Group(); iz.position.set(-0.3, 1.36, 0);
+    iz.add(cil(0.068, 0.056, 0.42, 10, k.ropa, 0, -0.2, 0));
+    iz.add(cil(0.064, 0.06, 0.13, 10, esCasco ? C.oro : metalN, 0, -0.34, 0));
+    iz.add(esfera(0.062, piel, 0, -0.45, 0, 10, 8));
+    if (esCasco || k.escudo) {
+      var colE = k.escudo || C.oro, rE = 0.3 + etapa * 0.02;
+      var esc = cil(rE, rE, 0.06, 16, colE, -0.07, -0.34, 0.12); esc.rotation.z = Math.PI / 2; esc.rotation.y = Math.PI / 2; iz.add(esc);
+      var aro = cil(rE + 0.01, rE + 0.01, 0.04, 16, esCasco ? 0xb8862a : C.metalOsc, -0.07, -0.34, 0.11); aro.rotation.z = Math.PI / 2; aro.rotation.y = Math.PI / 2; iz.add(aro);
+      var estrella = malla(geo('estrellaEscudo', function () {
+        var sh = new THREE.Shape();
+        for (var e = 0; e < 10; e++) { var an = e / 10 * Math.PI * 2 - Math.PI / 2, rr = e % 2 ? 0.07 : 0.16; if (e) sh.lineTo(Math.cos(an) * rr, Math.sin(an) * rr); else sh.moveTo(Math.cos(an) * rr, Math.sin(an) * rr); }
+        var ge = new THREE.ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: false }); ge.rotateY(-Math.PI / 2); return ge;
+      }), mat(esCasco ? C.rojo : metalN), -0.11, -0.34, 0.12);
+      iz.add(estrella);
+      iz.rotation.y = -0.5;
+    }
+    cuerpo.add(iz); p.izq = iz;
+    [cuerpo, cab, br, iz, arma, p.piernaI, p.piernaD].forEach(function (gr) { fusionar(gr, true); });
+    contorno(g);
+    var blob = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
+    blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.renderOrder = 1; blob.scale.setScalar(1.15);
+    g.add(blob);
+    if (rareza) { // aro de color bajo los pies según la rareza
+      var aroR = new THREE.Mesh(geo('aroRareza', function () { return new THREE.RingGeometry(0.5, 0.62, 32); }), new THREE.MeshBasicMaterial({ color: COLOR_RAREZA[rareza], transparent: true, opacity: 0.55, depthWrite: false }));
+      aroR.rotation.x = -Math.PI / 2; aroR.position.y = 0.04; aroR.renderOrder = 1; g.add(aroR);
+    }
+    p.respira = true;
+    var escala = HEROE_TAM * (tam || TAM_UNIDAD);
+    g.scale.setScalar(escala);
+    return { grupo: g, cuerpo: cuerpo, p: p, escala: escala, baseY: 0, alto: 2.2 * escala, cabezaY: 1.7, tier: tier, etapa: etapa };
+  }
+
   // Contorno oscuro y fino: una copia un poco más gruesa, por dentro, de cada pieza
   var MAT_CONTORNO = new THREE.MeshBasicMaterial({ color: 0x24170e, side: THREE.BackSide });
   function contorno(raiz) {
@@ -1712,6 +1878,6 @@ var M = (function () {
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
     ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar,
-    heroe: function (h, nivel) { return heroeModelo(h.look, undefined, nivel, h.rareza); }, tierHeroe: tierHeroe
+    heroe: function (h, nivel) { return heroeModelo2(h.look, undefined, nivel, h.rareza); }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };
 })();

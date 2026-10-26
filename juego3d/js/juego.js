@@ -2590,7 +2590,7 @@
     tropas.filter(function (u) { return u.tipo === 'heroe' && !u.heroeId; }).forEach(function (u) { var i = tropas.indexOf(u); if (i >= 0) tropas.splice(i, 1); escena.remove(u.m.grupo); escena.remove(u.barra); });
     estado.equipo.forEach(function (id) {
       var u = tropas.filter(function (x) { return x.heroeId === id; })[0];
-      if (u && u.m.tier !== M.tierHeroe(estado.heroes[id].nivel)) { var iu = tropas.indexOf(u); if (iu >= 0) tropas.splice(iu, 1); escena.remove(u.m.grupo); escena.remove(u.barra); u = null; }
+      if (u && (u.m.tier !== M.tierHeroe(estado.heroes[id].nivel) || u.m.etapa !== M.etapaArmadura(estado.heroes[id].nivel))) { var iu = tropas.indexOf(u); if (iu >= 0) tropas.splice(iu, 1); escena.remove(u.m.grupo); escena.remove(u.barra); u = null; }
       if (u) { var s = statsHeroe(id), fr = u.vida / u.max; u.d = s; u.max = s.vida; u.vida = Math.max(1, fr) * s.vida; return; }
       u = crearTropa('heroe', puertaCastillo(), false, id);
       guardarDentro(u);

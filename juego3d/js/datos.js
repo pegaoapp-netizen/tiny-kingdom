@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '2.9';
+var VERSION_JUEGO = '3.0';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🦸 <b>Héroes renovados</b>: casi el doble de grandes que las tropas, con cara completa (ojos, cejas, nariz, boca), ropa por capas y escudo con emblema.</li><li>🥉🥈🥇 Su <b>armadura cambia con el nivel</b>: bronce, plata (nivel 10) y oro (nivel 25).</li><li>💫 Respiran y miran a los lados cuando están quietos, y tienen un aro de color según su rareza.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🛡️ <b>La armadura de tus héroes cambia mientras suben</b>: hombreras más grandes (nivel 5), pechera (10), grebas y capa con borde (20), y emblema dorado con escudo grande (30).</li><li>😊 Héroes más grandes, con ojos más grandes y sonrisa.</li><li>⚔️ Las tropas ahora tienen nariz, boca y cejas, y la armadura 3 se nota en la cintura.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🦸 <b>Heroes remade</b>: almost twice as big as troops, with full faces (eyes, brows, nose, mouth), layered clothes and a shield with an emblem.</li><li>🥉🥈🥇 Their <b>armor changes with level</b>: bronze, silver (level 10) and gold (level 25).</li><li>💫 They breathe and look around when idle, and have a colored ring by rarity.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🛡️ <b>Your heroes’ armor changes as they level up</b>: bigger shoulder pads (level 5), chest plate (10), greaves and trimmed cape (20), and a golden emblem with a big shield (30).</li><li>😊 Bigger heroes with bigger eyes and a smile.</li><li>⚔️ Troops now have a nose, mouth and eyebrows, and armor 3 shows on the waist.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
