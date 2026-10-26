@@ -738,7 +738,7 @@
     $('mundo').classList.remove('oculto');
     enMundo = true;
     $('mundo-info').innerHTML = '';
-    $('mundo-leyenda').innerHTML = '<span>👑 ' + T('leyenda_tu') + '</span><span>🛡️ ' + T('leyenda_alianza') + '</span><span>🏰 ' + T('leyenda_otros') + '</span><span>⛺ ' + T('leyenda_trasgos') + '</span>';
+    $('mundo-leyenda').innerHTML = '<span class="pista-castillo">' + T('toca_tu_castillo') + '</span><span>🛡️ ' + T('leyenda_alianza') + '</span><span>🏰 ' + T('leyenda_otros') + '</span><span>⛺ ' + T('leyenda_trasgos') + '</span>';
     pintarAldeas([]);
     if (!hayCuenta()) {
       $('mundo-estado').textContent = T('mundo_cuenta');
@@ -758,19 +758,30 @@
     }, 400);
   }
   function cerrarMundo() { $('mundo').classList.add('oculto'); enMundo = false; }
+  // volver a la ciudad desde el mapa: la cámara baja desde lo alto hasta el reino
+  function entrarCiudad() {
+    cerrarMundo();
+    cam.objetivo.copy(CENTRO_REINO); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0);
+    cam.dist = 150; cam.distMeta = distInicial();
+    sonar('cuerno');
+    consejoTemporal(T('bienvenido_ciudad'));
+  }
+  function iconoMapa(clave, emoji) { return retratos[clave] ? '<img src="' + retratos[clave] + '" alt="">' : emoji; }
   var enMundo = false;
   function pintarAldeas(lista) {
     var cont = $('mundo-aldeas'), h = '';
-    var yo = hayCuenta() ? Cuentas.usuario().uid : null;
-    var miLugar = yo ? Cuentas.lugar() : null;
+    var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
+    var miLugar = hayCuenta() ? Cuentas.lugar() : { x: 50, y: 50 };
     var hayYo = lista.some(function (a) { return a.uid === yo; });
-    if (yo && !hayYo) lista = lista.concat([{ uid: yo, nombre: Cuentas.nombrePublico(), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: miLugar.x, y: miLugar.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0 }]);
+    if (!hayYo) lista = lista.concat([{ uid: yo, nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: miLugar.x, y: miLugar.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0 }]);
     CAMPAMENTOS.forEach(function (c, i) {
-      h += '<button class="aldea trasgo" data-campamento="' + i + '" style="left:' + c.x + '%;top:' + c.y + '%"><span class="ic">⛺</span><span class="nom">' + T('leyenda_trasgos') + '</span><span class="niv">' + c.nivel + '</span></button>';
+      h += '<button class="aldea trasgo" data-campamento="' + i + '" style="left:' + c.x + '%;top:' + c.y + '%"><span class="ic">' + iconoMapa('mapa_campamento', '⛺') + '</span><span class="nom">' + T('leyenda_trasgos') + '</span><span class="niv">' + c.nivel + '</span></button>';
     });
     lista.forEach(function (a, i) {
       var cls = a.uid === yo ? 'yo' : (estado.alianza && a.alianza === estado.alianza ? 'aliada' : '');
-      var ic = a.uid === yo ? '👑' : cls === 'aliada' ? '🛡️' : '🏰';
+      // tu castillo con su nivel real; los demás según su nivel
+      var tam = a.uid === yo ? nivelVisual(estado.castillo || 1) : (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3);
+      var ic = iconoMapa('mapa_castillo' + tam, a.uid === yo ? '👑' : cls === 'aliada' ? '🛡️' : '🏰') + (a.uid === yo ? '<span class="corona">👑</span>' : '');
       h += '<button class="aldea ' + cls + '" data-aldea="' + i + '" style="left:' + a.x + '%;top:' + a.y + '%">' + ((a.escudo || 0) > Date.now() ? '<span class="esc">🛡️</span>' : '') + '<span class="ic">' + ic + '</span><span class="nom">' +
         (a.alianza ? '[' + escaparHTML(a.alianza) + '] ' : '') + escaparHTML(a.nombre) + '</span><span class="niv">' + a.nivel + '</span></button>';
     });
@@ -786,6 +797,7 @@
           return;
         }
         var a = lista[+el.dataset.aldea];
+        if (a.uid === yo) { entrarCiudad(); return; }
         $('mundo-info').innerHTML = '<div class="carta"><h3>' + (a.uid === yo ? '👑 ' + T('tu_reino') : '🏰 ' + T('reino_de', { n: escaparHTML(a.nombre) })) + '</h3>' +
           '<div class="stats"><span>⭐ ' + T('nivel') + ' ' + a.nivel + '</span><span>💪 ' + T('poder') + ' ' + formatoNumero(a.poder) + '</span>' +
           '<span>🛡️ ' + (a.alianza ? '[' + escaparHTML(a.alianza) + ']' : T('sin_alianza')) + '</span><span>📍 ' + a.x + ', ' + a.y + '</span>' +
@@ -2072,6 +2084,16 @@
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
       ['aserradero', 'mina', 'academia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
+      [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
+      retratos.mapa_campamento = (function () {
+        var gc = new THREE.Group();
+        var tela = new THREE.MeshToonMaterial({ color: 0x8a5a33 }), tela2 = new THREE.MeshToonMaterial({ color: 0x6b8a2a });
+        var t1 = new THREE.Mesh(new THREE.ConeGeometry(1.3, 1.9, 6), tela); t1.position.set(-0.6, 0.95, 0); gc.add(t1);
+        var t2 = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.4, 6), tela2); t2.position.set(1.0, 0.7, -0.4); gc.add(t2);
+        var fuego = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.5, 5), new THREE.MeshBasicMaterial({ color: 0xff9a2a })); fuego.position.set(0.4, 0.25, 1.0); gc.add(fuego);
+        var tg = M.unidad('trasgo'); tg.grupo.position.set(1.2, 0, 0.9); tg.grupo.rotation.y = 0.4; gc.add(tg.grupo);
+        return foto(gc, 7, 0.9);
+      })();
       retratos.barricada = (function () { var m = M.barricada(1); m.rotation.y = 0.6; return foto(m, 6, 0.6); })();
       retratos.enfermeria = (function () { var m = M.enfermeria(1); m.rotation.y = 0.5; return foto(m, 5.5, 1.0); })();
       retratos.muralla = (function () { var m = M.muralla(3); return foto(m, 20, 1.5); })();

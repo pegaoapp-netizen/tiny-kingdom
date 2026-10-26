@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '2.5';
+var VERSION_JUEGO = '2.6';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -114,7 +114,7 @@ var TEXTOS = {
     mis_objetos: 'Tus objetos', usar: 'Usar', abrir: 'Abrir', recibiste: '🎁 Recibiste: {t}', tropas_regalo: '{n} tropas',
     tienda_txt: 'Compra con gemas. Lo que compras se guarda en tu Baúl 🧳. Las gemas se ganan en las oleadas y en el cofre diario.',
     tienda_real: 'Compras con dinero real: llegarán con la versión de la App Store.', comprar: 'Comprar', comprado: '{n}: guardado en tu Baúl 🧳',
-    acelerador_usado: '⏩ ¡Le quitaste 1 hora a todas las obras!', armaduras_tienda: '🛡️ Armaduras', armaduras_tienda_txt: 'Ponle armadura a un tipo de tropa: todas las de ese tipo (y las que entrenes) la llevan puesta.', armadura_para: 'Armadura {n} — {t}', entrenando_n: '⚔️ Entrenando {n} tropas', maximo: 'Máx', terminar_ya: 'Terminar ya', terminado_gemas: '💎 ¡Terminado!', escudo_activo: '🛡️ Escudo activo: faltan {t}. Espera a que se acabe para poner otro.', escudo_activo_btn: 'Activo: {t}', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
+    acelerador_usado: '⏩ ¡Le quitaste 1 hora a todas las obras!', toca_tu_castillo: '👑 Toca tu castillo para entrar a tu ciudad', entrar_ciudad: 'Entrar', bienvenido_ciudad: '🏰 ¡Bienvenido a tu ciudad!', armaduras_tienda: '🛡️ Armaduras', armaduras_tienda_txt: 'Ponle armadura a un tipo de tropa: todas las de ese tipo (y las que entrenes) la llevan puesta.', armadura_para: 'Armadura {n} — {t}', entrenando_n: '⚔️ Entrenando {n} tropas', maximo: 'Máx', terminar_ya: 'Terminar ya', terminado_gemas: '💎 ¡Terminado!', escudo_activo: '🛡️ Escudo activo: faltan {t}. Espera a que se acabe para poner otro.', escudo_activo_btn: 'Activo: {t}', nada_acelerar: 'No hay nada construyéndose ni entrenándose.',
     p_investigar: 'Investigación', investigar: 'Investigar', rama_crecimiento: 'Crecimiento', rama_economia: 'Economía', rama_batalla: 'Batalla',
     inv_txt: 'Cada tecnología mejora algo de verdad en tu reino. Solo se investiga una a la vez.', inv_ahora: 'Ahora', inv_siguiente: 'Siguiente',
     inv_en_curso: 'Investigando: {n} (nivel {l})', inv_falta: 'Faltan {s} s', inv_ocupada: 'La Academia ya está investigando.',
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🛡️ <b>Armaduras a la venta</b>: cómpralas con gemas en el Colmado o en la ficha de cada tropa (también se pueden mejorar con oro y piedra).</li><li>⚔️ <b>Entrena muchas de una vez</b>: botones ×5, ×10 y Máx.</li><li>🏰 <b>Cuarteles más grandes</b>: hasta 56 tropas por cuartel en nivel 12.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🗺️ <b>Tu castillo en el mapa</b>: al salir al mapa ves tu castillo en 3D. Tócalo para volver a tu ciudad.</li><li>🛡️ Armaduras a la venta y entrenar ×5, ×10 o Máx.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -256,7 +256,7 @@ var TEXTOS = {
     mis_objetos: 'Your items', usar: 'Use', abrir: 'Open', recibiste: '🎁 You got: {t}', tropas_regalo: '{n} troops',
     tienda_txt: 'Buy with gems. What you buy goes to your Chest 🧳. Gems are won in waves and from the daily chest.',
     tienda_real: 'Real-money purchases: coming with the App Store version.', comprar: 'Buy', comprado: '{n}: saved in your Chest 🧳',
-    acelerador_usado: '⏩ You took 1 hour off all buildings!', armaduras_tienda: '🛡️ Armor', armaduras_tienda_txt: 'Give armor to a troop type: every troop of that type (and new ones) wears it.', armadura_para: 'Armor {n} — {t}', entrenando_n: '⚔️ Training {n} troops', maximo: 'Max', terminar_ya: 'Finish now', terminado_gemas: '💎 Done!', escudo_activo: '🛡️ Shield active: {t} left. Wait until it ends to use another one.', escudo_activo_btn: 'Active: {t}', nada_acelerar: 'Nothing is being built or trained.',
+    acelerador_usado: '⏩ You took 1 hour off all buildings!', toca_tu_castillo: '👑 Tap your castle to enter your city', entrar_ciudad: 'Enter', bienvenido_ciudad: '🏰 Welcome to your city!', armaduras_tienda: '🛡️ Armor', armaduras_tienda_txt: 'Give armor to a troop type: every troop of that type (and new ones) wears it.', armadura_para: 'Armor {n} — {t}', entrenando_n: '⚔️ Training {n} troops', maximo: 'Max', terminar_ya: 'Finish now', terminado_gemas: '💎 Done!', escudo_activo: '🛡️ Shield active: {t} left. Wait until it ends to use another one.', escudo_activo_btn: 'Active: {t}', nada_acelerar: 'Nothing is being built or trained.',
     p_investigar: 'Research', investigar: 'Research', rama_crecimiento: 'Growth', rama_economia: 'Economy', rama_batalla: 'Battle',
     inv_txt: 'Each technology really improves something in your kingdom. Only one at a time.', inv_ahora: 'Now', inv_siguiente: 'Next',
     inv_en_curso: 'Researching: {n} (level {l})', inv_falta: '{s} s left', inv_ocupada: 'The Academy is already researching.',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🛡️ <b>Armor for sale</b>: buy it with gems in the shop or on each troop card (you can still upgrade it with gold and stone).</li><li>⚔️ <b>Train many at once</b>: ×5, ×10 and Max buttons.</li><li>🏰 <b>Bigger barracks</b>: up to 56 troops per barracks at level 12.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🗺️ <b>Your castle on the map</b>: when you go to the map you see your 3D castle. Tap it to go back to your city.</li><li>🛡️ Armor for sale and train ×5, ×10 or Max.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
