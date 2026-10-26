@@ -16,7 +16,7 @@
     return {
       monedas: INICIO.monedas, gemas: INICIO.gemas, comida: INICIO.comida, madera: INICIO.madera, piedra: INICIO.piedra, oleada: 1, vidaCastillo: INICIO.vidaCastillo,
       edificios: TERRENOS.map(function () { return null; }),
-      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {},
+      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {}, castillo: 1, obraCastillo: null,
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -321,10 +321,56 @@
   // ------------------------------------------------------------------
   //  CASTILLO Y TERRENOS
   // ------------------------------------------------------------------
-  var castillo = M.castillo();
+  var castillo = M.castillo(1);
   castillo.userData.castillo = true;
   castillo.scale.setScalar(0.8);
   escena.add(castillo);
+  var insigniaCastillo = null, andamiosCastillo = [], barraCastillo = null;
+  function ponerCastillo() {
+    escena.remove(castillo);
+    castillo = M.castillo(nivelVisual(estado.castillo || 1));
+    castillo.userData.castillo = true;
+    castillo.scale.setScalar(0.8);
+    escena.add(castillo);
+    if (insigniaCastillo) escena.remove(insigniaCastillo);
+    insigniaCastillo = M.insigniaNivel(estado.castillo || 1);
+    insigniaCastillo.position.set(0, 11.2, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
+    escena.add(insigniaCastillo);
+  }
+  function danoCastillo() { return CASTILLO.dano + ((estado.castillo || 1) - 1) * MEJORA_CASTILLO.dano; }
+  function costoCastillo(L) { return { oro: MEJORA_CASTILLO.costo[L - 1], madera: MEJORA_CASTILLO.madera[L - 1], piedra: MEJORA_CASTILLO.piedra[L - 1] }; }
+  function tiempoCastillo(L) { return MEJORA_CASTILLO.tiempo[L - 1] * (1 - bono('obras')); }
+  function andamiosDelCastillo(mostrar) {
+    andamiosCastillo.forEach(function (a) { escena.remove(a); }); andamiosCastillo = [];
+    if (barraCastillo) { escena.remove(barraCastillo); barraCastillo = null; }
+    if (!mostrar) return;
+    [[-3.8, -3.8], [3.8, -3.8], [-3.8, 3.8], [3.8, 3.8]].forEach(function (q) { var a = M.andamio(); a.scale.setScalar(1.25); a.position.set(q[0], 0, q[1]); escena.add(a); andamiosCastillo.push(a); });
+    barraCastillo = M.barraVida(false, 4); barraCastillo.position.set(0, 12.6, 0); escena.add(barraCastillo);
+  }
+  function mejorarCastillo() {
+    var n = estado.castillo || 1;
+    if (estado.obraCastillo || n >= NIVEL_MAX) return;
+    if (!pagar(costoCastillo(n + 1))) return;
+    estado.obraCastillo = { nivel: n + 1, t: 0, total: tiempoCastillo(n + 1) };
+    andamiosDelCastillo(true);
+    sonar('martillo');
+    cerrarPanel();
+    guardar(true);
+  }
+  function terminarCastillo() {
+    var o = estado.obraCastillo; estado.obraCastillo = null;
+    var antes = vidaMaxCastillo();
+    estado.castillo = o.nivel;
+    estado.vidaCastillo = Math.min(vidaMaxCastillo(), estado.vidaCastillo + (vidaMaxCastillo() - antes));
+    andamiosDelCastillo(false);
+    ponerCastillo();
+    chispas(new V3(0, 6, 0), 0xffe14a, 30, 5);
+    sonar('listo'); sonar('victoria');
+    consejoTemporal(T('castillo_listo', { n: o.nivel }));
+    actualizarHUD();
+    guardar(true); publicarAldea(true);
+    if (panelActual && panelActual.tipo === 'castillo') reabrirPanel();
+  }
   var castilloPos = new V3(0, 0, 0), RADIO_CASTILLO = 4.6;
   var castilloCd = 0, impuestoCd = 0, comidaCd = 0, hambre = false;
   var murallaModelo = null, obraMuralla = null, murallaBarra = null, murallaAndamios = [], murallaRebote = 1;
@@ -333,7 +379,7 @@
     for (var r in INVESTIGACION) for (var k = 0; k < INVESTIGACION[r].length; k++) if (INVESTIGACION[r][k].id === id) return lv * INVESTIGACION[r][k].cada;
     return 0;
   }
-  function vidaMaxCastillo() { return INICIO.vidaCastillo + (estado.muralla ? Math.round(MURALLA.vida[estado.muralla - 1] * (1 + bono('muros'))) : 0); }
+  function vidaMaxCastillo() { return INICIO.vidaCastillo + ((estado.castillo || 1) - 1) * MEJORA_CASTILLO.vida + (estado.muralla ? Math.round(MURALLA.vida[estado.muralla - 1] * (1 + bono('muros'))) : 0); }
   function formaMuralla() {
     var f = MURALLA_FORMA;
     if (!f.puerta) {
@@ -347,8 +393,27 @@
     }
     return f;
   }
+  var torresPuerta = [];
+  function ponerTorresPuerta(nivel) {
+    torresPuerta.forEach(function (tp) { escena.remove(tp.grupo); }); torresPuerta = [];
+    if (!nivel) return;
+    var f = formaMuralla();
+    [-1, 1].forEach(function (s) {
+      var t = f.puerta + s * (f.hueco + 0.13);
+      var x = f.cx + Math.cos(t) * f.rx * 1.1, z = f.cz + Math.sin(t) * f.rz * 1.1;
+      var g = new THREE.Group(); g.position.set(x, 0, z);
+      // mira hacia afuera (hacia el bosque)
+      g.rotation.y = Math.atan2(Math.cos(t), Math.sin(t));
+      var mo = crearModeloBase('torre', nivelVisual(nivel));
+      mo.scale.setScalar(ESCALA_EDIFICIO * 1.15);
+      g.add(mo); g.userData.castillo = true;
+      escena.add(g);
+      torresPuerta.push({ grupo: g, modelo: mo, pos: new V3(x, 0, z), cd: Math.random() });
+    });
+  }
   function ponerMuralla(nivel) {
     if (murallaModelo) { escena.remove(murallaModelo); murallaModelo = null; }
+    ponerTorresPuerta(nivel);
     if (!nivel) return;
     murallaModelo = M.muralla(nivelVisual(nivel), formaMuralla());
     murallaModelo.userData.castillo = true;
@@ -357,6 +422,7 @@
   function construirMuralla() {
     if (obraMuralla || estado.muralla >= NIVEL_MAX) return;
     var nivel = estado.muralla + 1;
+    if (nivel > (estado.castillo || 1)) { consejoTemporal(T('castillo_bloquea', { n: nivel })); sonar('error'); return; }
     if (!pagar(costoMuralla(nivel - 1))) return;
     obraMuralla = { nivel: nivel, t: 0, total: MURALLA.tiempo[nivel - 1] * (1 - bono('obras')) };
     murallaBarra = M.barraVida(false, 3.2);
@@ -907,6 +973,7 @@
     if (!s.edificio || s.obra) return;
     var d = EDIFICIOS[s.edificio.tipo], n = s.edificio.nivel;
     if (n >= NIVEL_MAX) return;
+    if (n + 1 > (estado.castillo || 1)) { consejoTemporal(T('castillo_bloquea', { n: n + 1 })); sonar('error'); return; }
     if (!pagar(costoEdif(s.edificio.tipo, n))) return;
     empezarObra(s, s.edificio.tipo, n + 1);
     sonar('martillo');
@@ -1341,6 +1408,28 @@
       if (murallaModelo.userData.banderas) murallaModelo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     }
     if (murallaBarra) murallaBarra.quaternion.copy(camara.quaternion);
+    // ---- mejora del castillo ----
+    if (estado.obraCastillo) {
+      estado.obraCastillo.t += dt;
+      if (barraCastillo) { M.ponerVida(barraCastillo, estado.obraCastillo.t / estado.obraCastillo.total); barraCastillo.quaternion.copy(camara.quaternion); }
+      if (Math.random() < dt * 4) chispas(new V3((Math.random() - 0.5) * 8, 3 + Math.random() * 4, (Math.random() - 0.5) * 8), 0xc9a66a, 1, 1.5);
+      if (estado.obraCastillo.t >= estado.obraCastillo.total) terminarCastillo();
+    }
+    // ---- torres de la puerta de la muralla ----
+    torresPuerta.forEach(function (tp) {
+      tp.cd -= dt;
+      var arq = tp.modelo.userData.arquero;
+      var ob = masCercano(enemigos, tp.pos, TORRES_PUERTA.alcance);
+      if (ob) {
+        arq.grupo.rotation.y = Math.atan2(ob.pos.x - tp.pos.x, ob.pos.z - tp.pos.z) - tp.grupo.rotation.y;
+        if (tp.cd <= 0) {
+          tp.cd = TORRES_PUERTA.ritmo; arq.ataque = 1;
+          disparar(tp.pos.clone().setY(tp.modelo.userData.alturaDisparo * 1.15), ob, (TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * (1 + bono('flechas')));
+        }
+      }
+      arq.ataque = Math.max(0, (arq.ataque || 0) - dt * 3);
+      M.animarUnidad(arq, tiempo, false, arq.ataque);
+    });
     // ---- castillo dispara ----
     castilloCd -= dt;
     if (castilloCd <= 0) {
@@ -1349,7 +1438,7 @@
         castilloCd = CASTILLO.ritmo;
         var esquinas = [[-3.4, -3.4], [-3.4, 3.4], [3.4, -3.4], [3.4, 3.4]];
         var es = esquinas.reduce(function (a, q) { return Math.hypot(q[0] - oc.pos.x, q[1] - oc.pos.z) < Math.hypot(a[0] - oc.pos.x, a[1] - oc.pos.z) ? q : a; });
-        disparar(new V3(es[0], 4.4, es[1]), oc, CASTILLO.dano);
+        disparar(new V3(es[0], 4.4, es[1]), oc, danoCastillo());
       }
     }
 
@@ -1612,7 +1701,7 @@
         if (quien) { sonar('click'); abrirPanelUnidad(quien); return; }
       }
     }
-    var hits = rayo.intersectObjects(slots.map(function (s) { return s.grupo; }).concat(barricadas.map(function (b) { return b.grupo; })).concat(murallaModelo ? [castillo, murallaModelo] : [castillo]), true);
+    var hits = rayo.intersectObjects(slots.map(function (s) { return s.grupo; }).concat(barricadas.map(function (b) { return b.grupo; })).concat(murallaModelo ? [castillo, murallaModelo] : [castillo]).concat(torresPuerta.map(function (tp) { return tp.grupo; })), true);
     for (var i = 0; i < hits.length; i++) {
       var o = hits[i].object;
       while (o && o.userData.slot === undefined && !o.userData.castillo && o.userData.barricada === undefined) o = o.parent;
@@ -1789,6 +1878,7 @@
     var h = '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('muralla', MURALLA.icono) + '</div><div><h3>' + N('muralla') + (n ? ' — ' + T('nivel_corto') + ' ' + n + '/' + NIVEL_MAX : '') + '</h3><p>' + D('muralla') + '</p></div></div>';
     if (obraMuralla) return h + '<div class="stats"><span>' + T('construyendo') + '</span></div></div>';
     if (n >= NIVEL_MAX) return h + '<div class="stats"><span>❤ +' + Math.round(MURALLA.vida[NIVEL_MAX - 1] * (1 + bono('muros'))) + '</span><span>' + T('nivel_max') + '</span></div></div>';
+    if (sig > (estado.castillo || 1)) return h + '<div class="stats"><span class="aviso-rojo">' + T('castillo_bloquea', { n: sig }) + '</span></div></div>';
     return h + '<div class="stats"><span>❤ ' + T('vida_extra') + ' +' + MURALLA.vida[sig - 1] + '</span></div>' +
       botonCosto(costoMuralla(sig - 1), 'muralla', '', n ? T('mejorar') : T('construir')) + '</div>';
   }
@@ -1860,7 +1950,9 @@
       html += '<div class="stats">' + statsEdificio(tipo, nivel) + '</div>';
       if (tipo === 'enfermeria') html += '<p class="nota">' + T('en_enfermeria', { n: totalHeridos() }) + '</p>';
       if (tipo === 'academia') html += '<button class="comprar naranja boton-oleada-grande" data-accion="investigacion">' + T('inv_abrir') + '</button>';
-      if (nivel < NIVEL_MAX) {
+      if (nivel < NIVEL_MAX && nivel + 1 > (estado.castillo || 1)) {
+        html += '<p class="nota aviso-rojo"><b>' + T('castillo_bloquea', { n: nivel + 1 }) + '</b></p>';
+      } else if (nivel < NIVEL_MAX) {
         html += '<p class="nota"><b>' + T('sube_a', { n: nivel + 1 }) + '</b></p><div class="stats">' + statsEdificio(tipo, nivel + 1) + '<span>⏱ ' + Math.round(EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'))) + 's</span></div>' +
           botonCosto(costoEdif(tipo, nivel), 'mejorar', 'data-slot="' + i + '"', T('mejorar'));
       } else html += '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
@@ -1996,7 +2088,8 @@
         var ac = academiaLista();
         if (ac) ponerReloj('inv', ac.pos.clone().setY(6.6), '📜 ' + fmtTiempo(faltaInvestigacion()));
       }
-      if (obraMuralla) ponerReloj('muralla', new V3(0, 12.5, 0), '🧱 ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velReal()));
+      if (estado.obraCastillo) ponerReloj('castillo', new V3(0, 13.6, 0), '🏰 ' + fmtTiempo((estado.obraCastillo.total - estado.obraCastillo.t) / velReal()));
+      if (obraMuralla) ponerReloj('muralla', new V3(0, 15, 0), '🧱 ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velReal()));
     }
     for (var k2 in relojesDiv) if (!relojesDiv[k2].dataset.vivo) relojesDiv[k2].classList.add('oculto');
   }
@@ -2004,7 +2097,8 @@
   function valorTropa(u) { return u.max * 0.5 + u.d.dano * 5 * (1 + bono('espadas')) * (1 + (u.defensa || 0)); }
   function fuerzaEjercito() { return Math.round(tropas.reduce(function (a, u) { return a + valorTropa(u); }, 0)); }
   function defensaReino() {
-    var d = vidaMaxCastillo() / 8 + CASTILLO.dano * 8;
+    var d = vidaMaxCastillo() / 8 + danoCastillo() * 8;
+    torresPuerta.forEach(function () { d += (TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * 6; });
     slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'torre') d += EDIFICIOS.torre.dano[s.edificio.nivel - 1] * (1 + bono('flechas')) * 6; });
     barricadas.forEach(function (b) { if (b.nivel) d += b.max / 10; });
     d += fuerzaEjercito() * 0.8;
@@ -2206,6 +2300,7 @@
     if (o.acelera) {
       var algo = slots.some(function (s) { return s.obra; }) || obraMuralla || colaEntreno.length || estado.investigando;
       if (estado.investigando) estado.investigando.t = estado.investigando.total;
+      if (estado.obraCastillo) { algo = true; estado.obraCastillo.t = estado.obraCastillo.total; }
       if (!algo) { consejoTemporal(T('nada_acelerar')); sonar('error'); return; }
       slots.forEach(function (s) { if (s.obra) s.obra.t = s.obra.total; });
       if (obraMuralla) obraMuralla.t = obraMuralla.total;
@@ -2271,10 +2366,16 @@
   }
   $('perfil').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'poder') cerrarPanel(); else abrirPanelPoder(); });
   function abrirPanelCastillo() {
-    var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo') + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
-      '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>⚔ ' + T('dano') + ' ' + CASTILLO.dano + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div></div>' +
+    var nc = estado.castillo || 1, oc = estado.obraCastillo, mej = '';
+    if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velReal()) + '</p>';
+    else if (nc < NIVEL_MAX) mej = '<p class="nota"><b>' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + '</b> ⏱ ' + fmtTiempo(tiempoCastillo(nc + 1)) + '</p>' + botonCosto(costoCastillo(nc + 1), 'mejorar-castillo', '', T('mejorar_castillo') + ' ');
+    else mej = '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
+    var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo_nivel', { n: nc, m: NIVEL_MAX }) + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
+      '<p class="nota">🏗️ ' + T('castillo_tope', { n: nc }) + '</p>' + mej +
+      '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>⚔ ' + T('dano') + ' ' + danoCastillo() + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div></div>' +
       '<p class="nota">🪙 ' + T('impuesto', { n: IMPUESTO.oro, s: IMPUESTO.cada }) + '</p>' +
-      '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>';
+      '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>' +
+      (estado.muralla ? '<p class="nota">🏹 <b>' + T('torres_puerta') + ':</b> ' + T('torres_puerta_txt') + ' (⚔ ' + Math.round((TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * (1 + bono('flechas'))) + ')</p>' : '');
     abrirPanel(T('castillo'), html, { tipo: 'castillo' });
   }
 
@@ -2379,7 +2480,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.9</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v2.0</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -2394,6 +2495,7 @@
       else entrarModoColocar(tipo);
     } else if (a === 'mejorar') mejorar(+b.getAttribute('data-slot'));
     else if (a === 'muralla') construirMuralla();
+    else if (a === 'mejorar-castillo') mejorarCastillo();
     else if (a === 'barricada') entrarModoBarricada();
     else if (a === 'al-crear') crearAlianzaDesdePanel(b);
     else if (a === 'al-unirse') unirseAlianza(b.getAttribute('data-tag'), b);
@@ -2447,6 +2549,7 @@
       var a = b.getAttribute('data-accion');
       if (a === 'entrenar') ok = ok && cuartelesListos().length > 0 && tropasOcupadas() < capacidad();
       if (a === 'muralla') ok = ok && !obraMuralla && estado.muralla < NIVEL_MAX;
+      if (a === 'mejorar-castillo') ok = ok && !estado.obraCastillo;
       if (a === 'investigar') ok = ok && !estado.investigando && !!academiaLista();
       if (a === 'heroe') ok = ok && !tropas.some(function (u) { return u.tipo === 'heroe'; });
       b.disabled = !ok;
@@ -2457,6 +2560,7 @@
       $('inv-falta').textContent = '⏱ ' + T('faltan_t', { t: fmtTiempo(faltaInvestigacion()) });
     }
     if ($('reloj-obra')) { var so = slots[+$('reloj-obra').dataset.slot]; if (so && so.obra) $('reloj-obra').textContent = '⏱ ' + fmtTiempo((so.obra.total - so.obra.t) / velReal()); else reabrirPanel(); }
+    if ($('reloj-castillo') && estado.obraCastillo) { var ob2 = estado.obraCastillo; $('reloj-castillo').textContent = '⏱ ' + fmtTiempo((ob2.total - ob2.t) / velReal()); $('castillo-barra').style.width = Math.round(ob2.t / ob2.total * 100) + '%'; }
     if ($('reloj-diario')) $('reloj-diario').textContent = T('proximo_cofre', { t: fmtTiempo(segHastaManana()) });
     var cola = $('cola');
     if (cola) {
@@ -2513,7 +2617,7 @@
     var p = 0;
     tropas.forEach(function (u) { p += Math.round(u.d.vida * 2 + u.d.dano * 25); });
     slots.forEach(function (s) { if (s.edificio) p += s.edificio.nivel * 450; });
-    p += estado.muralla * 600;
+    p += estado.muralla * 600 + ((estado.castillo || 1) - 1) * 800;
     for (var ik in estado.invest) p += (estado.invest[ik] || 0) * 250;
     barricadas.forEach(function (b) { p += b.nivel * 300; });
     return p + (estado.oleada - 1) * 1000;
@@ -2789,6 +2893,10 @@
       estado.invest = g.invest || {};
       estado.escudoHasta = g.escudoHasta || 0;
       estado.cdAtaque = g.cdAtaque || {};
+      // partidas viejas: el castillo empieza al nivel de su edificio más alto
+      var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
+      estado.castillo = g.castillo || maxEd;
+      estado.obraCastillo = g.obraCastillo || null;
       estado.investigando = g.investigando || null;
       estado.diario = g.diario || { ultimo: '', racha: 0 };
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
@@ -2804,6 +2912,8 @@
       if (g.heroe) crearTropa('heroe', reunion.clone());
       tropas.forEach(function (u) { u.pos.copy(u.puesto); });
     }
+    ponerCastillo();
+    andamiosDelCastillo(!!estado.obraCastillo);
     ponerMuralla(estado.muralla);
     estado.vidaCastillo = vidaMaxCastillo();
     curarHeridos();

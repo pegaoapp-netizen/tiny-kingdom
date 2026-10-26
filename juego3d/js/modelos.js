@@ -192,7 +192,9 @@ var M = (function () {
   // =================================================================
   //  CASTILLO
   // =================================================================
-  function castillo() {
+  function castillo(nivelVis) {
+    nivelVis = nivelVis || 1;
+    var colTecho = nivelVis >= 3 ? C.oro : nivelVis === 2 ? 0x6a46c8 : C.techoAzul;
     var g = new THREE.Group();
     g.add(cil(6.4, 6.9, 0.7, 8, C.piedraOsc, 0, 0.35, 0));
     // murallas
@@ -213,13 +215,13 @@ var M = (function () {
       var x = s[0] * L / 2, z = s[1] * L / 2;
       g.add(cil(1.15, 1.3, 4.2, 8, C.piedra, x, 0.7 + 2.1, z));
       g.add(cil(1.4, 1.2, 0.5, 8, C.piedraOsc, x, 0.7 + 4.3, z));
-      g.add(cono(1.55, 2.2, 8, C.techoAzul, x, 0.7 + 5.6, z));
+      g.add(cono(1.55, 2.2, 8, colTecho, x, 0.7 + 5.6, z));
       g.add(caja(0.25, 0.5, 0.08, C.negro, x - s[0] * 0.1, 3.6, z + s[1] * 1.17));
     });
     // torre central (torre del homenaje)
     g.add(caja(4.4, 5, 4.4, C.piedra, 0.6, 0.7 + 2.5, 0));
     g.add(caja(4.8, 0.4, 4.8, C.piedraOsc, 0.6, 0.7 + 5.1, 0));
-    var techo = cono(3.6, 3.4, 4, C.techoAzul, 0.6, 0.7 + 7, 0);
+    var techo = cono(3.6, 3.4, 4, colTecho, 0.6, 0.7 + 7, 0);
     techo.rotation.y = Math.PI / 4;
     g.add(techo);
     var b = bandera(C.techoRojo, 2.2); b.position.set(0.6, 8.4, 0); g.add(b);
@@ -250,7 +252,7 @@ var M = (function () {
     [-1.1, 0, 1.1].forEach(function (z) { g.add(caja(0.08, 0.55, 0.4, C.negro, 0.6 - 2.21, 2.6, z)); g.add(caja(0.1, 0.08, 0.55, 0xe8e2d8, 0.6 - 2.23, 2.9, z)); });
     // estandartes al lado de la puerta
     [-1.7, 1.7].forEach(function (z) {
-      g.add(caja(0.1, 1.6, 0.9, C.techoAzul, -L / 2 - 0.5, 2.1, z));
+      g.add(caja(0.1, 1.6, 0.9, colTecho, -L / 2 - 0.5, 2.1, z));
       g.add(esfera(0.18, C.oro, -L / 2 - 0.58, 2.3, z, 6, 4));
     });
     return fusionar(g);

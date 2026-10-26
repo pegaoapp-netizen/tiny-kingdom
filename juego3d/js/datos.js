@@ -153,6 +153,10 @@ var TEXTOS = {
     escudo_usado: '🛡️ ¡Reino protegido! Faltan {t}', protegido_falta: '🛡️ Protegido: faltan {t}', escudo_info: 'Mientras dure la protección, ningún jugador podrá atacar tu reino (para cuando lleguen los ataques entre jugadores). En el mapa se ve un escudo sobre tu aldea.',
     calidad: 'Calidad de gráficos', calidad_alta: 'Alta', calidad_baja: 'Baja (más rápido)', calidad_txt: 'Alta: sombras, humo y polvo. Baja: va más rápido en teléfonos viejos.',
     faltan_t: 'Faltan {t}', proximo_cofre: '⏰ Próximo cofre en {t}', entrenando_t: 'Faltan {t} para terminar el entrenamiento',
+    castillo_nivel: 'Castillo — nivel {n} de {m}', mejorar_castillo: '🏰 Mejorar castillo', castillo_bloquea: '🏰 Primero mejora el Castillo al nivel {n}.',
+    castillo_subiendo: '🏰 El castillo se está mejorando al nivel {n}', castillo_listo: '🏰 ¡Castillo nivel {n}! Ya puedes subir tus edificios hasta el nivel {n}.',
+    castillo_tope: 'Tus edificios pueden llegar hasta el nivel {n}.', castillo_sube: 'Al subir al nivel {n}: +{v} de vida, +{d} de daño y edificios hasta nivel {n}.',
+    torres_puerta: 'Torres de la puerta', torres_puerta_txt: 'Dos torres con arqueros protegen la puerta de la muralla. Pegan más fuerte con cada nivel de la muralla.',
     nivel_de: 'Nivel {n} de {m}', sube_a: 'Al subir al nivel {n}:', nivel_corto: 'Nv',
     vida_extra: 'Vida extra del castillo', muralla_nivel: 'Muralla nivel {n}', sin_muralla: 'Todavía no tienes Muralla.',
     c_enfermeria: 'Consejo: una Enfermería salva a las tropas que caen en batalla.', c_muralla: 'Consejo: construye la Muralla para que el castillo aguante más.',
@@ -291,6 +295,10 @@ var TEXTOS = {
     escudo_usado: '🛡️ Kingdom protected! {t} left', protegido_falta: '🛡️ Protected: {t} left', escudo_info: 'While the protection lasts, no player can attack your kingdom (for when player attacks arrive). On the map your village shows a shield.',
     calidad: 'Graphics quality', calidad_alta: 'High', calidad_baja: 'Low (faster)', calidad_txt: 'High: shadows, smoke and dust. Low: runs faster on older phones.',
     faltan_t: '{t} left', proximo_cofre: '⏰ Next chest in {t}', entrenando_t: '{t} left to finish training',
+    castillo_nivel: 'Castle — level {n} of {m}', mejorar_castillo: '🏰 Upgrade castle', castillo_bloquea: '🏰 First upgrade the Castle to level {n}.',
+    castillo_subiendo: '🏰 The castle is being upgraded to level {n}', castillo_listo: '🏰 Castle level {n}! Your buildings can now go up to level {n}.',
+    castillo_tope: 'Your buildings can go up to level {n}.', castillo_sube: 'At level {n}: +{v} health, +{d} damage and buildings up to level {n}.',
+    torres_puerta: 'Gate towers', torres_puerta_txt: 'Two archer towers guard the wall gate. They hit harder with each wall level.',
     nivel_de: 'Level {n} of {m}', sube_a: 'At level {n}:', nivel_corto: 'Lv',
     vida_extra: 'Extra castle health', muralla_nivel: 'Wall level {n}', sin_muralla: 'You do not have a Wall yet.',
     c_enfermeria: 'Tip: an Infirmary saves troops that fall in battle.', c_muralla: 'Tip: build the Wall so the castle lasts longer.',
@@ -417,6 +425,19 @@ var NIVEL_MAX = 12;
   extender(MURALLA.costo, ['x', 1.3]); extender(MURALLA.madera, ['=', 0]); extender(MURALLA.piedra, ['x', 1.3]);
   extender(MURALLA.tiempo, ['+', 2]); extender(MURALLA.vida, ['+', 600]);
 })();
+// Mejorar el castillo (nivel destino 2..12): cuesta más y tarda más cada vez.
+// Ningún edificio ni la muralla pueden pasar el nivel del castillo.
+var MEJORA_CASTILLO = (function () {
+  var m = { costo: [0], madera: [0], piedra: [0], tiempo: [0], vida: 300, dano: 3 };
+  function r5(v) { return Math.round(v / 5) * 5; }
+  for (var L = 2; L <= NIVEL_MAX; L++) {
+    m.costo.push(r5(150 * Math.pow(1.45, L - 2))); m.madera.push(r5(180 * Math.pow(1.45, L - 2)));
+    m.piedra.push(r5(60 * Math.pow(1.5, L - 2))); m.tiempo.push(Math.round(30 * Math.pow(1.35, L - 2)));
+  }
+  return m;
+})();
+// Torres de la puerta de la muralla (dañan más con el nivel de la muralla)
+var TORRES_PUERTA = { dano: 12, danoNivel: 4, alcance: 12, ritmo: 1.0 };
 // Cómo se ve cada nivel: 1-4 normal, 5-8 mejorado, 9-12 dorado
 function nivelVisual(n) { return n <= 4 ? 1 : n <= 8 ? 2 : 3; }
 // La muralla rodea TODO el reino (óvalo con todos los terrenos adentro)
