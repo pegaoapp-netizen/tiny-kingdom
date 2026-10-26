@@ -1529,13 +1529,13 @@
     var hd = heroeId ? HEROE[heroeId] : null;
     var d = hd ? statsHeroe(heroeId) : TROPAS[tipo];
     var na = tipo === 'heroe' ? 0 : nivelArmadura(tipo);
-    var m = hd ? M.unidad('heroe', undefined, 0, hd.look) : M.unidad(tipo, undefined, na);
+    var m = hd ? M.heroe(hd, (estado.heroes[heroeId] || {}).nivel) : M.unidad(tipo, undefined, na);
     m.grupo.position.copy(desde);
     escena.add(m.grupo);
     var u = {
       tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
-      barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: 1.75 * m.escala
+      barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: m.alto || 1.75 * m.escala
     };
     u.barra.visible = false;
     escena.add(u.barra);
@@ -2369,7 +2369,7 @@
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
       ['aserradero', 'mina', 'academia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
-      HEROES.forEach(function (h) { var hu = M.unidad('heroe', undefined, 0, h.look); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 2.3 * hu.escala, 0.95 * hu.escala); });
+      HEROES.forEach(function (h) { var hu = M.heroe(h, 1); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 1.55 * hu.escala, (hu.cabezaY - 0.12) * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
         var gc = new THREE.Group();
@@ -2590,6 +2590,7 @@
     tropas.filter(function (u) { return u.tipo === 'heroe' && !u.heroeId; }).forEach(function (u) { var i = tropas.indexOf(u); if (i >= 0) tropas.splice(i, 1); escena.remove(u.m.grupo); escena.remove(u.barra); });
     estado.equipo.forEach(function (id) {
       var u = tropas.filter(function (x) { return x.heroeId === id; })[0];
+      if (u && u.m.tier !== M.tierHeroe(estado.heroes[id].nivel)) { var iu = tropas.indexOf(u); if (iu >= 0) tropas.splice(iu, 1); escena.remove(u.m.grupo); escena.remove(u.barra); u = null; }
       if (u) { var s = statsHeroe(id), fr = u.vida / u.max; u.d = s; u.max = s.vida; u.vida = Math.max(1, fr) * s.vida; return; }
       u = crearTropa('heroe', puertaCastillo(), false, id);
       guardarDentro(u);

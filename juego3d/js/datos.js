@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '2.8';
+var VERSION_JUEGO = '2.9';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🦸 <b>8 héroes nuevos</b> con su poder especial. En GUARDIA → Héroes: recluta (¡1 gratis cada día!), sube de nivel y estrellas, y arma tu equipo de 3.</li><li>⚔️ <b>Entrena sin límite</b>: mientras tengas materiales. Ojo: las tropas comen.</li><li>🎵 <b>Sonido nuevo</b> y música medieval (se apaga en Ajustes).</li><li>☁️ Nubes más reales.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🦸 <b>Héroes renovados</b>: casi el doble de grandes que las tropas, con cara completa (ojos, cejas, nariz, boca), ropa por capas y escudo con emblema.</li><li>🥉🥈🥇 Su <b>armadura cambia con el nivel</b>: bronce, plata (nivel 10) y oro (nivel 25).</li><li>💫 Respiran y miran a los lados cuando están quietos, y tienen un aro de color según su rareza.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🦸 <b>8 new heroes</b> with special powers. In GUARD → Heroes: recruit (1 free every day!), raise levels and stars, and build your team of 3.</li><li>⚔️ <b>Train without limit</b> while you have materials. Careful: troops eat.</li><li>🎵 <b>New sound</b> and medieval music (turn it off in Settings).</li><li>☁️ More realistic clouds.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🦸 <b>Heroes remade</b>: almost twice as big as troops, with full faces (eyes, brows, nose, mouth), layered clothes and a shield with an emblem.</li><li>🥉🥈🥇 Their <b>armor changes with level</b>: bronze, silver (level 10) and gold (level 25).</li><li>💫 They breathe and look around when idle, and have a colored ring by rarity.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
@@ -593,11 +593,11 @@ var HEROES = [
   { id: 'sol', rareza: 'legendario', clase: 'infanteria', hab: 'grito', vida: 950, dano: 42, alcance: 1.7,
     look: { ropa: 0xe0b040, ropa2: 0xb8862a, sombrero: 'casco', arma: 'espada', capa: 0xd2463a } },
   { id: 'luna', rareza: 'legendario', clase: 'magia', hab: 'rayo', vida: 620, dano: 40, alcance: 7, distancia: true,
-    look: { ropa: 0x6a3fb8, ropa2: 0x3f2672, pelo: 0x2a2030, peinado: 'largo', sombrero: 'bruja', arma: 'varita', capa: 0x3f2672 } },
+    look: { ropa: 0x6a3fb8, ropa2: 0x3f2672, pelo: 0x2a2030, peinado: 'largo', sombrero: 'bruja', arma: 'varita', ojos: 0x8a5ad8, capa: 0x3f2672 } },
   { id: 'ancla', rareza: 'legendario', clase: 'infanteria', hab: 'canon', vida: 1100, dano: 46, alcance: 1.8,
     look: { ropa: 0xb8302a, ropa2: 0x2a2320, pelo: 0xf0eee8, peinado: 'corto', barba: 0xf0eee8, sombrero: 'tricornio', arma: 'sable', capa: 0x7a1a14 } },
   { id: 'brisa', rareza: 'raro', clase: 'arquero', hab: 'lluvia', vida: 560, dano: 30, alcance: 8, distancia: true,
-    look: { ropa: 0x2f8a5a, ropa2: 0x1f5a3a, pelo: 0xd2462a, peinado: 'trenza', arma: 'arco' } },
+    look: { ropa: 0x2f8a5a, ropa2: 0x1f5a3a, pelo: 0xd2462a, peinado: 'trenza', arma: 'arco', ojos: 0x3a8a4a } },
   { id: 'chispa', rareza: 'raro', clase: 'infanteria', hab: 'bomba', vida: 700, dano: 32, alcance: 1.6,
     look: { ropa: 0x3a6fc0, ropa2: 0x8a5a33, pelo: 0x6a3a1a, peinado: 'mono', sombrero: 'gafas', arma: 'martillo' } },
   { id: 'roble', rareza: 'comun', clase: 'guardian', hab: 'escudo', vida: 1300, dano: 22, alcance: 1.5,
@@ -605,7 +605,7 @@ var HEROES = [
   { id: 'trueno', rareza: 'comun', clase: 'infanteria', hab: 'golpe', vida: 900, dano: 30, alcance: 1.6,
     look: { ropa: 0xffd3b0, ropa2: 0x5a4a40, pelo: 0x2a2320, peinado: 'calvo', barba: 0x2a2320, sombrero: 'panuelo', arma: 'hacha2' } },
   { id: 'pluma', rareza: 'comun', clase: 'magia', hab: 'curar', vida: 600, dano: 18, alcance: 6, distancia: true,
-    look: { ropa: 0xf2ece0, ropa2: 0xc9b896, pelo: 0xf0c860, peinado: 'largo', sombrero: 'capucha', arma: 'baston' } }
+    look: { ropa: 0xf2ece0, ropa2: 0xc9b896, pelo: 0xf0c860, peinado: 'largo', sombrero: 'capucha', arma: 'baston', ojos: 0x5a8ad8 } }
 ];
 var HEROE = {}; HEROES.forEach(function (h) { HEROE[h.id] = h; });
 var HEROE_NIVEL_MAX = 50;                 // cada estrella deja subir 10 niveles más
