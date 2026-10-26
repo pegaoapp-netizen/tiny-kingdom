@@ -1,7 +1,8 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Cada jugador solo puede leer y escribir SU propia partida.
+
+    // Partida privada: cada jugador solo puede leer y escribir SU propia partida.
     match /jugadores/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
@@ -11,6 +12,44 @@ service cloud.firestore {
         && request.resource.data.actualizado is int;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Aldea pública en el mapa del mundo: todos los jugadores con cuenta la ven,
+    // pero solo su dueño la puede cambiar.
+    match /aldeas/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nombre', 'nivel', 'poder', 'x', 'y', 'alianza', 'actualizado'])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
+        && request.resource.data.nivel is int && request.resource.data.nivel >= 1 && request.resource.data.nivel <= 100000
+        && request.resource.data.poder is int && request.resource.data.poder >= 0 && request.resource.data.poder <= 1000000000
+        && request.resource.data.x is int && request.resource.data.x >= 0 && request.resource.data.x < 100
+        && request.resource.data.y is int && request.resource.data.y >= 0 && request.resource.data.y < 100
+        && request.resource.data.actualizado is int
+        && (request.resource.data.alianza == null
+            || (request.resource.data.alianza is string
+                && exists(/databases/$(database)/documents/alianzas/$(request.resource.data.alianza))));
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Alianzas: el id es la etiqueta (2 a 4 letras o números, en mayúsculas).
+    // Cualquiera con cuenta puede crear una (si la etiqueta está libre) y verlas.
+    // Solo el líder puede borrarla. Nadie la puede modificar después.
+    match /alianzas/{tag} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && tag.matches('^[A-Z0-9]{2,4}$')
+        && request.resource.data.keys().hasOnly(['nombre', 'tag', 'lider', 'liderNombre', 'creada'])
+        && request.resource.data.tag == tag
+        && request.resource.data.lider == request.auth.uid
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 3 && request.resource.data.nombre.size() <= 24
+        && request.resource.data.liderNombre is string && request.resource.data.liderNombre.size() <= 30
+        && request.resource.data.creada is int;
+      allow delete: if request.auth != null && resource.data.lider == request.auth.uid;
+      allow update: if false;
+    }
+
     // Todo lo demás está cerrado.
     match /{document=**} {
       allow read, write: if false;

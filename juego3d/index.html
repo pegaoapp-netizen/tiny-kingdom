@@ -75,9 +75,23 @@ window.addEventListener("error", function (e) {
 
 <!-- Barra de abajo -->
 <div id="abajo">
-  <button class="pestana" id="btn-tropas"><span class="icono">🛡️</span><span class="txt" data-t="b_tropas">TROPAS</span></button>
-  <button class="pestana grande" id="btn-construir"><span class="icono">🔨</span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
+  <button class="pestana" id="btn-tropas"><span class="icono">⚔️</span><span class="txt" data-t="b_tropas">TROPAS</span></button>
   <button class="pestana" id="btn-invocar"><span class="icono">✨</span><span class="txt" data-t="b_invocar">INVOCAR</span></button>
+  <button class="pestana grande" id="btn-construir"><span class="icono">🔨</span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
+  <button class="pestana" id="btn-mundo"><span class="icono">🗺️</span><span class="txt" data-t="b_mundo">MUNDO</span></button>
+  <button class="pestana" id="btn-alianza"><span class="icono">🛡️</span><span class="txt" data-t="b_alianza">ALIANZA</span></button>
+</div>
+
+<!-- Mapa del mundo -->
+<div id="mundo" class="oculto">
+  <div class="mundo-cab">
+    <h2 data-t="p_mundo">Mapa del mundo</h2>
+    <button class="cerrar" id="mundo-cerrar">✕</button>
+  </div>
+  <div id="mundo-estado"></div>
+  <div id="mundo-mapa"><canvas id="mundo-fondo" width="600" height="600"></canvas><div id="mundo-aldeas"></div></div>
+  <div id="mundo-leyenda"></div>
+  <div id="mundo-info"></div>
 </div>
 
 <!-- Panel genérico (hoja de abajo) -->

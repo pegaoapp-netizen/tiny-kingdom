@@ -99,6 +99,24 @@ var TEXTOS = {
     colocando_barr: 'Elige un punto del camino para la Barricada', punto_ocupado: 'Ya hay una Barricada ahí.',
     barr_rota: '🚧 ¡Rompieron una Barricada!', barr_arreglo: 'Las barricadas se arreglan solas al terminar la oleada.',
     madera_nivel: 'de madera', piedra_nivel: 'de piedra',
+    t_aliada: 'Tu tropa', t_enemigo: 'Enemigo', t_invocada: 'Invocada con gemas (no ocupa lugar en el cuartel)', t_heroe: 'Héroe: se cura solo poco a poco',
+    t_lenta: 'Velocidad', t_ritmo: 'Ataca cada {s} s', t_oro: 'Suelta {n} de oro al caer', t_hambre: 'Con hambre: pega más débil',
+    b_mundo: 'MUNDO', b_alianza: 'ALIANZA', p_mundo: 'Mapa del mundo', p_alianza: 'Alianza',
+    mundo_cuenta: 'Crea una cuenta para aparecer en el mapa del mundo y unirte a una alianza.',
+    mundo_cargando: 'Cargando el mapa...', mundo_error: 'No se pudo cargar el mapa. Revisa tu internet.',
+    mundo_solo: 'Por ahora eres el único reino en el mapa. ¡Invita a tus amigos a jugar!',
+    leyenda_tu: 'Tú', leyenda_alianza: 'Tu alianza', leyenda_otros: 'Otros reinos', leyenda_trasgos: 'Trasgos',
+    tu_reino: 'Tu reino', reino_de: 'Reino de {n}', campamento: 'Campamento de trasgos',
+    campamento_txt: 'De aquí salen las oleadas que atacan los reinos. ¡Cuidado!', sin_alianza: 'Sin alianza',
+    reinos_en_mapa: '{n} reinos en el mapa',
+    al_crear: 'Crear alianza', al_nombre: 'Nombre de la alianza (3 a 24)', al_tag: 'Etiqueta (2 a 4 letras)',
+    al_crear_btn: 'Crear', al_lista: 'Alianzas para unirte', al_ninguna: 'Todavía no hay alianzas. ¡Crea la primera!',
+    al_unirse: 'Unirse', al_salir: 'Salir de la alianza', al_miembros: 'Miembros ({n})', al_lider: 'Líder',
+    al_ver_mapa: 'Ver en el mapa', al_existe: 'Esa etiqueta ya está usada. Elige otra.',
+    al_nombre_mal: 'El nombre debe tener de 3 a 24 letras.', al_tag_mal: 'La etiqueta debe tener de 2 a 4 letras o números.',
+    al_creada: '🛡️ ¡Alianza [{t}] creada!', al_unido: '🛡️ Te uniste a [{t}]', al_salido: 'Saliste de la alianza.',
+    al_borrada: 'Esa alianza ya no existe.', al_salir_ok: '¿Seguro que quieres salir de la alianza?',
+    al_lider_sale: 'Eres el líder: si sales, la alianza se borra. ¿Seguro?',
     info_oro: 'Oro 🪙: lo cobra el castillo cada pocos segundos y lo sueltan los enemigos al caer.',
     info_comida: 'Comida 🍞: la dan las Granjas. Sirve para entrenar y alimentar a tus tropas.',
     info_madera: 'Madera 🪵: la da el Aserradero. Sirve para construir y mejorar.',
@@ -188,6 +206,24 @@ var TEXTOS = {
     colocando_barr: 'Pick a spot on the road for the Barricade', punto_ocupado: 'There is already a Barricade there.',
     barr_rota: '🚧 A Barricade was broken!', barr_arreglo: 'Barricades repair themselves when the wave ends.',
     madera_nivel: 'wooden', piedra_nivel: 'stone',
+    t_aliada: 'Your troop', t_enemigo: 'Enemy', t_invocada: 'Summoned with gems (does not use a barracks spot)', t_heroe: 'Hero: heals slowly over time',
+    t_lenta: 'Speed', t_ritmo: 'Attacks every {s} s', t_oro: 'Drops {n} gold when defeated', t_hambre: 'Hungry: hits weaker',
+    b_mundo: 'WORLD', b_alianza: 'ALLIANCE', p_mundo: 'World map', p_alianza: 'Alliance',
+    mundo_cuenta: 'Create an account to appear on the world map and join an alliance.',
+    mundo_cargando: 'Loading the map...', mundo_error: 'Could not load the map. Check your internet.',
+    mundo_solo: 'For now you are the only kingdom on the map. Invite your friends to play!',
+    leyenda_tu: 'You', leyenda_alianza: 'Your alliance', leyenda_otros: 'Other kingdoms', leyenda_trasgos: 'Goblins',
+    tu_reino: 'Your kingdom', reino_de: '{n}\'s kingdom', campamento: 'Goblin camp',
+    campamento_txt: 'The waves that attack the kingdoms come from here. Watch out!', sin_alianza: 'No alliance',
+    reinos_en_mapa: '{n} kingdoms on the map',
+    al_crear: 'Create alliance', al_nombre: 'Alliance name (3 to 24)', al_tag: 'Tag (2 to 4 letters)',
+    al_crear_btn: 'Create', al_lista: 'Alliances to join', al_ninguna: 'No alliances yet. Create the first one!',
+    al_unirse: 'Join', al_salir: 'Leave alliance', al_miembros: 'Members ({n})', al_lider: 'Leader',
+    al_ver_mapa: 'See on map', al_existe: 'That tag is taken. Pick another.',
+    al_nombre_mal: 'The name must be 3 to 24 letters.', al_tag_mal: 'The tag must be 2 to 4 letters or numbers.',
+    al_creada: '🛡️ Alliance [{t}] created!', al_unido: '🛡️ You joined [{t}]', al_salido: 'You left the alliance.',
+    al_borrada: 'That alliance no longer exists.', al_salir_ok: 'Are you sure you want to leave the alliance?',
+    al_lider_sale: 'You are the leader: if you leave, the alliance is deleted. Are you sure?',
     info_oro: 'Gold 🪙: the castle collects it every few seconds and enemies drop it.',
     info_comida: 'Food 🍞: Farms make it. Used to train and feed your troops.',
     info_madera: 'Wood 🪵: the Sawmill makes it. Used to build and upgrade.',
@@ -272,6 +308,11 @@ var MURALLA = { costo: [80, 140, 220], madera: [100, 0, 0], piedra: [0, 150, 260
 // Barricada: se pone en los puntos marcados del camino. Los enemigos se paran a romperla.
 // Nivel 1 de madera, nivel 2 de piedra. Se arregla sola al terminar cada oleada.
 var BARRICADA = { costo: [20, 40], madera: [40, 0], piedra: [0, 60], vida: [350, 900], tiempo: [2, 3], icono: '🚧' };
+// Campamentos de trasgos en el mapa del mundo (son del juego, no son jugadores)
+var CAMPAMENTOS = [
+  { x: 12, y: 18, nivel: 3 }, { x: 80, y: 14, nivel: 6 }, { x: 47, y: 52, nivel: 9 },
+  { x: 20, y: 78, nivel: 5 }, { x: 74, y: 70, nivel: 12 }, { x: 55, y: 88, nivel: 7 }
+];
 var PUNTOS_BARRICADA = [0.40, 0.53, 0.66, 0.79]; // en qué parte del camino (0 = bosque, 1 = castillo)
 
 // El castillo también dispara (para que la primera oleada sea posible)

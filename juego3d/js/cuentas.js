@@ -86,6 +86,7 @@ var Cuentas = (function () {
       var cred = firebase.auth.EmailAuthProvider.credential(u.email, clave);
       pendiente = null; clearTimeout(timer);
       return u.reauthenticateWithCredential(cred)
+        .then(function () { return db.collection('aldeas').doc(u.uid).delete().catch(function () {}); })
         .then(function () { return db.collection('jugadores').doc(u.uid).delete(); })
         .then(function () { try { localStorage.removeItem('tinykingdom_v1_' + u.uid); } catch (e) {} return u.delete(); });
     },
@@ -118,6 +119,52 @@ var Cuentas = (function () {
         actualizado: Math.floor(e.actualizado || Date.now()),
         version: 1
       }).catch(function () { /* sin internet: Firestore lo reintenta solo */ });
-    }
+    },
+
+    // ---------------- MAPA DEL MUNDO Y ALIANZAS ----------------
+    // Nombre que ven los demás: nunca el correo completo
+    nombrePublico: function () {
+      var n = nombreDe(usuario) || '';
+      return (n.indexOf('@') >= 0 ? n.split('@')[0] : n).slice(0, 30) || '?';
+    },
+    // Lugar fijo de la aldea en el mapa (sale del id de la cuenta)
+    lugar: function () {
+      var s = usuario ? usuario.uid : 'x', h = 0;
+      for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return { x: 8 + (h % 84), y: 8 + (Math.floor(h / 84) % 84) };
+    },
+    publicarAldea: function (d) {
+      if (!usuario) return Promise.resolve();
+      return db.collection('aldeas').doc(usuario.uid).set({
+        nombre: d.nombre, nivel: d.nivel, poder: d.poder, x: d.x, y: d.y,
+        alianza: d.alianza || null, actualizado: Date.now()
+      });
+    },
+    aldeas: function () {
+      return db.collection('aldeas').orderBy('poder', 'desc').limit(150).get().then(function (q) {
+        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+      });
+    },
+    alianza: function (tag) {
+      return db.collection('alianzas').doc(tag).get().then(function (d) { return d.exists ? d.data() : null; });
+    },
+    alianzas: function () {
+      return db.collection('alianzas').orderBy('creada', 'desc').limit(50).get().then(function (q) {
+        return q.docs.map(function (d) { return d.data(); });
+      });
+    },
+    miembros: function (tag) {
+      return db.collection('aldeas').where('alianza', '==', tag).limit(60).get().then(function (q) {
+        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+      });
+    },
+    crearAlianza: function (nombre, tag) {
+      if (!usuario) return Promise.reject(new Error('sin usuario'));
+      return db.collection('alianzas').doc(tag).set({
+        nombre: nombre, tag: tag, lider: usuario.uid, liderNombre: this.nombrePublico(), creada: Date.now()
+      });
+    },
+    borrarAlianza: function (tag) { return db.collection('alianzas').doc(tag).delete(); },
+    borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
 })();

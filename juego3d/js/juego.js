@@ -16,7 +16,7 @@
     return {
       monedas: INICIO.monedas, gemas: INICIO.gemas, comida: INICIO.comida, madera: INICIO.madera, piedra: INICIO.piedra, oleada: 1, vidaCastillo: INICIO.vidaCastillo,
       edificios: TERRENOS.map(function () { return null; }),
-      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [],
+      tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null,
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -92,7 +92,7 @@
   escena.fog = new THREE.Fog(0x9fd8ff, 85, 180);
 
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
-  var cam = { objetivo: new V3(-17, 0, -9), dist: 50, distMeta: 50, az: 0.52, polar: 1.0 };
+  var cam = { objetivo: new V3(-15, 0, -7), dist: 36, distMeta: 36, az: 0.52, polar: 1.0 };
 
   var hemi = new THREE.HemisphereLight(0xdff2ff, 0x6a8a4a, 0.55);
   escena.add(hemi);
@@ -420,6 +420,186 @@
   }
 
   // ------------------------------------------------------------------
+  //  MAPA DEL MUNDO
+  // ------------------------------------------------------------------
+  var ultimaPublicacion = 0, aldeasCache = [];
+  function hayCuenta() { return !!(window.Cuentas && Cuentas.disponible() && Cuentas.usuario()); }
+  function publicarAldea(forzar) {
+    if (!hayCuenta()) return;
+    var ahora = Date.now();
+    if (!forzar && ahora - ultimaPublicacion < 60000) return;
+    ultimaPublicacion = ahora;
+    var l = Cuentas.lugar();
+    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null })
+      .catch(function () {
+        // si la alianza ya no existe, la quitamos y probamos otra vez
+        if (estado.alianza) { estado.alianza = null; guardar(); Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: null }).catch(function () {}); }
+      });
+  }
+  var fondoMundoListo = false;
+  function dibujarFondoMundo() {
+    if (fondoMundoListo) return;
+    fondoMundoListo = true;
+    var c = $('mundo-fondo'), x = c.getContext('2d'), W = c.width;
+    var semilla = 11; function azar() { semilla = (semilla * 16807) % 2147483647; return semilla / 2147483647; }
+    x.fillStyle = '#5aa83c'; x.fillRect(0, 0, W, W);
+    for (var i = 0; i < 900; i++) { x.fillStyle = ['#4f9a34', '#64b244', '#58a33a', '#6cbb4a'][i % 4]; var px = azar() * W, py = azar() * W, r = 6 + azar() * 22; x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill(); }
+    // río
+    x.strokeStyle = '#4ab8f0'; x.lineWidth = 16; x.lineCap = 'round'; x.beginPath(); x.moveTo(-10, W * 0.32);
+    for (var k = 0; k <= 10; k++) x.lineTo(k * W / 10, W * 0.32 + Math.sin(k * 0.9) * 40 + k * 18);
+    x.stroke(); x.strokeStyle = '#8fd8ff'; x.lineWidth = 4; x.stroke();
+    // caminos
+    x.strokeStyle = 'rgba(217, 160, 110, .8)'; x.lineWidth = 6; x.setLineDash([10, 8]);
+    x.beginPath(); x.moveTo(W * 0.1, W * 0.9); x.quadraticCurveTo(W * 0.5, W * 0.5, W * 0.9, W * 0.1); x.stroke();
+    x.beginPath(); x.moveTo(W * 0.05, W * 0.25); x.quadraticCurveTo(W * 0.45, W * 0.6, W * 0.95, W * 0.75); x.stroke();
+    x.setLineDash([]);
+    // bosques y montañas
+    x.font = '22px serif'; x.textAlign = 'center';
+    for (var t = 0; t < 120; t++) x.fillText(azar() < 0.8 ? '🌲' : '🌳', azar() * W, azar() * W);
+    x.font = '30px serif';
+    for (var m = 0; m < 14; m++) x.fillText('⛰️', azar() * W, azar() * W);
+    // marco antiguo
+    x.strokeStyle = 'rgba(60, 40, 20, .5)'; x.lineWidth = 10; x.strokeRect(0, 0, W, W);
+  }
+  function abrirMundo() {
+    dibujarFondoMundo();
+    $('mundo').classList.remove('oculto');
+    enMundo = true;
+    $('mundo-info').innerHTML = '';
+    $('mundo-leyenda').innerHTML = '<span>👑 ' + T('leyenda_tu') + '</span><span>🛡️ ' + T('leyenda_alianza') + '</span><span>🏰 ' + T('leyenda_otros') + '</span><span>⛺ ' + T('leyenda_trasgos') + '</span>';
+    pintarAldeas([]);
+    if (!hayCuenta()) {
+      $('mundo-estado').textContent = T('mundo_cuenta');
+      $('mundo-info').innerHTML = '<div class="carta"><button class="comprar naranja" id="mundo-ir-cuenta">' + T('entrar_o_crear') + '</button></div>';
+      $('mundo-ir-cuenta').addEventListener('click', function () { cerrarMundo(); guardar(); modoInvitado = false; guardarPreferencias(true); pantallaInicio(); });
+      return;
+    }
+    $('mundo-estado').textContent = T('mundo_cargando');
+    publicarAldea(true);
+    setTimeout(function () {
+      Cuentas.aldeas().then(function (lista) {
+        aldeasCache = lista;
+        var otros = lista.filter(function (a) { return a.uid !== Cuentas.usuario().uid; }).length;
+        $('mundo-estado').textContent = otros ? T('reinos_en_mapa', { n: lista.length }) : T('mundo_solo');
+        pintarAldeas(lista);
+      }).catch(function () { $('mundo-estado').textContent = T('mundo_error'); });
+    }, 400);
+  }
+  function cerrarMundo() { $('mundo').classList.add('oculto'); enMundo = false; }
+  var enMundo = false;
+  function pintarAldeas(lista) {
+    var cont = $('mundo-aldeas'), h = '';
+    var yo = hayCuenta() ? Cuentas.usuario().uid : null;
+    var miLugar = yo ? Cuentas.lugar() : null;
+    var hayYo = lista.some(function (a) { return a.uid === yo; });
+    if (yo && !hayYo) lista = lista.concat([{ uid: yo, nombre: Cuentas.nombrePublico(), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: miLugar.x, y: miLugar.y, alianza: estado.alianza || null }]);
+    CAMPAMENTOS.forEach(function (c, i) {
+      h += '<button class="aldea trasgo" data-campamento="' + i + '" style="left:' + c.x + '%;top:' + c.y + '%"><span class="ic">⛺</span><span class="nom">' + T('leyenda_trasgos') + '</span><span class="niv">' + c.nivel + '</span></button>';
+    });
+    lista.forEach(function (a, i) {
+      var cls = a.uid === yo ? 'yo' : (estado.alianza && a.alianza === estado.alianza ? 'aliada' : '');
+      var ic = a.uid === yo ? '👑' : cls === 'aliada' ? '🛡️' : '🏰';
+      h += '<button class="aldea ' + cls + '" data-aldea="' + i + '" style="left:' + a.x + '%;top:' + a.y + '%"><span class="ic">' + ic + '</span><span class="nom">' +
+        (a.alianza ? '[' + escaparHTML(a.alianza) + '] ' : '') + escaparHTML(a.nombre) + '</span><span class="niv">' + a.nivel + '</span></button>';
+    });
+    cont.innerHTML = h;
+    cont.querySelectorAll('.aldea').forEach(function (el) {
+      el.addEventListener('click', function () {
+        sonar('click');
+        cont.querySelectorAll('.aldea').forEach(function (o) { o.classList.remove('sel'); });
+        el.classList.add('sel');
+        if (el.dataset.campamento !== undefined) {
+          var c = CAMPAMENTOS[+el.dataset.campamento];
+          $('mundo-info').innerHTML = '<div class="carta"><h3>⛺ ' + T('campamento') + ' — ' + T('nivel') + ' ' + c.nivel + '</h3><p>' + T('campamento_txt') + '</p></div>';
+          return;
+        }
+        var a = lista[+el.dataset.aldea];
+        $('mundo-info').innerHTML = '<div class="carta"><h3>' + (a.uid === yo ? '👑 ' + T('tu_reino') : '🏰 ' + T('reino_de', { n: escaparHTML(a.nombre) })) + '</h3>' +
+          '<div class="stats"><span>⭐ ' + T('nivel') + ' ' + a.nivel + '</span><span>💪 ' + T('poder') + ' ' + formatoNumero(a.poder) + '</span>' +
+          '<span>🛡️ ' + (a.alianza ? '[' + escaparHTML(a.alianza) + ']' : T('sin_alianza')) + '</span><span>📍 ' + a.x + ', ' + a.y + '</span></div></div>';
+      });
+    });
+  }
+
+  // ------------------------------------------------------------------
+  //  ALIANZAS
+  // ------------------------------------------------------------------
+  function abrirPanelAlianza() {
+    if (!hayCuenta()) {
+      abrirPanel(T('p_alianza'), '<div class="carta"><p>' + T('mundo_cuenta') + '</p><button class="comprar naranja" data-accion="ir-cuenta">' + T('entrar_o_crear') + '</button></div>', { tipo: 'alianza' });
+      return;
+    }
+    abrirPanel(T('p_alianza'), '<p class="nota">' + T('cargando') + '</p>', { tipo: 'alianza' });
+    var pedido = Date.now(); abrirPanelAlianza.pedido = pedido;
+    var tag = estado.alianza;
+    (tag ? Cuentas.alianza(tag) : Promise.resolve(null)).then(function (al) {
+      if (abrirPanelAlianza.pedido !== pedido || !panelActual || panelActual.tipo !== 'alianza') return;
+      if (tag && !al) { estado.alianza = null; guardar(); publicarAldea(true); consejoTemporal(T('al_borrada')); }
+      if (al) return Cuentas.miembros(tag).then(function (m) { pintarMiAlianza(al, m); });
+      return Cuentas.alianzas().then(function (lista) { pintarListaAlianzas(lista); });
+    }).catch(function () { if (panelActual && panelActual.tipo === 'alianza') $('panel-cuerpo').innerHTML = '<p class="nota aviso-rojo">' + T('mundo_error') + '</p>'; });
+  }
+  function pintarMiAlianza(al, miembros) {
+    miembros.sort(function (a, b) { return b.poder - a.poder; });
+    var h = '<div class="carta"><h3><span class="etiqueta-al">' + escaparHTML(al.tag) + '</span>' + escaparHTML(al.nombre) + '</h3>' +
+      '<p>👑 ' + T('al_lider') + ': ' + escaparHTML(al.liderNombre) + '</p>' +
+      '<p class="nota"><b>' + T('al_miembros', { n: miembros.length }) + '</b></p>';
+    miembros.forEach(function (m) {
+      h += '<div class="fila-miembro">' + (m.uid === al.lider ? '👑' : '🛡️') + '<b>' + escaparHTML(m.nombre) + '</b><span class="chip">⭐ ' + m.nivel + '</span><span class="chip">💪 ' + formatoNumero(m.poder) + '</span></div>';
+    });
+    h += '<div class="stats" style="margin-top:10px"><button class="comprar" data-accion="al-mapa">🗺️ ' + T('al_ver_mapa') + '</button>' +
+      '<button class="comprar rojo" data-accion="al-salir" data-lider="' + (al.lider === Cuentas.usuario().uid ? 1 : 0) + '">' + T('al_salir') + '</button></div></div>';
+    $('panel-cuerpo').innerHTML = h;
+  }
+  function pintarListaAlianzas(lista) {
+    var h = '<div class="carta"><h3>🛡️ ' + T('al_crear') + '</h3>' +
+      '<input class="campo" id="al-nombre" maxlength="24" placeholder="' + T('al_nombre') + '" style="margin-top:6px">' +
+      '<input class="campo" id="al-tag" maxlength="4" placeholder="' + T('al_tag') + '" style="margin-top:6px;text-transform:uppercase">' +
+      '<p class="nota aviso-rojo" id="al-error"></p><button class="comprar naranja" data-accion="al-crear">' + T('al_crear_btn') + '</button></div>' +
+      '<div class="carta" style="margin-top:10px"><h3>' + T('al_lista') + '</h3>';
+    if (!lista.length) h += '<p>' + T('al_ninguna') + '</p>';
+    lista.forEach(function (al) {
+      h += '<div class="fila-miembro"><span class="etiqueta-al">' + escaparHTML(al.tag) + '</span><b>' + escaparHTML(al.nombre) + '</b><span class="chip">👑 ' + escaparHTML(al.liderNombre) + '</span>' +
+        '<button class="comprar" data-accion="al-unirse" data-tag="' + escaparHTML(al.tag) + '">' + T('al_unirse') + '</button></div>';
+    });
+    $('panel-cuerpo').innerHTML = h + '</div>';
+  }
+  function crearAlianzaDesdePanel(b) {
+    var nombre = $('al-nombre').value.trim(), tag = $('al-tag').value.trim().toUpperCase();
+    var err = function (k) { $('al-error').textContent = T(k); sonar('error'); };
+    if (nombre.length < 3 || nombre.length > 24) return err('al_nombre_mal');
+    if (!/^[A-Z0-9]{2,4}$/.test(tag)) return err('al_tag_mal');
+    b.disabled = true;
+    Cuentas.crearAlianza(nombre, tag).then(function () {
+      estado.alianza = tag; guardar(true);
+      publicarAldea(true);
+      consejoTemporal(T('al_creada', { t: tag })); sonar('listo');
+      setTimeout(abrirPanelAlianza, 600);
+    }).catch(function () { b.disabled = false; err('al_existe'); });
+  }
+  function unirseAlianza(tag, b) {
+    b.disabled = true;
+    Cuentas.alianza(tag).then(function (al) {
+      if (!al) { consejoTemporal(T('al_borrada')); abrirPanelAlianza(); return; }
+      estado.alianza = tag; guardar(true);
+      publicarAldea(true);
+      consejoTemporal(T('al_unido', { t: tag })); sonar('listo');
+      setTimeout(abrirPanelAlianza, 600);
+    }).catch(function () { b.disabled = false; sonar('error'); });
+  }
+  function salirAlianza(b) {
+    var lider = b.getAttribute('data-lider') === '1';
+    if (!window.confirm(T(lider ? 'al_lider_sale' : 'al_salir_ok'))) return;
+    var tag = estado.alianza;
+    estado.alianza = null; guardar(true);
+    publicarAldea(true);
+    (lider ? Cuentas.borrarAlianza(tag).catch(function () {}) : Promise.resolve()).then(function () {
+      consejoTemporal(T('al_salido'));
+      setTimeout(abrirPanelAlianza, 400);
+    });
+  }
+
+  // ------------------------------------------------------------------
   //  ALDEANOS: caminan por el pueblo para que el reino tenga vida
   // ------------------------------------------------------------------
   var aldeanos = [];
@@ -705,7 +885,7 @@
     var u = {
       tipo: tipo, d: d, vida: d.vida, max: d.vida, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
-      barra: M.barraVida(false, tipo === 'heroe' ? 1.4 : 0.9), altoBarra: 1.75 * m.escala
+      barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: 1.75 * m.escala
     };
     u.barra.visible = false;
     escena.add(u.barra);
@@ -719,7 +899,7 @@
     var u = {
       tipo: tipo, d: d, vida: d.vida * f, max: d.vida * f, dano: d.dano * f, pos: m.grupo.position, m: m, aliado: false,
       cd: 0, ataque: 0, dist: 0, lat: (Math.random() - 0.5) * 1.6, radio: 0.42 * m.escala,
-      barra: M.barraVida(true, tipo === 'ogro' ? 2.4 : 0.9), altoBarra: 1.75 * m.escala
+      barra: M.barraVida(true, tipo === 'ogro' ? 3.0 : 1.3), altoBarra: 1.75 * m.escala
     };
     var pc = puntoCamino(0);
     u.pos.copy(pc.p);
@@ -743,8 +923,8 @@
           .addScaledVector(dirLado, (col - (enFila - 1) / 2) * sep);
       });
     }
-    poner(cuerpo, 1.8, 1.25, 1.25);
-    poner(lejos, -2.2, 1.2, 1.35);
+    poner(cuerpo, 2.2, 1.8, 1.8);
+    poner(lejos, -3.0, 1.8, 1.9);
   }
 
   function encararHacia(u, x, z, dt) {
@@ -895,6 +1075,7 @@
     curarHeridos();
     repararBarricadas();
     guardar();
+    publicarAldea(true);
     if (ultima) {
       setTimeout(function () { sonar('victoria'); pantallaVictoria(); }, 900);
     } else {
@@ -1217,7 +1398,7 @@
     if (pellizco && ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       var d = Math.hypot(a.x - b.x, a.y - b.y);
-      cam.distMeta = Math.max(18, Math.min(80, pellizco.dist * pellizco.d / Math.max(20, d)));
+      cam.distMeta = Math.max(16, Math.min(52, pellizco.dist * pellizco.d / Math.max(20, d)));
       return;
     }
     if (!arrastre) return;
@@ -1241,10 +1422,10 @@
   lienzo.addEventListener('pointercancel', function (ev) { delete punteros[ev.pointerId]; arrastre = null; pellizco = null; });
   lienzo.addEventListener('wheel', function (ev) {
     ev.preventDefault();
-    cam.distMeta = Math.max(18, Math.min(80, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
+    cam.distMeta = Math.max(16, Math.min(52, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') { if (modoColocar) salirModoColocar(); else cerrarPanel(); }
+    if (ev.key === 'Escape') { if (enMundo) cerrarMundo(); else if (modoColocar) salirModoColocar(); else cerrarPanel(); }
   });
 
   var rayo = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -1252,6 +1433,17 @@
     if (enMenu) return;
     mouse.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1);
     rayo.setFromCamera(mouse, camara);
+    // primero miramos si tocó una tropa o un enemigo (se ven más arriba que el suelo)
+    if (!modoColocar) {
+      var gente = tropas.concat(enemigos);
+      var hitsG = rayo.intersectObjects(gente.map(function (u) { return u.m.grupo; }), true);
+      if (hitsG.length) {
+        var og = hitsG[0].object;
+        while (og && !gente.some(function (u) { return u.m.grupo === og; })) og = og.parent;
+        var quien = og && gente.filter(function (u) { return u.m.grupo === og; })[0];
+        if (quien) { sonar('click'); abrirPanelUnidad(quien); return; }
+      }
+    }
     var hits = rayo.intersectObjects(slots.map(function (s) { return s.grupo; }).concat(barricadas.map(function (b) { return b.grupo; })).concat(murallaModelo ? [castillo, murallaModelo] : [castillo]), true);
     for (var i = 0; i < hits.length; i++) {
       var o = hits[i].object;
@@ -1347,6 +1539,7 @@
         retratos[t] = foto(m, t === 'torre' ? 10 : 5.5, t === 'torre' ? 2.8 : 0.9);
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
+      ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
       ['aserradero', 'mina'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
       retratos.barricada = (function () { var m = M.barricada(1); m.rotation.y = 0.6; return foto(m, 6, 0.6); })();
       retratos.enfermeria = (function () { var m = M.enfermeria(1); m.rotation.y = 0.5; return foto(m, 5.5, 1.0); })();
@@ -1387,6 +1580,7 @@
     else if (p.tipo === 'edificio') abrirPanelEdificio(p.slot);
     else if (p.tipo === 'castillo') abrirPanelCastillo();
     else if (p.tipo === 'barricada') abrirPanelBarricada(p.i);
+    else if (p.tipo === 'alianza') abrirPanelAlianza();
     else if (p.tipo === 'ajustes') abrirPanelAjustes();
   }
 
@@ -1498,6 +1692,24 @@
     abrirPanel(N(tipo), html, { tipo: 'edificio', slot: i });
   }
 
+  function abrirPanelUnidad(u) {
+    var d = u.d, nombre = N(u.tipo), aliado = u.aliado;
+    var dano = aliado ? d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) : u.dano;
+    var foto = retratos[u.tipo] ? '<img src="' + retratos[u.tipo] + '" alt="">' : (aliado ? '🛡️' : '👹');
+    var frac = Math.max(0, u.vida / u.max);
+    var html = '<div class="carta"><div class="ficha"><div class="foto">' + foto + '</div><div style="flex:1">' +
+      '<h3>' + nombre + '</h3><p>' + (aliado ? T('t_aliada') : T('t_enemigo')) + (NOMBRES[u.tipo].des_es ? ' — ' + D(u.tipo) : '') + '</p>' +
+      '<div class="vida-grande' + (aliado ? '' : ' enemigo') + '"><div style="width:' + (frac * 100) + '%"></div></div>' +
+      '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(u.vida) + ' / ' + Math.ceil(u.max) + '</span>' +
+      '<span>⚔ ' + T('dano') + ' ' + Math.round(dano) + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span>' +
+      '<span>⏱ ' + T('t_ritmo', { s: d.ritmo }) + '</span><span>👟 ' + T('t_lenta') + ' ' + d.vel + '</span>' +
+      (!aliado && d.oro ? '<span>🪙 ' + T('t_oro', { n: d.oro }) + '</span>' : '') + '</div>' +
+      (u.invocada ? '<p class="nota">✨ ' + T('t_invocada') + '</p>' : '') +
+      (u.tipo === 'heroe' ? '<p class="nota">👑 ' + T('t_heroe') + '</p>' : '') +
+      (aliado && hambre ? '<p class="nota aviso-rojo">🍞 ' + T('t_hambre') + '</p>' : '') +
+      '</div></div></div>';
+    abrirPanel(nombre, html, { tipo: 'unidad' });
+  }
   function abrirPanelPoder() {
     var pt = 0, pe = 0;
     tropas.forEach(function (u) { pt += Math.round(u.d.vida * 2 + u.d.dano * 25); });
@@ -1619,7 +1831,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.3</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.4</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -1635,6 +1847,10 @@
     } else if (a === 'mejorar') mejorar(+b.getAttribute('data-slot'));
     else if (a === 'muralla') construirMuralla();
     else if (a === 'barricada') entrarModoBarricada();
+    else if (a === 'al-crear') crearAlianzaDesdePanel(b);
+    else if (a === 'al-unirse') unirseAlianza(b.getAttribute('data-tag'), b);
+    else if (a === 'al-salir') salirAlianza(b);
+    else if (a === 'al-mapa') { cerrarPanel(); abrirMundo(); }
     else if (a === 'mejorar-barricada') { var bi = +b.getAttribute('data-barr'); if (pagar(costoBarricada(1))) { ponerBarricada(bi, 2); sonar('listo'); cerrarPanel(); guardar(); } }
     else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'));
     else if (a === 'invocar3') invocarTres();
@@ -1777,6 +1993,12 @@
     if (panelActual && panelActual.tipo === 'invocar') cerrarPanel(); else abrirPanelInvocar();
   });
   $('btn-ajustes').addEventListener('click', function () { sonar('click'); abrirPanelAjustes(); });
+  $('btn-mundo').addEventListener('click', function () { sonar('click'); salirModoColocar(); cerrarPanel(); abrirMundo(); });
+  $('btn-alianza').addEventListener('click', function () {
+    sonar('click'); salirModoColocar();
+    if (panelActual && panelActual.tipo === 'alianza') cerrarPanel(); else abrirPanelAlianza();
+  });
+  $('mundo-cerrar').addEventListener('click', function () { sonar('click'); cerrarMundo(); });
   $('panel-cerrar').addEventListener('click', function () { sonar('click'); cerrarPanel(); });
   $('btn-oleada').addEventListener('click', function () { empezarOleada(); });
   $('btn-velocidad').addEventListener('click', function () { cambiarVelocidad(); sonar('click'); });
@@ -1987,6 +2209,7 @@
       estado.monedas = g.monedas; estado.gemas = g.gemas; estado.oleada = g.oleada || 1;
       estado.infinito = !!g.infinito;
       estado.muralla = g.muralla || 0;
+      estado.alianza = g.alianza || null;
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
       estado.heridos = g.heridos || {};
@@ -2004,11 +2227,13 @@
     estado.vidaCastillo = vidaMaxCastillo();
     curarHeridos();
     tiempoJuego = 0;
-    cam.objetivo.set(-17, 0, -9); cam.distMeta = 50;
+    cam.objetivo.set(-15, 0, -7); cam.distMeta = 36;
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
     actualizarHUD();
     guardar();
+    // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
+    setTimeout(function () { if (!enMenu) publicarAldea(true); }, 800);
   }
 
   // ------------------------------------------------------------------

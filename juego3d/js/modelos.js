@@ -265,7 +265,7 @@ var M = (function () {
     g.add(caja(0.25, 0.6, 0.1, C.negro, 0, 0.5 + alto * 0.6, 1.08));
     g.add(caja(0.1, 0.6, 0.25, C.negro, -1.08, 0.5 + alto * 0.4, 0));
     // arquero en la torre
-    var arq = unidad('arquero');
+    var arq = unidad('arquero', 1);
     arq.grupo.scale.setScalar(0.8);
     arq.grupo.position.y = 0.5 + alto + 0.5;
     g.add(arq.grupo);
@@ -456,7 +456,9 @@ var M = (function () {
     });
   }
 
-  function unidad(tipo) {
+  // Tamaño general de la gente en el reino (más grande = se distinguen mejor)
+  var TAM_UNIDAD = 1.6;
+  function unidad(tipo, tam) {
     var g = new THREE.Group();     // grupo principal (posición en el mundo)
     var cuerpo = new THREE.Group(); // todo lo que se balancea al caminar
     g.add(cuerpo);
@@ -598,6 +600,7 @@ var M = (function () {
       cuerpo.add(capa);
     }
 
+    escala *= (tam || TAM_UNIDAD);
     g.scale.setScalar(escala);
     return { grupo: g, cuerpo: cuerpo, p: p, escala: escala };
   }
