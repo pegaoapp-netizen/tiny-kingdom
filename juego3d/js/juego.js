@@ -85,11 +85,31 @@
   render.setSize(window.innerWidth, window.innerHeight);
   render.shadowMap.enabled = true;
   render.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Calidad: 'alta' (sombras, humo, polvo, nitidez) o 'baja' (más rápido)
+  var calidad = (function () {
+    try { var p = JSON.parse(localStorage.getItem('tinykingdom_pref')) || {}; if (p.calidad) return p.calidad; } catch (e) {}
+    return (navigator.hardwareConcurrency || 4) >= 4 ? 'alta' : 'baja';
+  })();
   $('juego').appendChild(render.domElement);
 
   var escena = new THREE.Scene();
-  escena.background = new THREE.Color(0x9fd8ff);
-  escena.fog = new THREE.Fog(0x9fd8ff, 85, 180);
+  escena.background = new THREE.Color(0xbfe3ff);
+  escena.fog = new THREE.Fog(0xc6e6ff, 90, 200);
+  // cielo: un domo con degradado (azul arriba, claro en el horizonte)
+  (function cielo() {
+    var g = new THREE.SphereGeometry(390, 24, 12);
+    var mt = new THREE.ShaderMaterial({
+      side: THREE.BackSide, depthWrite: false, fog: false,
+      uniforms: { arriba: { value: new THREE.Color(0x4f9fe8) }, horizonte: { value: new THREE.Color(0xd6eeff) } },
+      vertexShader: 'varying vec3 vP; void main(){ vP = (modelMatrix * vec4(position,1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vP,1.0); }',
+      fragmentShader: 'uniform vec3 arriba; uniform vec3 horizonte; varying vec3 vP; void main(){ float h = clamp(normalize(vP - cameraPosition).y * 1.6 + 0.1, 0.0, 1.0); gl_FragColor = vec4(mix(horizonte, arriba, h), 1.0); }'
+    });
+    var domo = new THREE.Mesh(g, mt);
+    domo.renderOrder = -10;
+    domo.frustumCulled = false;
+    escena.add(domo);
+    escena.userData.domo = domo;
+  })();
 
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
@@ -97,9 +117,9 @@
   var CENTRO_REINO = new V3(-5, 0, -2);
   var cam = { objetivo: CENTRO_REINO.clone(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
 
-  var hemi = new THREE.HemisphereLight(0xdff2ff, 0x6a8a4a, 0.55);
+  var hemi = new THREE.HemisphereLight(0xd8ecff, 0x5a7a3a, 0.6);
   escena.add(hemi);
-  var sol = new THREE.DirectionalLight(0xffe2b8, 0.85);
+  var sol = new THREE.DirectionalLight(0xffd8a0, 0.95);
   sol.castShadow = true;
   sol.shadow.mapSize.set(2048, 2048);
   var sc = sol.shadow.camera;
@@ -108,6 +128,14 @@
   sol.shadow.normalBias = 0.03;
   escena.add(sol);
   escena.add(sol.target);
+  function aplicarCalidad() {
+    var alta = calidad === 'alta';
+    render.setPixelRatio(alta ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+    render.setSize(window.innerWidth, window.innerHeight);
+    render.shadowMap.enabled = alta;
+    sol.castShadow = alta;
+    escena.traverse(function (o) { if (o.material) { (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { m.needsUpdate = true; }); } });
+  }
 
   // ------------------------------------------------------------------
   //  CAMINO
@@ -182,15 +210,27 @@
     var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xcf8c5e, side: THREE.DoubleSide }));
     m.receiveShadow = true;
     escena.add(m);
+    // borde más oscuro, un poco más ancho, debajo del camino
+    var vb = [], ib = [];
+    for (var j = 0; j <= n; j++) {
+      var ub = j / n, pb = curva.getPointAt(ub), tb = curva.getTangentAt(ub), pr = new V3(tb.z, 0, -tb.x).normalize();
+      var wb = ancho * (0.92 + 0.12 * Math.sin(j * 0.7)) + 0.45;
+      vb.push(pb.x + pr.x * wb, 0.035, pb.z + pr.z * wb, pb.x - pr.x * wb, 0.035, pb.z - pr.z * wb);
+      if (j < n) { var a2 = j * 2; ib.push(a2, a2 + 1, a2 + 2, a2 + 1, a2 + 3, a2 + 2); }
+    }
+    var gb = new THREE.BufferGeometry(); gb.setAttribute('position', new THREE.Float32BufferAttribute(vb, 3)); gb.setIndex(ib); gb.computeVertexNormals();
+    var mb = new THREE.Mesh(gb, new THREE.MeshLambertMaterial({ color: 0x9a6a40, side: THREE.DoubleSide })); mb.receiveShadow = true; escena.add(mb);
     // piedritas a los lados del camino
+    var deco = new THREE.Group();
     for (var k = 0; k < 90; k++) {
       var uu = rnd(), pp = curva.getPointAt(uu), tt = curva.getTangentAt(uu);
       var lado = rnd() < 0.5 ? -1 : 1, pe = new V3(tt.z, 0, -tt.x).normalize().multiplyScalar(lado * (1.9 + rnd() * 0.4));
       var r = M.roca(0.25 + rnd() * 0.2, 0xb59a86);
       r.position.x = pp.x + pe.x; r.position.z = pp.z + pe.z;
       r.castShadow = false;
-      escena.add(r);
+      deco.add(r);
     }
+    escena.add(M.fusionar(deco));
   })();
 
   (function crearNaturaleza() {
@@ -220,14 +260,26 @@
     }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
+    var arb = [], matas = [];
+    for (var ia = 0; ia < 700 && arb.length < 110; ia++) {
+      var bx = (rnd() - 0.5) * 120, bz = (rnd() - 0.5) * 120;
+      if (libre(bx, bz, 0.3)) arb.push({ x: bx, z: bz, s: 0.7 + rnd() * 0.6, rot: rnd() * 6 });
+    }
+    for (var im2 = 0; im2 < 1500 && matas.length < 380; im2++) {
+      var mx = (rnd() - 0.5) * 90, mz = (rnd() - 0.5) * 90;
+      if (libre(mx, mz, -1.2) || (Math.hypot(mx, mz) > 6 && distCamino(mx, mz) > 2.3 && Math.hypot(mx, mz) < 15)) matas.push({ x: mx, z: mz, rot: rnd() * 6 });
+    }
+    escena.add(M.arbustos(arb));
+    escena.add(M.matasPasto(matas));
 
-    // rocas grandes y flores
+    // rocas grandes y flores (todo en un grupo que se fusiona)
+    var deco2 = new THREE.Group();
     for (var r = 0; r < 40; r++) {
       var rx = (rnd() - 0.5) * 120, rz = (rnd() - 0.5) * 120;
       if (!libre(rx, rz, 0.5)) continue;
       var ro = M.roca(0.6 + rnd() * 1.4);
       ro.position.x = rx; ro.position.z = rz; ro.position.y += altura(rx, rz);
-      escena.add(ro);
+      deco2.add(ro);
     }
     var colFlor = [0xffffff, 0xffe14a, 0xff7aa8, 0xb08aff];
     for (var f = 0; f < 110; f++) {
@@ -235,8 +287,9 @@
       if (!libre(fx, fz, -1.5) || Math.hypot(fx, fz) < 7) continue;
       var fl = M.flor(colFlor[f % 4]);
       fl.position.set(fx, 0, fz);
-      escena.add(fl);
+      deco2.add(fl);
     }
+    escena.add(M.fusionar(deco2));
     // estanque
     var agua = new THREE.Mesh(new THREE.CircleGeometry(ESTANQUE.r + 0.3, 20),
       new THREE.MeshLambertMaterial({ color: 0x4ab8f0, transparent: true, opacity: 0.85 }));
@@ -735,6 +788,32 @@
     setTimeout(function () { d.remove(); }, 1150);
   }
   var geoParticula = new THREE.BoxGeometry(0.16, 0.16, 0.16);
+  var bocanadas = [], geoHumo = new THREE.IcosahedronGeometry(0.35, 0);
+  var matHumo = new THREE.MeshLambertMaterial({ color: 0xe8e4dc, transparent: true, opacity: 0.55, depthWrite: false, flatShading: true });
+  var matPolvo = new THREE.MeshLambertMaterial({ color: 0xd8b98a, transparent: true, opacity: 0.5, depthWrite: false, flatShading: true });
+  function bocanada(pos, polvo) {
+    if (calidad !== 'alta' || bocanadas.length > 140) return;
+    var m = new THREE.Mesh(geoHumo, polvo ? matPolvo : matHumo);
+    m.position.copy(pos);
+    m.scale.setScalar(polvo ? 0.5 : 0.6);
+    escena.add(m);
+    bocanadas.push({ m: m, vida: polvo ? 0.7 : 2.6, max: polvo ? 0.7 : 2.6, polvo: polvo, deriva: new V3((Math.random() - 0.5) * 0.3, polvo ? 0.35 : 0.9, (Math.random() - 0.5) * 0.3) });
+  }
+  function moverBocanadas(dt) {
+    bocanadas = bocanadas.filter(function (b) {
+      b.vida -= dt;
+      b.m.position.addScaledVector(b.deriva, dt);
+      var k = 1 - b.vida / b.max;
+      b.m.scale.setScalar((b.polvo ? 0.45 : 0.55) + k * (b.polvo ? 0.6 : 1.4));
+      b.m.rotation.y += dt;
+      if (b.vida <= 0) { escena.remove(b.m); return false; }
+      return true;
+    });
+  }
+  // anillo brillante bajo la tropa seleccionada
+  var anilloSel = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.2, 28), new THREE.MeshBasicMaterial({ color: 0xfff27a, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
+  anilloSel.rotation.x = -Math.PI / 2; anilloSel.visible = false; escena.add(anilloSel);
+  var unidadSel = null;
   function chispas(pos, color, n, fuerza) {
     for (var i = 0; i < n; i++) {
       var m = new THREE.Mesh(geoParticula, M.mat(color));
@@ -809,7 +888,8 @@
   //  EDIFICIOS
   // ------------------------------------------------------------------
   var ESCALA_EDIFICIO = 1.3;
-  function crearModelo(tipo, nivel) { return tipo === 'granja' ? M.granja(nivel) : tipo === 'cuartel' ? M.cuartel(nivel) : tipo === 'enfermeria' ? M.enfermeria(nivel) : tipo === 'aserradero' ? M.aserradero(nivel) : tipo === 'mina' ? M.mina(nivel) : tipo === 'academia' ? M.academia(nivel) : M.torre(nivel); }
+  function crearModelo(tipo, nivel) { return M.fusionar(crearModeloBase(tipo, nivel)); }
+  function crearModeloBase(tipo, nivel) { return tipo === 'granja' ? M.granja(nivel) : tipo === 'cuartel' ? M.cuartel(nivel) : tipo === 'enfermeria' ? M.enfermeria(nivel) : tipo === 'aserradero' ? M.aserradero(nivel) : tipo === 'mina' ? M.mina(nivel) : tipo === 'academia' ? M.academia(nivel) : M.torre(nivel); }
 
   function construir(i, tipo) {
     var s = slots[i];
@@ -1325,6 +1405,7 @@
         if (!obj && !caminando) encararHacia(u, u.pos.x + dirFrente.x, u.pos.z + dirFrente.z, dt);
       }
       M.animarUnidad(u.m, tiempo + u.radio * 10, caminando, u.ataque);
+      if (caminando && Math.random() < dt * 2.5) bocanada(u.pos.clone().setY(0.15), true);
     });
 
     // ---- enemigos ----
@@ -1373,6 +1454,7 @@
         }
       }
       M.animarUnidad(e.m, tiempo + e.lat * 7, caminando, e.ataque);
+      if (caminando && Math.random() < dt * 1.5) bocanada(e.pos.clone().setY(0.15), true);
     });
 
     // ---- separar unidades para que no se encimen ----
@@ -1420,6 +1502,17 @@
       return true;
     });
 
+    // ---- humo de chimeneas ----
+    slots.forEach(function (s) {
+      if (!s.edificio || !s.modelo || !s.modelo.userData.chimenea) return;
+      s.cdHumo = (s.cdHumo || Math.random()) - dt;
+      if (s.cdHumo <= 0) { s.cdHumo = 0.7 + Math.random() * 0.5; bocanada(s.modelo.localToWorld(s.modelo.userData.chimenea.clone())); }
+    });
+    moverBocanadas(dt);
+    // ---- anillo de selección ----
+    if (unidadSel && (unidadSel.vida <= 0 || !panelActual || panelActual.tipo !== 'unidad')) unidadSel = null;
+    anilloSel.visible = !!unidadSel;
+    if (unidadSel) { anilloSel.position.set(unidadSel.pos.x, 0.06, unidadSel.pos.z); anilloSel.scale.setScalar(unidadSel.m.escala * (1 + Math.sin(tiempo * 6) * 0.06)); }
     // ---- partículas ----
     particulas = particulas.filter(function (p) {
       p.vida -= dt;
@@ -1777,6 +1870,7 @@
   }
 
   function abrirPanelUnidad(u) {
+    unidadSel = u;
     var d = u.d, nombre = N(u.tipo), aliado = u.aliado;
     var dano = aliado ? d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) : u.dano;
     var foto = retratos[u.tipo] ? '<img src="' + retratos[u.tipo] + '" alt="">' : (aliado ? '🛡️' : '👹');
@@ -2259,6 +2353,7 @@
       '<button class="comprar' + (estado.idioma === 'en' ? '' : ' morado') + '" data-accion="idioma" data-valor="en">English</button></div></div>' +
       '<div class="carta"><h3>' + T('sonido') + '</h3><button class="comprar" data-accion="sonido">' + (estado.sonido ? '🔊 ON' : '🔇 OFF') + '</button></div>' +
       '<div class="carta"><h3>' + T('velocidad') + '</h3><button class="comprar" data-accion="velocidad">x' + velocidad + '</button></div>' +
+      '<div class="carta"><h3>' + T('calidad') + '</h3><div class="stats"><button class="comprar' + (calidad === 'alta' ? '' : ' morado') + '" data-accion="calidad" data-valor="alta">' + T('calidad_alta') + '</button><button class="comprar' + (calidad === 'baja' ? '' : ' morado') + '" data-accion="calidad" data-valor="baja">' + T('calidad_baja') + '</button></div><p class="nota">' + T('calidad_txt') + '</p></div>' +
       '</div>';
     // Cuenta
     html += '<div class="carta" style="margin-top:10px"><h3>' + T('cuenta') + '</h3>';
@@ -2284,7 +2379,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.8</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.9</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -2320,6 +2415,7 @@
     else if (a === 'idioma') { estado.idioma = b.getAttribute('data-valor'); aplicarIdioma(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'sonido') { cambiarSonido(); reabrirPanel(); }
     else if (a === 'velocidad') { cambiarVelocidad(); reabrirPanel(); }
+    else if (a === 'calidad') { calidad = b.getAttribute('data-valor'); aplicarCalidad(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'cerrar-sesion') { guardar(true); cerrarPanel(); Cuentas.salir(); }
     else if (a === 'ver-borrar-cuenta') { $('caja-borrar').style.display = 'block'; $('clave-borrar').focus(); }
     else if (a === 'borrar-cuenta') {
@@ -2499,7 +2595,7 @@
   }
   function guardarPreferencias(sinPartida) {
     try {
-      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1 }));
+      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad }));
     } catch (e) {}
     if (!enMenu && !sinPartida) guardar();
   }
@@ -2794,6 +2890,7 @@
   if (window.Cuentas && Cuentas.disponible()) Cuentas.alCambiar(alCambiarCuenta);
   else pantallaInicio();
   cambiarVelocidad(leerPref().velocidad === 2 ? 2 : 1);
+  aplicarCalidad();
   window.__juegoListo = true;
   bucle();
 })();

@@ -1,6 +1,6 @@
 // Guarda los archivos del juego en el teléfono para que funcione sin internet.
 // Cambia VERSION cada vez que publiques una versión nueva del juego.
-var VERSION = 'tinykingdom-v1.3';
+var VERSION = 'tinykingdom-v1.4';
 var ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
   'js/three.min.js', 'js/datos.js', 'js/cuentas.js',
