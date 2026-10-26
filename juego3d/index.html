@@ -47,6 +47,7 @@ window.addEventListener("error", function (e) {
   <div class="pill" id="pill-tropas"><span class="ico casco"></span><b id="tropas">0/0</b></div>
   <button class="redondo" id="btn-idioma" title="Idioma / Language">ES</button>
   <button class="redondo" id="btn-velocidad" title="Velocidad">x1</button>
+  <button class="redondo" id="btn-pausa" title="Pausa">⏸</button>
   <button class="redondo" id="btn-sonido" title="Sonido"></button>
   <button class="redondo" id="btn-ajustes" title="Ajustes"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="#4a2a00" d="M19.4 13a7.7 7.7 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.3 7.3 0 0 0-1.7-1L15 3h-4l-.4 2.7a7.3 7.3 0 0 0-1.7 1l-2.5-1-2 3.5L6.5 11a7.7 7.7 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.3 7.3 0 0 0 1.7 1L11 21h4l.4-2.7a7.3 7.3 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg></button>
 </div>
@@ -61,8 +62,10 @@ window.addEventListener("error", function (e) {
 <div id="consejo"></div>
 
 <!-- Botón de oleada -->
-<button id="btn-oleada"><span class="espadas">⚔️</span><span id="btn-oleada-txt">¡Empezar oleada 1!</span></button>
+<button id="btn-oleada"><span class="espadas">⚔️</span><span class="txts"><span id="btn-oleada-txt">¡Empezar oleada 1!</span><small id="btn-oleada-sub"></small></span></button>
 <div id="aviso-oleada"></div>
+<div id="aviso-pausa" class="oculto"><b data-t="pausa">PAUSA</b><span data-t="pausa_txt">Toca ▶ para seguir</span></div>
+<div id="barra-colocar" class="oculto"><span id="barra-colocar-txt"></span><button class="comprar rojo" id="btn-cancelar-colocar" data-t="cancelar">Cancelar</button></div>
 
 <!-- Barra de abajo -->
 <div id="abajo">

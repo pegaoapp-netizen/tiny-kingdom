@@ -296,6 +296,7 @@ var M = (function () {
     if (tipo === 'trasgo') { piel = C.trasgo; ropa = C.cuero; ropa2 = 0x5a3a20; escala = 0.9; }
     if (tipo === 'bruto') { piel = C.bruto; ropa = 0x6a4a3a; ropa2 = 0x3a2a20; escala = 1.3; }
     if (tipo === 'ogro') { piel = C.ogro; ropa = 0x6a3a2a; ropa2 = 0x3a1a10; escala = 2.5; }
+    if (tipo === 'aldeano') { ropa = 0xb5835a; ropa2 = 0x6a4a30; escala = 0.85; }
 
     // piernas
     [-1, 1].forEach(function (s) {
@@ -338,6 +339,10 @@ var M = (function () {
         var penacho = cono(0.1, 0.4, 5, tipo === 'guardian' ? C.azul : C.rojo, 0, 0.5, -0.05);
         cabeza.add(penacho);
       }
+    }
+    if (tipo === 'aldeano') {
+      cabeza.add(cil(0.62, 0.62, 0.05, 10, C.paja, 0, 0.22, 0));
+      cabeza.add(cono(0.34, 0.32, 10, C.paja, 0, 0.4, 0));
     }
     if (tipo === 'arquero') {
       cabeza.add(malla(geo('capucha', function () { return new THREE.SphereGeometry(0.42, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.55); }), mat(0x3f9a4a), 0, 0, -0.03));

@@ -352,3 +352,95 @@ html, body { background: #2a1a10; }
 #pantalla-form:empty { display: none; }
 #pantalla-form .campo { font-size: 17px; padding: 11px 12px; }
 #pantalla-form .nota { min-height: 1em; margin: 0; }
+
+/* =====================================================================
+   ARREGLOS v1.1 — paneles que caben, colocar edificios, pausa, avisos
+   ===================================================================== */
+/* El panel va por encima de la barra de abajo y su encabezado no se pierde */
+#panel { z-index: 30; padding-bottom: 28px; }
+#abajo { z-index: 20; }
+.panel-cab { position: sticky; top: -12px; z-index: 3; }
+body.panel-abierto #btn-oleada { display: none; }
+body.panel-abierto .pestana.grande .icono { visibility: hidden; }
+
+/* Cartas compactas: foto | nombre y datos | botón */
+.carta.compacta {
+  display: grid; grid-template-columns: 54px 1fr auto; grid-template-areas: "foto info boton" "foto stats boton";
+  align-items: center; gap: 2px 10px;
+}
+.carta.compacta .cab { display: contents; }
+.carta.compacta .foto { grid-area: foto; }
+.carta.compacta .cab > div:last-child { grid-area: info; }
+.carta.compacta .stats { grid-area: stats; }
+.carta.compacta .comprar { grid-area: boton; white-space: nowrap; }
+.lista { grid-template-columns: 1fr; }
+@media (min-width: 900px) { .lista { grid-template-columns: 1fr 1fr; } }
+.stats span { white-space: nowrap; }
+
+/* Pantalla de inicio: si no cabe, se puede deslizar */
+#pantalla { overflow-y: auto; align-items: flex-start; }
+.tarjeta { margin: auto; }
+
+/* Barra para colocar edificios */
+#barra-colocar {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 25;
+  bottom: calc(84px + env(safe-area-inset-bottom)); width: min(520px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 14px;
+  background: rgba(255, 250, 230, .97); border: 3px solid #7a4a00; border-radius: 14px;
+  color: #4a2a00; font-weight: 800; box-shadow: 0 4px 0 rgba(0,0,0,.25);
+}
+#barra-colocar span { flex: 1; }
+#barra-colocar.oculto { display: none; }
+body.colocando #btn-oleada { display: none; }
+
+/* Pausa */
+#aviso-pausa {
+  position: fixed; inset: 0; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(10, 20, 40, .35); color: #fff3b0; pointer-events: none; text-shadow: 0 3px 0 rgba(0,0,0,.4);
+}
+#aviso-pausa b { font-size: 54px; -webkit-text-stroke: 2px #6b2a00; }
+#aviso-pausa span { font-weight: 800; font-size: 18px; }
+#aviso-pausa.oculto { display: none; }
+#btn-pausa.pausado { background: radial-gradient(circle at 40% 30%, #6af0e6, #14a7ad 75%); }
+
+/* Botón de oleada con vista previa */
+#btn-oleada .txts { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1; }
+#btn-oleada small { font-size: 12px; font-weight: 700; opacity: .95; }
+#btn-oleada small:empty { display: none; }
+
+/* El perfil se puede tocar para ver qué es el Poder */
+#perfil { cursor: pointer; }
+.avatar.dueno + .poder span { color: #ffe27a; }
+
+@media (max-width: 600px) {
+  #panel { max-height: calc(100vh - 170px - env(safe-area-inset-bottom)); }
+  .carta.compacta { grid-template-columns: 46px 1fr auto; padding: 8px; }
+  .carta.compacta .foto { width: 46px; height: 46px; }
+  .carta.compacta p { font-size: 12px; }
+  .carta.compacta h3 { font-size: 15px; }
+  .carta.compacta .comprar { font-size: 14px; padding: 6px 8px; }
+  .stats { gap: 4px; font-size: 11px; }
+  #btn-idioma, #btn-velocidad { display: none !important; }
+  #btn-oleada small { font-size: 11px; }
+}
+
+/* Respuesta visible al tocar cualquier botón */
+button { transition: transform .08s, filter .08s; }
+button:active { transform: scale(.93); filter: brightness(1.12); }
+.pestana:active { transform: none; }
+.pestana:active .icono { transform: scale(.9); }
+@media (max-width: 600px) {
+  .redondo { width: 44px !important; height: 44px !important; font-size: 16px; }
+  #lateral { gap: 7px; }
+}
+
+/* La pantalla de inicio / fin siempre va encima de todo */
+#pantalla { z-index: 50; }
+@media (max-width: 600px) {
+  .carta.compacta p { display: none; }
+  .carta.compacta .stats span { padding: 1px 5px; }
+  .carta.compacta { gap: 2px 8px; }
+}
+@media (min-width: 601px) {
+  #panel { max-height: calc(100vh - 160px); }
+}

@@ -27,7 +27,9 @@
       // si algo se estaba construyendo, lo guardamos ya terminado
       slots.forEach(function (s, i) { if (s.obra) estado.edificios[i] = { tipo: s.obra.tipo, nivel: s.obra.nivel }; });
       var t = {};
-      tropas.forEach(function (u) { if (u.tipo !== 'heroe') t[u.tipo] = (t[u.tipo] || 0) + 1; });
+      var inv = {};
+      tropas.forEach(function (u) { if (u.tipo === 'heroe') return; if (u.invocada) inv[u.tipo] = (inv[u.tipo] || 0) + 1; else t[u.tipo] = (t[u.tipo] || 0) + 1; });
+      estado.invocadas = inv;
       colaEntreno.forEach(function (c) { t[c.tipo] = (t[c.tipo] || 0) + 1; });
       estado.tropas = t;
       estado.heroe = tropas.some(function (u) { return u.tipo === 'heroe'; });
@@ -53,7 +55,7 @@
     } catch (e) { return null; }
   }
   // El idioma y el sonido se recuerdan aunque no haya partida
-  (function () { var p = leerPref(); estado.idioma = p.idioma || 'es'; estado.sonido = p.sonido !== false; estado.dueno = !!p.dueno && MODO_DUENO_ACTIVO; estado.oroInfinito = !!p.oroInfinito && estado.dueno; estado.gemasInfinitas = !!p.gemasInfinitas && estado.dueno; })();
+  (function () { var p = leerPref(); estado.idioma = p.idioma || 'es'; estado.sonido = p.sonido !== false; })();
 
   function T(k, vars) {
     var s = (TEXTOS[estado.idioma] || TEXTOS.es)[k] || TEXTOS.es[k] || k;
@@ -284,6 +286,44 @@
   }
 
   // ------------------------------------------------------------------
+  //  ALDEANOS: caminan por el pueblo para que el reino tenga vida
+  // ------------------------------------------------------------------
+  var aldeanos = [];
+  function puntoPueblo() {
+    for (var k = 0; k < 30; k++) {
+      var a = Math.random() * Math.PI * 2, r = 6 + Math.random() * 9;
+      var x = Math.cos(a) * r + 1, z = Math.sin(a) * r;
+      if (distCamino(x, z) > 2.6) return new V3(x, 0, z);
+    }
+    return new V3(6, 0, 6);
+  }
+  for (var al = 0; al < 6; al++) {
+    var ma = M.unidad('aldeano'), pa = puntoPueblo();
+    ma.grupo.position.copy(pa);
+    escena.add(ma.grupo);
+    aldeanos.push({ m: ma, meta: puntoPueblo(), espera: Math.random() * 3, vel: 1.2 + Math.random() * 0.6 });
+  }
+  function moverAldeanos(dt, t) {
+    aldeanos.forEach(function (a, i) {
+      var g = a.m.grupo, camina = false;
+      if (a.espera > 0) a.espera -= dt;
+      else {
+        var dx = a.meta.x - g.position.x, dz = a.meta.z - g.position.z, d = Math.hypot(dx, dz);
+        if (d < 0.2) { a.meta = puntoPueblo(); a.espera = 1 + Math.random() * 4; }
+        else {
+          var paso = Math.min(d, a.vel * dt);
+          g.position.x += dx / d * paso; g.position.z += dz / d * paso;
+          g.rotation.y = Math.atan2(dx, dz);
+          camina = true;
+          var rc = Math.hypot(g.position.x, g.position.z);
+          if (rc < 5.2) { g.position.x *= 5.2 / rc; g.position.z *= 5.2 / rc; }
+        }
+      }
+      M.animarUnidad(a.m, t + i * 3, camina, 0);
+    });
+  }
+
+  // ------------------------------------------------------------------
   //  LISTAS DE COSAS VIVAS
   // ------------------------------------------------------------------
   var tropas = [], enemigos = [], flechas = [], muriendo = [], particulas = [];
@@ -374,6 +414,9 @@
     actualizarHUD();
   }
   function pulso(id) { var e = $(id); e.classList.remove('pulso'); void e.offsetWidth; e.classList.add('pulso'); }
+  function puedePagar(monedas, gemas) {
+    return (estado.oroInfinito || estado.monedas >= (monedas || 0)) && (estado.gemasInfinitas || estado.gemas >= (gemas || 0));
+  }
   function pagar(monedas, gemas) {
     if (monedas && !estado.oroInfinito && estado.monedas < monedas) { consejoTemporal(T('sin_monedas')); sonar('error'); return false; }
     if (gemas && !estado.gemasInfinitas && estado.gemas < gemas) { consejoTemporal(T('sin_gemas')); sonar('error'); return false; }
@@ -594,15 +637,18 @@
   }
   function invocarTres() {
     if (!pagar(0, INVOCAR.tres)) return;
-    var tipos = ['espadachin', 'arquero', 'guardian'];
+    var tipos = ['espadachin', 'arquero', 'guardian'], salieron = [];
     for (var i = 0; i < 3; i++) {
       var tipo = tipos[Math.floor(Math.random() * 3)];
       var p = reunion.clone().add(new V3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3));
       crearTropa(tipo, p, true);
       chispas(p.clone().setY(0.8), 0xd59bff, 14, 3);
+      salieron.push(N(tipo));
     }
     sonar('magia');
     cerrarPanel();
+    consejoTemporal(T('invocaste', { t: salieron.join(', ') }));
+    actualizarHUD();
     guardar();
   }
   function invocarHeroe() {
@@ -613,6 +659,7 @@
     chispas(p.clone().setY(1), 0xffe14a, 30, 4);
     sonar('magia');
     cerrarPanel();
+    actualizarHUD();
     guardar();
   }
 
@@ -622,7 +669,7 @@
   function empezarOleada() {
     if (oleadaActiva) return;
     var n = estado.oleada;
-    var o = n <= OLEADAS.length ? OLEADAS[n - 1] : oleadaInfinita(n);
+    var o = composicion(n);
     var lista = [];
     var tr = o.trasgo || 0, br = o.bruto || 0;
     var total = tr + br;
@@ -962,7 +1009,7 @@
     cam.distMeta = Math.max(18, Math.min(80, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') { salirModoColocar(); cerrarPanel(); }
+    if (ev.key === 'Escape') { if (modoColocar) salirModoColocar(); else cerrarPanel(); }
   });
 
   var rayo = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -979,8 +1026,8 @@
       tocarSlot(o.userData.slot);
       return;
     }
-    // tocar el suelo: cerrar cosas
-    if (modoColocar) salirModoColocar();
+    // tocar el suelo: si estás colocando, te recordamos qué hacer (no se cancela solo)
+    if (modoColocar) { consejoTemporal(T('colocando', { n: N(modoColocar) })); sonar('error'); return; }
     cerrarPanel();
   }
   function tocarSlot(i) {
@@ -988,6 +1035,7 @@
     sonar('click');
     if (modoColocar) {
       if (!s.edificio && !s.obra) construir(i, modoColocar);
+      else { consejoTemporal(T('ocupado')); sonar('error'); }
       return;
     }
     if (s.edificio || s.obra) abrirPanelEdificio(i);
@@ -1000,12 +1048,34 @@
   var modoColocar = null, slotElegido = null;
   function entrarModoColocar(tipo) {
     if (!slots.some(function (s) { return !s.edificio && !s.obra; })) { consejoTemporal(T('sin_terreno')); sonar('error'); return; }
-    if (estado.monedas < EDIFICIOS[tipo].costo[0]) { consejoTemporal(T('sin_monedas')); sonar('error'); return; }
+    if (!puedePagar(EDIFICIOS[tipo].costo[0])) { consejoTemporal(T('sin_monedas')); sonar('error'); return; }
+    salirModoColocar();
     modoColocar = tipo;
     cerrarPanel();
     $('btn-construir').classList.add('activo');
+    // vista previa transparente del edificio en cada terreno libre
+    slots.forEach(function (s) {
+      if (s.edificio || s.obra) return;
+      var f = crearModelo(tipo, 1);
+      f.traverse(function (o) {
+        if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.45; o.material.depthWrite = false; o.castShadow = false; }
+      });
+      f.scale.setScalar(ESCALA_EDIFICIO);
+      s.grupo.add(f);
+      s.fantasma = f;
+    });
+    $('barra-colocar-txt').textContent = T('colocando', { n: N(tipo) });
+    $('barra-colocar').classList.remove('oculto');
+    document.body.classList.add('colocando');
   }
-  function salirModoColocar() { modoColocar = null; $('btn-construir').classList.remove('activo'); }
+  function salirModoColocar() {
+    modoColocar = null;
+    $('btn-construir').classList.remove('activo');
+    slots.forEach(function (s) { if (s.fantasma) { s.grupo.remove(s.fantasma); s.fantasma = null; } });
+    $('barra-colocar').classList.add('oculto');
+    document.body.classList.remove('colocando');
+  }
+  $('btn-cancelar-colocar').addEventListener('click', function () { sonar('click'); salirModoColocar(); });
 
   // ------------------------------------------------------------------
   //  RETRATOS 3D PARA LOS PANELES
@@ -1054,11 +1124,14 @@
     $('panel-titulo').textContent = titulo;
     $('panel-cuerpo').innerHTML = html;
     $('panel').classList.remove('oculto');
+    $('panel').scrollTop = 0;
+    document.body.classList.add('panel-abierto');
     panelActual = cual;
     actualizarPanel();
   }
   function cerrarPanel() {
     $('panel').classList.add('oculto');
+    document.body.classList.remove('panel-abierto');
     panelActual = null;
     slotElegido = null;
   }
@@ -1092,7 +1165,7 @@
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
     ['granja', 'cuartel', 'torre'].forEach(function (t) {
-      html += '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
+      html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
         '<div class="stats">' + statsEdificio(t, 1) + '</div>' +
         botonMonedas(EDIFICIOS[t].costo[0], 'construir', 'data-tipo="' + t + '"', T('construir')) + '</div>';
     });
@@ -1107,8 +1180,8 @@
     html += '<div class="lista">';
     ['espadachin', 'arquero', 'guardian'].forEach(function (t) {
       var d = TROPAS[t];
-      html += '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML(t, d.icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
-        '<div class="stats"><span>❤ ' + d.vida + '</span><span>⚔ ' + d.dano + '</span><span>🎯 ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span></div>' +
+      html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, d.icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
+        '<div class="stats"><span>❤ ' + T('vida') + ' ' + d.vida + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span></div>' +
         botonMonedas(d.costo, 'entrenar', 'data-tipo="' + t + '"', T('entrenar')) + '</div>';
     });
     html += '</div><div class="cola" id="cola"></div>';
@@ -1118,10 +1191,10 @@
   function abrirPanelInvocar() {
     var d = TROPAS.heroe;
     var html = '<div class="lista">' +
-      '<div class="carta"><div class="cab"><div class="foto">✨</div><div><h3>' + T('invocar3') + '</h3><p>' + T('invocar3_txt') + '</p></div></div>' +
+      '<div class="carta compacta"><div class="cab"><div class="foto">✨</div><div><h3>' + T('invocar3') + '</h3><p>' + T('invocar3_txt') + '</p></div></div>' +
       botonGemas(INVOCAR.tres, 'invocar3', '', T('p_invocar')) + '</div>' +
-      '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('heroe', '👑') + '</div><div><h3>' + N('heroe') + '</h3><p>' + T('heroe_txt') + '</p></div></div>' +
-      '<div class="stats"><span>❤ ' + d.vida + '</span><span>⚔ ' + d.dano + '</span><span>✚ ' + d.cura + '/s</span></div>' +
+      '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('heroe', '👑') + '</div><div><h3>' + N('heroe') + '</h3><p>' + T('heroe_txt') + '</p></div></div>' +
+      '<div class="stats"><span>❤ ' + T('vida') + ' ' + d.vida + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>✚ ' + T('cura') + ' ' + d.cura + '/s</span></div>' +
       botonGemas(INVOCAR.heroe, 'heroe', '', T('p_invocar')) + '</div></div>';
     abrirPanel(T('p_invocar'), html, { tipo: 'invocar' });
   }
@@ -1145,9 +1218,21 @@
     abrirPanel(N(tipo), html, { tipo: 'edificio', slot: i });
   }
 
+  function abrirPanelPoder() {
+    var pt = 0, pe = 0;
+    tropas.forEach(function (u) { pt += Math.round(u.d.vida * 2 + u.d.dano * 25); });
+    slots.forEach(function (s) { if (s.edificio) pe += s.edificio.nivel * 450; });
+    var html = '<div class="carta"><p>' + T('poder_txt') + '</p><div class="stats">' +
+      '<span>🛡️ ' + T('poder_tropas') + ': ' + formatoNumero(pt) + '</span>' +
+      '<span>🏠 ' + T('poder_edificios') + ': ' + formatoNumero(pe) + '</span>' +
+      '<span>⚔️ ' + T('poder_oleadas') + ': ' + formatoNumero((estado.oleada - 1) * 1000) + '</span>' +
+      '</div><p class="nota">' + T('nivel_txt') + '</p></div>';
+    abrirPanel(T('poder_titulo') + ' — ' + formatoNumero(calcularPoder()), html, { tipo: 'poder' });
+  }
+  $('perfil').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'poder') cerrarPanel(); else abrirPanelPoder(); });
   function abrirPanelCastillo() {
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo') + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
-      '<div class="stats"><span>❤ ' + Math.ceil(estado.vidaCastillo) + ' / ' + INICIO.vidaCastillo + '</span><span>⚔ ' + CASTILLO.dano + '</span><span>🎯 ' + CASTILLO.alcance + '</span></div></div>';
+      '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + INICIO.vidaCastillo + '</span><span>⚔ ' + T('dano') + ' ' + CASTILLO.dano + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div></div>';
     abrirPanel(T('castillo'), html, { tipo: 'castillo' });
   }
 
@@ -1158,7 +1243,6 @@
     if (!MODO_DUENO_ACTIVO) return;
     estado.dueno = true;
     if (correo) estado.correo = correo;
-    estado.gemas = Math.max(estado.gemas, GEMAS_DUENO);
     estado.oroInfinito = true;
     estado.gemasInfinitas = true;
     cambiarVelocidad(10);
@@ -1169,7 +1253,6 @@
   }
   function salirModoDueno() {
     estado.dueno = false; estado.oroInfinito = false; estado.gemasInfinitas = false; estado.correo = '';
-    estado.gemas = Math.min(estado.gemas, INICIO.gemas + 200);
     cambiarVelocidad(1);
     actualizarHUD();
     guardarPreferencias();
@@ -1250,7 +1333,7 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
-      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.0</p>';
+      '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v1.1</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
 
@@ -1280,7 +1363,7 @@
         cerrarPanel(); consejoTemporal(T('cuenta_borrada'));
       }).catch(function (err) { b.disabled = false; $('error-borrar').textContent = T(Cuentas.claveError(err)); sonar('error'); });
     }
-    else if (a === 'ir-cuenta') { guardar(); modoInvitado = false; pantallaInicio(); }
+    else if (a === 'ir-cuenta') { guardar(); modoInvitado = false; guardarPreferencias(); pantallaInicio(); }
     else if (a === 'dueno-gemas-inf') { estado.gemasInfinitas = !estado.gemasInfinitas; guardarPreferencias(); actualizarHUD(); sonar('gemas'); reabrirPanel(); }
     else if (a === 'dueno-gemas') { estado.gemas = GEMAS_DUENO; actualizarHUD(); sonar('gemas'); guardar(); }
     else if (a === 'dueno-oro') { estado.oroInfinito = !estado.oroInfinito; guardarPreferencias(); actualizarHUD(); sonar('moneda'); reabrirPanel(); }
@@ -1296,7 +1379,7 @@
     var botones = $('panel-cuerpo').querySelectorAll('[data-costo],[data-gemas]');
     botones.forEach(function (b) {
       var c = +b.getAttribute('data-costo') || 0, g = +b.getAttribute('data-gemas') || 0;
-      var ok = estado.monedas >= c && estado.gemas >= g;
+      var ok = puedePagar(c, g);
       var a = b.getAttribute('data-accion');
       if (a === 'entrenar') ok = ok && cuartelesListos().length > 0 && tropasNormales() + colaEntreno.length < capacidad();
       if (a === 'heroe') ok = ok && !tropas.some(function (u) { return u.tipo === 'heroe'; });
@@ -1325,11 +1408,30 @@
     $('nivel-rey').textContent = Math.max(1, estado.oleada);
     $('avatar').classList.toggle('dueno', !!estado.dueno);
     $('gemas').textContent = estado.gemasInfinitas ? '∞' : Math.floor(estado.gemas);
-    $('tropas').textContent = tropasNormales() + '/' + capacidad();
-    var n = oleadaActiva ? oleadaActual : estado.oleada;
-    $('oleada').textContent = estado.infinito || n > OLEADAS.length ? n : n + '/' + OLEADAS.length;
+    $('tropas').textContent = textoTropas();
+    $('oleada').textContent = textoOleada();
     $('vida-castillo-fill').style.width = (estado.vidaCastillo / INICIO.vidaCastillo * 100) + '%';
+    $('vida-castillo').querySelector('.etq').textContent = T('castillo') + '  ❤ ' + Math.ceil(estado.vidaCastillo) + ' / ' + INICIO.vidaCastillo;
     $('btn-oleada-txt').textContent = T('empezar_oleada', { n: estado.oleada });
+    $('btn-oleada-sub').textContent = textoComposicion(estado.oleada);
+    document.querySelector('.poder span').textContent = estado.dueno ? T('modo_dueno') : T('poder');
+  }
+  function textoTropas() {
+    var inv = tropas.filter(function (u) { return u.invocada || u.tipo === 'heroe'; }).length;
+    return tropasNormales() + '/' + capacidad() + (inv ? ' +' + inv + '✨' : '');
+  }
+  function textoOleada() {
+    var n = oleadaActiva ? oleadaActual : estado.oleada;
+    var t = estado.infinito || n > OLEADAS.length ? '' + n : n + '/' + OLEADAS.length;
+    if (oleadaActiva) t += ' · ⚔' + (enemigos.length + colaSpawn.length);
+    return t;
+  }
+  function composicion(n) { return n <= OLEADAS.length ? OLEADAS[n - 1] : oleadaInfinita(n); }
+  function textoComposicion(n) {
+    var o = composicion(n), partes = [];
+    ['trasgo', 'bruto', 'ogro'].forEach(function (k) { if (o[k]) partes.push(N(k) + ' ×' + o[k]); });
+    var premio = GEMAS_POR_OLEADA + (n === OLEADAS.length && !estado.infinito ? GEMAS_VICTORIA : 0);
+    return partes.join(' · ') + ' · ' + T('premio', { g: premio }) + (n === OLEADAS.length && !estado.infinito ? ' — ' + T('ultima') : '');
   }
   function calcularPoder() {
     var p = 0;
@@ -1387,6 +1489,7 @@
     velocidad = v || opciones[(opciones.indexOf(velocidad) + 1) % opciones.length];
     $('btn-velocidad').textContent = 'x' + velocidad;
     $('btn-velocidad').classList.toggle('x10', velocidad === 10);
+    if (!v) guardarPreferencias();
   }
   function cambiarSonido() {
     estado.sonido = !estado.sonido;
@@ -1394,12 +1497,11 @@
     guardarPreferencias();
     sonar('click');
   }
-  function guardarPreferencias() {
+  function guardarPreferencias(sinPartida) {
     try {
-      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, dueno: estado.dueno,
-        oroInfinito: estado.oroInfinito, gemasInfinitas: estado.gemasInfinitas }));
+      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1 }));
     } catch (e) {}
-    if (!enMenu) guardar();
+    if (!enMenu && !sinPartida) guardar();
   }
 
   function aplicarIdioma() {
@@ -1441,9 +1543,9 @@
     $('pantalla').classList.remove('oculto');
     cerrarPanel();
   }
-  function ocultarPantalla() { $('pantalla').classList.add('oculto'); enMenu = false; }
+  function ocultarPantalla() { $('pantalla').classList.add('oculto'); enMenu = false; cambiarPausa(false); }
 
-  var duenoPorCuenta = false, modoInvitado = false, modoCrear = false, partidaNube = null, cargandoNube = false, errorCuenta = '';
+  var habiaUsuario = false, duenoPorCuenta = false, modoInvitado = !!leerPref().invitado, modoCrear = false, partidaNube = null, cargandoNube = false, errorCuenta = '';
   function botonIdioma() {
     return { texto: estado.idioma === 'es' ? 'English' : 'Español', clase: 'morado', accion: function () {
       estado.idioma = estado.idioma === 'es' ? 'en' : 'es'; guardarPreferencias(); aplicarIdioma();
@@ -1470,7 +1572,7 @@
       botones.push({ texto: T('cerrar_sesion'), clase: 'rojo', accion: function () { Cuentas.salir(); } });
     } else if (nube) {
       texto = T('invitado_txt');
-      botones.push({ texto: T('entrar_o_crear'), clase: 'naranja', accion: function () { modoInvitado = false; pantallaInicio(); } });
+      botones.push({ texto: T('entrar_o_crear'), clase: 'naranja', accion: function () { modoInvitado = false; guardarPreferencias(); pantallaInicio(); } });
     }
     botones.push(botonIdioma());
     mostrarPantalla('🏰', NOMBRE_JUEGO, texto, botones);
@@ -1487,7 +1589,7 @@
       { texto: T('entrar_btn'), accion: function () { enviarCuenta(false); } },
       { texto: T('crear_cuenta'), clase: 'naranja', accion: function () { modoCrear = true; errorCuenta = ''; pantallaCuenta(); } }
     ];
-    botones.push({ texto: T('invitado'), clase: 'morado', accion: function () { modoInvitado = true; errorCuenta = ''; pantallaInicio(); } });
+    botones.push({ texto: T('invitado'), clase: 'morado', accion: function () { modoInvitado = true; errorCuenta = ''; guardarPreferencias(); pantallaInicio(); } });
     botones.push(botonIdioma());
     mostrarPantalla('🏰', NOMBRE_JUEGO, modoCrear ? T('crear_txt') : T('login_txt'), botones, f);
     var cl = $(modoCrear ? 'campo-clave2' : 'campo-clave');
@@ -1512,12 +1614,14 @@
   function alCambiarCuenta(u) {
     partidaNube = null;
     if (!u) {
-      if (!enMenu) { modoInvitado = false; }
       if (duenoPorCuenta) { duenoPorCuenta = false; salirModoDueno(); }
-      modoInvitado = false;
+      // si alguien cerró sesión de verdad, vuelve al formulario de cuenta
+      if (habiaUsuario) { modoInvitado = false; guardarPreferencias(true); }
+      habiaUsuario = false;
       pantallaInicio();
       return;
     }
+    habiaUsuario = true;
     if (esCuentaDueno()) { duenoPorCuenta = true; activarModoDueno(Cuentas.correo()); }
     cargandoNube = true;
     if (enMenu) pantallaInicio();
@@ -1538,7 +1642,7 @@
   }
   function pantallaVictoria() {
     pantallaModo = 'victoria';
-    mostrarPantalla('🏆', T('victoria'), T('victoria_txt'), [
+    mostrarPantalla('🏆', T('victoria'), T('victoria_txt', { g: GEMAS_POR_OLEADA * OLEADAS.length + GEMAS_VICTORIA }), [
       { texto: T('seguir_infinito'), accion: function () { estado.infinito = true; guardar(); ocultarPantalla(); $('btn-oleada').classList.remove('oculto'); actualizarHUD(); } },
       { texto: T('nueva'), clase: 'morado', accion: function () { empezarPartida(null); } }
     ]);
@@ -1573,15 +1677,16 @@
     var idioma = estado.idioma, sonido = estado.sonido, dueno = estado.dueno, oroInf = estado.oroInfinito, gemInf = estado.gemasInfinitas, correo = estado.correo;
     estado = nuevoEstado();
     estado.idioma = idioma; estado.sonido = sonido; estado.dueno = dueno; estado.oroInfinito = oroInf; estado.gemasInfinitas = gemInf; estado.correo = correo;
-    if (dueno) estado.gemas = Math.max(estado.gemas, GEMAS_DUENO);
     if (g) {
-      estado.monedas = g.monedas; estado.gemas = dueno ? Math.max(g.gemas, GEMAS_DUENO) : g.gemas; estado.oleada = g.oleada || 1;
+      estado.monedas = g.monedas; estado.gemas = g.gemas; estado.oleada = g.oleada || 1;
       estado.infinito = !!g.infinito;
       (g.edificios || []).forEach(function (e, i) { if (e && slots[i]) ponerEdificio(slots[i], e.tipo, e.nivel); });
       var t = g.tropas || {};
       Object.keys(t).forEach(function (tipo) {
         for (var k = 0; k < t[tipo]; k++) crearTropa(tipo, reunion.clone().add(new V3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4)));
       });
+      var iv = g.invocadas || {};
+      Object.keys(iv).forEach(function (tipo) { for (var k = 0; k < iv[tipo]; k++) crearTropa(tipo, reunion.clone(), true); });
       if (g.heroe) crearTropa('heroe', reunion.clone());
       tropas.forEach(function (u) { u.pos.copy(u.puesto); });
     }
@@ -1596,13 +1701,22 @@
   // ------------------------------------------------------------------
   //  BUCLE PRINCIPAL
   // ------------------------------------------------------------------
-  var reloj = new THREE.Clock(), cuentaHUD = 0;
+  var reloj = new THREE.Clock(), cuentaHUD = 0, pausado = false;
+  function cambiarPausa(v) {
+    pausado = v === undefined ? !pausado : v;
+    $('aviso-pausa').classList.toggle('oculto', !pausado);
+    $('btn-pausa').textContent = pausado ? '▶' : '⏸';
+    $('btn-pausa').classList.toggle('pausado', pausado);
+  }
+  $('btn-pausa').addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarPausa(); });
+  window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
     requestAnimationFrame(bucle);
     var dtReal = Math.min(reloj.getDelta(), 0.05);
-    if (!enMenu) {
+    if (!enMenu && !pausado) {
       var dt = dtReal * velocidad;
       actualizar(dt);
+      moverAldeanos(dt, tiempo);
       tiempoJuego += dtReal;
     } else {
       // en el menú la cámara gira despacio
@@ -1621,12 +1735,13 @@
       var on = (modoColocar && libre) || slotElegido === i;
       s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : (libre && !enMenu ? 0.12 : 0);
     });
+    slots.forEach(function (s) { if (s.fantasma) s.fantasma.position.y = 0.15 + Math.sin(performance.now() / 300) * 0.12; });
     // las barras de vida miran a la cámara
     tropas.concat(enemigos).forEach(function (u) { u.barra.quaternion.copy(camara.quaternion); });
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); $('tropas').textContent = tropasNormales() + '/' + capacidad(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); }
     render.render(escena, camara);
   }
 
@@ -1640,7 +1755,7 @@
 
   // Para pruebas desde la consola del navegador
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
-    tropas: function () { return tropas; }, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
+    tropas: function () { return tropas; }, camara: camara, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); render.render(escena, camara); } };
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
@@ -1650,6 +1765,7 @@
   aplicarIdioma();
   if (window.Cuentas && Cuentas.disponible()) Cuentas.alCambiar(alCambiarCuenta);
   else pantallaInicio();
+  cambiarVelocidad(leerPref().velocidad === 2 ? 2 : 1);
   window.__juegoListo = true;
   bucle();
 })();
