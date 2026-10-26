@@ -172,6 +172,32 @@ var Cuentas = (function () {
         .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
     },
     marcarVisto: function (id) { return db.collection('ataques').doc(id).update({ visto: true }); },
+    // ---------------- REFUERZOS ENTRE ALIADOS ----------------
+    enviarRefuerzo: function (r) { return db.collection('refuerzos').add(r); },
+    refuerzosRecibidos: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('refuerzos').where('para', '==', usuario.uid).limit(30).get()
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    refuerzosEnviados: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('refuerzos').where('de', '==', usuario.uid).limit(30).get()
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    leerRefuerzo: function (id) {
+      return db.collection('refuerzos').doc(id).get().then(function (d) { if (!d.exists) return null; var x = d.data(); x.id = d.id; return x; });
+    },
+    actualizarRefuerzo: function (id, datos) { return db.collection('refuerzos').doc(id).update(datos); },
+    borrarRefuerzo: function (id) { return db.collection('refuerzos').doc(id).delete(); },
+    pedirRefuerzos: function (tag) {
+      if (!usuario) return Promise.reject(new Error('sin usuario'));
+      return db.collection('pedidos').doc(usuario.uid).set({ nombre: this.nombrePublico(), alianza: tag, fecha: Date.now() });
+    },
+    quitarPedido: function () { return usuario ? db.collection('pedidos').doc(usuario.uid).delete() : Promise.resolve(); },
+    pedidos: function (tag) {
+      return db.collection('pedidos').where('alianza', '==', tag).limit(60).get()
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; }); });
+    },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
 })();

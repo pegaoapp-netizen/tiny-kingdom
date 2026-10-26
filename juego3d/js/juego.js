@@ -29,7 +29,7 @@
       estado.obraMuralla = obraMuralla ? { nivel: obraMuralla.nivel, t: obraMuralla.t, total: obraMuralla.total } : null;
       var t = {};
       var inv = {};
-      tropas.forEach(function (u) { if (u.tipo === 'heroe') return; if (u.invocada) inv[u.tipo] = (inv[u.tipo] || 0) + 1; else t[u.tipo] = (t[u.tipo] || 0) + 1; });
+      tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; if (u.invocada) inv[u.tipo] = (inv[u.tipo] || 0) + 1; else t[u.tipo] = (t[u.tipo] || 0) + 1; });
       estado.invocadas = inv;
       colaEntreno.forEach(function (c) { t[c.tipo] = (t[c.tipo] || 0) + 1; });
       estado.tropas = t;
@@ -803,8 +803,10 @@
           '<span>🛡️ ' + (a.alianza ? '[' + escaparHTML(a.alianza) + ']' : T('sin_alianza')) + '</span><span>📍 ' + a.x + ', ' + a.y + '</span>' +
           ((a.escudo || 0) > Date.now() ? '<span>' + T('protegido_falta', { t: fmtTiempo((a.escudo - Date.now()) / 1000) }) + '</span>' : '') +
           (a.defensa ? '<span>🏰 ' + T('defensa_txt') + ' ~' + formatoNumero(Math.round(a.defensa / 100) * 100) + '</span>' : '') + '</div>' +
+          (estado.alianza && a.alianza === estado.alianza ? '<button class="comprar boton-oleada-grande" id="btn-reforzar">' + T('ref_reforzar') + '</button>' : '') +
           (a.uid !== yo ? '<button class="comprar rojo boton-oleada-grande" id="btn-atacar">' + T('atacar') + '</button>' : '') + '</div>';
         var ba = $('btn-atacar'); if (ba) ba.addEventListener('click', function () { sonar('click'); abrirAtaque(a); });
+        var br = $('btn-reforzar'); if (br) br.addEventListener('click', function () { sonar('click'); cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); });
       });
     });
   }
@@ -823,22 +825,183 @@
     (tag ? Cuentas.alianza(tag) : Promise.resolve(null)).then(function (al) {
       if (abrirPanelAlianza.pedido !== pedido || !panelActual || panelActual.tipo !== 'alianza') return;
       if (tag && !al) { estado.alianza = null; guardar(); publicarAldea(true); consejoTemporal(T('al_borrada')); }
-      if (al) return Cuentas.miembros(tag).then(function (m) { pintarMiAlianza(al, m); });
+      if (al) return Promise.all([Cuentas.miembros(tag), Cuentas.pedidos(tag).catch(function () { return []; }), Cuentas.refuerzosRecibidos().catch(function () { return []; }), Cuentas.refuerzosEnviados().catch(function () { return []; })])
+        .then(function (r) { if (panelActual && panelActual.tipo === 'alianza') pintarMiAlianza(al, r[0], r[1], r[2], r[3]); });
       return Cuentas.alianzas().then(function (lista) { pintarListaAlianzas(lista); });
     }).catch(function () { if (panelActual && panelActual.tipo === 'alianza') $('panel-cuerpo').innerHTML = '<p class="nota aviso-rojo">' + T('mundo_error') + '</p>'; });
   }
-  function pintarMiAlianza(al, miembros) {
+  function pintarMiAlianza(al, miembros, pedidos, recibidos, enviados) {
+    var yoUid = Cuentas.usuario().uid;
     miembros.sort(function (a, b) { return b.poder - a.poder; });
     var h = '<div class="carta"><h3><span class="etiqueta-al">' + escaparHTML(al.tag) + '</span>' + escaparHTML(al.nombre) + '</h3>' +
       '<p>👑 ' + T('al_lider') + ': ' + escaparHTML(al.liderNombre) + '</p>' +
       '<p class="nota"><b>' + T('al_miembros', { n: miembros.length }) + '</b></p>';
     miembros.forEach(function (m) {
-      h += '<div class="fila-miembro">' + (m.uid === al.lider ? '👑' : '🛡️') + '<b>' + escaparHTML(m.nombre) + '</b><span class="chip">⭐ ' + m.nivel + '</span><span class="chip">💪 ' + formatoNumero(m.poder) + '</span></div>';
+      h += '<div class="fila-miembro">' + (m.uid === al.lider ? '👑' : '🛡️') + '<b>' + escaparHTML(m.nombre) + '</b><span class="chip">⭐ ' + m.nivel + '</span><span class="chip">💪 ' + formatoNumero(m.poder) + '</span>' +
+        (m.uid !== yoUid ? '<button class="comprar mini" data-accion="ref-enviar" data-uid="' + escaparHTML(m.uid) + '" data-nombre="' + escaparHTML(m.nombre) + '">' + T('ref_reforzar') + '</button>' : '') + '</div>';
     });
     h += '<div class="stats" style="margin-top:10px"><button class="comprar" data-accion="al-mapa">🗺️ ' + T('al_ver_mapa') + '</button>' +
       '<button class="comprar rojo" data-accion="al-salir" data-lider="' + (al.lider === Cuentas.usuario().uid ? 1 : 0) + '">' + T('al_salir') + '</button></div></div>';
+    h += htmlRefuerzos(pedidos || [], recibidos || [], enviados || []);
     $('panel-cuerpo').innerHTML = h;
   }
+  // ---------- REFUERZOS ENTRE ALIADOS ----------
+  var TIPOS_REFUERZO = ['espadachin', 'caballeria', 'arquero', 'guardian'];
+  var refRecibidos = [], refVistos = null, ultimaRevRef = 0, revisandoRef = false, refProcesando = {};
+  function totalTropasDe(t) { return TIPOS_REFUERZO.reduce(function (s, k) { return s + ((t && t[k]) || 0); }, 0); }
+  function iconosTropas(t) { return TIPOS_REFUERZO.filter(function (k) { return t && t[k]; }).map(function (k) { return t[k] + ' ' + TROPAS[k].icono; }).join(' · '); }
+  function propiasDe(tipo) { return tropas.filter(function (u) { return u.tipo === tipo && !u.invocada && !u.refuerzo; }); }
+  function quitarUnidad(u) {
+    var i = tropas.indexOf(u); if (i >= 0) tropas.splice(i, 1);
+    escena.remove(u.m.grupo); escena.remove(u.barra);
+  }
+  function volverTropas(t) {
+    var n = 0;
+    TIPOS_REFUERZO.forEach(function (k) { for (var i = 0; i < ((t && t[k]) || 0); i++) { crearTropa(k, casaTropa()); n++; } });
+    return n;
+  }
+  function htmlRefuerzos(pedidos, recibidos, enviados) {
+    var yoUid = Cuentas.usuario().uid, hoy = Date.now() - 24 * 3600 * 1000;
+    var miPedido = pedidos.some(function (p) { return p.uid === yoUid && p.fecha > hoy; });
+    var otros = pedidos.filter(function (p) { return p.uid !== yoUid && p.fecha > hoy; });
+    var h = '<div class="carta" style="margin-top:10px"><h3>' + T('ref_titulo') + '</h3><p class="nota">' + T('ref_txt') + '</p>';
+    h += miPedido ? '<p class="nota"><b>' + T('ref_pedido_hecho') + '</b></p><button class="comprar" data-accion="ref-quitar-pedido">' + T('ref_quitar_pedido') + '</button>'
+      : '<button class="comprar naranja boton-oleada-grande" data-accion="ref-pedir">' + T('ref_pedir') + '</button>';
+    h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_pedidos') + '</b></p>';
+    if (!otros.length) h += '<p class="nota">' + T('ref_ninguno') + '</p>';
+    otros.forEach(function (p) {
+      h += '<div class="fila-miembro">📣<b>' + escaparHTML(p.nombre) + '</b><button class="comprar mini naranja" data-accion="ref-enviar" data-uid="' + escaparHTML(p.uid) + '" data-nombre="' + escaparHTML(p.nombre) + '">' + T('ref_reforzar') + '</button></div>';
+    });
+    var rec = recibidos.filter(function (r) { return !r.devuelto && totalTropasDe(r.tropas); });
+    h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_en_reino') + '</b></p>';
+    if (!rec.length) h += '<p class="nota">' + T('ref_nadie') + '</p>';
+    rec.forEach(function (r) {
+      h += '<div class="fila-miembro">🛡️<b>' + T('ref_de', { n: totalTropasDe(r.tropas), q: escaparHTML(r.deNombre) }) + '</b><span class="chip">' + iconosTropas(r.tropas) + '</span><button class="comprar mini" data-accion="ref-devolver" data-id="' + escaparHTML(r.id) + '">' + T('ref_devolver') + '</button></div>';
+    });
+    var env = enviados.filter(function (r) { return !r.devuelto; });
+    h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_enviados') + '</b></p>';
+    if (!env.length) h += '<p class="nota">' + T('ref_nadie') + '</p>';
+    env.forEach(function (r) {
+      h += '<div class="fila-miembro">➡️<b>' + T('ref_a', { n: totalTropasDe(r.tropas), q: escaparHTML(r.paraNombre) }) + '</b><span class="chip">' + iconosTropas(r.tropas) + '</span><button class="comprar mini rojo" data-accion="ref-retirar" data-id="' + escaparHTML(r.id) + '">' + T('ref_retirar') + '</button></div>';
+    });
+    return h + '</div>';
+  }
+  function abrirEnviarRefuerzo(uid, nombre) {
+    if (!hayCuenta() || !estado.alianza) return;
+    if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    var h = '<div class="carta"><h3>' + T('ref_enviar_a', { q: escaparHTML(nombre) }) + '</h3><p class="nota">' + T('ref_txt') + '</p>';
+    TIPOS_REFUERZO.forEach(function (k) {
+      var n = Math.min(300, propiasDe(k).length);
+      h += '<div class="fila-ref"><div class="foto">' + fotoHTML(k, TROPAS[k].icono) + '</div><div style="flex:1;min-width:0"><b>' + N(k) + '</b> <span class="nota">' + T('ref_tienes', { n: propiasDe(k).length }) + '</span>' +
+        '<div class="fila-ref-barra"><input type="range" id="ref-' + k + '" min="0" max="' + n + '" value="0"' + (n ? '' : ' disabled') + '><b class="num" id="refn-' + k + '">0</b>' +
+        '<button class="comprar mini" data-accion="ref-max" data-tipo="' + k + '"' + (n ? '' : ' disabled') + '>' + T('maximo') + '</button></div></div></div>';
+    });
+    h += '<p class="nota aviso-rojo" id="ref-error"></p><button class="comprar naranja boton-oleada-grande" data-accion="ref-mandar" data-uid="' + escaparHTML(uid) + '" data-nombre="' + escaparHTML(nombre) + '">' + T('ref_enviar') + '</button></div>';
+    abrirPanel(T('ref_titulo'), h, { tipo: 'refuerzo' });
+    TIPOS_REFUERZO.forEach(function (k) {
+      var rg = $('ref-' + k); if (rg) rg.addEventListener('input', function () { $('refn-' + k).textContent = rg.value; });
+    });
+  }
+  function mandarRefuerzo(b) {
+    if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    var t = {}, total = 0;
+    TIPOS_REFUERZO.forEach(function (k) { var rg = $('ref-' + k); var n = rg ? Math.min(+rg.value || 0, propiasDe(k).length, 300) : 0; t[k] = n; total += n; });
+    if (!total) { $('ref-error').textContent = T('ref_nada'); sonar('error'); return; }
+    var uid = b.getAttribute('data-uid'), nombre = b.getAttribute('data-nombre');
+    b.disabled = true;
+    Cuentas.enviarRefuerzo({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: uid, paraNombre: String(nombre).slice(0, 30), tropas: t, alianza: estado.alianza, fecha: Date.now(), devuelto: false })
+      .then(function () {
+        // las tropas salen de tu reino (primero las que están guardadas en el cuartel)
+        TIPOS_REFUERZO.forEach(function (k) {
+          propiasDe(k).sort(function (x, y) { return (y.dentro ? 1 : 0) - (x.dentro ? 1 : 0); }).slice(0, t[k]).forEach(quitarUnidad);
+        });
+        asignarPuestos();
+        guardar(true); publicarAldea(true); actualizarHUD();
+        sonar('cuerno'); consejoTemporal(T('ref_enviado', { q: nombre }));
+        cerrarPanel();
+      }).catch(function () { b.disabled = false; $('ref-error').textContent = T('ref_error'); sonar('error'); });
+  }
+  function pedirRefuerzos(b) {
+    if (!estado.alianza) return;
+    b.disabled = true;
+    Cuentas.pedirRefuerzos(estado.alianza).then(function () { sonar('cuerno'); consejoTemporal(T('ref_pedido_hecho')); abrirPanelAlianza(); })
+      .catch(function () { b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
+  }
+  function devolverRefuerzo(id, b) {
+    if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    b.disabled = true;
+    Cuentas.actualizarRefuerzo(id, { devuelto: true }).then(function () {
+      tropas.filter(function (u) { return u.refuerzo === id; }).forEach(quitarUnidad);
+      refRecibidos = refRecibidos.filter(function (r) { return r.id !== id; });
+      asignarPuestos(); publicarAldea(true);
+      consejoTemporal(T('ref_devueltos')); abrirPanelAlianza();
+    }).catch(function () { b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
+  }
+  function retirarRefuerzo(id, b) {
+    if (refProcesando[id]) return;
+    refProcesando[id] = true; b.disabled = true;
+    Cuentas.leerRefuerzo(id).then(function (r) {
+      if (!r) return null;
+      return Cuentas.borrarRefuerzo(id).then(function () { return r; });
+    }).then(function (r) {
+      if (r) { volverTropas(r.tropas); guardar(true); publicarAldea(true); consejoTemporal(T('ref_retirados')); }
+      abrirPanelAlianza();
+    }).catch(function () { refProcesando[id] = false; b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
+  }
+  // Pone en tu reino las tropas que te mandaron (y quita las que ya se fueron)
+  function sincronizarRecibidos(lista) {
+    var ids = {};
+    lista.forEach(function (r) { ids[r.id] = r; });
+    tropas.filter(function (u) { return u.refuerzo && !ids[u.refuerzo]; }).forEach(quitarUnidad);
+    var nuevos = [];
+    lista.forEach(function (r) {
+      if (refVistos && !refVistos[r.id]) nuevos.push(r.deNombre);
+      TIPOS_REFUERZO.forEach(function (k) {
+        var mias = tropas.filter(function (u) { return u.refuerzo === r.id && u.tipo === k; }), quiero = (r.tropas && r.tropas[k]) || 0;
+        for (var i = mias.length; i < quiero; i++) { var u = crearTropa(k, casaTropa()); u.refuerzo = r.id; u.deNombre = r.deNombre; }
+        mias.slice(quiero).forEach(quitarUnidad);
+      });
+    });
+    refVistos = ids;
+    refRecibidos = lista;
+    asignarPuestos();
+    if (nuevos.length) { sonar('cuerno'); consejoTemporal(T('ref_llegaron', { q: nuevos.join(', ') })); publicarAldea(true); }
+  }
+  function revisarRefuerzos(forzar) {
+    if (!hayCuenta() || enMenu || revisandoRef || oleadaActiva) return;
+    if (!forzar && Date.now() - ultimaRevRef < 30000) return;
+    ultimaRevRef = Date.now(); revisandoRef = true;
+    Promise.all([Cuentas.refuerzosRecibidos(), Cuentas.refuerzosEnviados()]).then(function (r) {
+      revisandoRef = false;
+      if (oleadaActiva || enMenu) return;
+      sincronizarRecibidos(r[0].filter(function (x) { return !x.devuelto && totalTropasDe(x.tropas); }));
+      // los refuerzos que te devolvieron vuelven a tu reino
+      r[1].filter(function (x) { return x.devuelto && !refProcesando[x.id]; }).forEach(function (x) {
+        refProcesando[x.id] = true;
+        Cuentas.borrarRefuerzo(x.id).then(function () {
+          var n = volverTropas(x.tropas);
+          if (n) consejoTemporal(T('ref_volvieron', { n: n, q: x.paraNombre }));
+          guardar(true); publicarAldea(true);
+        }).catch(function () { refProcesando[x.id] = false; });
+      });
+    }).catch(function () { revisandoRef = false; });
+  }
+  // Después de una pelea: le avisamos a la nube cuántos refuerzos siguen vivos
+  function informarBajasRefuerzos() {
+    if (!hayCuenta()) return;
+    refRecibidos.forEach(function (r) {
+      var vivos = {}, cambio = false;
+      TIPOS_REFUERZO.forEach(function (k) {
+        vivos[k] = Math.min((r.tropas && r.tropas[k]) || 0, tropas.filter(function (u) { return u.refuerzo === r.id && u.tipo === k; }).length);
+        if (vivos[k] !== ((r.tropas && r.tropas[k]) || 0)) cambio = true;
+      });
+      if (!cambio) return;
+      var todos = !totalTropasDe(vivos);
+      r.tropas = vivos;
+      Cuentas.actualizarRefuerzo(r.id, todos ? { tropas: vivos, devuelto: true } : { tropas: vivos }).catch(function () {});
+    });
+  }
+
   function pintarListaAlianzas(lista) {
     var h = '<div class="carta"><h3>🛡️ ' + T('al_crear') + '</h3>' +
       '<input class="campo" id="al-nombre" maxlength="24" placeholder="' + T('al_nombre') + '" style="margin-top:6px">' +
@@ -1235,7 +1398,7 @@
     actualizarHUD();
   }
   function tropasOcupadas() { return tropasNormales() + totalHeridos() + colaEntreno.length; }
-  function tropasNormales() { return tropas.filter(function (u) { return u.tipo !== 'heroe' && !u.invocada; }).length; }
+  function tropasNormales() { return tropas.filter(function (u) { return u.tipo !== 'heroe' && !u.invocada && !u.refuerzo; }).length; }
 
   // ------------------------------------------------------------------
   //  UNIDADES
@@ -1369,7 +1532,7 @@
       sonar('moneda');
     } else {
       // con Enfermería, la tropa no se pierde: va a curarse
-      if (u.tipo !== 'heroe' && !u.invocada && totalHeridos() < capacidadEnfermeria()) {
+      if (u.tipo !== 'heroe' && !u.invocada && !u.refuerzo && totalHeridos() < capacidadEnfermeria()) {
         estado.heridos[u.tipo] = (estado.heridos[u.tipo] || 0) + 1;
         flotar(T('a_enfermeria'), u.pos.clone().setY(u.altoBarra + 0.6), 'gema');
       }
@@ -1513,6 +1676,7 @@
   }
   function oleadaTerminada() {
     oleadaActiva = false;
+    informarBajasRefuerzos();
     camSigue = false;
     cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     var n = oleadaActual;
@@ -1539,6 +1703,7 @@
   }
   function castilloCaido() {
     oleadaActiva = false;
+    informarBajasRefuerzos();
     colaSpawn = [];
     sonar('derrota');
     pantallaDerrota();
@@ -2845,6 +3010,13 @@
     else if (a === 'al-unirse') unirseAlianza(b.getAttribute('data-tag'), b);
     else if (a === 'al-salir') salirAlianza(b);
     else if (a === 'al-mapa') { cerrarPanel(); abrirMundo(); }
+    else if (a === 'ref-enviar') abrirEnviarRefuerzo(b.getAttribute('data-uid'), b.getAttribute('data-nombre'));
+    else if (a === 'ref-mandar') mandarRefuerzo(b);
+    else if (a === 'ref-max') { var rg = $('ref-' + b.getAttribute('data-tipo')); if (rg) { rg.value = rg.max; rg.dispatchEvent(new Event('input')); } }
+    else if (a === 'ref-pedir') pedirRefuerzos(b);
+    else if (a === 'ref-quitar-pedido') { b.disabled = true; Cuentas.quitarPedido().then(abrirPanelAlianza).catch(function () { b.disabled = false; }); }
+    else if (a === 'ref-devolver') devolverRefuerzo(b.getAttribute('data-id'), b);
+    else if (a === 'ref-retirar') retirarRefuerzo(b.getAttribute('data-id'), b);
     else if (a === 'mejorar-barricada') { var bi = +b.getAttribute('data-barr'); if (pagar(costoBarricada(1))) { ponerBarricada(bi, 2); sonar('listo'); cerrarPanel(); guardar(); } }
     else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'), b.getAttribute('data-n') === 'max' ? 'max' : +(b.getAttribute('data-n') || 1));
     else if (a === 'armadura') mejorarArmadura(b.getAttribute('data-tipo'));
@@ -3336,7 +3508,7 @@
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); }
     render.render(escena, camara);
   }
 
@@ -3352,6 +3524,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
+    refuerzos: function () { revisarRefuerzos(true); },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {

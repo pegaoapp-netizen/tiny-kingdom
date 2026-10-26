@@ -802,3 +802,13 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .aldea.yo .ic img { width: 74px; height: 74px; filter: drop-shadow(0 0 8px #ffd34a) drop-shadow(0 3px 2px rgba(0,0,0,.45)); animation: latido 1.6s infinite; }
 .aldea.yo .corona { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 18px; filter: drop-shadow(0 2px 0 rgba(0,0,0,.4)); }
 .pista-castillo { color: #ffd34a; }
+
+/* refuerzos */
+.fila-miembro .comprar.mini { margin-left: auto; padding: 4px 8px; font-size: 12px; width: auto; flex: 0 0 auto; }
+.fila-ref { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.fila-ref .foto { width: 44px; height: 44px; flex: 0 0 44px; }
+.fila-ref .foto img { width: 100%; height: 100%; }
+.fila-ref-barra { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.fila-ref-barra input[type=range] { flex: 1; min-width: 0; accent-color: #2fa86a; }
+.fila-ref-barra .num { min-width: 28px; text-align: right; }
+.fila-ref-barra .comprar.mini { width: auto; flex: 0 0 auto; padding: 4px 8px; font-size: 12px; }

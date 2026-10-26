@@ -2,6 +2,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Tropas de un refuerzo: los 4 tipos, números enteros de 0 a 300
+    function tropasValidas(t) {
+      return t.keys().hasOnly(['espadachin', 'caballeria', 'arquero', 'guardian'])
+        && t.keys().hasAll(['espadachin', 'caballeria', 'arquero', 'guardian'])
+        && t.espadachin is int && t.espadachin >= 0 && t.espadachin <= 300
+        && t.caballeria is int && t.caballeria >= 0 && t.caballeria <= 300
+        && t.arquero is int && t.arquero >= 0 && t.arquero <= 300
+        && t.guardian is int && t.guardian >= 0 && t.guardian <= 300;
+    }
+
     // Partida privada: cada jugador solo puede leer y escribir SU propia partida.
     match /jugadores/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
@@ -79,6 +89,50 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visto'])
         && request.resource.data.visto == true;
       allow delete: if false;
+    }
+
+    // Refuerzos entre aliados: solo entre jugadores de la MISMA hermandad.
+    // El que envía crea el documento y lo puede borrar (retirar). El que recibe solo puede
+    // bajar el número de tropas (las que murieron) o marcarlo como devuelto.
+    match /refuerzos/{id} {
+      allow read: if request.auth != null
+        && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'paraNombre', 'tropas', 'alianza', 'fecha', 'devuelto'])
+        && request.resource.data.de == request.auth.uid
+        && request.resource.data.para is string
+        && request.resource.data.para != request.auth.uid
+        && request.resource.data.deNombre is string && request.resource.data.deNombre.size() <= 30
+        && request.resource.data.paraNombre is string && request.resource.data.paraNombre.size() <= 30
+        && request.resource.data.fecha is int
+        && request.resource.data.devuelto == false
+        && request.resource.data.alianza is string
+        && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.alianza == request.resource.data.alianza
+        && get(/databases/$(database)/documents/aldeas/$(request.resource.data.para)).data.alianza == request.resource.data.alianza
+        && tropasValidas(request.resource.data.tropas)
+        && (request.resource.data.tropas.espadachin + request.resource.data.tropas.caballeria + request.resource.data.tropas.arquero + request.resource.data.tropas.guardian) > 0;
+      allow update: if request.auth != null && resource.data.para == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['tropas', 'devuelto'])
+        && request.resource.data.devuelto is bool
+        && tropasValidas(request.resource.data.tropas)
+        && request.resource.data.tropas.espadachin <= resource.data.tropas.espadachin
+        && request.resource.data.tropas.caballeria <= resource.data.tropas.caballeria
+        && request.resource.data.tropas.arquero <= resource.data.tropas.arquero
+        && request.resource.data.tropas.guardian <= resource.data.tropas.guardian;
+      allow delete: if request.auth != null && resource.data.de == request.auth.uid;
+    }
+
+    // Pedidos de refuerzo: uno por jugador. Los ven los demás jugadores; solo el dueño lo cambia.
+    match /pedidos/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['nombre', 'alianza', 'fecha'])
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
+        && request.resource.data.alianza is string
+        && exists(/databases/$(database)/documents/alianzas/$(request.resource.data.alianza))
+        && request.resource.data.fecha is int;
+      allow delete: if request.auth != null && request.auth.uid == uid;
     }
 
     // Todo lo demás está cerrado.
