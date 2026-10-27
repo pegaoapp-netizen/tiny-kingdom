@@ -5,7 +5,8 @@
   "description": "App de iPhone de Tiny Kingdom (envuelve la carpeta juego3d con Capacitor)",
   "scripts": {
     "copiar-web": "node scripts/copiar-web.js",
-    "sync": "node scripts/copiar-web.js && npx cap sync ios"
+    "sync": "node scripts/copiar-web.js && npx cap sync ios",
+    "revisar": "node scripts/revisar.js"
   },
   "dependencies": {
     "@capacitor/core": "^7.6.9",
