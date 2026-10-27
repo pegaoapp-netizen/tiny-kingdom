@@ -2258,7 +2258,7 @@
     camSigue = false;
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape') { if (enMundo) cerrarMundo(); else if (modoColocar) salirModoColocar(); else cerrarPanel(); }
+    if (ev.key === 'Escape') { if (enMundo) cerrarMundo(); else if (modoColocar) salirModoColocar(); else { cerrarMenuEdif(); cerrarPanel(); } }
   });
 
   var rayo = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -2283,12 +2283,13 @@
       while (o && o.userData.slot === undefined && !o.userData.castillo && o.userData.barricada === undefined) o = o.parent;
       if (!o) continue;
       if (o.userData.barricada !== undefined) { tocarBarricada(o.userData.barricada); return; }
-      if (o.userData.castillo) { if (modoColocar) continue; sonar('click'); abrirPanelCastillo(); return; }
+      if (o.userData.castillo) { if (modoColocar) continue; sonar('click'); abrirMenuEdif('castillo'); return; }
       tocarSlot(o.userData.slot);
       return;
     }
     // tocar el suelo: si estás colocando, te recordamos qué hacer (no se cancela solo)
     if (modoColocar) { consejoTemporal(modoColocar === 'barricada' ? T('colocando_barr') : T('colocando', { n: N(modoColocar) })); sonar('error'); return; }
+    cerrarMenuEdif();
     cerrarPanel();
   }
   // ---- nombre del edificio al pasar el mouse por encima (solo con mouse, no en el teléfono) ----
@@ -2334,6 +2335,88 @@
     lienzo.style.cursor = 'pointer';
   });
   lienzo.addEventListener('pointerleave', function () { etiquetaHover.classList.add('oculto'); lienzo.style.cursor = ''; });
+  // ------------------------------------------------------------------
+  //  MENÚ RÁPIDO: al tocar un edificio salen botones debajo de él
+  // ------------------------------------------------------------------
+  var menuEdif = { el: null, slot: null, castillo: false, html: '' };
+  (function () {
+    var d = document.createElement('div'); d.id = 'menu-edif'; d.className = 'oculto';
+    document.body.appendChild(d); menuEdif.el = d;
+    d.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-mb]');
+      if (!b || b.disabled) return;
+      ev.stopPropagation();
+      accionMenuEdif(b.getAttribute('data-mb'));
+    });
+  })();
+  function menuAbierto() { return !menuEdif.el.classList.contains('oculto'); }
+  function cerrarMenuEdif() { menuEdif.el.classList.add('oculto'); menuEdif.slot = null; menuEdif.castillo = false; menuEdif.html = ''; }
+  function abrirMenuEdif(i) {
+    cerrarPanel();
+    menuEdif.castillo = i === 'castillo'; menuEdif.slot = menuEdif.castillo ? null : i; menuEdif.html = '';
+    pintarMenuEdif();
+    menuEdif.el.classList.remove('oculto');
+    actualizarRelojes();
+  }
+  // lo que se está haciendo ahora en ese edificio (obra, entrenamiento o investigación)
+  function progresoMenu() {
+    if (menuEdif.castillo) { var oc = estado.obraCastillo; return oc ? { que: 'castillo', gemas: gemasParaTerminar((oc.total - oc.t) / velObras()) } : null; }
+    var s = slots[menuEdif.slot];
+    if (!s) return null;
+    if (s.obra) return { que: 'obra:' + s.i, gemas: gemasParaTerminar((s.obra.total - s.obra.t) / velObras()) };
+    if (s.edificio && s.edificio.tipo === 'cuartel' && colaEntreno.length) return { que: 'entreno', gemas: gemasEntreno() };
+    if (s.edificio && s.edificio.tipo === 'academia' && estado.investigando) return { que: 'invest', gemas: gemasParaTerminar(faltaInvestigacion() * velReal()) };
+    return null;
+  }
+  function botonMenu2(accion, icono, texto, apagado, extra) {
+    return '<button class="mb" data-mb="' + accion + '"' + (apagado ? ' disabled' : '') + '><span class="mb-ico">' + icono + '</span>' + (extra || '') + '<span class="mb-txt">' + texto + '</span></button>';
+  }
+  function pintarMenuEdif() {
+    var s = menuEdif.castillo ? null : slots[menuEdif.slot];
+    if (!menuEdif.castillo && (!s || (!s.edificio && !s.obra))) { cerrarMenuEdif(); return; }
+    var tipo = s ? (s.edificio ? s.edificio.tipo : s.obra.tipo) : null;
+    var nivel = s ? (s.edificio ? s.edificio.nivel : Math.max(1, s.obra.nivel - 1)) : (estado.castillo || 1);
+    var nombre = s ? N(tipo) : T('castillo');
+    var pr = progresoMenu(), acel = (estado.mochila && estado.mochila.acelerador) || 0;
+    var h = '<div class="me-titulo"><span class="me-nivel">' + nivel + '</span>' + nombre + '</div><div class="me-botones">' +
+      botonMenu2('detalles', '📜', T('mb_detalles')) +
+      botonMenu2('terminar', '⚡', T('mb_terminar'), !pr, pr ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '') +
+      botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>');
+    if (tipo === 'cuartel') h += botonMenu2('entrenar', '⚔️', T('entrenar'));
+    if (tipo === 'academia') h += botonMenu2('investigar', '📚', T('mb_investigar'));
+    h += '</div>';
+    if (menuEdif.html !== h) { menuEdif.el.innerHTML = h; menuEdif.html = h; }
+  }
+  function accionMenuEdif(a) {
+    var i = menuEdif.slot, esCastillo = menuEdif.castillo;
+    sonar('click');
+    if (a === 'detalles') { cerrarMenuEdif(); if (esCastillo) abrirPanelCastillo(); else abrirPanelEdificio(i); return; }
+    if (a === 'entrenar') { cerrarMenuEdif(); abrirPanelTropas(); return; }
+    if (a === 'investigar') { cerrarMenuEdif(); abrirPanelInvestigacion(ramaInv); return; }
+    var pr = progresoMenu();
+    if (!pr) return;
+    if (a === 'terminar') { terminarConGemas(pr.que); pintarMenuEdif(); return; }
+    if (a === 'acelerar') {
+      if ((estado.mochila && estado.mochila.acelerador) > 0) { usarObjeto('acelerador'); pintarMenuEdif(); }
+      else { cerrarMenuEdif(); consejoTemporal(T('mb_sin_acelerador')); abrirPanelTienda(); }
+    }
+  }
+  function posicionarMenuEdif() {
+    if (!menuAbierto()) return;
+    if (enMenu || enMundo || panelActual) { cerrarMenuEdif(); return; }
+    var p = menuEdif.castillo ? castillo.position.clone() : (slots[menuEdif.slot] && slots[menuEdif.slot].pos.clone());
+    if (!p) { cerrarMenuEdif(); return; }
+    vRel.copy(p).project(camara);
+    if (vRel.z > 1) { menuEdif.el.style.visibility = 'hidden'; return; }
+    menuEdif.el.style.visibility = '';
+    var x = (vRel.x + 1) / 2 * window.innerWidth, y = (1 - vRel.y) / 2 * window.innerHeight;
+    var w = menuEdif.el.offsetWidth, hh = menuEdif.el.offsetHeight;
+    menuEdif.el.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, x - w / 2)) + 'px';
+    menuEdif.el.style.top = Math.max(60, Math.min(window.innerHeight - hh - 90, y - hh * 0.35)) + 'px';
+    if ((Math.floor(performance.now() / 500) % 2) === 0) pintarMenuEdif();
+  }
+
   function tocarSlot(i) {
     var s = slots[i];
     sonar('click');
@@ -2343,8 +2426,8 @@
       else { consejoTemporal(T('ocupado')); sonar('error'); }
       return;
     }
-    if (s.edificio || s.obra) abrirPanelEdificio(i);
-    else abrirPanelConstruir(i);
+    if (s.edificio || s.obra) abrirMenuEdif(i);
+    else { cerrarMenuEdif(); abrirPanelConstruir(i); }
   }
 
   // ------------------------------------------------------------------
@@ -2468,6 +2551,7 @@
   // ------------------------------------------------------------------
   var panelActual = null;
   function abrirPanel(titulo, html, cual) {
+    if (menuEdif.el) cerrarMenuEdif();
     $('panel-titulo').textContent = titulo;
     $('panel-cuerpo').innerHTML = html;
     $('panel').classList.remove('oculto');
@@ -3045,6 +3129,7 @@
     d.dataset.vivo = '1';
   }
   function actualizarRelojes() {
+    posicionarMenuEdif();
     for (var k in relojesDiv) relojesDiv[k].dataset.vivo = '';
     if (!enMenu && !enMundo) {
       slots.forEach(function (s) {
@@ -3268,6 +3353,13 @@
     abrirPanel(T('p_mochila'), html + '</div>', { tipo: 'mochila' });
   }
   function terminarConGemas(que) {
+    if (que === 'invest') {
+      var ii = estado.investigando;
+      if (!ii) return;
+      if (!pagar(0, gemasParaTerminar(faltaInvestigacion() * velReal()))) return;
+      ii.t = ii.total; sonar('magia'); consejoTemporal(T('terminado_gemas')); actualizarHUD(); guardar(true);
+      return;
+    }
     if (que === 'entreno') {
       if (!colaEntreno.length) return;
       if (!pagar(0, gemasEntreno())) return;

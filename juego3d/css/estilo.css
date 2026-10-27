@@ -881,3 +881,21 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 #etiqueta-hover { position: fixed; z-index: 60; pointer-events: none; padding: 5px 11px; border-radius: 10px; font-weight: 900; font-size: 14px; color: #3a2414;
   background: #fff6dc; border: 2px solid #c99a4a; box-shadow: 0 3px 8px rgba(0,0,0,.3); white-space: nowrap; }
 #etiqueta-hover.oculto { display: none; }
+
+/* ---- Menú rápido al tocar un edificio ---- */
+#menu-edif { position: fixed; z-index: 9; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: auto; animation: me-sale .16s ease-out; }
+#menu-edif.oculto { display: none; }
+@keyframes me-sale { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.me-titulo { display: flex; align-items: center; gap: 6px; padding: 3px 12px 3px 4px; border-radius: 14px; background: rgba(42, 26, 14, .82); color: #fff6dc; font-weight: 900; font-size: 15px; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+.me-nivel { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(#ffe27a, #d29a12); color: #4a2a00; font-size: 13px; text-shadow: none; border: 2px solid #7a4a00; }
+.me-botones { display: flex; gap: 8px; align-items: flex-start; }
+.mb { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 62px; padding: 0; border: none; background: none; cursor: pointer; }
+.mb-ico { display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; border-radius: 50%; font-size: 22px;
+  background: radial-gradient(circle at 40% 30%, #fff1c2, #e3b45a 70%); border: 3px solid #7a4a00; box-shadow: 0 3px 0 #5a3410, 0 4px 10px rgba(0,0,0,.35); }
+.mb:active .mb-ico { transform: translateY(2px); box-shadow: 0 1px 0 #5a3410; }
+.mb-txt { font-weight: 900; font-size: 12px; color: #fff; text-shadow: 0 1px 2px #000, 0 0 4px #000; white-space: nowrap; }
+.mb-gema { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); padding: 0 5px; border-radius: 8px; background: rgba(42,26,14,.85); color: #fff; font-size: 11px; font-weight: 900; white-space: nowrap; display: flex; align-items: center; gap: 2px; }
+.mb-gema .ico.gema { width: 11px; height: 11px; }
+.mb[disabled] { cursor: default; }
+.mb[disabled] .mb-ico { filter: grayscale(.9); opacity: .6; }
+.mb[disabled] .mb-txt { opacity: .6; }
