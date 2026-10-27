@@ -1168,3 +1168,9 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .car-botones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin: 6px 0; }
 .car-botones .comprar { font-size: 11px; padding: 5px 4px; flex-wrap: wrap; justify-content: center; }
 .car-carta > .comprar { width: 100%; font-size: 12px; }
+
+/* v5.5: escuadrón y cantidades por rango */
+.tropa-cuenta { display: flex; gap: 6px; justify-content: center; margin: 2px 0 4px; font-size: 12px; font-weight: 800; }
+.tropa-cuenta span { background: rgba(42,26,14,.75); color: #ffe9b0; border-radius: 999px; padding: 2px 9px; }
+.rangos button { display: flex; flex-direction: column; align-items: center; line-height: 1.05; padding-top: 3px; padding-bottom: 3px; }
+.rangos button small { font-size: 10px; opacity: .9; font-weight: 800; }

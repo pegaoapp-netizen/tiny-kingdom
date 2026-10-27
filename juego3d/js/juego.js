@@ -3542,7 +3542,17 @@
   var ROMANO = ['I', 'II', 'III', 'IV'];
   var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1 };
   var visor = null;
-  function visorTropa(cont, tipo, rango) { visorModelo(cont, tipo + ':' + rango, function () { return M.unidad(tipo, undefined, rango); }); }
+  // Escuadrón: el líder adelante y 7 soldados en formación detrás (todos del rango elegido)
+  function escuadron(tipo, rango) {
+    var g = new THREE.Group(), lider = M.unidad(tipo, undefined, rango), miembros = [lider];
+    g.add(lider.grupo);
+    var sep = tipo === 'caballeria' ? 1.55 : 1.0, puestos = [[-1, -1], [0, -1.1], [1, -1], [-1.5, -2.1], [-0.5, -2.2], [0.5, -2.2], [1.5, -2.1]];
+    puestos.forEach(function (q) { var u = M.unidad(tipo, undefined, rango); u.grupo.position.set(q[0] * sep, 0, q[1] * sep); g.add(u.grupo); miembros.push(u); });
+    return { grupo: g, cuerpo: lider.cuerpo, p: lider.p, escala: lider.escala, baseY: lider.baseY, miembros: miembros };
+  }
+  function cuentaRango(tipo, r) { return tropas.filter(function (u) { return u.tipo === tipo && !u.invocada && !u.refuerzo && !u.heroeId && (u.armadura || 0) === r; }).length; }
+  function cuentaTipo(tipo) { return tropas.filter(function (u) { return u.tipo === tipo && !u.invocada && !u.refuerzo && !u.heroeId; }).length; }
+  function visorTropa(cont, tipo, rango) { visorModelo(cont, 'esc:' + tipo + ':' + rango, function () { return escuadron(tipo, rango); }); }
   // visor 3D que gira: lo usan la pantalla de tropas y la ficha del héroe
   function visorModelo(cont, clave, fabrica) {
     try {
@@ -3575,7 +3585,7 @@
         var caja = new THREE.Box3().setFromObject(m.grupo), tam = new V3(); caja.getSize(tam);
         var ancho = Math.max(tam.x, tam.z);
         visor.base.scale.set(ancho * 0.72, 1, ancho * 0.72);
-        visor.h = tam.y; visor.dist = Math.max(tam.y, ancho * 0.9) * 2.35;
+        visor.h = tam.y; visor.dist = Math.max(tam.y, ancho * 0.9) * (m.miembros ? 2.5 : 2.35);
         visor.e.add(m.grupo);
         visor.m = m; visor.clave = clave;
       }
@@ -3589,9 +3599,12 @@
   }
   function dibujarVisor(dt) {
     visor.t += dt;
-    if (visor.arrastre === null) visor.giro += dt * 0.6;
+    if (visor.arrastre === null) visor.giro += dt * (visor.m.miembros ? 0.3 : 0.6);
     visor.m.grupo.rotation.y = visor.giro;
-    try { M.animarUnidad(visor.m, visor.t, false, 0); } catch (x) {}
+    try {
+      if (visor.m.miembros) { var fase = visor.t % 3.2, golpe = fase < 0.55 ? 1 - fase / 0.55 : 0; visor.m.miembros.forEach(function (u, i) { M.animarUnidad(u, visor.t + i * 0.41, false, i === 0 ? golpe : 0); }); }
+      else M.animarUnidad(visor.m, visor.t, false, 0);
+    } catch (x) {}
     var c = visor.c, d = visor.dist, h = visor.h;
     c.position.set(0, h * 0.5 + d * 0.22, d); c.lookAt(0, h * 0.36, 0);
     visor.r.render(visor.e, c);
@@ -3623,11 +3636,12 @@
     // escena con el muñeco
     html += '<div class="tropa-escena"><div class="visor-tropa" id="visor-tropa"></div>' +
       '<div class="tropa-nombre"><h3>' + N(t) + '</h3><span class="rango-chapa r' + r + '">' + T('rango') + ' ' + ROMANO[r] + '</span></div>' +
+      '<div class="tropa-cuenta"><span>👥 ' + T('esc_tienes', { n: formatoNumero(cuentaTipo(t)) }) + '</span><span>⏱ ' + T('esc_entrenando', { n: formatoNumero(colaEntreno.filter(function (c) { return c.tipo === t; }).length) }) + '</span></div>' +
       (lista.length > 1 ? '<div class="tropa-elegir">' + lista.map(function (k) {
         return '<button data-accion="tropa-tipo" data-tipo="' + k + '" class="' + (k === t ? 'activo' : '') + '" title="' + N(k) + '">' + fotoHTML(k, TROPAS[k].icono) + '</button>';
       }).join('') + '</div>' : '') +
       '<div class="rangos">' + ROMANO.map(function (rn, i) {
-        return '<button data-accion="tropa-rango" data-r="' + i + '" class="r' + i + (i > na ? ' bloq' : '') + (i === r ? ' activo' : '') + '">' + rn + (i > na ? ' 🔒' : '') + '</button>';
+        return '<button data-accion="tropa-rango" data-r="' + i + '" class="r' + i + (i > na ? ' bloq' : '') + (i === r ? ' activo' : '') + '"><b>' + rn + (i > na ? ' 🔒' : '') + '</b><small>×' + formatoNumero(cuentaRango(t, i)) + '</small></button>';
       }).join('') + '</div></div>';
     html += '<p class="nota tropa-desc">' + D(t) + '</p><button class="comprar morado inv-tropa-btn" data-accion="inv-tropa" data-tipo="' + t + '">' + T('investigar_tropa') + ' · ' + N(t) + '</button>';
     html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * r)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + fmtTiempo(d.tiempo / rapidezEntreno()) + '</span>' +
@@ -5823,7 +5837,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 

@@ -1219,6 +1219,85 @@ var M = (function () {
   var MAT_BLOB = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false });
   // Colores de la armadura por nivel: 1 metal, 2 acero azul, 3 oro
   var COLOR_ARMADURA = [0, 0xd6dde5, 0x6f8fb5, 0xf5c542];
+  // ---- Forma de las tropas por rango (I = 0 ... IV = 3): cada rango cambia armadura, casco, arma y escudo ----
+  var TROPA_RANGO = { espadachin: 1, guardian: 1, caballeria: 1, arquero: 1 };
+  function detallesRango(tipo, r, cuerpo, cabeza, arma, izq, radioEscudo) {
+    var ORO = C.oro, ACERO = 0xd6dde5, AZUL = 0x2f5fae, AZUL2 = 0x1f3f7a, CUERO = 0x7a4a26, CUERO2 = 0x5a3418, MADERA = C.madera;
+    var caballero = tipo !== 'arquero';
+    // RANGO I: cuero y madera (lo más sencillo)
+    if (r === 0) {
+      cuerpo.add(cil(0.29, 0.34, 0.32, 8, CUERO, 0, 0.58, 0));
+      cuerpo.add(caja(0.08, 0.3, 0.02, CUERO2, 0, 0.6, 0.31));
+      if (caballero && radioEscudo) { var d = cil(radioEscudo * 1.01, radioEscudo * 1.01, 0.02, 10, MADERA, -0.06, -0.15, 0.17); d.rotation.z = Math.PI / 2; d.rotation.y = Math.PI / 2; izq.add(d); izq.add(caja(0.03, radioEscudo * 1.8, 0.02, CUERO2, -0.06, -0.15, 0.19)); }
+    }
+    // RANGO II: acero, cinturón con hebilla y escudo con borde de metal
+    if (r >= 1) {
+      cuerpo.add(cil(0.345, 0.345, 0.07, 10, CUERO2, 0, 0.42, 0));
+      cuerpo.add(caja(0.1, 0.08, 0.04, ORO, 0, 0.42, 0.34));
+      if (caballero && radioEscudo) { var aro = new THREE.Mesh(new THREE.TorusGeometry(radioEscudo, 0.035, 6, 18), mat(ACERO)); aro.position.set(-0.06, -0.15, 0.16); izq.add(aro); }
+    }
+    // RANGO III: placas, visera, guanteletes y escudo azul con emblema
+    if (r >= 2) {
+      if (caballero) {
+        for (var i = -1; i <= 1; i++) cabeza.add(caja(0.035, 0.18, 0.04, 0x2a2f38, i * 0.08, 0.02, 0.39));
+        cabeza.add(caja(0.3, 0.035, 0.04, 0x2a2f38, 0, 0.08, 0.39));
+      }
+      [-1, 1].forEach(function (s) { cuerpo.add(esfera(0.1, ACERO, s * 0.33, 0.37, 0.02, 8, 6)); });
+      for (var k = 0; k < 6; k++) { var a = k / 6 * Math.PI * 2; cuerpo.add(caja(0.14, 0.18, 0.03, ACERO, Math.cos(a) * 0.33, 0.27, Math.sin(a) * 0.33).rotateY(-a + Math.PI / 2)); }
+      if (caballero && radioEscudo) {
+        var cara = cil(radioEscudo * 0.86, radioEscudo * 0.86, 0.02, 12, AZUL, -0.06, -0.15, 0.175); cara.rotation.z = Math.PI / 2; cara.rotation.y = Math.PI / 2; izq.add(cara);
+        izq.add(caja(0.04, radioEscudo * 1.3, 0.02, ORO, -0.06, -0.15, 0.19)); izq.add(caja(radioEscudo * 1.3, 0.04, 0.02, ORO, -0.06, -0.12, 0.19));
+      }
+    }
+    // RANGO IV: premium dorado y azul, escudo grande, hombreras con púas, corona en el casco, aura
+    if (r >= 3) {
+      if (caballero) {
+        cabeza.add(cil(0.43, 0.43, 0.09, 16, ORO, 0, 0.12, 0));
+        for (var j = 0; j < 6; j++) { var b = j / 6 * Math.PI * 2; cabeza.add(cono(0.05, 0.16, 4, ORO, Math.cos(b) * 0.36, 0.22, Math.sin(b) * 0.36)); }
+        var pen = cono(0.13, 0.62, 6, AZUL, 0, 0.62, -0.08); pen.rotation.x = -0.35; cabeza.add(pen);
+      } else {
+        cabeza.add(cil(0.4, 0.4, 0.06, 14, ORO, 0, 0.1, 0));
+        var pluma = cono(0.06, 0.5, 5, 0xffffff, 0.2, 0.42, -0.12); pluma.rotation.z = -0.5; cabeza.add(pluma);
+      }
+      [-1, 1].forEach(function (s) {
+        var hb = esfera(0.2, ORO, s * 0.35, 0.8, 0, 10, 8); hb.scale.set(1.15, 0.65, 1.15); cuerpo.add(hb);
+        cuerpo.add(cono(0.05, 0.18, 4, ACERO, s * 0.42, 0.92, 0).rotateZ(-s * 0.5));
+      });
+      cuerpo.add(caja(0.26, 0.26, 0.03, AZUL2, 0, 0.62, 0.32));
+      cuerpo.add(caja(0.16, 0.04, 0.035, ORO, 0, 0.68, 0.335)); cuerpo.add(caja(0.04, 0.16, 0.035, ORO, 0, 0.64, 0.335));
+      var capa = caja(0.62, 0.78, 0.04, AZUL, 0, 0.52, -0.36); capa.rotation.x = 0.16; cuerpo.add(capa);
+      cuerpo.add(caja(0.64, 0.05, 0.05, ORO, 0, 0.16, -0.42).rotateX(0.16));
+      if (caballero && radioEscudo) {
+        var grande = cil(radioEscudo * 1.35, radioEscudo * 1.35, 0.06, 6, AZUL2, -0.06, -0.15, 0.2); grande.rotation.z = Math.PI / 2; grande.rotation.y = Math.PI / 2; izq.add(grande);
+        var borde = new THREE.Mesh(new THREE.TorusGeometry(radioEscudo * 1.33, 0.05, 6, 6), mat(ORO)); borde.position.set(-0.06, -0.15, 0.24); izq.add(borde);
+        izq.add(esfera(radioEscudo * 0.32, ORO, -0.06, -0.15, 0.27, 8, 6));
+      }
+      var anillo = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.66, 28), new THREE.MeshBasicMaterial({ color: 0xffd34a, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+      anillo.rotation.x = -Math.PI / 2; anillo.position.y = 0.04; anillo.userData.noFusionar = true; cuerpo.parent ? cuerpo.parent.add(anillo) : cuerpo.add(anillo);
+    }
+    // ARMAS por rango
+    if (tipo === 'espadachin') {
+      if (r >= 1) arma.add(caja(0.07, 0.16, 0.025, ACERO, 0, 0.86, 0));
+      if (r >= 2) { arma.add(caja(0.02, 0.6, 0.03, AZUL, 0, 0.6, 0)); arma.add(caja(0.08, 0.16, 0.025, ACERO, 0, 1.0, 0)); }
+      if (r >= 3) { arma.add(caja(0.42, 0.07, 0.08, ORO, 0, 0.08, 0)); arma.add(esfera(0.05, 0x4aa3ff, 0, 0.08, 0.05, 6, 5)); arma.add(caja(0.09, 0.2, 0.025, 0xf4f7fb, 0, 1.16, 0)); }
+    }
+    if (tipo === 'guardian') {
+      if (r >= 1) [-1, 1].forEach(function (s) { arma.add(cono(0.04, 0.12, 4, ACERO, s * 0.13, 0.58, 0).rotateZ(-s * Math.PI / 2)); });
+      if (r >= 2) { arma.add(cono(0.04, 0.14, 4, ACERO, 0, 0.74, 0)); arma.add(cil(0.04, 0.04, 0.25, 5, C.maderaOsc, 0, -0.08, 0)); }
+      if (r >= 3) { arma.add(caja(0.36, 0.24, 0.24, ORO, 0, 0.6, 0)); arma.add(cono(0.05, 0.2, 4, ORO, 0, 0.82, 0)); }
+    }
+    if (tipo === 'caballeria') {
+      if (r >= 1) arma.add(cono(0.12, 0.16, 8, ACERO, 0, 0.35, 0).rotateX(Math.PI));
+      if (r >= 2) arma.add(caja(0.3, 0.22, 0.02, AZUL, 0.15, 1.18, 0));
+      if (r >= 3) { arma.add(cono(0.1, 0.38, 6, ORO, 0, 1.62, 0)); arma.add(caja(0.34, 0.26, 0.02, ORO, 0.17, 1.05, 0)); }
+    }
+    if (tipo === 'arquero') {
+      var arc = function (rad, col, z) { var a2 = new THREE.Mesh(new THREE.TorusGeometry(rad, 0.035, 4, 12, Math.PI), mat(col)); a2.position.set(0, 0.05, 0.05 + (z || 0)); a2.rotation.set(0, Math.PI / 2, Math.PI / 2); arma.add(a2); };
+      if (r >= 1) { [-1, 1].forEach(function (s) { var hc = esfera(0.14, CUERO, s * 0.33, 0.78, 0, 8, 6); hc.scale.set(1.1, 0.55, 1.1); cuerpo.add(hc); }); for (var f = 0; f < 3; f++) cuerpo.add(cil(0.012, 0.012, 0.3, 4, MADERA, -0.18 + f * 0.05, 0.92, -0.3)); }
+      if (r >= 2) { arc(0.44, 0x5a3418, 0.01); cuerpo.add(cil(0.25, 0.3, 0.26, 8, ACERO, 0, 0.62, 0.05)); }
+      if (r >= 3) { arc(0.5, ORO, 0.02); var cp2 = caja(0.58, 0.72, 0.04, 0x2a6a34, 0, 0.52, -0.35); cp2.rotation.x = 0.16; cuerpo.add(cp2); }
+    }
+  }
   function unidad(tipo, tam, armadura, look) {
     if (tipo === 'heroe' && look) return heroeModelo(look, tam);
     armadura = armadura || 0;
@@ -1378,6 +1457,7 @@ var M = (function () {
     }
     cuerpo.add(izq);
     p.izq = izq;
+    if (TROPA_RANGO[tipo] && !look) { detallesRango(tipo, armadura, cuerpo, cabeza, arma, izq, esCaballero ? (tipo === 'guardian' ? 0.42 : 0.28) : 0); p.respira = true; if (armadura >= 3) escala *= 1.07; }
 
     // capa del héroe
     if (tipo === 'heroe' && (!look || look.capa)) {
@@ -1400,6 +1480,9 @@ var M = (function () {
       // manta con el color del equipo y armadura del caballo desde el nivel 2
       caballo.add(caja(0.66, 0.08, 0.6, ropa, 0, 1.05, -0.05));
       if (armadura >= 2) caballo.add(caja(0.66, 0.3, 0.32, colArm, 0, 1.25, 0.7));
+      if (armadura === 1) caballo.add(caja(0.7, 0.04, 0.64, C.oro, 0, 1.0, -0.05));
+      if (armadura >= 2) [-1, 1].forEach(function (s) { caballo.add(caja(0.05, 0.38, 1.0, colArm, s * 0.34, 0.82, -0.05)); });
+      if (armadura >= 3) { caballo.add(caja(0.34, 0.32, 0.4, C.oro, 0, 1.42, 0.82)); caballo.add(cono(0.08, 0.4, 5, 0x2f5fae, 0, 1.72, 0.7)); [-1, 1].forEach(function (s) { caballo.add(caja(0.06, 0.06, 1.02, C.oro, s * 0.36, 1.0, -0.05)); }); }
       // silla, estribos y riendas
       caballo.add(caja(0.5, 0.12, 0.5, 0x5a3418, 0, 1.1, 0.0));
       caballo.add(caja(0.42, 0.14, 0.1, 0x5a3418, 0, 1.17, -0.24));
