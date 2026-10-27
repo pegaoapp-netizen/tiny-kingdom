@@ -1140,3 +1140,16 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 #opciones-ataque { top: calc(150px + env(safe-area-inset-top)); }
 #opciones-ataque .oa-info { font-size: 10.5px; font-weight: 700; opacity: .8; }
 @media (min-width: 760px) { #alerta-ataque { top: calc(72px + env(safe-area-inset-top)) !important; } #opciones-ataque { top: calc(112px + env(safe-area-inset-top)); } }
+
+/* ===== v5.3: iconos dibujados del menú de abajo, con relieve y doble marco ===== */
+.pestana .icono { width: 46px; height: 46px; padding: 3px;
+  background: radial-gradient(circle at 38% 28%, #fffaf0, #f0dcae 55%, #c9a467 100%);
+  border: 2px solid #5c3418;
+  box-shadow: 0 0 0 2px #e8b84a, 0 0 0 3.5px #5c3418, 0 4px 0 2px rgba(0,0,0,.45), inset 0 -3px 0 rgba(122,74,0,.25), inset 0 2px 0 rgba(255,255,255,.7); }
+.pestana .icono .ic, .centro-construir .icono .ic { width: 100%; height: 100%; display: block; filter: drop-shadow(0 1.5px 0 rgba(58,36,20,.45)); }
+.pestana.activo .icono { background: radial-gradient(circle at 38% 28%, #fff7c2, #f2c45a 60%, #b8801c 100%);
+  box-shadow: 0 0 0 2px #fff1b0, 0 0 0 3.5px #5c3418, 0 6px 0 2px rgba(0,0,0,.45), 0 0 14px rgba(255,226,122,.85), inset 0 2px 0 rgba(255,255,255,.7); }
+.centro-construir .icono { padding: 7px; }
+@media (max-width: 600px) { .pestana .icono { width: 40px; height: 40px; padding: 2px; } .centro-construir .icono { padding: 6px; } }
+@media (max-width: 370px) { .pestana .icono { width: 34px; height: 34px; } }
+@media (min-width: 760px) { .pestana .icono { width: 52px; height: 52px; } }
