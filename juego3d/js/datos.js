@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '3.2';
+var VERSION_JUEGO = '3.3';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>👑 <b>Sir Sol tiene un modelo nuevo</b>: caballero dorado con capa roja, penacho, espada y escudo con estrella.</li><li>🦵 Ahora camina de verdad, respira cuando está quieto y da el espadazo en las peleas.</li><li>🧹 Se quitó el botón «Nueva partida» para que nadie borre su reino sin querer.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🏰 <b>Nuevo botón 🏰</b> a la derecha: te lleva de vuelta a tu castillo. Y la cámara ya no se puede ir lejos del reino.</li><li>👑 <b>Sir Sol tiene un modelo nuevo</b>: caballero dorado con capa roja, penacho, espada y escudo con estrella.</li><li>🦵 Ahora camina de verdad, respira cuando está quieto y da el espadazo en las peleas.</li><li>🧹 Se quitó el botón «Nueva partida» para que nadie borre su reino sin querer.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>👑 <b>Sir Sol has a new model</b>: golden knight with a red cape, plume, sword and star shield.</li><li>🦵 He now really walks, breathes while standing and swings his sword in battle.</li><li>🧹 The «New game» button was removed so nobody erases their kingdom by mistake.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🏰 <b>New 🏰 button</b> on the right: takes you back to your castle. And the camera can no longer wander far from the kingdom.</li><li>👑 <b>Sir Sol has a new model</b>: golden knight with a red cape, plume, sword and star shield.</li><li>🦵 He now really walks, breathes while standing and swings his sword in battle.</li><li>🧹 The «New game» button was removed so nobody erases their kingdom by mistake.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',

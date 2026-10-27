@@ -129,6 +129,7 @@
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   function distInicial() { return window.innerWidth < window.innerHeight ? 84 : 62; }
   var CENTRO_REINO = new V3(-5, 0, -2);
+  var LIMITE_CAM = 32;
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
   var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
   var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
@@ -2180,8 +2181,9 @@
       cam.meta.addScaledVector(cam.vel, dt);
       cam.vel.multiplyScalar(Math.exp(-dt * 4.5));
     }
-    cam.meta.x = Math.max(-70, Math.min(38, cam.meta.x));
-    cam.meta.z = Math.max(-52, Math.min(38, cam.meta.z));
+    // la cámara no se puede ir lejos del reino
+    cam.meta.x = Math.max(CENTRO_REINO.x - LIMITE_CAM, Math.min(CENTRO_REINO.x + LIMITE_CAM, cam.meta.x));
+    cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
     cam.objetivo.lerp(cam.meta, kp);
     // de cerca la cámara baja (más cinematográfica); de lejos sube para ver el reino entero
     var u = Math.max(0, Math.min(1, (cam.dist - 16) / 94));
@@ -3977,6 +3979,8 @@
     $('btn-pausa').classList.toggle('pausado', pausado);
   }
   $('btn-pausa').addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarPausa(); });
+  // volver a ver el castillo si la cámara se fue lejos
+  $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); });
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
     requestAnimationFrame(bucle);
