@@ -19,7 +19,8 @@
       tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {}, castillo: 1, obraCastillo: null,
       heroes: { sol: { nivel: 1, estrellas: 1, frag: 0 } }, equipo: ['sol'], reclutaGratis: '',
       eqItems: [{ i: 'r1', t: 'arma', r: 'comun', n: 1, h: null }, { i: 'r2', t: 'casco', r: 'comun', n: 1, h: null }], eqRegalo: true,
-      logros: { recolectas: 0, tropas: 0, campamentos: 0 }, tropasDefienden: true,
+      logros: { recolectas: 0, tropas: 0, campamentos: 0 }, tropasDefienden: true, burbujaHasta: 0,
+      carretas: { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] },
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -1022,6 +1023,7 @@
     M3.cam.position.set(M3.obj.x, d * 0.85, M3.obj.z + d * 0.62); M3.cam.lookAt(M3.obj);
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
     actualizarEfectosPortal();
+    actualizarCarretasMundo();
     M3.r.render(M3.e, M3.cam);
     requestAnimationFrame(dibujarMundo3D);
   }
@@ -1044,8 +1046,9 @@
       var cs = M.castillo(tam); cs.scale.setScalar(0.12); g.add(cs);
       var esYo = a.uid === yo, aliada = estado.alianza && a.alianza === estado.alianza;
       if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
-      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14), a.nivel || 1); et.position.set(0, 2.7, 0); et.scale.multiplyScalar(0.62); g.add(et);
-      if ((a.escudo || 0) > Date.now()) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x6fb7ff, transparent: true, opacity: 0.25, depthWrite: false })); g.add(cup); }
+      var prot = (a.escudo || 0) > Date.now();
+      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, 2.7, 0); et.scale.multiplyScalar(0.62); g.add(et);
+      if (prot) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.3, depthWrite: false })); g.add(cup); }
       g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[c.x + '_' + c.y] = { aldea: i };
       if (esYo) M3.miCelda = c;
@@ -1078,10 +1081,12 @@
       '<span>' + ICONO_RECURSO[t.r] + '</span><b>+' + Math.round(2 * c.nivel) + '% ' + T('r_' + t.r) + ' · 🛡️ ' + formatoNumero(defensaCasilla(c)) + '</b></div>' +
       '<div class="casilla-botones"><button class="comprar morado" id="cas-portal"' + (libreTel ? '' : ' disabled') + '>' + T('cas_reubicar') + (libreTel ? ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) : '') + '</button>' +
       (mia ? '<button class="comprar" id="cas-soltar">' + T('cas_abandonar') + '</button>' : '<button class="comprar rojo" id="cas-conquistar">' + T('cas_ocupar') + '</button>') + '</div>';
+    if (mia) { var gd = guardadoCasilla(c), rr = TIPOS_CASILLA[c.tipo].r; html += '<p class="nota">' + ICONO_RECURSO[rr] + ' ' + T('cas_guardado', { a: formatoNumero(gd.n), m: formatoNumero(gd.max), r: T('r_' + rr), h: formatoNumero(gd.hora) }) + '</p><button class="comprar naranja" id="cas-recoger"' + (gd.n >= 1 ? '' : ' disabled') + '>' + T('cas_recolectar') + ' · ' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + '</button>'; }
     if (!mia) html += '<p class="nota">' + (deOtro ? T('cas_de', { n: escaparHTML(nube.nombre || '?') }) : T('cas_libre', { n: misCasillas().length, m: maxCasillas() })) + '</p>';
     $('mundo-info').innerHTML = html + '</div>';
     var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { this.disabled = true; conquistarCasilla(c, deOtro ? nube : null); });
     var bs = $('cas-soltar'); if (bs) bs.addEventListener('click', function () { soltarCasilla(c); });
+    var brc = $('cas-recoger'); if (brc) brc.addEventListener('click', function () { recogerCasilla(c); });
     var bp = $('cas-portal'); if (bp) bp.addEventListener('click', function () {
       var no = puedeTeleportar(); if (no) { consejoTemporal(no); sonar('error'); return; }
       confirmarJuego('✨ ' + T('tel_titulo'), T('tel_txt', { x: c.x, y: c.y }), T('tel_aqui'), function () {
@@ -1089,6 +1094,22 @@
         teletransportar(c.x, c.y, 'portal_elegir');
       });
     });
+  }
+  // lo que tiene guardado una casilla tuya (crece por hora hasta un tope)
+  function guardadoCasilla(c) {
+    var info = (estado.casillas || {})[c.id] || {}, hora = CASILLA_RECOGER.porNivel * (c.nivel || 1), max = hora * CASILLA_RECOGER.horas;
+    if (!info.recogido) info.recogido = Date.now() - 3600 * 1000;
+    return { n: Math.min(max, Math.floor((Date.now() - info.recogido) / 3600000 * hora)), max: max, hora: hora, info: info };
+  }
+  function recogerCasilla(c) {
+    var gd = guardadoCasilla(c); if (gd.n < 1) { consejoTemporal(T('cas_nada')); sonar('error'); return; }
+    var libres = carretasLibres(); if (!libres) { consejoTemporal(T('car_faltan', { n: 1, l: 0 })); sonar('error'); return; }
+    var lleva = Math.min(gd.n, libres * capCarreta()), nc = carretasPara(lleva), r = TIPOS_CASILLA[c.tipo].r, rec = {};
+    rec[r] = lleva;
+    gd.info.recogido = Date.now() - Math.max(0, gd.n - lleva) / gd.hora * 3600000;
+    estado.casillas[c.id] = gd.info;
+    salirCarretas('recoger', miLugar(), { x: aCoord(c.x), y: aCoord(c.y) }, rec, nc, T('cas_' + c.tipo));
+    sonar('click'); guardar(true); mostrarCasilla(c);
   }
   function conquistarCasilla(c, deOtro) {
     if (!tropas.some(function (u) { return !u.heroeId; })) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCasilla(c); return; }
@@ -1335,18 +1356,31 @@
     TIPOS_REFUERZO.forEach(function (k) { for (var i = 0; i < ((t && t[k]) || 0); i++) { crearTropa(k, casaTropa()); n++; } });
     return n;
   }
+  // nivel del caballero: el número de la corona de tu perfil
+  function nivelCaballero() { return Math.max(1, estado.oleada || 1); }
+  var pedidosCache = [];
+  function htmlPedido(p, mio) {
+    var tropasP = p.tipo !== 'recursos', falta = Math.max(0, (p.cantidad || 0) - (p.recibido || 0)), pct = Math.min(100, Math.round((p.recibido || 0) / Math.max(1, p.cantidad || 1) * 100));
+    var que = tropasP ? T('ped_tropas') + ' ' + T(p.motivo === 'atacar' ? 'ped_motivo_atacar' : 'ped_motivo_defender') : ICONO_RECURSO[p.recurso] + ' ' + T('r_' + p.recurso);
+    var don = (p.donantes || []).map(function (s) { var q = String(s).split('|'); return escaparHTML(q[0]) + ' ' + formatoNumero(+q[1] || 0); });
+    var h = '<div class="pedido' + (mio ? ' mio' : '') + '"><div class="ped-cab">' + (tropasP ? (p.motivo === 'atacar' ? '⚔️' : '🛡️') : '📦') + ' <b>' + (mio ? T('ped_mio') : T('ped_de', { n: escaparHTML(p.nombre) })) + '</b> · ' + que + '</div>' +
+      '<div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + formatoNumero(p.recibido || 0) + ' / ' + formatoNumero(p.cantidad || 0) + (falta ? ' · ' + T('ped_faltan', { n: formatoNumero(falta) }) : '') + '</span></div>' +
+      '<p class="nota">' + (don.length ? T('ped_donaron', { l: don.join(', ') }) : T('ped_nadie')) + '</p>';
+    if (mio) h += (falta ? '' : '<p class="nota"><b>' + T('ped_completo') + '</b></p>') + '<button class="comprar mini" data-accion="ped-quitar" data-id="' + escaparHTML(p.id) + '">' + T('ped_quitar') + '</button>';
+    else if (falta) h += tropasP ? '<button class="comprar mini naranja" data-accion="ped-tropas" data-id="' + escaparHTML(p.id) + '">' + T('ped_mandar_tropas') + '</button>'
+      : '<button class="comprar mini naranja" data-accion="ped-donar" data-id="' + escaparHTML(p.id) + '">' + T('ped_donar') + '</button>';
+    return h + '</div>';
+  }
   function htmlRefuerzos(pedidos, recibidos, enviados) {
     var yoUid = Cuentas.usuario().uid, hoy = Date.now() - 24 * 3600 * 1000;
-    var miPedido = pedidos.some(function (p) { return p.uid === yoUid && p.fecha > hoy; });
-    var otros = pedidos.filter(function (p) { return p.uid !== yoUid && p.fecha > hoy; });
-    var h = '<div class="carta" style="margin-top:10px"><h3>' + T('ref_titulo') + '</h3><p class="nota">' + T('ref_txt') + '</p>';
-    h += miPedido ? '<p class="nota"><b>' + T('ref_pedido_hecho') + '</b></p><button class="comprar" data-accion="ref-quitar-pedido">' + T('ref_quitar_pedido') + '</button>'
-      : '<button class="comprar naranja boton-oleada-grande" data-accion="ref-pedir">' + T('ref_pedir') + '</button>';
-    h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_pedidos') + '</b></p>';
-    if (!otros.length) h += '<p class="nota">' + T('ref_ninguno') + '</p>';
-    otros.forEach(function (p) {
-      h += '<div class="fila-miembro">📣<b>' + escaparHTML(p.nombre) + '</b><button class="comprar mini naranja" data-accion="ref-enviar" data-uid="' + escaparHTML(p.uid) + '" data-nombre="' + escaparHTML(p.nombre) + '">' + T('ref_reforzar') + '</button></div>';
-    });
+    pedidosCache = pedidos.filter(function (p) { return p.tipo && p.fecha > hoy; });
+    var mios = pedidosCache.filter(function (p) { return p.uid === yoUid; }), otros = pedidosCache.filter(function (p) { return p.uid !== yoUid; });
+    var h = '<div class="carta" style="margin-top:10px"><h3>📣 ' + T('ped_titulo') + '</h3><p class="nota">' + T('nivel_caballero', { n: nivelCaballero(), m: limiteRefuerzos(nivelCaballero()) }) + '</p>' +
+      '<div class="stats ped-botones"><button class="comprar mini naranja" data-accion="ped-nuevo" data-tipo="tropas" data-motivo="defender">' + T('ped_def') + '</button><button class="comprar mini rojo" data-accion="ped-nuevo" data-tipo="tropas" data-motivo="atacar">' + T('ped_atk') + '</button><button class="comprar mini morado" data-accion="ped-nuevo" data-tipo="recursos">' + T('ped_rec') + '</button></div>';
+    mios.forEach(function (p) { h += htmlPedido(p, true); });
+    if (!otros.length) h += '<p class="nota">' + T('ped_ninguno') + '</p>';
+    otros.forEach(function (p) { h += htmlPedido(p, false); });
+    h += '</div><div class="carta" style="margin-top:10px"><h3>' + T('ref_titulo') + '</h3><p class="nota">' + T('ref_txt') + '</p>';
     var rec = recibidos.filter(function (r) { return !r.devuelto && totalTropasDe(r.tropas); });
     h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_en_reino') + '</b></p>';
     if (!rec.length) h += '<p class="nota">' + T('ref_nadie') + '</p>';
@@ -1361,12 +1395,14 @@
     });
     return h + '</div>';
   }
-  function abrirEnviarRefuerzo(uid, nombre) {
+  var refPedido = null;
+  function abrirEnviarRefuerzo(uid, nombre, pedido) {
+    refPedido = pedido || null;
     if (!hayCuenta() || !estado.alianza) return;
     if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
     var h = '<div class="carta"><h3>' + T('ref_enviar_a', { q: escaparHTML(nombre) }) + '</h3><p class="nota">' + T('ref_txt') + '</p>';
     TIPOS_REFUERZO.forEach(function (k) {
-      var n = Math.min(300, propiasDe(k).length);
+      var n = Math.min(refPedido ? Math.max(0, refPedido.cantidad - (refPedido.recibido || 0)) : 300, propiasDe(k).length);
       h += '<div class="fila-ref"><div class="foto">' + fotoHTML(k, TROPAS[k].icono) + '</div><div style="flex:1;min-width:0"><b>' + N(k) + '</b> <span class="nota">' + T('ref_tienes', { n: propiasDe(k).length }) + '</span>' +
         '<div class="fila-ref-barra"><input type="range" id="ref-' + k + '" min="0" max="' + n + '" value="0"' + (n ? '' : ' disabled') + '><b class="num" id="refn-' + k + '">0</b>' +
         '<button class="comprar mini" data-accion="ref-max" data-tipo="' + k + '"' + (n ? '' : ' disabled') + '>' + T('maximo') + '</button></div></div></div>';
@@ -1380,7 +1416,8 @@
   function mandarRefuerzo(b) {
     if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
     var t = {}, total = 0;
-    TIPOS_REFUERZO.forEach(function (k) { var rg = $('ref-' + k); var n = rg ? Math.min(+rg.value || 0, propiasDe(k).length, 300) : 0; t[k] = n; total += n; });
+    var tope = refPedido ? Math.max(0, refPedido.cantidad - (refPedido.recibido || 0)) : 1e9;
+    TIPOS_REFUERZO.forEach(function (k) { var rg = $('ref-' + k); var n = rg ? Math.min(+rg.value || 0, propiasDe(k).length, refPedido ? tope : 300) : 0; n = Math.min(n, tope - total); t[k] = n; total += n; });
     if (!total) { $('ref-error').textContent = T('ref_nada'); sonar('error'); return; }
     var uid = b.getAttribute('data-uid'), nombre = b.getAttribute('data-nombre');
     b.disabled = true;
@@ -1393,8 +1430,52 @@
         asignarPuestos();
         guardar(true); publicarAldea(true); actualizarHUD();
         sonar('cuerno'); consejoTemporal(T('ref_enviado', { q: nombre }));
+        if (refPedido) { Cuentas.donarPedido(refPedido.id, total, Cuentas.nombrePublico()).catch(function () {}); refPedido = null; }
         cerrarPanel();
       }).catch(function () { b.disabled = false; $('ref-error').textContent = T('ref_error'); sonar('error'); });
+  }
+  function abrirNuevoPedido(tipo, motivo) {
+    if (!hayCuenta() || !estado.alianza) return;
+    var tropasP = tipo === 'tropas', max = tropasP ? limiteRefuerzos(nivelCaballero()) : 100000;
+    var h = '<div class="carta"><h3>' + (tropasP ? T(motivo === 'atacar' ? 'ped_atk' : 'ped_def') : T('ped_rec')) + '</h3>' +
+      (tropasP ? '<p class="nota">' + T('nivel_caballero', { n: nivelCaballero(), m: max }) + '</p>' : '<p class="nota">' + T('ped_llegan') + '</p><div class="mer-fila" id="ped-recursos">' + ['oro', 'comida', 'madera', 'piedra'].map(function (r, i) { return '<button class="mer-r' + (i === 0 ? ' activo' : '') + '" data-r="' + r + '">' + ICONO_RECURSO[r] + '</button>'; }).join('') + '</div>') +
+      '<div class="tropa-cantidad"><span>' + T('ped_cantidad') + '</span><input type="range" id="ped-n" min="' + (tropasP ? 5 : 500) + '" max="' + max + '" step="' + (tropasP ? 5 : 500) + '" value="' + Math.round(max / 2) + '"><span class="tropa-num" id="ped-num">' + Math.round(max / 2) + '</span></div>' +
+      '<button class="comprar naranja boton-oleada-grande" data-accion="ped-crear" data-tipo="' + tipo + '" data-motivo="' + (motivo || '') + '">' + T('ped_crear') + '</button></div>';
+    abrirPanel(T('ped_titulo'), h, { tipo: 'pedido' });
+    var rg = $('ped-n'); rg.addEventListener('input', function () { $('ped-num').textContent = formatoNumero(+rg.value); });
+    var box = $('ped-recursos'); if (box) box.addEventListener('click', function (ev) { var b = ev.target.closest('[data-r]'); if (!b) return; box.querySelectorAll('.mer-r').forEach(function (x) { x.classList.toggle('activo', x === b); }); });
+  }
+  function crearPedido(b) {
+    var tipo = b.getAttribute('data-tipo'), tropasP = tipo === 'tropas', n = Math.floor(+$('ped-n').value || 0);
+    var max = tropasP ? limiteRefuerzos(nivelCaballero()) : 100000; n = Math.max(1, Math.min(max, n));
+    var rsel = document.querySelector('#ped-recursos .activo');
+    var datos = { nombre: Cuentas.nombrePublico(), alianza: estado.alianza, fecha: Date.now(), tipo: tropasP ? 'tropas' : 'recursos', motivo: tropasP ? (b.getAttribute('data-motivo') || 'defender') : '', recurso: tropasP ? '' : (rsel ? rsel.getAttribute('data-r') : 'oro'), cantidad: n, recibido: 0, donantes: [] };
+    b.disabled = true;
+    Cuentas.crearPedido(tropasP ? 't' : 'r', datos).then(function () { sonar('cuerno'); consejoTemporal(T('ped_hecho')); abrirPanelAlianza(); })
+      .catch(function () { b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
+  }
+  function abrirDonar(p) {
+    var falta = Math.max(0, p.cantidad - (p.recibido || 0)), r = p.recurso;
+    var max = Math.max(0, Math.min(falta, Math.floor(cantidad(r)), capCarreta() * carretasLibres(), 100000));
+    var h = '<div class="carta"><h3>📦 ' + T('ped_de', { n: escaparHTML(p.nombre) }) + ' · ' + ICONO_RECURSO[r] + ' ' + T('r_' + r) + '</h3><p class="nota">' + T('ped_donar_txt') + '</p><p class="nota">' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + ' · ' + T('car_tienes', { n: carretas().n, l: carretasLibres(), c: formatoNumero(capCarreta()) }) + '</p>' +
+      '<div class="tropa-cantidad"><input type="range" id="don-n" min="0" max="' + max + '" step="' + Math.max(1, Math.round(max / 50)) + '" value="' + max + '"' + (max ? '' : ' disabled') + '><span class="tropa-num" id="don-num">' + formatoNumero(max) + '</span></div>' +
+      '<button class="comprar naranja boton-oleada-grande" data-accion="ped-mandar" data-id="' + escaparHTML(p.id) + '"' + (max ? '' : ' disabled') + '>🛒 ' + T('ped_donar') + '</button></div>';
+    abrirPanel(T('ped_titulo'), h, { tipo: 'pedido' });
+    var rg = $('don-n'); rg.addEventListener('input', function () { $('don-num').textContent = formatoNumero(+rg.value); });
+  }
+  function mandarDonacion(b) {
+    var p = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!p) return;
+    var n = Math.floor(+$('don-n').value || 0), r = p.recurso; if (n <= 0) return;
+    var nc = carretasPara(n); if (carretasLibres() < nc) { consejoTemporal(T('car_faltan', { n: nc, l: carretasLibres() })); sonar('error'); return; }
+    var rec = { oro: 0, comida: 0, madera: 0, piedra: 0 }; rec[r] = n;
+    var c = {}; c[r] = n; if (!pagar(c)) return;
+    b.disabled = true;
+    var destino, seg;
+    lugarDeNube(p.uid).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: p.uid, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc })
+      ; })
+      .then(function () { return Cuentas.donarPedido(p.id, n, Cuentas.nombrePublico()); })
+      .then(function () { salirCarretas('envio', miLugar(), destino, rec, nc, p.nombre); consejoTemporal(T('ped_donado', { n: ICONO_RECURSO[r] + ' ' + formatoNumero(n), q: escaparHTML(p.nombre) })); sonar('moneda'); guardar(true); abrirPanelAlianza(); })
+      .catch(function () { sumarRecurso(r, n); b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
   }
   function pedirRefuerzos(b) {
     if (!estado.alianza) return;
@@ -2079,7 +2160,7 @@
     function fila(cual) {
       return '<div class="mer-fila">' + R.map(function (r) { return '<button class="mer-r' + (mer[cual] === r ? ' activo' : '') + '" data-accion="mer-elegir" data-cual="' + cual + '" data-r="' + r + '">' + ICONO_RECURSO[r] + '</button>'; }).join('') + '</div>';
     }
-    var html = '<div class="carta compacta"><h3>⚖️ ' + T('mer_cambiar') + '</h3><p class="nota">' + T('tasa_txt', { n: Math.round(tasa * 100) }) + '</p>' +
+    var html = htmlCarretas() + '<div class="carta compacta" style="margin-top:8px"><h3>⚖️ ' + T('mer_cambiar') + '</h3><p class="nota">' + T('tasa_txt', { n: Math.round(tasa * 100) }) + '</p>' +
       '<div class="mer-lado"><b>' + T('mer_das') + '</b>' + fila('da') + '</div><div class="mer-lado"><b>' + T('mer_recibes') + '</b>' + fila('recibe') + '</div>' +
       '<div class="tropa-cantidad"><input type="range" id="mer-n" min="0" max="' + max + '" step="' + Math.max(1, Math.round(max / 100)) + '" value="' + mer.n + '"><span class="tropa-num" id="mer-num">' + mer.n + '</span></div>' +
       '<p class="mer-res" id="mer-res">' + ICONO_RECURSO[mer.da] + ' ' + mer.n + ' → ' + ICONO_RECURSO[mer.recibe] + ' ' + Math.floor(mer.n * tasa) + '</p>' +
@@ -2096,7 +2177,7 @@
       if (!otros.length) { box.innerHTML = '<p class="nota">' + T('mer_nadie') + '</p>'; return; }
       if (!otros.some(function (a) { return a.uid === mer.para; })) mer.para = otros[0].uid;
       box.innerHTML = '<label class="nota">' + T('mer_a') + ' <select id="mer-para">' + otros.map(function (a) { return '<option value="' + a.uid + '"' + (a.uid === mer.para ? ' selected' : '') + '>' + escaparHTML(a.nombre) + '</option>'; }).join('') + '</select></label>' +
-        R.map(function (r) { var mx = Math.min(5000, Math.floor(cantidad(r))); return '<div class="tropa-cantidad"><span style="width:26px">' + ICONO_RECURSO[r] + '</span><input type="range" class="mer-env" data-r="' + r + '" min="0" max="' + mx + '" step="' + Math.max(1, Math.round(mx / 50)) + '" value="' + Math.min(mer.envio[r], mx) + '"><span class="tropa-num" id="mer-env-' + r + '">' + Math.min(mer.envio[r], mx) + '</span></div>'; }).join('') +
+        R.map(function (r) { var mx = Math.min(capCarreta() * Math.max(1, carretasLibres()), 100000, Math.floor(cantidad(r))); return '<div class="tropa-cantidad"><span style="width:26px">' + ICONO_RECURSO[r] + '</span><input type="range" class="mer-env" data-r="' + r + '" min="0" max="' + mx + '" step="' + Math.max(1, Math.round(mx / 50)) + '" value="' + Math.min(mer.envio[r], mx) + '"><span class="tropa-num" id="mer-env-' + r + '">' + Math.min(mer.envio[r], mx) + '</span></div>'; }).join('') +
         '<button class="comprar" data-accion="mer-enviar">' + T('mer_enviar_btn') + '</button>';
       mer.nombres = {}; otros.forEach(function (a) { mer.nombres[a.uid] = a.nombre; });
     }).catch(function () {});
@@ -2113,27 +2194,118 @@
   }
   function enviarMercado(boton) {
     var R = ['oro', 'comida', 'madera', 'piedra'], rec = {}, tot = 0;
-    R.forEach(function (r) { rec[r] = Math.max(0, Math.min(5000, Math.floor(mer.envio[r] || 0), Math.floor(cantidad(r)))); tot += rec[r]; });
+    R.forEach(function (r) { rec[r] = Math.max(0, Math.min(100000, Math.floor(mer.envio[r] || 0), Math.floor(cantidad(r)))); tot += rec[r]; });
     if (!tot) { consejoTemporal(T('mer_nada')); sonar('error'); return; }
     var para = $('mer-para') ? $('mer-para').value : mer.para;
+    var nc = carretasPara(tot);
+    if (carretasLibres() < nc) { consejoTemporal(T('car_faltan', { n: nc, l: carretasLibres() })); sonar('error'); return; }
     if (!pagar(rec)) return;
     boton.disabled = true;
-    Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: para, recursos: rec, alianza: estado.alianza, fecha: Date.now() }).then(function () {
+    var destino, seg;
+    lugarDeNube(para).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: para, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc }).then(function () {
+      salirCarretas('envio', miLugar(), destino, rec, nc, (mer.nombres || {})[para] || '');
       sonar('moneda'); consejoTemporal(T('mer_enviado', { n: escaparHTML((mer.nombres || {})[para] || '') }));
       mer.envio = { oro: 0, comida: 0, madera: 0, piedra: 0 };
       guardar(true); abrirPanelMercado();
     }).catch(function () {
       R.forEach(function (r) { if (rec[r]) sumarRecurso(r, rec[r]); });
       consejoTemporal(T('mer_error')); sonar('error'); boton.disabled = false;
+    }); });
+  }
+  // ---------- CARRETAS: se entrenan en el Mercado, se mejoran y viajan por el mapa ----------
+  function carretas() { return estado.carretas || (estado.carretas = { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] }); }
+  function capCarreta() { return CARRETA.capacidad[carretas().nivel] || CARRETA.capacidad[1]; }
+  function carretasLibres() { var c = carretas(); return Math.max(0, c.n - c.viajes.reduce(function (s, v) { return s + v.n; }, 0)); }
+  function carretasPara(total) { return Math.max(1, Math.ceil(total / capCarreta())); }
+  // segundos de viaje entre dos puntos del mapa (coordenadas 0..99)
+  function segViaje(de, a) { return Math.round(30 + 6 * Math.hypot((de.x || 0) - (a.x || 0), (de.y || 0) - (a.y || 0))); }
+  function salirCarretas(tipo, de, a, recursos, n, nombre) {
+    var seg = segViaje(de, a), ahora = Date.now();
+    var v = { id: 'v' + ahora + Math.floor(Math.random() * 1000), tipo: tipo, de: de, a: a, sale: ahora, llega: ahora + seg * 1000, vuelve: ahora + 2 * seg * 1000, recursos: recursos, n: n, nombre: nombre || '' };
+    carretas().viajes.push(v);
+    consejoTemporal(T('car_salen', { n: n, t: fmtTiempo(seg) }));
+    return v;
+  }
+  function procesarCarretas(silencio) {
+    var c = carretas(), ahora = Date.now(), listas = 0;
+    while (c.cola.length && c.cola[0] <= ahora) { c.cola.shift(); c.n++; listas++; }
+    if (listas && !silencio) { consejoTemporal(T('car_listas', { n: listas })); sonar('listo'); }
+    var vuelven = c.viajes.filter(function (v) { return v.vuelve <= ahora; });
+    if (vuelven.length) {
+      c.viajes = c.viajes.filter(function (v) { return v.vuelve > ahora; });
+      vuelven.forEach(function (v) {
+        if (v.tipo === 'recoger' && v.recursos) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (v.recursos[r]) sumarRecurso(r, v.recursos[r]); }); if (!silencio) { consejoTemporal(T('car_volvieron', { b: textoBotin(v.recursos) })); sonar('moneda'); } }
+      });
+      guardar();
+    }
+  }
+  function entrenarCarretas(k) {
+    if (!edificiosDe('mercado').length) { consejoTemporal(T('car_necesitas_mercado')); sonar('error'); return; }
+    var costo = { oro: CARRETA.costo.oro * k, madera: CARRETA.costo.madera * k };
+    if (!pagar(costo)) return;
+    var c = carretas(), ahora = Date.now(), ult = c.cola.length ? c.cola[c.cola.length - 1] : ahora;
+    for (var i = 0; i < k; i++) { ult = Math.max(ult, ahora) + CARRETA.tiempo * 1000 / (estado.dueno ? velReal() : 1); c.cola.push(ult); }
+    sonar('martillo'); guardar(true); reabrirPanel();
+  }
+  function mejorarCarretas() {
+    var c = carretas(), sig = c.nivel + 1;
+    if (!CARRETA.mejora[sig]) return;
+    if (!pagar(CARRETA.mejora[sig])) return;
+    c.nivel = sig; sonar('listo');
+    consejoTemporal(T('car_mejoradas', { n: sig, c: formatoNumero(capCarreta()) }));
+    guardar(true); reabrirPanel();
+  }
+  function htmlCarretas() {
+    var c = carretas(), sig = c.nivel + 1, enCamino = c.viajes.reduce(function (s, v) { return s + v.n; }, 0);
+    var h = '<div class="carta car-carta"><h3>🛒 ' + T('car_titulo') + ' <span class="me-nivel">' + c.nivel + '</span></h3><p class="nota">' + T('car_txt') + '</p>' +
+      '<p><b>' + T('car_tienes', { n: c.n, l: carretasLibres(), c: formatoNumero(capCarreta()) }) + '</b>' + (enCamino ? ' · ' + T('car_en_camino', { n: enCamino }) : '') + '</p>';
+    if (c.cola.length) h += '<p class="nota reloj-panel">⏱ ' + T('car_entrenando', { n: c.cola.length, t: fmtTiempo((c.cola[0] - Date.now()) / 1000) }) + '</p>';
+    h += '<div class="car-botones">' + [1, 5, 10].map(function (k) { return botonCosto({ oro: CARRETA.costo.oro * k, madera: CARRETA.costo.madera * k }, 'car-entrenar', 'data-n="' + k + '"', T('car_entrenar', { n: k }) + ' ⏱' + fmtTiempo(CARRETA.tiempo * k) + ' '); }).join('') + '</div>';
+    h += CARRETA.mejora[sig] ? botonCosto(CARRETA.mejora[sig], 'car-mejorar', '', '⬆️ ' + T('car_mejorar', { n: sig, c: formatoNumero(CARRETA.capacidad[sig]) }) + ' ') : '<p class="nota"><b>' + T('car_max') + '</b></p>';
+    return h + '</div>';
+  }
+  // carretas viajando en el mapa del mundo (las tuyas y las que te mandan)
+  var enviosEnCamino = [];
+  function lugarDe(uid) { var a = aldeasCache.filter(function (x) { return x.uid === uid; })[0]; return a ? { x: a.x, y: a.y } : null; }
+  // dónde está el reino de otro jugador (si no está en el mapa cargado, se pregunta a la nube)
+  function lugarDeNube(uid) { var l = lugarDe(uid); if (l) return Promise.resolve(l); return Cuentas.leerAldea(uid).then(function (a) { return a && typeof a.x === 'number' ? { x: a.x, y: a.y } : miLugar(); }).catch(function () { return miLugar(); }); }
+  function modeloCarreta() {
+    var g = new THREE.Group();
+    g.add(M.caja ? M.caja(0.7, 0.3, 0.45, 0x9a5e2c, 0, 0.32, 0) : new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.45), new THREE.MeshLambertMaterial({ color: 0x9a5e2c })));
+    var saco = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8d39a })); saco.position.set(0, 0.55, 0); g.add(saco);
+    [[-0.25, 0.26], [0.25, 0.26], [-0.25, -0.26], [0.25, -0.26]].forEach(function (p) { var r = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), new THREE.MeshLambertMaterial({ color: 0x5c3418 })); r.rotation.x = Math.PI / 2; r.position.set(p[0], 0.15, p[1]); g.add(r); });
+    var bu = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.2), new THREE.MeshLambertMaterial({ color: 0x7a5232 })); bu.position.set(0.62, 0.3, 0); g.add(bu);
+    return g;
+  }
+  function actualizarCarretasMundo() {
+    if (!M3) return;
+    M3.carros = M3.carros || {};
+    var ahora = Date.now(), vivos = {};
+    var lista = carretas().viajes.map(function (v) { return v; });
+    enviosEnCamino.forEach(function (e) { var de = lugarDe(e.de); if (de && e.llega > ahora) lista.push({ id: 'e' + e.id, de: de, a: miLugar(), sale: e.fecha, llega: e.llega, vuelve: e.llega, n: e.carretas || 1, recursos: e.recursos, entrante: true }); });
+    lista.forEach(function (v) {
+      var ida = ahora < v.llega, u = ida ? (ahora - v.sale) / Math.max(1, v.llega - v.sale) : (ahora - v.llega) / Math.max(1, v.vuelve - v.llega);
+      if (!ida && v.entrante) return;
+      u = Math.max(0, Math.min(1, u));
+      var p0 = posCelda(celdaDe(v.de.x, v.de.y).x, celdaDe(v.de.x, v.de.y).y), p1 = posCelda(celdaDe(v.a.x, v.a.y).x, celdaDe(v.a.x, v.a.y).y);
+      var desde = ida ? p0 : p1, hasta = ida ? p1 : p0;
+      var g = M3.carros[v.id];
+      if (!g) { g = new THREE.Group(); g.add(modeloCarreta()); var et = M.etiquetaEdificio('🛒×' + v.n, v.n); et.position.set(0, 1.4, 0); et.scale.multiplyScalar(0.42); g.add(et); g.userData.et = et; M3.e.add(g); M3.carros[v.id] = g; }
+      g.position.set(desde.x + (hasta.x - desde.x) * u, 0.05, desde.z + (hasta.z - desde.z) * u);
+      g.rotation.y = Math.atan2(-(hasta.z - desde.z), hasta.x - desde.x);
+      vivos[v.id] = true;
     });
+    for (var k in M3.carros) if (!vivos[k]) { M3.e.remove(M3.carros[k]); delete M3.carros[k]; }
   }
   function recibirEnvios() {
     if (!hayCuenta() || !Cuentas.enviosRecibidos) return;
     Cuentas.enviosRecibidos().then(function (lista) {
-      lista.forEach(function (e) {
+      var ahora = Date.now();
+      enviosEnCamino = lista.filter(function (e) { return (e.llega || 0) > ahora; });
+      lista.filter(function (e) { return (e.llega || 0) <= ahora; }).forEach(function (e) {
         Cuentas.borrarEnvio(e.id).then(function () {
           var b = e.recursos || {};
-          ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (b[r] > 0) sumarRecurso(r, Math.min(5000, b[r])); });
+          ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (b[r] > 0) sumarRecurso(r, Math.min(100000, b[r])); });
           sonar('moneda'); consejoTemporal(T('mer_recibiste', { n: escaparHTML(e.deNombre || '?'), b: textoBotin(b) }));
           guardar(true);
         }).catch(function () {});
@@ -4211,8 +4383,9 @@
     $('mundo-info').innerHTML = '<div class="carta"><h3>⚔️ ' + T('at_titulo', { n: escaparHTML(a.nombre) }) + '</h3>' +
       '<div class="stats"><span>🛡️ ' + T('at_fuerza') + ': ' + formatoNumero(f) + '</span><span>🏰 ' + T('at_defensa') + ': ' + formatoNumero(Math.round(d / 100) * 100) + '</span><span><b>' + dif + '</b></span></div>' +
       '<p class="nota">' + T('at_botin') + ': ' + textoBotin(botinMaximo(a.nivel)) + '</p><p class="nota">' + T('at_nota') + '</p>' +
-      '<button class="comprar rojo boton-oleada-grande" id="btn-atacar-ya">' + T('atacar_ya') + '</button></div>';
+      '<button class="comprar rojo boton-oleada-grande" id="btn-atacar-ya">' + T('atacar_ya') + '</button>' + (estado.alianza ? '<button class="comprar mini naranja" id="btn-ped-atk" style="margin-top:6px">' + T('ped_atk_btn') + '</button>' : '') + '</div>';
     $('btn-atacar-ya').addEventListener('click', function () { this.disabled = true; realizarAtaque(a); });
+    var bpa = $('btn-ped-atk'); if (bpa) bpa.addEventListener('click', function () { cerrarMundo(); abrirNuevoPedido('tropas', 'atacar'); });
   }
   // ---------- ESCENA DE BATALLA CONTRA OTRO REINO ----------
   // El resultado ya está decidido; la escena muestra a los dos ejércitos chocando.
@@ -4276,7 +4449,7 @@
     sonar('cuerno');
     Cuentas.atacar(doc).then(function (ref) {
       doc.id = ref.id; marchas.push(doc);
-      estado.escudoHasta = 0; // atacar quita tu protección
+      estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 10 * 60 * 1000;
       guardar(true); publicarAldea(true); actualizarEscudo();
       $('mundo-info').innerHTML = '<div class="carta"><h3>' + T('mar_salen', { n: escaparHTML(a.nombre), t: fmtTiempo(viaje / 1000) }) + '</h3></div>';
@@ -4419,23 +4592,40 @@
   }
 
   // ---------- PROTECCIÓN (escudo) ----------
-  var cupulaEscudo = new THREE.Mesh(new THREE.SphereGeometry(9.5, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2),
-    new THREE.MeshBasicMaterial({ color: 0x6fb7ff, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide }));
+  // Burbuja / escudo: cubre TODA la ciudad (muralla, edificios y campos), con brillo en el borde
+  var cupulaEscudo = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 20, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.ShaderMaterial({ transparent: true, depthWrite: false, side: THREE.DoubleSide, uniforms: { t: { value: 0 } },
+      vertexShader: 'varying vec3 vN; varying vec3 vV; varying float vY; void main(){ vec4 p = modelViewMatrix * vec4(position,1.0); vN = normalize(normalMatrix * normal); vV = normalize(-p.xyz); vY = position.y; gl_Position = projectionMatrix * p; }',
+      fragmentShader: 'uniform float t; varying vec3 vN; varying vec3 vV; varying float vY; void main(){ float f = pow(1.0 - abs(dot(vN, vV)), 2.2); float ola = 0.5 + 0.5 * sin(vY * 18.0 - t * 1.6); vec3 c = mix(vec3(0.55,0.85,1.0), vec3(0.95,0.98,1.0), f); gl_FragColor = vec4(c, 0.06 + f * 0.5 + ola * 0.035); }' }));
+  (function () { var f = MURALLA_FORMA; cupulaEscudo.position.set(f.cx, 0, f.cz); cupulaEscudo.scale.set(f.rx * 1.42, Math.max(f.rx, f.rz) * 0.55, f.rz * 1.42); })();
   cupulaEscudo.visible = false;
+  cupulaEscudo.renderOrder = 5;
   escena.add(cupulaEscudo);
+  function burbujaActiva() { return (estado.burbujaHasta || 0) > Date.now(); }
+  function fmtLargo(seg) { var d = Math.floor(seg / 86400); return d >= 1 ? d + 'd ' + Math.floor((seg % 86400) / 3600) + 'h' : fmtTiempo(seg); }
+  function terminarBurbuja() {
+    if (!estado.burbujaHasta) return;
+    if ((estado.escudoHasta || 0) <= estado.burbujaHasta + 1000) estado.escudoHasta = 0;
+    estado.burbujaHasta = 0;
+    consejoTemporal(T('burbuja_perdida')); sonar('error');
+    guardar(true); publicarAldea(true);
+  }
   function protegido() { return (estado.escudoHasta || 0) > Date.now(); }
   function actualizarEscudo() {
+    if (burbujaActiva() && (estado.castillo || 1) >= BURBUJA.castillo) terminarBurbuja();
+    if (estado.burbujaHasta && !burbujaActiva()) estado.burbujaHasta = 0;
     var on = protegido() && !enMenu;
     cupulaEscudo.visible = on;
     $('pill-escudo').classList.toggle('oculto-pill', !on);
-    if (on) $('escudo-t').textContent = fmtTiempo((estado.escudoHasta - Date.now()) / 1000);
+    $('pill-escudo').firstChild.textContent = burbujaActiva() ? '🫧' : '🛡️';
+    if (on) $('escudo-t').textContent = fmtLargo((estado.escudoHasta - Date.now()) / 1000);
     var bes = document.querySelectorAll('[data-escudo-boton]');
     if (bes.length) {
       if (!protegido()) reabrirPanel();
       else bes.forEach(function (b) { b.textContent = '🛡️ ' + T('escudo_activo_btn', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) }); });
     }
   }
-  $('pill-escudo').addEventListener('click', function () { consejoTemporal(T('escudo_info')); });
+  $('pill-escudo').addEventListener('click', function () { consejoTemporal(burbujaActiva() ? T('burbuja_txt', { t: fmtLargo((estado.burbujaHasta - Date.now()) / 1000), n: BURBUJA.castillo }) : T('escudo_info')); });
   function subtabsHeroes(cual) {
     return '<div class="subtabs"><button data-accion="sub-tropas" class="' + (cual === 'tropas' ? 'activo' : '') + '">⚔️ ' + T('sub_tropas') + '</button>' +
       '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
@@ -4866,6 +5056,14 @@
     else if (a === 'ref-mandar') mandarRefuerzo(b);
     else if (a === 'ref-max') { var rg = $('ref-' + b.getAttribute('data-tipo')); if (rg) { rg.value = rg.max; rg.dispatchEvent(new Event('input')); } }
     else if (a === 'ref-pedir') pedirRefuerzos(b);
+    else if (a === 'ped-nuevo') abrirNuevoPedido(b.getAttribute('data-tipo'), b.getAttribute('data-motivo'));
+    else if (a === 'ped-crear') crearPedido(b);
+    else if (a === 'ped-quitar') { b.disabled = true; Cuentas.quitarPedidoId(b.getAttribute('data-id')).then(abrirPanelAlianza).catch(function () { b.disabled = false; }); }
+    else if (a === 'ped-tropas') { var pt = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (pt) abrirEnviarRefuerzo(pt.uid, pt.nombre, pt); }
+    else if (a === 'ped-donar') { var pd = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (pd) abrirDonar(pd); }
+    else if (a === 'ped-mandar') mandarDonacion(b);
+    else if (a === 'car-entrenar') entrenarCarretas(+b.getAttribute('data-n') || 1);
+    else if (a === 'car-mejorar') mejorarCarretas();
     else if (a === 'ref-quitar-pedido') { b.disabled = true; Cuentas.quitarPedido().then(abrirPanelAlianza).catch(function () { b.disabled = false; }); }
     else if (a === 'ref-devolver') devolverRefuerzo(b.getAttribute('data-id'), b);
     else if (a === 'ref-retirar') retirarRefuerzo(b.getAttribute('data-id'), b);
@@ -5342,6 +5540,9 @@
       estado.vistos = g.vistos || null;
       estado.novedadesVistas = g.novedadesVistas || '';
       estado.ultimoPortal = g.ultimoPortal || 0;
+      estado.burbujaHasta = g.burbujaHasta || 0;
+      estado.carretas = g.carretas || { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] };
+      estado.carretas.cola = estado.carretas.cola || []; estado.carretas.viajes = estado.carretas.viajes || [];
       estado.sinAtacarHasta = g.sinAtacarHasta || 0;
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
       var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
@@ -5398,6 +5599,8 @@
       }
       tropas.forEach(guardarDentro);
     }
+    if (!g) { estado.burbujaHasta = Date.now() + BURBUJA.dias * 86400000; estado.escudoHasta = Math.max(estado.escudoHasta || 0, estado.burbujaHasta); }
+    procesarCarretas(true);
     ponerCastillo();
     andamiosDelCastillo(!!estado.obraCastillo);
     ponerEquipo();
@@ -5598,13 +5801,13 @@
     slots.forEach(function (s) { if (s.fantasma) s.fantasma.position.y = 0.15 + Math.sin(performance.now() / 300) * 0.12; });
     barricadas.forEach(function (bq) { bq.marca.material.opacity = (modoColocar === 'barricada' && !bq.nivel) ? 0.3 + b * 0.4 : 0; if (bq.fantasma) bq.fantasma.position.y = 0.1 + Math.sin(performance.now() / 300) * 0.1; });
     actualizarRelojes();
-    if (cupulaEscudo.visible) cupulaEscudo.material.opacity = 0.14 + Math.sin(performance.now() / 600) * 0.05;
+    if (cupulaEscudo.visible) cupulaEscudo.material.uniforms.t.value = performance.now() / 1000;
     // las barras de vida miran a la cámara
     tropas.concat(enemigos).forEach(function (u) { u.barra.quaternion.copy(camara.quaternion); });
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); }
     render.render(escena, camara);
   }
 

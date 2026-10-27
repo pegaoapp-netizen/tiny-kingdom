@@ -211,8 +211,12 @@ var Cuentas = (function () {
     quitarPedido: function () { return usuario ? db.collection('pedidos').doc(usuario.uid).delete() : Promise.resolve(); },
     pedidos: function (tag) {
       return db.collection('pedidos').where('alianza', '==', tag).limit(60).get()
-        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; }); });
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; x.uid = x.uid || d.id; return x; }); });
     },
+    // pedidos nuevos (v5.4): uno de tropas (_t) y uno de recursos (_r) por jugador
+    crearPedido: function (sufijo, datos) { if (!usuario) return Promise.reject(new Error('sin usuario')); datos.uid = usuario.uid; return db.collection('pedidos').doc(usuario.uid + '_' + sufijo).set(datos); },
+    quitarPedidoId: function (id) { return db.collection('pedidos').doc(id).delete(); },
+    donarPedido: function (id, n, nombre) { var FV = firebase.firestore.FieldValue; return db.collection('pedidos').doc(id).update({ recibido: FV.increment(n), donantes: FV.arrayUnion(String(nombre).slice(0, 20) + '|' + n + '|' + Date.now()) }); },
     // casillas del mapa conquistadas (id 'x_y')
     casillas: function () {
       return db.collection('casillas').limit(500).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });

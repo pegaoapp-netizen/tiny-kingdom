@@ -137,15 +137,17 @@ service cloud.firestore {
     // El que envía crea el documento y lo puede borrar (retirar). El que recibe solo puede
     // bajar el número de tropas (las que murieron) o marcarlo como devuelto.
     // Envíos de recursos entre miembros de la misma hermandad (máximo 5000 de cada uno por envío)
-    function recursoValido(v) { return v is int && v >= 0 && v <= 5000; }
+    function recursoValido(v) { return v is int && v >= 0 && v <= 100000; }
     match /envios/{id} {
       allow read: if request.auth != null && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'recursos', 'alianza', 'fecha'])
+        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'recursos', 'alianza', 'fecha', 'llega', 'carretas'])
         && request.resource.data.de == request.auth.uid
         && request.resource.data.para is string && request.resource.data.para != request.auth.uid
         && request.resource.data.deNombre is string && request.resource.data.deNombre.size() <= 30
         && request.resource.data.fecha is int
+        // las carretas tardan en llegar (como mucho 2 horas)
+        && (!('llega' in request.resource.data) || (request.resource.data.llega is int && request.resource.data.llega <= request.time.toMillis() + 7200000))
         && request.resource.data.alianza is string
         && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.alianza == request.resource.data.alianza
         && get(/databases/$(database)/documents/aldeas/$(request.resource.data.para)).data.alianza == request.resource.data.alianza
@@ -211,17 +213,29 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.de == request.auth.uid;
     }
 
-    // Pedidos de refuerzo: uno por jugador. Los ven los demás jugadores; solo el dueño lo cambia.
-    match /pedidos/{uid} {
+    // Pedidos de la alianza (refuerzos y recursos). El dueño los crea y quita;
+    // los compañeros de la MISMA alianza solo pueden sumar lo que donan y su nombre.
+    match /pedidos/{id} {
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['nombre', 'alianza', 'fecha'])
+      allow create, update: if request.auth != null
+        && (id == request.auth.uid || id == request.auth.uid + '_t' || id == request.auth.uid + '_r')
+        && request.resource.data.keys().hasOnly(['uid', 'nombre', 'alianza', 'fecha', 'tipo', 'motivo', 'recurso', 'cantidad', 'recibido', 'donantes'])
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
         && request.resource.data.alianza is string
         && exists(/databases/$(database)/documents/alianzas/$(request.resource.data.alianza))
-        && request.resource.data.fecha is int;
-      allow delete: if request.auth != null && request.auth.uid == uid;
+        && request.resource.data.fecha is int
+        && (!('cantidad' in request.resource.data) || (request.resource.data.cantidad is int && request.resource.data.cantidad >= 1 && request.resource.data.cantidad <= 1000000))
+        && (!('recibido' in request.resource.data) || (request.resource.data.recibido is int && request.resource.data.recibido >= 0));
+      allow update: if request.auth != null && resource.data.get('uid', id) != request.auth.uid
+        && exists(/databases/$(database)/documents/aldeas/$(request.auth.uid))
+        && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.alianza == resource.data.alianza
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recibido', 'donantes'])
+        && request.resource.data.recibido is int
+        && request.resource.data.recibido > resource.data.get('recibido', 0)
+        && request.resource.data.recibido <= resource.data.cantidad + 100000
+        && request.resource.data.donantes is list && request.resource.data.donantes.size() <= 60;
+      allow delete: if request.auth != null && (id == request.auth.uid || id == request.auth.uid + '_t' || id == request.auth.uid + '_r');
     }
 
     // Todo lo demás está cerrado.
