@@ -198,6 +198,12 @@ var Cuentas = (function () {
       return db.collection('pedidos').where('alianza', '==', tag).limit(60).get()
         .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; }); });
     },
+    // casillas del mapa conquistadas (id 'x_y')
+    casillas: function () {
+      return db.collection('casillas').limit(500).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    tomarCasilla: function (id, datos) { return db.collection('casillas').doc(id).set(datos); },
+    soltarCasilla: function (id) { return db.collection('casillas').doc(id).delete(); },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
 })();

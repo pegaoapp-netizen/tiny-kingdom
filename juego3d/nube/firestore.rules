@@ -64,6 +64,18 @@ service cloud.firestore {
 
     // Ataques entre jugadores: el atacante crea el reporte; el defensor lo lee y lo marca como visto.
     // No se puede atacar a uno mismo, ni a un reino protegido, ni llevarse más de 5.000 de cada recurso.
+    // Casillas del mapa del mundo conquistadas: id 'x_y' (0..39). El dueño es siempre quien escribe.
+    match /casillas/{id} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && id.matches('^[0-9]{1,2}_[0-9]{1,2}$')
+        && request.resource.data.keys().hasOnly(['dueno', 'nombre', 'alianza', 'fecha'])
+        && request.resource.data.dueno == request.auth.uid
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 30
+        && request.resource.data.alianza is string && request.resource.data.alianza.size() <= 6
+        && request.resource.data.fecha is int;
+      allow delete: if request.auth != null && resource.data.dueno == request.auth.uid;
+    }
     match /ataques/{id} {
       allow read: if request.auth != null
         && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid);

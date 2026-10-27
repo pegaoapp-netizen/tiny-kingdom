@@ -995,3 +995,9 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .cj-caja { width: 100%; max-width: 340px; padding: 14px; border-radius: 14px; background: linear-gradient(#fff6dc, #f0dcae); border: 3px solid #7a4a00; box-shadow: 0 10px 30px rgba(0,0,0,.5); text-align: center; color: #3a2414; }
 .cj-caja h3 { margin: 0 0 6px; font-size: 18px; } .cj-caja p { margin: 0 0 12px; font-size: 14px; }
 .cj-botones { display: flex; gap: 8px; } .cj-botones .comprar { flex: 1; margin: 0; padding: 10px 6px; font-size: 15px; }
+
+/* ---- Mapa del mundo 3D ---- */
+#mundo-3d { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; cursor: grab; }
+#mundo-fondo, #mundo-aldeas { display: none !important; }
+.casilla-info h3 { display: flex; align-items: center; gap: 6px; }
+#mundo-info .me-nivel { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(#ffe27a, #d29a12); color: #4a2a00; font-size: 12px; border: 2px solid #7a4a00; }

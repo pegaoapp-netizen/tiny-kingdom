@@ -814,21 +814,25 @@
     x.strokeStyle = 'rgba(60, 40, 20, .5)'; x.lineWidth = 10; x.strokeRect(0, 0, W, W);
   }
   function abrirMundo() {
-    dibujarFondoMundo();
     $('mundo').classList.remove('oculto');
     enMundo = true;
-    $('mundo-info').innerHTML = '';
-    $('mundo-leyenda').innerHTML = '<span class="pista-castillo">' + T('toca_tu_castillo') + '</span><span>🛡️ ' + T('leyenda_alianza') + '</span><span>🏰 ' + T('leyenda_otros') + '</span><span>⛺ ' + T('leyenda_trasgos') + '</span>';
+    $('mundo-info').innerHTML = '<div class="carta"><p class="nota">' + T('mundo_toca') + '</p></div>';
+    if (!M3) crearMundo3D();
+    if (!M3.corriendo) { M3.corriendo = true; requestAnimationFrame(dibujarMundo3D); }
+    $('mundo-leyenda').innerHTML = '<span class="pista-castillo">' + T('toca_tu_castillo') + '</span>' + Object.keys(TIPOS_CASILLA).map(function (k) { return '<span>' + TIPOS_CASILLA[k].icono + ' ' + T('cas_' + k) + '</span>'; }).join('') + '<span>🚩 ' + T('cas_mias', { n: misCasillas().length, m: maxCasillas() }) + '</span>';
     pintarAldeas([]);
-    if (!hayCuenta()) {
-      $('mundo-estado').textContent = T('mundo_cuenta');
-      $('mundo-info').innerHTML = '<div class="carta"><button class="comprar naranja" id="mundo-ir-cuenta">' + T('entrar_o_crear') + '</button></div>';
-      $('mundo-ir-cuenta').addEventListener('click', function () { cerrarMundo(); guardar(); modoInvitado = false; guardarPreferencias(true); pantallaInicio(); });
-      return;
-    }
+    if (!hayCuenta()) { $('mundo-estado').textContent = T('mundo_cuenta'); return; }
     $('mundo-estado').textContent = T('mundo_cargando');
     publicarAldea(true);
     setTimeout(function () {
+      Cuentas.casillas().then(function (cs) {
+        casillasNube = {};
+        var yo = Cuentas.usuario().uid;
+        cs.forEach(function (q) { casillasNube[q.id] = q; });
+        // si otro jugador me quitó una casilla, ya no es mía
+        misCasillas().forEach(function (k) { if (casillasNube[k] && casillasNube[k].dueno !== yo) delete estado.casillas[k]; });
+        if (aldeasCache.length) ponerCosasMundo(aldeasCache, yo);
+      }).catch(function () {});
       Cuentas.aldeas().then(function (lista) {
         aldeasCache = lista;
         var otros = lista.filter(function (a) { return a.uid !== Cuentas.usuario().uid; }).length;
@@ -836,6 +840,260 @@
         pintarAldeas(lista);
       }).catch(function () { $('mundo-estado').textContent = T('mundo_error'); });
     }, 400);
+  }
+  // ------------------------------------------------------------------
+  //  MAPA DEL MUNDO EN CUADRÍCULA (3D): casillas de llanura, bosque, colina, lago y montaña
+  // ------------------------------------------------------------------
+  var TAM_MUNDO = 40, CELDA_M = 2;
+  var TIPOS_CASILLA = {
+    llanura: { r: 'comida', color: 0xa9b86c, icono: '🌾' },
+    bosque: { r: 'madera', color: 0x748f4a, icono: '🌲' },
+    colina: { r: 'piedra', color: 0xbfae7c, icono: '⛰️' },
+    lago: { r: 'comida', color: 0x4f8fb8, icono: '🌊' },
+    montana: { r: 'oro', color: 0x9a948a, icono: '🏔️' }
+  };
+  function hashM(x, y) { var h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); }
+  function ruidoM(x, y) {
+    var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, s = function (t) { return t * t * (3 - 2 * t); };
+    var a = hashM(xi, yi), b = hashM(xi + 1, yi), c = hashM(xi, yi + 1), d = hashM(xi + 1, yi + 1);
+    return a + (b - a) * s(xf) + (c - a) * s(yf) + (a - b - c + d) * s(xf) * s(yf);
+  }
+  // el mismo mapa para todos los jugadores (sale de una fórmula, no se guarda)
+  function casillaMundo(x, y) {
+    var n = ruidoM(x / 6, y / 6) * 0.65 + ruidoM(x / 2.5 + 50, y / 2.5 + 50) * 0.35;
+    var tipo = n < 0.3 ? 'lago' : n < 0.5 ? 'llanura' : n < 0.66 ? 'bosque' : n < 0.8 ? 'colina' : 'montana';
+    var lejos = Math.hypot(x - 20, y - 20) / 28;
+    var nivel = Math.max(1, Math.min(5, 1 + Math.floor(hashM(x + 7, y + 13) * 3 + lejos * 2.5)));
+    return { id: x + '_' + y, x: x, y: y, tipo: tipo, nivel: nivel };
+  }
+  function celdaDe(px, py) { return { x: Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(px * TAM_MUNDO / 100))), y: Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(py * TAM_MUNDO / 100))) }; }
+  function posCelda(x, y) { return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
+  function maxCasillas() { return estado.castillo || 1; }
+  function misCasillas() { return Object.keys(estado.casillas || {}); }
+  // bonus de producción de las casillas conquistadas (2% por nivel de cada casilla de ese recurso)
+  function bonoCasillas(recurso) {
+    var b = 0, c = estado.casillas || {};
+    for (var k in c) if (TIPOS_CASILLA[c[k].tipo] && TIPOS_CASILLA[c[k].tipo].r === recurso) b += 0.02 * c[k].nivel;
+    return b;
+  }
+  function defensaCasilla(c) { return Math.round(600 * Math.pow(c.nivel, 1.8)); }
+  function defensaCampamento(n) { return Math.round(900 * Math.pow(n, 1.5)); }
+  var casillasNube = {}, M3 = null, ocupadasMundo = {};
+  // batalla genérica: devuelve si ganó, qué parte del ejército cae y qué tan bien le fue
+  function resolverBatalla(f, d) {
+    var fa = f * (0.85 + Math.random() * 0.3), fd = Math.max(1, d) * (0.85 + Math.random() * 0.3), gano = fa > fd;
+    return { gano: gano, bajas: gano ? Math.min(0.5, Math.max(0.05, fd / fa * 0.4)) : Math.min(0.9, Math.max(0.3, fd / fa * 0.5)), margen: gano ? Math.min(1, 0.5 + (fa - fd) / fd) : 0 };
+  }
+  function bajasEjercito(frac) {
+    var vivos = tropas.filter(function (u) { return !u.heroeId && !u.refuerzo; }), nb = Math.round(vivos.length * frac), caidas = 0;
+    vivos.sort(function () { return Math.random() - 0.5; });
+    for (var i = 0; i < nb && i < vivos.length; i++) { vivos[i].vida = 0; morir(vivos[i]); caidas++; }
+    return caidas;
+  }
+  function crearMundo3D() {
+    var cont = $('mundo-mapa');
+    var r = new THREE.WebGLRenderer({ antialias: true });
+    r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    r.setClearColor(0x2a5a7a);
+    r.domElement.id = 'mundo-3d';
+    cont.appendChild(r.domElement);
+    var e = new THREE.Scene();
+    e.fog = new THREE.Fog(0x2a5a7a, 70, 140);
+    e.add(new THREE.HemisphereLight(0xffffff, 0x6a7a5a, 0.75));
+    var sol = new THREE.DirectionalLight(0xffffff, 0.65); sol.position.set(20, 40, 25); e.add(sol);
+    var cam = new THREE.PerspectiveCamera(38, 1, 0.5, 300);
+    // suelo: una baldosa por casilla (con una rendija para que se vea la cuadrícula)
+    var n = TAM_MUNDO * TAM_MUNDO, mat0 = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    var suelo = new THREE.InstancedMesh(new THREE.BoxGeometry(CELDA_M * 0.94, 0.3, CELDA_M * 0.94), mat0, n);
+    var arbol = [], loma = [], pico = [], nieve = [], tmp = new THREE.Object3D(), col = new THREE.Color(), k = 0;
+    for (var y = 0; y < TAM_MUNDO; y++) for (var x = 0; x < TAM_MUNDO; x++) {
+      var c = casillaMundo(x, y), p = posCelda(x, y), t = TIPOS_CASILLA[c.tipo];
+      tmp.position.set(p.x, c.tipo === 'lago' ? -0.18 : -0.15 + (hashM(x, y) - 0.5) * 0.06, p.z); tmp.rotation.set(0, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix();
+      suelo.setMatrixAt(k, tmp.matrix);
+      col.setHex(t.color).offsetHSL(0, 0, (hashM(y, x) - 0.5) * 0.06); suelo.setColorAt(k, col); k++;
+      if (c.tipo === 'bosque') for (var a = 0; a < 3; a++) arbol.push([p.x + (hashM(x + a, y) - 0.5) * 1.2, p.z + (hashM(x, y + a) - 0.5) * 1.2, 0.7 + hashM(x * a, y) * 0.5]);
+      if (c.tipo === 'colina') for (var b = 0; b < 2; b++) loma.push([p.x + (hashM(x + b, y + 3) - 0.5) * 0.9, p.z + (hashM(x + 5, y + b) - 0.5) * 0.9, 0.6 + hashM(x, y * b + 1) * 0.3]);
+      if (c.tipo === 'montana') { pico.push([p.x, p.z, 1 + c.nivel * 0.12]); }
+    }
+    e.add(suelo);
+    function instancias(geo, color, lista, fn) {
+      if (!lista.length) return;
+      var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: color }), lista.length);
+      lista.forEach(function (q, i) { fn(q); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); });
+      e.add(im);
+    }
+    instancias(new THREE.ConeGeometry(0.32, 0.9, 6), 0x4a7a34, arbol, function (q) { tmp.position.set(q[0], 0.45 * q[2] + 0.2, q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, 0, 0); });
+    instancias(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 5), 0x6a4426, arbol, function (q) { tmp.position.set(q[0], 0.12, q[1]); tmp.scale.set(1, 1, 1); });
+    instancias(new THREE.SphereGeometry(0.55, 8, 6), 0x9a9058, loma, function (q) { tmp.position.set(q[0], 0, q[1]); tmp.scale.set(q[2], q[2] * 0.55, q[2]); });
+    instancias(new THREE.ConeGeometry(0.85, 1.6, 6), 0x7a746a, pico, function (q) { tmp.position.set(q[0], 0.8 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); });
+    instancias(new THREE.ConeGeometry(0.36, 0.5, 6), 0xf4f4f4, pico, function (q) { tmp.position.set(q[0], (1.35) * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); });
+    // marco de madera alrededor del mundo
+    var marco = new THREE.Mesh(new THREE.BoxGeometry(TAM_MUNDO * CELDA_M + 1.2, 0.5, TAM_MUNDO * CELDA_M + 1.2), new THREE.MeshLambertMaterial({ color: 0x5e3d24 }));
+    marco.position.y = -0.45; e.add(marco);
+    // marcador de la casilla elegida
+    var sel = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.98, 4), new THREE.MeshBasicMaterial({ color: 0xffe14a, transparent: true, opacity: 0.95, depthWrite: false }));
+    sel.rotation.x = -Math.PI / 2; sel.rotation.z = Math.PI / 4; sel.position.y = 0.05; sel.visible = false; sel.renderOrder = 5; e.add(sel);
+    var cosas = new THREE.Group(); e.add(cosas);
+    M3 = { r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {} };
+    // mover con el dedo / ratón, acercar con rueda o pellizco, tocar para elegir
+    var el = r.domElement, dedos = {}, inicio = null, pell = null;
+    el.style.touchAction = 'none';
+    el.addEventListener('pointerdown', function (ev) { try { el.setPointerCapture(ev.pointerId); } catch (x) {} dedos[ev.pointerId] = { x: ev.clientX, y: ev.clientY }; var ids = Object.keys(dedos); if (ids.length === 1) inicio = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, movio: false }; if (ids.length === 2) { var a = dedos[ids[0]], b = dedos[ids[1]]; pell = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: M3.dist }; inicio = null; } });
+    el.addEventListener('pointermove', function (ev) {
+      if (!dedos[ev.pointerId]) return; dedos[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+      var ids = Object.keys(dedos);
+      if (pell && ids.length === 2) { var a = dedos[ids[0]], b = dedos[ids[1]]; M3.dist = Math.max(12, Math.min(75, pell.dist * pell.d / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)))); return; }
+      if (!inicio) return;
+      var dx = ev.clientX - inicio.x, dy = ev.clientY - inicio.y; inicio.x = ev.clientX; inicio.y = ev.clientY;
+      if (Math.hypot(ev.clientX - inicio.sx, ev.clientY - inicio.sy) > 6) inicio.movio = true;
+      var kk = M3.dist / el.clientHeight * 1.3, lim = TAM_MUNDO * CELDA_M / 2;
+      M3.obj.x = Math.max(-lim, Math.min(lim, M3.obj.x - dx * kk)); M3.obj.z = Math.max(-lim, Math.min(lim, M3.obj.z - dy * kk * 1.25));
+    });
+    function soltar(ev) {
+      var era = inicio; delete dedos[ev.pointerId];
+      if (Object.keys(dedos).length < 2) pell = null;
+      if (era && !era.movio && ev.type === 'pointerup') tocarMundo(ev.clientX, ev.clientY);
+      if (!Object.keys(dedos).length) inicio = null;
+    }
+    el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
+    el.addEventListener('wheel', function (ev) { ev.preventDefault(); M3.dist = Math.max(12, Math.min(75, M3.dist * (ev.deltaY > 0 ? 1.1 : 0.9))); }, { passive: false });
+  }
+  var rayoM = new THREE.Raycaster(), planoM = new THREE.Plane(new V3(0, 1, 0), 0);
+  function tocarMundo(cx, cy) {
+    var rc = M3.r.domElement.getBoundingClientRect();
+    var v = new THREE.Vector2((cx - rc.left) / rc.width * 2 - 1, -(cy - rc.top) / rc.height * 2 + 1);
+    rayoM.setFromCamera(v, M3.cam);
+    var p = new V3(); if (!rayoM.ray.intersectPlane(planoM, p)) return;
+    var x = Math.floor(p.x / CELDA_M + TAM_MUNDO / 2), y = Math.floor(p.z / CELDA_M + TAM_MUNDO / 2);
+    if (x < 0 || y < 0 || x >= TAM_MUNDO || y >= TAM_MUNDO) return;
+    sonar('click');
+    elegirCelda(x, y);
+  }
+  function elegirCelda(x, y) {
+    var p = posCelda(x, y);
+    M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
+    var q = ocupadasMundo[x + '_' + y];
+    if (q && q.aldea !== undefined) { var b = $('mundo-aldeas').querySelector('[data-aldea="' + q.aldea + '"]'); if (b) b.click(); return; }
+    if (q && q.campamento !== undefined) { mostrarCampamento(q.campamento); return; }
+    mostrarCasilla(casillaMundo(x, y));
+  }
+  function dibujarMundo3D() {
+    if (!M3 || !enMundo) { if (M3) M3.corriendo = false; return; }
+    var cont = $('mundo-mapa'), w = cont.clientWidth, h = cont.clientHeight;
+    if (M3.w !== w || M3.h !== h) { M3.r.setSize(w, h); M3.cam.aspect = w / h; M3.cam.updateProjectionMatrix(); M3.w = w; M3.h = h; }
+    var d = M3.dist;
+    M3.cam.position.set(M3.obj.x, d * 0.85, M3.obj.z + d * 0.62); M3.cam.lookAt(M3.obj);
+    M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
+    M3.r.render(M3.e, M3.cam);
+    requestAnimationFrame(dibujarMundo3D);
+  }
+  // castillos, campamentos y banderas de las casillas conquistadas
+  function ponerCosasMundo(lista, yo) {
+    if (!M3) crearMundo3D();
+    while (M3.cosas.children.length) M3.cosas.remove(M3.cosas.children[0]);
+    ocupadasMundo = {};
+    CAMPAMENTOS.forEach(function (cm, i) {
+      var c = celdaDe(cm.x, cm.y), p = posCelda(c.x, c.y), g = new THREE.Group();
+      g.add(M.cono(0.55, 0.9, 6, 0x8a5a33, -0.3, 0.45, 0)); g.add(M.cono(0.4, 0.7, 6, 0x6b8a2a, 0.4, 0.35, -0.2));
+      g.add(M.cono(0.12, 0.25, 5, 0xff9a2a, 0.15, 0.12, 0.45));
+      var et = M.etiquetaEdificio('⛺ ' + T('leyenda_trasgos'), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
+      g.position.copy(p); M3.cosas.add(g);
+      ocupadasMundo[c.x + '_' + c.y] = { campamento: i };
+    });
+    lista.forEach(function (a, i) {
+      var c = celdaDe(a.x, a.y), p = posCelda(c.x, c.y), g = new THREE.Group();
+      var tam = a.uid === yo ? nivelVisual(estado.castillo || 1) : (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3);
+      var cs = M.castillo(tam); cs.scale.setScalar(0.12); g.add(cs);
+      var esYo = a.uid === yo, aliada = estado.alianza && a.alianza === estado.alianza;
+      if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
+      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14), a.nivel || 1); et.position.set(0, 2.7, 0); et.scale.multiplyScalar(0.62); g.add(et);
+      if ((a.escudo || 0) > Date.now()) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x6fb7ff, transparent: true, opacity: 0.25, depthWrite: false })); g.add(cup); }
+      g.position.copy(p); M3.cosas.add(g);
+      ocupadasMundo[c.x + '_' + c.y] = { aldea: i };
+      if (esYo) M3.miCelda = c;
+    });
+    // banderas en las casillas conquistadas (mías doradas, de mi hermandad azules, de otros rojas)
+    var todas = {};
+    for (var k in casillasNube) todas[k] = casillasNube[k];
+    misCasillas().forEach(function (k) { todas[k] = { dueno: yo, nombre: '' }; });
+    Object.keys(todas).forEach(function (k) {
+      var xy = k.split('_'), p = posCelda(+xy[0], +xy[1]), dq = todas[k];
+      var color = dq.dueno === yo ? 0xffc93a : (estado.alianza && dq.alianza === estado.alianza ? 0x4aa3ff : 0xd2463a);
+      var f = new THREE.Group();
+      f.add(M.cil(0.03, 0.03, 0.9, 5, 0x5e3d24, 0.6, 0.45, 0.6));
+      f.add(M.caja(0.35, 0.22, 0.02, color, 0.78, 0.78, 0.6));
+      var borde = new THREE.Mesh(new THREE.RingGeometry(0.86, 0.94, 4), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.8, depthWrite: false }));
+      borde.rotation.x = -Math.PI / 2; borde.rotation.z = Math.PI / 4; borde.position.y = 0.03; f.add(borde);
+      f.position.copy(p); M3.cosas.add(f);
+    });
+  }
+  function mostrarCasilla(c) {
+    var t = TIPOS_CASILLA[c.tipo], mia = !!(estado.casillas || {})[c.id], nube = casillasNube[c.id];
+    var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
+    var deOtro = nube && nube.dueno !== yo && !mia;
+    var html = '<div class="carta casilla-info"><h3>' + t.icono + ' ' + T('cas_' + c.tipo) + ' <span class="me-nivel">' + c.nivel + '</span></h3>' +
+      '<div class="stats"><span>📍 ' + c.x + ', ' + c.y + '</span><span>' + ICONO_RECURSO[t.r] + ' +' + Math.round(2 * c.nivel) + '% ' + T('r_' + t.r) + '</span><span>🛡️ ' + T('cas_guardianes') + ' ' + formatoNumero(defensaCasilla(c)) + '</span></div>';
+    if (mia) html += '<p class="nota"><b>' + T('cas_tuya') + '</b></p><button class="comprar" id="cas-soltar">' + T('cas_abandonar') + '</button>';
+    else if (deOtro) html += '<p class="nota">' + T('cas_de', { n: escaparHTML(nube.nombre || '?') }) + '</p><button class="comprar rojo boton-oleada-grande" id="cas-conquistar">⚔️ ' + T('cas_quitar') + '</button>';
+    else html += '<p class="nota">' + T('cas_libre', { n: misCasillas().length, m: maxCasillas() }) + '</p><button class="comprar rojo boton-oleada-grande" id="cas-conquistar">🚩 ' + T('cas_conquistar') + '</button>';
+    $('mundo-info').innerHTML = html + '</div>';
+    var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { this.disabled = true; conquistarCasilla(c, deOtro ? nube : null); });
+    var bs = $('cas-soltar'); if (bs) bs.addEventListener('click', function () { soltarCasilla(c); });
+  }
+  function conquistarCasilla(c, deOtro) {
+    if (!tropas.some(function (u) { return !u.heroeId; })) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCasilla(c); return; }
+    if (!deOtro && misCasillas().length >= maxCasillas()) { consejoTemporal(T('cas_maximo', { n: maxCasillas() })); sonar('error'); mostrarCasilla(c); return; }
+    var f = fuerzaEjercito(), d = defensaCasilla(c) * (deOtro ? 1.4 : 1), res = resolverBatalla(f, d);
+    sonar('cuerno');
+    var listo = null, mostrar = null;
+    escenaBatalla({ nombre: T('cas_' + c.tipo) + ' ' + c.x + ',' + c.y, nivel: c.nivel, retrato: null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    var caidas = bajasEjercito(res.bajas);
+    function fin(extra) {
+      listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('cas_ganada') : T('cas_perdida')) + '</p>' + (extra || '') + '<p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
+      if (mostrar) mostrar(listo);
+      guardar(true); actualizarHUD(); if (enMundo) { pintarAldeas(aldeasCache); mostrarCasilla(c); }
+    }
+    if (!res.gano) { sonar('derrota'); fin(); return; }
+    estado.casillas = estado.casillas || {};
+    estado.casillas[c.id] = { tipo: c.tipo, nivel: c.nivel };
+    sonar('victoria');
+    if (hayCuenta()) Cuentas.tomarCasilla(c.id, { dueno: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), alianza: estado.alianza || '', fecha: Date.now() })
+      .then(function () { casillasNube[c.id] = { dueno: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), alianza: estado.alianza || '' }; fin(); })
+      .catch(function () { fin(); });
+    else fin();
+  }
+  function soltarCasilla(c) {
+    confirmarJuego('🏳️ ' + T('cas_abandonar'), T('cas_abandonar_txt'), T('cas_abandonar'), function () {
+      delete estado.casillas[c.id];
+      if (hayCuenta()) Cuentas.soltarCasilla(c.id).catch(function () {});
+      delete casillasNube[c.id];
+      sonar('click'); guardar(true);
+      pintarAldeas(aldeasCache); mostrarCasilla(c);
+    });
+  }
+  function mostrarCampamento(i) {
+    var cm = CAMPAMENTOS[i], c = celdaDe(cm.x, cm.y), espera = ((estado.cdCamp || {})[i] || 0) - Date.now();
+    var html = '<div class="carta"><h3>⛺ ' + T('campamento') + ' <span class="me-nivel">' + cm.nivel + '</span></h3><p>' + T('campamento_txt') + '</p>' +
+      '<div class="stats"><span>📍 ' + c.x + ', ' + c.y + '</span><span>🛡️ ' + formatoNumero(defensaCampamento(cm.nivel)) + '</span><span>' + T('at_botin') + ': ' + textoBotin(botinMaximo(cm.nivel)) + '</span></div>' +
+      (espera > 0 ? '<p class="nota aviso-rojo">' + T('camp_espera', { t: fmtTiempo(espera / 1000) }) + '</p>' : '<button class="comprar rojo boton-oleada-grande" id="camp-atacar">⚔️ ' + T('camp_atacar') + '</button>') + '</div>';
+    $('mundo-info').innerHTML = html;
+    var b = $('camp-atacar'); if (b) b.addEventListener('click', function () { this.disabled = true; atacarCampamento(i); });
+  }
+  function atacarCampamento(i) {
+    var cm = CAMPAMENTOS[i];
+    if (!tropas.some(function (u) { return !u.heroeId; })) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCampamento(i); return; }
+    var f = fuerzaEjercito(), d = defensaCampamento(cm.nivel), res = resolverBatalla(f, d);
+    var bm = botinMaximo(cm.nivel), botin = {};
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { botin[r] = Math.floor(bm[r] * res.margen); });
+    sonar('cuerno');
+    var listo = null, mostrar = null;
+    escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento' }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    var caidas = bajasEjercito(res.bajas);
+    if (res.gano) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); } else sonar('derrota');
+    estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
+    listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
+    if (mostrar) mostrar(listo);
+    guardar(true); actualizarHUD(); mostrarCampamento(i);
   }
   function cerrarMundo() { $('mundo').classList.add('oculto'); enMundo = false; }
   // volver a la ciudad desde el mapa: la cámara baja desde lo alto hasta el reino
@@ -866,6 +1124,8 @@
         (a.alianza ? '[' + escaparHTML(a.alianza) + '] ' : '') + escaparHTML(a.nombre) + '</span><span class="niv">' + a.nivel + '</span></button>';
     });
     cont.innerHTML = h;
+    ponerCosasMundo(lista, yo);
+    if (M3 && M3.miCelda && !M3.centrado) { var pc = posCelda(M3.miCelda.x, M3.miCelda.y); M3.obj.copy(pc); M3.centrado = true; }
     cont.querySelectorAll('.aldea').forEach(function (el) {
       el.addEventListener('click', function () {
         sonar('click');
@@ -1568,7 +1828,7 @@
   // ---- CAMPOS DE RECURSOS ----
   function ritmoCampo(s) {
     var d = EDIFICIOS[s.edificio.tipo];
-    return d.produce[s.edificio.nivel - 1] * (1 + bono({ comida: 'cosecha', madera: 'lenadores', piedra: 'canteros' }[d.recurso] || '')) / d.cada;
+    return d.produce[s.edificio.nivel - 1] * (1 + bono({ comida: 'cosecha', madera: 'lenadores', piedra: 'canteros' }[d.recurso] || '') + bonoCasillas(d.recurso)) / d.cada;
   }
   function capacidadCampo(s) { return s.edificio && esCampo(s.edificio.tipo) ? ritmoCampo(s) * HORAS_ALMACEN * 3600 : 0; }
   function recolectarCampo(s) {
@@ -3513,7 +3773,7 @@
       '<div class="bp-lado yo"><div class="bp-retratos">' + (retr || '🛡️') + '</div><b>' + escaparHTML(Cuentas.nombrePublico ? Cuentas.nombrePublico() : T('tu_reino')) + '</b>' +
       '<div class="bp-tropas">' + mios + '</div><div class="bp-barra"><div id="bp-b1"></div></div><span class="bp-num" id="bp-n1">' + formatoNumero(Math.round(f)) + '</span></div>' +
       '<div class="bp-vs"><span>VS</span><div class="bp-choque" id="bp-choque">💥</div></div>' +
-      '<div class="bp-lado el"><div class="bp-retratos">' + (retratos['mapa_castillo' + tam] ? '<img src="' + retratos['mapa_castillo' + tam] + '" alt="">' : '🏰') + '</div><b>' + escaparHTML(a.nombre) + '</b>' +
+      '<div class="bp-lado el"><div class="bp-retratos">' + (retratos[a.retrato || ('mapa_castillo' + tam)] ? '<img src="' + retratos[a.retrato || ('mapa_castillo' + tam)] + '" alt="">' : (a.retrato === null ? '🚩' : '🏰')) + '</div><b>' + escaparHTML(a.nombre) + '</b>' +
       '<div class="bp-tropas"><span>⭐ ' + a.nivel + '</span></div><div class="bp-barra rojo"><div id="bp-b2"></div></div><span class="bp-num" id="bp-n2">' + formatoNumero(Math.round(d)) + '</span></div>' +
       '</div><div class="bp-pie"><button class="comprar mini" id="bp-x2">x2</button><button class="comprar mini" id="bp-saltar">' + T('bp_saltar') + '</button></div><div class="bp-res" id="bp-res"></div></div>';
     document.body.appendChild(caja);
@@ -4412,6 +4672,8 @@
       estado.equipo = (g.equipo || ['sol']).filter(function (id) { return estado.heroes[id]; }).slice(0, 3);
       estado.reclutaGratis = g.reclutaGratis || '';
       estado.ofertaFrag = g.ofertaFrag || '';
+      estado.casillas = g.casillas || {};
+      estado.cdCamp = g.cdCamp || {};
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
       var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
@@ -4557,6 +4819,7 @@
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); },
+    mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
