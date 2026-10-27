@@ -2015,7 +2015,7 @@
       if (!oleadaActiva && !enemigos.length && !u.volviendo) u.volviendo = true;
       if (u.heroeId && oleadaActiva && enemigos.length && !u.volviendo) {
         u.cdHab = (u.cdHab === undefined ? 3 : u.cdHab) - dt;
-        if (u.cdHab <= 0 && usarHabilidad(u)) u.cdHab = HABILIDADES[HEROE[u.heroeId].hab].cd;
+        if (u.cdHab <= 0 && usarHabilidad(u)) u.cdHab = recargaHab(u.heroeId);
       }
       if (u.volviendo) {
         u.barra.visible = false;
@@ -2033,7 +2033,11 @@
         if (obj) {
           encararHacia(u, obj.pos.x, obj.pos.z, dt);
           if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u), Math.random() < 0.5); }
-        } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
+        } else {
+          // los héroes de distancia avanzan hacia los enemigos que se acercan a su puesto
+          var lejos = u.heroeId ? masCercano(enemigos.filter(function (e) { return e.pos.distanceTo(u.puesto) < 17; }), u.pos, 99) : null;
+          caminando = lejos ? !moverHacia(u, lejos.pos.x, lejos.pos.z, d.vel, dt) : !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
+        }
       } else {
         var correa = u.tipo === 'heroe' ? 13 : 9.5;
         obj = masCercano(enemigos.filter(function (e) { return e.pos.distanceTo(u.puesto) < correa; }), u.pos, 99);
@@ -2879,7 +2883,8 @@
   function statsHeroe(id) {
     var h = HEROE[id], e = estado.heroes[id] || { nivel: 1, estrellas: 1 };
     var f = (1 + 0.06 * (e.nivel - 1)) * (1 + 0.2 * (e.estrellas - 1));
-    return { vida: Math.round(h.vida * f), dano: Math.round(h.dano * f), alcance: h.alcance, vel: 3.4, ritmo: h.distancia ? 1.1 : 0.8,
+    var tal = TALENTOS[h.clase], tl = e.tal || 0;
+    return { vida: Math.round(h.vida * f * (1 + (tal.vida || 0) * tl)), dano: Math.round(h.dano * f * (1 + (tal.dano || 0) * tl)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4, ritmo: h.distancia ? 1.1 : 0.8,
       cura: Math.round(6 * f), distancia: !!h.distancia, icono: CLASES_HEROE[h.clase] };
   }
   function topeNivel(id) { return Math.min(HEROE_NIVEL_MAX, (estado.heroes[id].estrellas || 1) * 10); }
@@ -2904,47 +2909,48 @@
     asignarPuestos();
   }
   function usarHabilidad(u) {
-    var h = HEROE[u.heroeId], hab = HABILIDADES[h.hab], dano = u.d.dano * furia(u);
-    var cerca = enemigos.filter(function (e) { return e.pos.distanceTo(u.pos) < hab.rango; }).sort(function (a, b) { return a.pos.distanceTo(u.pos) - b.pos.distanceTo(u.pos); });
-    var amigos = tropasFuera().filter(function (t) { return t.pos.distanceTo(u.pos) < hab.rango; });
+    var h = HEROE[u.heroeId], hab = HABILIDADES[h.hab], dano = u.d.dano * furia(u), V = valoresHab(h.hab, nivelHab(u.heroeId));
+    var rango = hab.rango * (h.distancia ? 1.8 : 1); // los de distancia lanzan su poder desde más lejos
+    var cerca = enemigos.filter(function (e) { return e.pos.distanceTo(u.pos) < rango; }).sort(function (a, b) { return a.pos.distanceTo(u.pos) - b.pos.distanceTo(u.pos); });
+    var amigos = tropasFuera().filter(function (t) { return t.pos.distanceTo(u.pos) < rango; });
     var alto = u.pos.clone().setY(1.6 * u.m.escala);
     switch (h.hab) {
       case 'grito':
         if (!cerca.length) return false;
-        amigos.forEach(function (t) { t.furia = tiempo + 5; chispas(t.pos.clone().setY(1.2), 0xff7a3a, 3, 2); });
+        amigos.forEach(function (t) { t.furia = tiempo + V.dur; chispas(t.pos.clone().setY(1.2), 0xff7a3a, 3, 2); });
         chispas(alto, 0xff7a3a, 24, 5); break;
       case 'rayo':
         if (!cerca.length) return false;
-        cerca.slice(0, 4).forEach(function (e, i) { setTimeout(function () { if (e.vida > 0) { danar(e, dano * 2.5, u); chispas(e.pos.clone().setY(1.2), 0xb48cff, 14, 4); } }, i * 120); });
+        cerca.slice(0, V.saltos).forEach(function (e, i) { setTimeout(function () { if (e.vida > 0) { danar(e, dano * V.mult, u); chispas(e.pos.clone().setY(1.2), 0xb48cff, 14, 4); } }, i * 120); });
         chispas(alto, 0xb48cff, 16, 4); break;
       case 'canon':
         if (!cerca.length) return false;
         var fuerte = cerca.slice().sort(function (a, b) { return b.vida - a.vida; })[0];
-        enemigos.filter(function (e) { return e !== fuerte && e.pos.distanceTo(fuerte.pos) < 2.5; }).forEach(function (e) { danar(e, dano * 2, u); });
-        danar(fuerte, dano * 6, u);
+        enemigos.filter(function (e) { return e !== fuerte && e.pos.distanceTo(fuerte.pos) < 2.5; }).forEach(function (e) { danar(e, dano * V.mult2, u); });
+        danar(fuerte, dano * V.mult, u);
         chispas(fuerte.pos.clone().setY(1), 0xffa030, 34, 6); chispas(fuerte.pos.clone().setY(0.5), 0x5a5048, 16, 3); break;
       case 'lluvia':
         if (!cerca.length) return false;
         var centro = cerca[0].pos;
-        enemigos.filter(function (e) { return e.pos.distanceTo(centro) < 3.5; }).forEach(function (e, i) { setTimeout(function () { if (e.vida > 0) disparar(u.pos.clone().setY(3.5), e, dano * 2.5, i === 0); }, i * 60); });
+        enemigos.filter(function (e) { return e.pos.distanceTo(centro) < V.radio; }).forEach(function (e, i) { setTimeout(function () { if (e.vida > 0) disparar(u.pos.clone().setY(3.5), e, dano * V.mult, i === 0); }, i * 60); });
         break;
       case 'bomba':
         if (!cerca.length) return false;
         var c2 = cerca[0].pos.clone();
-        enemigos.filter(function (e) { return e.pos.distanceTo(c2) < 3; }).forEach(function (e) { danar(e, dano * 4, u); });
+        enemigos.filter(function (e) { return e.pos.distanceTo(c2) < V.radio; }).forEach(function (e) { danar(e, dano * V.mult, u); });
         chispas(c2.clone().setY(0.8), 0xffb020, 36, 6); chispas(c2.clone().setY(0.4), 0x4a4440, 18, 3); break;
       case 'escudo':
         if (!cerca.length) return false;
-        amigos.forEach(function (t) { t.escudoHasta = tiempo + 5; chispas(t.pos.clone().setY(1), 0x6fb7ff, 4, 2); });
+        amigos.forEach(function (t) { t.escudoHasta = tiempo + V.dur; chispas(t.pos.clone().setY(1), 0x6fb7ff, 4, 2); });
         chispas(alto, 0x6fb7ff, 22, 4); break;
       case 'golpe':
         if (!cerca.length) return false;
-        cerca.forEach(function (e) { danar(e, dano * 2, u); e.aturdido = 2; });
+        cerca.forEach(function (e) { danar(e, dano * V.mult, u); e.aturdido = V.mareo; });
         chispas(u.pos.clone().setY(0.3), 0xffe14a, 30, 5); break;
       case 'curar':
         var heridos = amigos.filter(function (t) { return t.vida < t.max * 0.95; });
         if (!heridos.length || !cerca.length && !heridos.length) return false;
-        heridos.forEach(function (t) { t.vida = Math.min(t.max, t.vida + t.max * 0.25); M.ponerVida(t.barra, t.vida / t.max); chispas(t.pos.clone().setY(1.1), 0x7fe39a, 6, 2); });
+        heridos.forEach(function (t) { t.vida = Math.min(t.max, t.vida + t.max * V.cura); M.ponerVida(t.barra, t.vida / t.max); chispas(t.pos.clone().setY(1.1), 0x7fe39a, 6, 2); });
         break;
     }
     u.ataque = 1;
@@ -2969,6 +2975,96 @@
       (reclutaGratisHoy() ? '<button class="comprar naranja" data-accion="reclutar" data-n="gratis">' + T('reclutar_gratis') + '</button>' : botonGemas(RECLUTAR.uno, 'reclutar', 'data-n="1"', '×1')) +
       botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>';
     abrirPanel(T('p_heroes'), html, { tipo: 'heroes' });
+  }
+  // ---------- HABILIDADES CON NIVEL ----------
+  // Poder (activo): nivel 1..5, cada estrella abre un nivel. Talento (pasivo por clase): se abre con 2★, nivel máximo = estrellas - 1.
+  var HAB_MAX = 5;
+  function nivelHab(id) { var e = estado.heroes[id]; return e ? Math.max(1, e.hab || 1) : 1; }
+  function nivelTal(id) { var e = estado.heroes[id]; return e ? (e.tal || 0) : 0; }
+  function topeHab(id) { var e = estado.heroes[id]; return e ? Math.min(HAB_MAX, e.estrellas) : 1; }
+  function topeTal(id) { var e = estado.heroes[id]; return e ? Math.max(0, Math.min(4, e.estrellas - 1)) : 0; }
+  function costoHab(L) { return { oro: 300 * L, perg: 2 * L }; }   // para pasar del nivel L al L+1
+  function costoTal(L) { return { oro: 250 * (L + 1), perg: 2 * (L + 1) }; }
+  var TALENTOS = {
+    infanteria: { icono: '💪', dano: 0.06 },
+    arquero: { icono: '🎯', dano: 0.05, alcance: 0.3 },
+    magia: { icono: '🔮', recarga: 0.05 },
+    guardian: { icono: '🧱', vida: 0.08 }
+  };
+  function fuerzaHab(L) { return 1 + 0.15 * (L - 1); }
+  function recargaHab(id, L) {
+    var h = HEROE[id], t = TALENTOS[h.clase], tl = L === undefined ? nivelTal(id) : nivelTal(id);
+    var cd = HABILIDADES[h.hab].cd - 0.5 * ((L || nivelHab(id)) - 1);
+    if (t.recarga) cd *= 1 - t.recarga * tl;
+    return Math.max(3, Math.round(cd * 10) / 10);
+  }
+  // valores del poder en un nivel (para la batalla y para la vista previa)
+  function valoresHab(hab, L) {
+    var f = fuerzaHab(L), p = function (x) { return Math.round(x * f) + '%'; };
+    switch (hab) {
+      case 'grito': return { dur: 5 + (L - 1), filas: [[T('hv_extra'), '+40%'], [T('hv_dur'), (5 + (L - 1)) + ' s']] };
+      case 'rayo': return { mult: 2.5 * f, saltos: 4 + Math.floor((L - 1) / 2), filas: [[T('hv_dano'), p(250)], [T('hv_saltos'), 4 + Math.floor((L - 1) / 2)]] };
+      case 'canon': return { mult: 6 * f, mult2: 2 * f, filas: [[T('hv_dano'), p(600)], [T('hv_alrededor'), p(200)]] };
+      case 'lluvia': return { mult: 2.5 * f, radio: 3.5 + 0.25 * (L - 1), filas: [[T('hv_flecha'), p(250)], [T('hv_radio'), (3.5 + 0.25 * (L - 1)).toFixed(2).replace(/0$/, '')]] };
+      case 'bomba': return { mult: 4 * f, radio: 3 + 0.25 * (L - 1), filas: [[T('hv_dano'), p(400)], [T('hv_radio'), (3 + 0.25 * (L - 1)).toFixed(2).replace(/0$/, '')]] };
+      case 'escudo': return { dur: 5 + (L - 1), filas: [[T('hv_menos'), '-50%'], [T('hv_dur'), (5 + (L - 1)) + ' s']] };
+      case 'golpe': return { mult: 2 * f, mareo: 2 + 0.25 * (L - 1), filas: [[T('hv_dano'), p(200)], [T('hv_mareo'), (2 + 0.25 * (L - 1)) + ' s']] };
+      case 'curar': return { cura: 0.25 + 0.05 * (L - 1), filas: [[T('hv_cura'), (25 + 5 * (L - 1)) + '%']] };
+    }
+    return { filas: [] };
+  }
+  function filasTalento(clase, L) {
+    var t = TALENTOS[clase], r = [];
+    if (t.dano) r.push([T('hv_dano_heroe'), '+' + Math.round(t.dano * L * 100) + '%']);
+    if (t.alcance) r.push([T('alcance'), '+' + (t.alcance * L).toFixed(1)]);
+    if (t.vida) r.push([T('hv_vida_heroe'), '+' + Math.round(t.vida * L * 100) + '%']);
+    if (t.recarga) r.push([T('hv_recarga'), '-' + Math.round(t.recarga * L * 100) + '%']);
+    return r;
+  }
+  function tablaPrevia(ahora, luego) {
+    return '<div class="hv-tabla">' + ahora.map(function (f, i) {
+      var sig = luego && luego[i] ? luego[i][1] : null;
+      return '<div class="hv-f"><span>' + f[0] + '</span><b>' + f[1] + '</b>' + (sig !== null && String(sig) !== String(f[1]) ? '<i>→ ' + sig + '</i>' : '') + '</div>';
+    }).join('') + '</div>';
+  }
+  function botonCostoHab(c, accion, id) {
+    var ok = (estado.mochila.pergamino || 0) >= c.perg && puedePagar({ oro: c.oro });
+    return '<button class="comprar" data-accion="' + accion + '" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>' + T('mejorar') +
+      ' <span class="costo-r' + ((estado.mochila.pergamino || 0) >= c.perg ? '' : ' no') + '">📜' + c.perg + '</span>' + htmlCosto({ oro: c.oro }) + '</button>';
+  }
+  function htmlHabilidades(id) {
+    var h = HEROE[id], e = estado.heroes[id], hb = HB(h.hab), L = nivelHab(id), tope = topeHab(id);
+    var ahora = valoresHab(h.hab, L).filas.concat([[T('hv_recarga'), recargaHab(id, L) + ' s']]);
+    var luego = L < HAB_MAX ? valoresHab(h.hab, L + 1).filas.concat([[T('hv_recarga'), recargaHab(id, L + 1) + ' s']]) : null;
+    var html = '<div class="hv-carta"><div class="hv-cab"><span class="hv-ico">' + HABILIDADES[h.hab].icono + '</span><div><b>' + HABILIDADES[h.hab][estado.idioma] + '</b><span class="hv-tipo">' + T('hv_poder') + ' · ' + T('nivel_corto') + ' ' + L + ' / ' + HAB_MAX + '</span></div></div>' +
+      '<div class="nota">' + hb.des + '</div>' + tablaPrevia(ahora, luego);
+    if (!e) html += '';
+    else if (L >= HAB_MAX) html += '<p class="nota"><b>' + T('nivel_max') + '</b></p>';
+    else if (L >= tope) html += '<p class="nota aviso-rojo">' + T('hv_necesita', { n: L + 1 }) + '</p>';
+    else html += botonCostoHab(costoHab(L), 'hab-subir', id);
+    html += '</div>';
+    var t = TALENTOS[h.clase], tl = nivelTal(id), tt = topeTal(id);
+    html += '<div class="hv-carta' + (tt ? '' : ' cerrado') + '"><div class="hv-cab"><span class="hv-ico">' + t.icono + '</span><div><b>' + T('tal_' + h.clase) + '</b><span class="hv-tipo">' + T('hv_talento') + ' · ' + T('nivel_corto') + ' ' + tl + ' / 4</span></div></div>' +
+      '<div class="nota">' + T('tal_' + h.clase + '_txt') + '</div>' + tablaPrevia(filasTalento(h.clase, tl), tl < 4 ? filasTalento(h.clase, tl + 1) : null);
+    if (!e) html += '';
+    else if (tl >= 4) html += '<p class="nota"><b>' + T('nivel_max') + '</b></p>';
+    else if (tl >= tt) html += '<p class="nota aviso-rojo">' + T('hv_necesita', { n: tl + 2 }) + '</p>';
+    else html += botonCostoHab(costoTal(tl), 'tal-subir', id);
+    html += '</div><p class="nota">📜 ' + T('pergaminos_tienes', { n: estado.mochila.pergamino || 0 }) + '</p>';
+    return html;
+  }
+  function subirHab(id, talento) {
+    var e = estado.heroes[id]; if (!e) return;
+    var L = talento ? nivelTal(id) : nivelHab(id), tope = talento ? topeTal(id) : topeHab(id);
+    if (L >= tope) return;
+    var c = talento ? costoTal(L) : costoHab(L);
+    if ((estado.mochila.pergamino || 0) < c.perg) { consejoTemporal(T('sin_pergaminos')); sonar('error'); return; }
+    if (!pagar({ oro: c.oro })) return;
+    estado.mochila.pergamino -= c.perg;
+    if (talento) e.tal = L + 1; else e.hab = L + 1;
+    sonar('magia');
+    consejoTemporal(T('hab_sube', { h: talento ? T('tal_' + HEROE[id].clase) : HABILIDADES[HEROE[id].hab][estado.idioma], n: L + 1 }));
+    ponerEquipo(); guardar(true); abrirPanelHeroe(id);
   }
   // ---------- EXPERIENCIA DEL HÉROE ----------
   function expNivel(n) { return Math.round(50 * Math.pow(n, 1.35)); }
@@ -2997,9 +3093,12 @@
     });
     var suerte = estado.equipo[Math.floor(Math.random() * estado.equipo.length)], fr = Math.min(5, 1 + Math.floor(n / 5));
     estado.heroes[suerte].frag += fr;
+    var pg = 1 + Math.floor(n / 10);
+    estado.mochila.pergamino = (estado.mochila.pergamino || 0) + pg;
     consejoTemporal(T('heroes_premio', { x: exp, f: fr, n: NH(suerte) }));
   }
   function estrellasHTML(n) { var s = ''; for (var i = 1; i <= 5; i++) s += '<span class="' + (i <= n ? 'si' : 'no') + '">★</span>'; return s; }
+  var pestanaHeroe = 'atrib';
   function abrirPanelHeroe(id) {
     var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab);
     var html = '<button class="volver-mini" data-accion="sub-heroes">' + T('volver') + '</button>' +
@@ -3012,8 +3111,10 @@
         '<div class="hf-barra"><div style="width:' + Math.round(ex / need * 100) + '%"></div><span>' + (e.nivel >= tope ? T('exp_llena') : ex + ' / ' + need + ' EXP') + '</span></div>';
     } else html += '<p class="nota">' + T('bloqueado') + '</p>';
     html += '</div></div>' +
-      '<div class="hf-stats"><span>❤ ' + s.vida + '</span><span>⚔ ' + s.dano + '</span><span>🎯 ' + s.alcance + '</span><span>✚ ' + s.cura + '/s</span></div>' +
-      '<div class="hf-hab"><b>' + hb.nombre + '</b> <span class="nota">' + T('cada_s', { s: HABILIDADES[h.hab].cd }) + '</span><div class="nota">' + hb.des + '</div></div>';
+      '<div class="subtabs hf-tabs">' + [['atrib', T('hv_atributos')], ['hab', T('hv_habilidades')]].map(function (p) { return '<button data-accion="heroe-tab" data-tab="' + p[0] + '" data-id="' + id + '" class="' + (pestanaHeroe === p[0] ? 'activo' : '') + '">' + p[1] + '</button>'; }).join('') + '</div>';
+    if (pestanaHeroe === 'hab') { html += htmlHabilidades(id); abrirPanel(NH(id), html, { tipo: 'heroe', id: id }); var nv0 = e ? e.nivel : 1; visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv0) + ':' + M.etapaArmadura(nv0) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv0); }); return; }
+    html += '<div class="hf-stats"><span>❤ ' + s.vida + '</span><span>⚔ ' + s.dano + '</span><span>🎯 ' + s.alcance + '</span><span>✚ ' + s.cura + '/s</span></div>' +
+      '<div class="hf-hab"><b>' + hb.nombre + ' · ' + T('nivel_corto') + ' ' + nivelHab(id) + '</b> <span class="nota">' + T('cada_s', { s: recargaHab(id) }) + '</span><div class="nota">' + hb.des + '</div></div>';
     if (e) {
       var tope2 = topeNivel(id), libros = librosQueTienes();
       html += '<div class="hf-bloque"><div class="hf-tit">⬆️ ' + T('mejorar') + '</div>';
@@ -3482,7 +3583,7 @@
   function usarObjeto(k) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
-    if (o.exp) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
+    if (o.exp || o.pergamino) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
     if (o.escudo) {
       if (protegido()) { consejoTemporal(T('escudo_activo', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) })); sonar('error'); return; }
       estado.escudoHasta = Date.now() + o.escudo * 3600 * 1000;
@@ -3740,10 +3841,13 @@
     else if (a === 'investigar') empezarInvestigacion(b.getAttribute('data-id'));
     else if (a === 'sub-invocar') abrirPanelInvocar();
     else if (a === 'sub-heroes') abrirPanelHeroes();
-    else if (a === 'heroe-ver') abrirPanelHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-ver') { if (!panelActual || panelActual.tipo !== 'obtener') pestanaHeroe = 'atrib'; abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'heroe-nivel') subirNivelHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-libros') usarLibrosHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-tab') { pestanaHeroe = b.getAttribute('data-tab'); sonar('click'); abrirPanelHeroe(b.getAttribute('data-id')); }
+    else if (a === 'hab-subir') subirHab(b.getAttribute('data-id'), false);
+    else if (a === 'tal-subir') subirHab(b.getAttribute('data-id'), true);
     else if (a === 'heroe-obtener') abrirPanelObtener(b.getAttribute('data-id'));
     else if (a === 'ob-ir') irDesdeObtener(b.getAttribute('data-a'));
     else if (a === 'ob-oferta') ofertaFragmentos(b.getAttribute('data-id'));
