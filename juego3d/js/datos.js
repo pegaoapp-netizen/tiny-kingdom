@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '3.6';
+var VERSION_JUEGO = '3.7';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>👆 <b>Menú rápido</b>: toca un edificio y salen botones debajo: Detalles, Terminar (con gemas), Acelerar y Entrenar en el cuartel o Investigar en la academia.</li><li>🎉 <b>¡Los 8 héroes tienen modelo nuevo!</b> Luna, Capitán Ancla, Brisa, Chispa, Roble y Pluma se suman a Sir Sol y Trueno.</li><li>🦵 Todos caminan, respiran y atacan a su manera: Brisa tensa el arco, Luna y Pluma levantan su bastón para lanzar magia, Roble y Ancla dan golpes con su arma.</li><li>🃏 Las cartas de los héroes muestran su nuevo retrato.</li><li>📶 Solo se descargan los héroes que tienes, para que el juego abra rápido.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🏰 <b>Los edificios se ven mejor al subir de nivel</b>, en 4 tramos: nivel 1-3 sencillo; 4-6 más grande con techo rojo y estandartes; 7-9 piedra arenisca, techo de pizarra azul y braseros con fuego; 10-12 mármol, techo azul real, adornos de oro, aguja dorada y cristales.</li><li>👆 <b>Menú rápido</b>: toca un edificio y salen botones debajo: Detalles, Terminar (con gemas), Acelerar y Entrenar en el cuartel o Investigar en la academia.</li><li>🎉 <b>¡Los 8 héroes tienen modelo nuevo!</b> Luna, Capitán Ancla, Brisa, Chispa, Roble y Pluma se suman a Sir Sol y Trueno.</li><li>🦵 Todos caminan, respiran y atacan a su manera: Brisa tensa el arco, Luna y Pluma levantan su bastón para lanzar magia, Roble y Ancla dan golpes con su arma.</li><li>🃏 Las cartas de los héroes muestran su nuevo retrato.</li><li>📶 Solo se descargan los héroes que tienes, para que el juego abra rápido.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>👆 <b>Quick menu</b>: tap a building and buttons appear below it: Details, Finish (with gems), Speed up, and Train at the barracks or Research at the academy.</li><li>🎉 <b>All 8 heroes have new models!</b> Luna, Captain Anchor, Breeze, Spark, Oak and Feather join Sir Sol and Thunder.</li><li>🦵 They all walk, breathe and attack their own way: Breeze draws her bow, Luna and Feather raise their staffs to cast magic, Oak and Anchor strike with their weapons.</li><li>🃏 Hero cards show their new portrait.</li><li>📶 Only the heroes you own are downloaded, so the game opens fast.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🏰 <b>Buildings look better as they level up</b>, in 4 stages: level 1-3 simple; 4-6 bigger with red roof and banners; 7-9 sandstone, blue slate roof and fire braziers; 10-12 marble, royal blue roof, gold trim, golden spire and crystals.</li><li>👆 <b>Quick menu</b>: tap a building and buttons appear below it: Details, Finish (with gems), Speed up, and Train at the barracks or Research at the academy.</li><li>🎉 <b>All 8 heroes have new models!</b> Luna, Captain Anchor, Breeze, Spark, Oak and Feather join Sir Sol and Thunder.</li><li>🦵 They all walk, breathe and attack their own way: Breeze draws her bow, Luna and Feather raise their staffs to cast magic, Oak and Anchor strike with their weapons.</li><li>🃏 Hero cards show their new portrait.</li><li>📶 Only the heroes you own are downloaded, so the game opens fast.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
@@ -441,6 +441,10 @@ var MEJORA_CASTILLO = (function () {
 var TORRES_PUERTA = { dano: 12, danoNivel: 4, alcance: 14, ritmo: 1.0 };
 // Cómo se ve cada nivel: 1-4 normal, 5-8 mejorado, 9-12 dorado
 function nivelVisual(n) { return n <= 4 ? 1 : n <= 8 ? 2 : 3; }
+// Tramos para el aspecto de los edificios: 1 (nv 1-3), 2 (4-6), 3 (7-9), 4 (10-12)
+function tramoNivel(n) { return n <= 3 ? 1 : n <= 6 ? 2 : n <= 9 ? 3 : 4; }
+var TRAMO_INTERNO = [1, 1, 2, 2, 3]; // qué versión del modelo base usa cada tramo
+var ESCALA_TRAMO = [1, 1, 1.08, 1.15, 1.24]; // cada tramo el edificio es más grande
 // La muralla rodea TODO el reino (óvalo con todos los terrenos adentro)
 // El reino es más grande: todo se separa del castillo por este número
 var ESCALA_REINO = 1.35;

@@ -225,6 +225,96 @@ var M = (function () {
   }
 
   // =================================================================
+  //  EDIFICIOS POR TRAMOS: 1 (nv 1-3), 2 (4-6), 3 (7-9), 4 (10-12)
+  //  Cambia los materiales y agrega adornos que se notan desde lejos.
+  // =================================================================
+  var ROJOS = [0xb8402e, 0xb85a36, 0x9c3b28, 0x7e2f22], TEJAS = [0x7a2a1a, 0x7a3420];
+  var COLORES_TRAMO = {
+    3: { gris: 0xc2b49a, osc: 0x968a74, claro: 0xdcd0b8, piedra: 0xe0d3b8, piedraOsc: 0xb3a385, techo: 0x3e5c8c, teja: 0x2b4066, viga: 0x6e4526, vigaOsc: 0x4a2e1a, metal: 0x6f7c8c },
+    4: { gris: 0xece6da, osc: 0xcfc6b5, claro: 0xfaf6ee, piedra: 0xf2ece0, piedraOsc: 0xd2c8b4, techo: 0x2a4fa8, teja: 0xe0b040, viga: 0xc9952e, vigaOsc: 0x8a6420, metal: 0xe0b040 }
+  };
+  function recolorearTramo(g, tramo) {
+    var k = COLORES_TRAMO[tramo];
+    if (!k) return;
+    var mapa = {};
+    mapa[P.gris] = k.gris; mapa[P.osc] = k.osc; mapa[P.claro] = k.claro;
+    mapa[C.piedra] = k.piedra; mapa[C.piedraOsc] = k.piedraOsc;
+    ROJOS.forEach(function (c) { mapa[c] = k.techo; });
+    TEJAS.forEach(function (c) { mapa[c] = k.teja; });
+    mapa[P.viga] = k.viga; mapa[C.madera] = k.viga; mapa[P.vigaOsc] = k.vigaOsc;
+    mapa[C.metalOsc] = k.metal;
+    g.traverse(function (o) {
+      if (!o.isMesh || !o.material || !o.material.color || o.material.transparent || o.material.isMeshBasicMaterial) return;
+      var nuevo = mapa[o.material.color.getHex()];
+      if (nuevo !== undefined) o.material = mat(nuevo, o.material.side === THREE.DoubleSide ? { side: THREE.DoubleSide } : undefined);
+    });
+  }
+  var MAT_FUEGO = new THREE.MeshBasicMaterial({ color: 0xffa23a });
+  var MAT_FUEGO2 = new THREE.MeshBasicMaterial({ color: 0xffe07a });
+  var MAT_CRISTAL = new THREE.MeshBasicMaterial({ color: 0x7fe8ff });
+  function estandarte(g, x, z, tela, borde, alto) {
+    g.add(cil(0.05, 0.06, alto, 6, borde === C.oro ? C.oro : C.maderaOsc, x, alto / 2, z));
+    g.add(esfera(0.09, borde, x, alto + 0.05, z, 8, 6));
+    g.add(caja(0.62, 0.06, 0.06, borde, x, alto - 0.12, z + 0.04));
+    var t = caja(0.52, 0.95, 0.03, tela, x, alto - 0.65, z + 0.05); t.castShadow = false; g.add(t);
+    g.add(caja(0.54, 0.06, 0.035, borde, x, alto - 1.1, z + 0.05));
+    var punta = cono(0.27, 0.22, 3, tela, x, alto - 1.24, z + 0.05); punta.rotation.z = Math.PI; punta.rotation.y = Math.PI / 6; g.add(punta);
+  }
+  function brasero(g, x, z, piedra, metal) {
+    g.add(caja(0.34, 0.55, 0.34, piedra, x, 0.28, z));
+    g.add(cil(0.26, 0.16, 0.18, 8, metal, x, 0.64, z));
+    var f1 = new THREE.Mesh(geo('fuego1', function () { return new THREE.ConeGeometry(0.17, 0.42, 6); }), MAT_FUEGO); f1.position.set(x, 0.92, z); g.add(f1);
+    var f2 = new THREE.Mesh(geo('fuego2', function () { return new THREE.ConeGeometry(0.09, 0.3, 5); }), MAT_FUEGO2); f2.position.set(x, 0.9, z); g.add(f2);
+  }
+  function mejorarPorTramo(g, tramo, tipo) {
+    recolorearTramo(g, tramo);
+    if (tramo < 2) return g;
+    g.updateMatrixWorld(true);
+    var caja3 = new THREE.Box3().setFromObject(g), tam = new THREE.Vector3(), cen = new THREE.Vector3();
+    caja3.getSize(tam); caja3.getCenter(cen);
+    var esCastillo = tipo === 'castillo';
+    var w = Math.min(tam.x, esCastillo ? 99 : 4.6), d = Math.min(tam.z, esCastillo ? 99 : 4.6), arriba = caja3.max.y;
+    var k = COLORES_TRAMO[tramo] || {};
+    var piedra = tramo >= 4 ? 0xe0d3b8 : tramo === 3 ? k.osc : 0x8a8478;
+    var borde = tramo >= 4 ? C.oro : tramo === 3 ? 0x6f7c8c : C.maderaOsc;
+    var tela = tramo >= 4 ? 0x6a2a9a : tramo === 3 ? 0x2a4f8f : 0xa8322a;
+    var fx = w / 2 + 0.3, fz = d / 2 + 0.3;
+    // base de piedra (y en el tramo 4, de mármol con borde de oro)
+    if (!esCastillo) {
+      var losa = caja(w + 0.55, 0.12, d + 0.55, piedra, cen.x, 0.06, cen.z); losa.castShadow = false; g.add(losa);
+      if (tramo >= 4) { var aro = caja(w + 0.7, 0.06, d + 0.7, C.oro, cen.x, 0.03, cen.z); aro.castShadow = false; g.add(aro); }
+    }
+    // estandartes al frente
+    var altoE = esCastillo ? 3.4 : 2.3;
+    estandarte(g, cen.x - fx, cen.z + fz, tela, borde, altoE);
+    estandarte(g, cen.x + fx, cen.z + fz, tela, borde, altoE);
+    if (tramo >= 3 && !esCastillo) {
+      // braseros con fuego atrás y postes de piedra en las esquinas
+      brasero(g, cen.x - fx, cen.z - fz, piedra, k.metal);
+      brasero(g, cen.x + fx, cen.z - fz, piedra, k.metal);
+      [[-1, 1], [1, 1]].forEach(function (s) {
+        g.add(caja(0.22, 0.42, 0.22, piedra, cen.x + s[0] * (fx - 0.55), 0.21, cen.z + s[1] * fz));
+        g.add(esfera(0.1, borde, cen.x + s[0] * (fx - 0.55), 0.48, cen.z + s[1] * fz, 6, 4));
+      });
+    }
+    if (tramo >= 4) {
+      // aguja dorada en lo alto y cristales que brillan
+      var ax = cen.x, az = cen.z;
+      g.add(cil(0.08, 0.12, 0.5, 8, C.oro, ax, arriba + 0.2, az));
+      g.add(esfera(0.16, C.oro, ax, arriba + 0.5, az, 10, 8));
+      g.add(cono(0.08, 0.55, 6, C.oro, ax, arriba + 0.85, az));
+      if (!esCastillo) [[-1], [1]].forEach(function (s) {
+        var cr = new THREE.Mesh(geo('cristalT', function () { return new THREE.OctahedronGeometry(0.2, 0); }), MAT_CRISTAL);
+        cr.position.set(cen.x + s[0] * (fx - 0.55), 0.78, cen.z + fz); cr.scale.y = 1.6; g.add(cr);
+      });
+      // emblema dorado al frente
+      var em = cil(0.26, 0.26, 0.05, 16, C.oro, cen.x, Math.min(arriba * 0.45, 1.5), cen.z + Math.min(tam.z, 4.6) / 2 + 0.06); em.rotation.x = Math.PI / 2; g.add(em);
+      var em2 = cil(0.15, 0.15, 0.06, 5, 0x6a2a9a, cen.x, Math.min(arriba * 0.45, 1.5), cen.z + Math.min(tam.z, 4.6) / 2 + 0.08); em2.rotation.x = Math.PI / 2; g.add(em2);
+    }
+    return g;
+  }
+
+  // =================================================================
   //  BANDERA
   // =================================================================
   function bandera(color, alto) {
@@ -1962,7 +2052,7 @@ var M = (function () {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
-    unidad: unidad, animarUnidad: animarUnidad,
+    unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,

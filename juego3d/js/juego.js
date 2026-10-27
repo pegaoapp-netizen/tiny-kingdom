@@ -453,7 +453,8 @@
   var insigniaCastillo = null, andamiosCastillo = [], barraCastillo = null;
   function ponerCastillo() {
     escena.remove(castillo);
-    castillo = M.castillo(nivelVisual(estado.castillo || 1));
+    var trc = tramoNivel(estado.castillo || 1);
+    castillo = M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[trc]), trc, 'castillo');
     castillo.userData.castillo = true;
     castillo.scale.setScalar(0.8);
     escena.add(castillo);
@@ -529,7 +530,7 @@
       var g = new THREE.Group(); g.position.set(x, 0, z);
       // mira hacia afuera (hacia el bosque)
       g.rotation.y = Math.atan2(Math.cos(t), Math.sin(t));
-      var mo = crearModeloBase('torre', Math.max(2, nivelVisual(nivel)));
+      var mo = crearModeloBase('torre', Math.max(2, tramoNivel(nivel)));
       mo.scale.setScalar(ESCALA_EDIFICIO * 1.15);
       g.add(mo); g.userData.castillo = true;
       escena.add(g);
@@ -1417,7 +1418,12 @@
   // ------------------------------------------------------------------
   var ESCALA_EDIFICIO = 1.3;
   function crearModelo(tipo, nivel) { return M.fusionar(crearModeloBase(tipo, nivel)); }
-  function crearModeloBase(tipo, nivel) { return tipo === 'granja' ? M.granja(nivel) : tipo === 'cuartel' ? M.cuartel(nivel) : tipo === 'enfermeria' ? M.enfermeria(nivel) : tipo === 'aserradero' ? M.aserradero(nivel) : tipo === 'mina' ? M.mina(nivel) : tipo === 'academia' ? M.academia(nivel) : M.torre(nivel); }
+  // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
+  function crearModeloBase(tipo, tramo) {
+    var n = TRAMO_INTERNO[tramo] || 1;
+    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.mina(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
+    return M.mejorarPorTramo(m, tramo, tipo);
+  }
 
   function construir(i, tipo) {
     var s = slots[i];
@@ -1472,11 +1478,12 @@
   function ponerEdificio(s, tipo, nivel) {
     if (s.modelo) s.grupo.remove(s.modelo);
     s.edificio = { tipo: tipo, nivel: nivel };
-    s.modelo = crearModelo(tipo, nivelVisual(nivel));
-    s.modelo.scale.setScalar(ESCALA_EDIFICIO);
+    var tr = tramoNivel(nivel);
+    s.modelo = crearModelo(tipo, tr);
+    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr]);
     if (s.insignia) s.grupo.remove(s.insignia);
     s.insignia = M.insigniaNivel(nivel);
-    s.insignia.position.set(0, tipo === 'torre' ? 9.5 : 5.2, 0);
+    s.insignia.position.set(0, (tipo === 'torre' ? 9.5 : 5.2) * ESCALA_TRAMO[tr] + (tr >= 4 ? 0.9 : 0), 0);
     s.grupo.add(s.insignia);
     s.grupo.add(s.modelo);
     s.cd = 0;
