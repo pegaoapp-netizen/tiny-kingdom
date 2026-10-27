@@ -11,7 +11,7 @@ workflows:
     integrations:
       # Nombre de tu clave de App Store Connect en Codemagic
       # (Codemagic -> Team settings -> Integrations -> Developer Portal).
-      app_store_connect: NOMBRE_DE_TU_CLAVE_API          # <-- CAMBIAR
+      app_store_connect: codemagic
 
     environment:
       ios_signing:
@@ -19,7 +19,7 @@ workflows:
         bundle_identifier: com.pegao.tinykingdom
       vars:
         # "Apple ID" de la app: App Store Connect -> tu app -> Información de la app.
-        APP_STORE_APPLE_ID: 0000000000                     # <-- CAMBIAR
+        APP_STORE_APPLE_ID: 6826971598
         XCODE_PROJECT: app/ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 20
