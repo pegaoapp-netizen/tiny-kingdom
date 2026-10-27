@@ -132,11 +132,11 @@
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   // de lejos: se ve el reino entero con el castillo en el centro
-  function distInicial() { return window.innerWidth < window.innerHeight ? 122 : 92; }
+  function distInicial() { return window.innerWidth < window.innerHeight ? 134 : 100; }
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = 3.55;
   var CENTRO_REINO = new V3(0, 0, 0);
-  var LIMITE_CAM = 62;
+  var LIMITE_CAM = 74;
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
   var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
   var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: AZ_CAM, polar: 1.0 };
@@ -244,8 +244,8 @@
 
   function altura(x, z) {
     var r = Math.sqrt(x * x + z * z);
-    if (r < 64) return 0;
-    var k = (r - 64);
+    if (r < 76) return 0;
+    var k = (r - 76);
     return k * 0.32 * (0.7 + 0.5 * Math.sin(x * 0.11) * Math.cos(z * 0.09)) + Math.sin(x * 0.4 + z * 0.3) * 0.3;
   }
 
@@ -362,15 +362,21 @@
   // ------------------------------------------------------------------
   var PARCELAS = (function () {
     function enMuralla(x, z) { var a = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, b = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz; return Math.sqrt(a * a + b * b); }
-    var ciudad = [], campos = [], C1 = 8, C2 = 10;
+    // distancia real del borde de la parcela (con su marco de pasto) a la muralla: nada la toca
+    function aireMuralla(x, z) {
+      var m = 1e9, f = MURALLA_FORMA;
+      for (var a = 0; a < 6.283; a += 0.01) { var dx = Math.max(0, Math.abs(f.cx + Math.cos(a) * f.rx - x) - 4.25), dz = Math.max(0, Math.abs(f.cz + Math.sin(a) * f.rz - z) - 4.25); m = Math.min(m, Math.hypot(dx, dz)); }
+      return m;
+    }
+    var ciudad = [], campos = [], C1 = 10, C2 = 10;
     for (var i = -7; i <= 7; i++) for (var j = -7; j <= 7; j++) {
       var x = i * C1, z = j * C1;
-      if (enMuralla(x, z) < 0.84 && Math.hypot(x, z) > 10.5 && distCamino(x, z) > 7 &&
-        Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) > 7 && Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) > ESTANQUE.r + 5) ciudad.push([x, z]);
+      if (enMuralla(x, z) < 1 && aireMuralla(x, z) >= 2.5 && Math.hypot(x, z) > 12 && distCamino(x, z) > 7.5 &&
+        Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) > 7.5 && Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) > ESTANQUE.r + 5.5) ciudad.push([x, z]);
     }
     for (var a = -9; a <= 9; a++) for (var b = -9; b <= 9; b++) {
       var fx = MURALLA_FORMA.cx + a * C2, fz = MURALLA_FORMA.cz + b * C2, m = enMuralla(fx, fz);
-      if (m > 1.13 && m < 1.75 && distCamino(fx, fz) > 9 && Math.abs(fx) < 120 && Math.abs(fz) < 120) campos.push([fx, fz]);
+      if (m > 1 && m < 1.75 && aireMuralla(fx, fz) >= 2.5 && distCamino(fx, fz) > 9 && Math.abs(fx) < 120 && Math.abs(fz) < 120) campos.push([fx, fz]);
     }
     function porCercania(p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); }
     ciudad.sort(porCercania); campos.sort(porCercania);
@@ -392,7 +398,7 @@
       var mfx = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mfz = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
       if (Math.abs(Math.sqrt(mfx * mfx + mfz * mfz) - 1) < 0.1) return false;
       if (distCamino(x, z) < 3.4 + extra) return false;
-      for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (PARCELAS.esCampo(i) ? 6 : 4) + extra) return false;
+      for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < 7 + extra) return false;
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 1.5) return false;
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
       return true;
@@ -400,14 +406,14 @@
     for (var i = 0; i < 3400 && arboles.length < 680; i++) {
       var x = (rnd() - 0.5) * 270, z = (rnd() - 0.5) * 270;
       var bosqueDensidad = Math.max(0, 1 - Math.hypot(x + 50, z + 30) / 26);
-      var borde = Math.hypot(x, z) > 52 ? 0.45 : 0.04;
+      var borde = Math.hypot(x, z) > 62 ? 0.45 : 0.04;
       if (x < -32 && z < 0) borde = 0.75;
       if (rnd() > Math.max(bosqueDensidad, borde)) continue;
       if (!libre(x, z, 0)) continue;
       var mex = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mez = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
       if (mex * mex + mez * mez < 1.15 && rnd() > 0.05) continue;
       // mezcla de especies: pinos en el bosque oscuro, palmeras cerca del pueblo y del estanque
-      var cerca = Math.hypot(x, z) < 58 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
+      var cerca = Math.hypot(x, z) < 68 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
       var enBosque = bosqueDensidad > 0.2 || (x < -32 && z < 0);
       var u = rnd(), tipo;
       if (enBosque) tipo = u < 0.55 ? 0 : u < 0.8 ? 2 : 1;
@@ -652,8 +658,9 @@
     g.position.set(p[0], 0, p[1]);
     // los edificios de la ciudad miran hacia el camino; los campos, hacia el castillo
     var haciaCamino = campo ? new V3(0, 0, 0) : puntoMasCercano(p[0], p[1]);
-    g.rotation.y = campo ? Math.round(Math.atan2(-p[0], -p[1]) / (Math.PI / 2)) * (Math.PI / 2) : Math.atan2(haciaCamino.x - p[0], haciaCamino.z - p[1]);
-    var t = campo ? M.campoParcela() : M.terreno();
+    // girado solo en pasos de 90°: todo queda alineado con la cuadrícula
+    g.rotation.y = campo ? Math.round(Math.atan2(-p[0], -p[1]) / (Math.PI / 2)) * (Math.PI / 2) : Math.round(Math.atan2(haciaCamino.x - p[0], haciaCamino.z - p[1]) / (Math.PI / 2)) * (Math.PI / 2);
+    var t = M.parcelaLibre();
     g.add(t);
     g.userData.slot = i;
     escena.add(g);
@@ -1920,12 +1927,23 @@
       guardar();
     }
   }
+  // Que el edificio quepa en su parcela con aire alrededor (crece un poco con cada tramo de nivel) y quede centrado
+  var MAX_EDIFICIO = [0, 5.4, 5.7, 6.0, 6.3];
+  function encajarEnParcela(m, tr) {
+    m.position.set(0, 0, 0); m.updateMatrixWorld(true);
+    var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = MAX_EDIFICIO[tr] || 6;
+    if (lado > max) { m.scale.multiplyScalar(max / lado); m.updateMatrixWorld(true); caja.setFromObject(m); }
+    var c = caja.getCenter(new V3());
+    m.position.x -= c.x; m.position.z -= c.z;
+    m.position.y = 0.2;
+  }
   function ponerEdificio(s, tipo, nivel) {
     if (s.modelo) s.grupo.remove(s.modelo);
     s.edificio = { tipo: tipo, nivel: nivel };
     var tr = tramoNivel(nivel);
     s.modelo = crearModelo(tipo, tr);
     s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr]);
+    encajarEnParcela(s.modelo, tr);
     if (s.insignia) s.grupo.remove(s.insignia);
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' ? 9.5 : 5.2) * ESCALA_TRAMO[tr] + (tr >= 4 ? 0.9 : 0), 0);
@@ -2862,7 +2880,7 @@
     if (pellizco && ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       var d = Math.hypot(a.x - b.x, a.y - b.y);
-      cam.distMeta = Math.max(16, Math.min(150, pellizco.dist * pellizco.d / Math.max(20, d)));
+      cam.distMeta = Math.max(16, Math.min(170, pellizco.dist * pellizco.d / Math.max(20, d)));
       camSigue = false;
       return;
     }
@@ -2894,7 +2912,7 @@
   lienzo.addEventListener('pointercancel', function (ev) { delete punteros[ev.pointerId]; arrastre = null; pellizco = null; });
   lienzo.addEventListener('wheel', function (ev) {
     ev.preventDefault();
-    cam.distMeta = Math.max(16, Math.min(150, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
+    cam.distMeta = Math.max(16, Math.min(170, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
     camSigue = false;
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
@@ -5448,6 +5466,7 @@
       var libre = !s.edificio && !s.obra;
       var on = (modoColocar && libre && modoColocar !== 'barricada' && s.campo === esCampo(modoColocar) && !cerrada(s)) || slotElegido === i;
       s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
+      if (s.terreno.userData.mas) s.terreno.userData.mas.visible = libre && !cerrada(s);
       // estacas y cuerda: solo en modo construcción
       if (s.terreno.userData.marcas) s.terreno.userData.marcas.visible = !!on;
     });

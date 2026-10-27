@@ -602,6 +602,39 @@ var M = (function () {
   // =================================================================
   //  TERRENO PARA CONSTRUIR
   // =================================================================
+  // Parcela libre (v5.0): el mismo estilo dentro y fuera de la muralla.
+  // Caminito de arena alrededor, marco de pasto, borde de piedra, base de tierra lisa y un + para construir.
+  var TAM_PARCELA = 7.0;
+  function parcelaLibre() {
+    var g = new THREE.Group();
+    var camino = caja(10, 0.04, 10, 0xcdb88c, 0, 0.02, 0); camino.castShadow = false; camino.receiveShadow = true; g.add(camino);
+    var pasto = caja(8.5, 0.07, 8.5, 0x7fae4e, 0, 0.045, 0); pasto.castShadow = false; pasto.receiveShadow = true; g.add(pasto);
+    var borde = caja(7.6, 0.16, 7.6, 0xa7a196, 0, 0.09, 0); borde.castShadow = false; borde.receiveShadow = true; g.add(borde);
+    var bordeOsc = caja(7.62, 0.04, 7.62, 0x7f796f, 0, 0.17, 0); bordeOsc.castShadow = false; g.add(bordeOsc);
+    var tierra = caja(TAM_PARCELA, 0.2, TAM_PARCELA, 0xc6a878, 0, 0.1, 0); tierra.castShadow = false; tierra.receiveShadow = true; g.add(tierra);
+    // piedras de las esquinas
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { var p = caja(0.7, 0.26, 0.7, 0x948e84, s[0] * 3.62, 0.13, s[1] * 3.62); p.castShadow = false; g.add(p); });
+    // símbolo de construir: un + dentro de un aro (se esconde cuando hay edificio)
+    var mas = new THREE.Group();
+    var aro = new THREE.Mesh(geo('masAro', function () { return new THREE.RingGeometry(1.25, 1.55, 36); }), new THREE.MeshBasicMaterial({ color: 0xf2c45a, side: THREE.DoubleSide }));
+    aro.rotation.x = -Math.PI / 2; aro.position.y = 0.215; mas.add(aro);
+    var fondo = new THREE.Mesh(geo('masFondo', function () { return new THREE.CircleGeometry(1.25, 36); }), new THREE.MeshBasicMaterial({ color: 0x8a6a3e, transparent: true, opacity: 0.45, side: THREE.DoubleSide }));
+    fondo.rotation.x = -Math.PI / 2; fondo.position.y = 0.212; mas.add(fondo);
+    var matMas = new THREE.MeshBasicMaterial({ color: 0xfff4cc });
+    var h = new THREE.Mesh(geo('masH', function () { return new THREE.BoxGeometry(1.5, 0.06, 0.38); }), matMas); h.position.y = 0.24; mas.add(h);
+    var v = new THREE.Mesh(geo('masV', function () { return new THREE.BoxGeometry(0.38, 0.06, 1.5); }), matMas); v.position.y = 0.24; mas.add(v);
+    mas.userData.noFusionar = true;
+    g.add(mas);
+    g.userData.mas = mas;
+    var brillo = new THREE.Mesh(
+      geo('brilloParcela', function () { return new THREE.PlaneGeometry(7.4, 7.4); }),
+      new THREE.MeshBasicMaterial({ color: 0xfff27a, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide })
+    );
+    brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.23; brillo.renderOrder = 2;
+    g.add(brillo);
+    g.userData.brillo = brillo;
+    return fusionar(g);
+  }
   function terreno() {
     var g = new THREE.Group();
     // parcela cuadrada de la cuadrícula: tierra con borde de piedra
@@ -2207,7 +2240,7 @@ var M = (function () {
 
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
-    castillo: castillo, terreno: terreno, andamio: andamio,
+    castillo: castillo, terreno: terreno, parcelaLibre: parcelaLibre, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
     vigia: vigia, almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
