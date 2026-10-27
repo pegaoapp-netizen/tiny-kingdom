@@ -226,6 +226,15 @@ var Cuentas = (function () {
       return db.collection('envios').where('para', '==', usuario.uid).limit(20).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
     },
     borrarEnvio: function (id) { return db.collection('envios').doc(id).delete(); },
+    // chat: canal 'global' o 'al_TAG' (cada canal guarda sus mensajes)
+    escucharChat: function (canal, fn) {
+      if (!usuario) return function () {};
+      return db.collection('canales').doc(canal).collection('mensajes').orderBy('fecha', 'desc').limit(60)
+        .onSnapshot({ includeMetadataChanges: true }, function (q) { if (q.metadata.fromCache) return; /* solo lo que confirma el servidor (no la caché de otra cuenta) */ fn(q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).reverse()); }, function () { fn(null); });
+    },
+    enviarChat: function (canal, m) { return db.collection('canales').doc(canal).collection('mensajes').add(m); },
+    borrarChat: function (canal, id) { return db.collection('canales').doc(canal).collection('mensajes').doc(id).delete(); },
+    reportar: function (r) { return db.collection('reportes').add(r); },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
 })();

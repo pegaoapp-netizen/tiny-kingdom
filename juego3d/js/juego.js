@@ -4182,6 +4182,7 @@
     if (!forzar && Date.now() - ultimaRevision < 60000) return;
     ultimaRevision = Date.now(); revisando = true;
     iniciarVigilancia();
+    iniciarChat();
     Cuentas.ataquesNuevos().then(function (lista) {
       revisando = false;
       lista = lista.filter(function (r) { return r.resuelto !== false; });
@@ -4593,6 +4594,9 @@
     else if (a === 'armas') forjarArmas(b.getAttribute('data-tipo'), false);
     else if (a === 'armas-gemas') forjarArmas(b.getAttribute('data-tipo'), true);
     else if (a === 'abrir-mercado') abrirPanelMercado();
+    else if (a === 'chat-canal') { var cc = b.getAttribute('data-c'); sonar('click'); abrirPanelChat(cc === 'global' ? 'global' : (canalAlianza() || 'al')); }
+    else if (a === 'chat-enviar') enviarMensaje();
+    else if (a === 'chat-quien') opcionesChat(b);
     else if (a === 'acel-entreno') abrirAcelerar('entreno');
     else if (a === 'abrir-herreria') abrirPanelHerreria();
     else if (a === 'mer-elegir') { mer[b.getAttribute('data-cual')] = b.getAttribute('data-r'); sonar('click'); abrirPanelMercado(); }
@@ -5034,6 +5038,7 @@
       estado.casillas = g.casillas || {};
       estado.armas = g.armas || {};
       estado.lugar = g.lugar || null;
+      estado.bloqueados = g.bloqueados || [];
       estado.cdCamp = g.cdCamp || {};
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
@@ -5124,6 +5129,116 @@
   }
   $('btn-pausa').addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarPausa(); });
   // volver a ver el castillo si la cámara se fue lejos
+  // ------------------------------------------------------------------
+  //  CHAT: global y de la hermandad, en vivo, con bloquear, reportar y filtro de groserías
+  // ------------------------------------------------------------------
+  var chat = { canal: 'global', msgs: { }, escucha: {}, visto: {}, ultimoEnvio: 0, uid: null };
+  try { chat.visto = JSON.parse(localStorage.getItem('tk_chat_visto') || '{}'); } catch (e) {}
+  var GROSERIAS = ['puta', 'puto', 'mierda', 'pendejo', 'pendeja', 'cabron', 'cabrón', 'coño', 'verga', 'culero', 'joder', 'gilipollas', 'maricon', 'maricón', 'fuck', 'shit', 'bitch', 'asshole', 'dick', 'cunt', 'bastard', 'mamaguevo', 'mamahuevo', 'hijueputa', 'hdp', 'malparido', 'carajo', 'idiota', 'estupido', 'estúpido', 'imbecil', 'imbécil'];
+  function filtrarTexto(t) {
+    var s = String(t || '');
+    GROSERIAS.forEach(function (w) { s = s.replace(new RegExp('(^|[^a-záéíóúñü])(' + w + ')(?=$|[^a-záéíóúñü])', 'gi'), function (m, a, b) { return a + b.charAt(0) + new Array(b.length).join('*'); }); });
+    return s;
+  }
+  function canalAlianza() { return estado.alianza ? 'al_' + estado.alianza : null; }
+  function bloqueados() { return estado.bloqueados || (estado.bloqueados = []); }
+  // escuchar los dos canales mientras haya cuenta (para el numerito de mensajes nuevos)
+  function iniciarChat() {
+    if (!hayCuenta()) return;
+    var uid = Cuentas.usuario().uid;
+    if (chat.uid !== uid) { for (var k in chat.escucha) { try { chat.escucha[k](); } catch (e) {} } chat.escucha = {}; chat.msgs = {}; chat.uid = uid; }
+    ['global', canalAlianza()].forEach(function (c) {
+      if (!c || chat.escucha[c]) return;
+      chat.escucha[c] = Cuentas.escucharChat(c, function (lista) {
+        if (lista === null) { chat.msgs[c] = []; return; }
+        chat.msgs[c] = lista;
+        if (panelActual && panelActual.tipo === 'chat' && chat.canal === c) pintarMensajes(true);
+        actualizarBadgeChat();
+      });
+    });
+    // si cambió de hermandad, deja el canal viejo
+    Object.keys(chat.escucha).forEach(function (c) { if (c !== 'global' && c !== canalAlianza()) { try { chat.escucha[c](); } catch (e) {} delete chat.escucha[c]; delete chat.msgs[c]; } });
+  }
+  function nuevosEn(c) {
+    var l = chat.msgs[c] || [], v = chat.visto[c] || 0, yo = hayCuenta() ? Cuentas.usuario().uid : '';
+    return l.filter(function (m) { return m.fecha > v && m.uid !== yo && bloqueados().indexOf(m.uid) < 0; }).length;
+  }
+  function actualizarBadgeChat() {
+    var n = nuevosEn('global') + (canalAlianza() ? nuevosEn(canalAlianza()) : 0);
+    ponerBadge('badge-chat', n ? (n > 9 ? '9+' : n) : '');
+  }
+  function marcarVistoChat(c) {
+    var l = chat.msgs[c] || []; if (!l.length) return;
+    chat.visto[c] = l[l.length - 1].fecha;
+    try { localStorage.setItem('tk_chat_visto', JSON.stringify(chat.visto)); } catch (e) {}
+    actualizarBadgeChat();
+  }
+  function abrirPanelChat(canal) {
+    if (canal) chat.canal = canal;
+    if (chat.canal !== 'global' && !canalAlianza()) chat.canal = 'global';
+    var html = '<div class="subtabs">' + [['global', '🌍 ' + T('chat_global'), nuevosEn('global')], ['al', '🛡️ ' + T('chat_hermandad'), canalAlianza() ? nuevosEn(canalAlianza()) : 0]].map(function (p) {
+      var activo = p[0] === 'global' ? chat.canal === 'global' : chat.canal !== 'global';
+      return '<button data-accion="chat-canal" data-c="' + p[0] + '" class="' + (activo ? 'activo' : '') + '">' + p[1] + (p[2] && !activo ? ' <span class="chat-n">' + p[2] + '</span>' : '') + '</button>';
+    }).join('') + '</div>';
+    if (!hayCuenta()) html += '<p class="nota">' + T('chat_cuenta') + '</p>';
+    else if (chat.canal === 'al' || (chat.canal !== 'global' && !canalAlianza())) html += '<p class="nota">' + T('chat_sin_alianza') + '</p>';
+    else {
+      html += '<div class="chat-lista" id="chat-lista"></div>' +
+        '<div class="chat-escribir"><input id="chat-texto" maxlength="200" autocomplete="off" placeholder="' + T('chat_escribe') + '"><button class="comprar naranja" data-accion="chat-enviar">➤</button></div>' +
+        '<p class="nota chat-normas">' + T('chat_normas') + (bloqueados().length ? ' · ' + T('chat_bloqueados', { n: bloqueados().length }) : '') + '</p>';
+    }
+    abrirPanel(T('p_chat'), html, { tipo: 'chat' });
+    if (hayCuenta()) { iniciarChat(); pintarMensajes(false); }
+    var inp = $('chat-texto');
+    if (inp) inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); enviarMensaje(); } });
+  }
+  function pintarMensajes(nuevo) {
+    var box = $('chat-lista'); if (!box) return;
+    var c = chat.canal, l = (chat.msgs[c] || []).filter(function (m) { return bloqueados().indexOf(m.uid) < 0; }), yo = Cuentas.usuario().uid;
+    var abajo = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+    box.innerHTML = l.length ? l.map(function (m) {
+      var mio = m.uid === yo, hora = new Date(m.fecha), hh = ('0' + hora.getHours()).slice(-2) + ':' + ('0' + hora.getMinutes()).slice(-2);
+      return '<div class="chat-m' + (mio ? ' mio' : '') + '"><button class="chat-quien" data-accion="chat-quien" data-uid="' + m.uid + '" data-id="' + m.id + '" data-n="' + escaparHTML(m.nombre) + '">' + (mio ? T('chat_tu') : escaparHTML(m.nombre)) + '</button><span class="chat-hora">' + hh + '</span><div class="chat-t">' + escaparHTML(filtrarTexto(m.texto)) + '</div></div>';
+    }).join('') : '<p class="nota chat-vacio">' + T('chat_vacio') + '</p>';
+    if (!nuevo || abajo) box.scrollTop = box.scrollHeight;
+    marcarVistoChat(c);
+  }
+  function enviarMensaje() {
+    var inp = $('chat-texto'); if (!inp) return;
+    var texto = inp.value.replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!texto) return;
+    if (Date.now() - chat.ultimoEnvio < 3000) { consejoTemporal(T('chat_espera')); sonar('error'); return; }
+    chat.ultimoEnvio = Date.now();
+    inp.value = '';
+    Cuentas.enviarChat(chat.canal, { uid: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), texto: texto, fecha: Date.now() })
+      .then(function () { sonar('click'); }).catch(function () { inp.value = texto; consejoTemporal(T('chat_error')); sonar('error'); });
+  }
+  // tocar un nombre: bloquear / reportar (o borrar el mensaje propio)
+  function opcionesChat(b) {
+    var uid = b.getAttribute('data-uid'), id = b.getAttribute('data-id'), nombre = b.getAttribute('data-n'), yo = Cuentas.usuario().uid;
+    var v = $('chat-opciones'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'chat-opciones';
+    var msg = (chat.msgs[chat.canal] || []).filter(function (m) { return m.id === id; })[0];
+    d.innerHTML = '<div class="cj-caja"><h3>' + (uid === yo ? T('chat_tu') : escaparHTML(nombre)) + '</h3><div class="cj-botones" style="flex-direction:column">' +
+      (uid === yo ? '<button class="comprar rojo" data-co="borrar">🗑️ ' + T('chat_borrar') + '</button>' :
+        '<button class="comprar" data-co="bloquear">🚫 ' + T('chat_bloquear') + '</button><button class="comprar rojo" data-co="reportar">🚩 ' + T('chat_reportar') + '</button>') +
+      '<button class="comprar" data-co="cerrar">' + T('cancelar') + '</button></div></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) {
+      var o = ev.target.closest('[data-co]');
+      if (ev.target === d || (o && o.getAttribute('data-co') === 'cerrar')) { d.remove(); return; }
+      if (!o) return;
+      var que = o.getAttribute('data-co');
+      d.remove();
+      if (que === 'borrar') { Cuentas.borrarChat(chat.canal, id).catch(function () {}); return; }
+      if (que === 'bloquear') { if (bloqueados().indexOf(uid) < 0) bloqueados().push(uid); guardar(true); consejoTemporal(T('chat_bloqueado', { n: escaparHTML(nombre) })); pintarMensajes(false); actualizarBadgeChat(); return; }
+      if (que === 'reportar') {
+        Cuentas.reportar({ de: yo, contra: uid, contraNombre: String(nombre).slice(0, 30), texto: String(msg ? msg.texto : '').slice(0, 200), canal: chat.canal.slice(0, 10), mensaje: String(id).slice(0, 40), fecha: Date.now() })
+          .then(function () { consejoTemporal(T('chat_reportado', { n: escaparHTML(nombre) })); }).catch(function () { consejoTemporal(T('chat_error')); });
+      }
+    });
+  }
+  $('btn-chat').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'chat') cerrarPanel(); else abrirPanelChat(); });
   $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); });
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {

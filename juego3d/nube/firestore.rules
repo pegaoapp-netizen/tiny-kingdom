@@ -145,6 +145,35 @@ service cloud.firestore {
         && recursoValido(request.resource.data.recursos.madera) && recursoValido(request.resource.data.recursos.piedra);
       allow delete: if request.auth != null && resource.data.para == request.auth.uid;
     }
+    // Chat: canal global para todos y un canal por hermandad (al_TAG) solo para sus miembros
+    function enCanal(canal) {
+      return canal == 'global' || (canal.matches('^al_[A-Z0-9]{2,4}$')
+        && exists(/databases/$(database)/documents/aldeas/$(request.auth.uid))
+        && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.alianza == canal.split('_')[1]);
+    }
+    match /canales/{canal}/mensajes/{id} {
+      allow read: if request.auth != null && enCanal(canal);
+      allow create: if request.auth != null && enCanal(canal)
+        && request.resource.data.keys().hasOnly(['uid', 'nombre', 'texto', 'fecha'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
+        && request.resource.data.texto is string && request.resource.data.texto.size() >= 1 && request.resource.data.texto.size() <= 200
+        && request.resource.data.fecha is int
+        && request.resource.data.fecha > request.time.toMillis() - 60000 && request.resource.data.fecha < request.time.toMillis() + 60000;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+    // Reportes de mensajes: solo se crean (se revisan desde la consola de Firebase)
+    match /reportes/{id} {
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['de', 'contra', 'contraNombre', 'texto', 'canal', 'mensaje', 'fecha'])
+        && request.resource.data.de == request.auth.uid
+        && request.resource.data.contra is string && request.resource.data.contraNombre is string && request.resource.data.contraNombre.size() <= 30
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 200
+        && request.resource.data.canal is string && request.resource.data.canal.size() <= 10
+        && request.resource.data.mensaje is string && request.resource.data.mensaje.size() <= 40
+        && request.resource.data.fecha is int;
+      allow read, update, delete: if false;
+    }
     match /refuerzos/{id} {
       allow read: if request.auth != null
         && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
