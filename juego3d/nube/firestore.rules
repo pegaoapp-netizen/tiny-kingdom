@@ -76,30 +76,51 @@ service cloud.firestore {
         && request.resource.data.fecha is int;
       allow delete: if request.auth != null && resource.data.dueno == request.auth.uid;
     }
+    // Ataques con marcha: se crean al salir, se resuelven al llegar (lo hace el defensor o el atacante, una sola vez)
+    function botinOk(b) {
+      return b.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
+        && b.oro is int && b.oro >= 0 && b.oro <= 5000 && b.comida is int && b.comida >= 0 && b.comida <= 5000
+        && b.madera is int && b.madera >= 0 && b.madera <= 5000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 5000;
+    }
     match /ataques/{id} {
       allow read: if request.auth != null
         && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid);
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto'])
+        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto', 'llega', 'resuelto', 'cobrado', 'bajas'])
         && request.resource.data.atacante == request.auth.uid
         && request.resource.data.defensor is string
         && request.resource.data.defensor != request.auth.uid
         && request.resource.data.atacanteNombre is string && request.resource.data.atacanteNombre.size() <= 30
         && request.resource.data.defensorNombre is string && request.resource.data.defensorNombre.size() <= 30
-        && request.resource.data.gano is bool
-        && request.resource.data.visto == false
+        && request.resource.data.gano == false && request.resource.data.visto == false
+        && request.resource.data.resuelto == false && request.resource.data.cobrado == false && request.resource.data.bajas == 0
         && request.resource.data.fecha is int
         && request.resource.data.fuerza is int && request.resource.data.defensa is int
-        && request.resource.data.botin.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
-        && request.resource.data.botin.oro is int && request.resource.data.botin.oro >= 0 && request.resource.data.botin.oro <= 5000
-        && request.resource.data.botin.comida is int && request.resource.data.botin.comida >= 0 && request.resource.data.botin.comida <= 5000
-        && request.resource.data.botin.madera is int && request.resource.data.botin.madera >= 0 && request.resource.data.botin.madera <= 5000
-        && request.resource.data.botin.piedra is int && request.resource.data.botin.piedra >= 0 && request.resource.data.botin.piedra <= 5000
+        && request.resource.data.llega is int
+        && request.resource.data.llega >= request.time.toMillis() + 20000
+        && request.resource.data.llega <= request.time.toMillis() + 900000
+        && botinOk(request.resource.data.botin)
         && exists(/databases/$(database)/documents/aldeas/$(request.resource.data.defensor))
         && get(/databases/$(database)/documents/aldeas/$(request.resource.data.defensor)).data.get('escudo', 0) < request.time.toMillis();
-      allow update: if request.auth != null && resource.data.defensor == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visto'])
-        && request.resource.data.visto == true;
+      allow update: if request.auth != null && (
+        (resource.data.get('resuelto', true) == false
+          && request.time.toMillis() >= resource.data.llega
+          && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gano', 'botin', 'resuelto', 'defensa', 'bajas'])
+          && request.resource.data.resuelto == true
+          && request.resource.data.gano is bool
+          && request.resource.data.bajas is number && request.resource.data.bajas >= 0 && request.resource.data.bajas <= 1
+          && request.resource.data.defensa is int
+          && botinOk(request.resource.data.botin)
+          && request.resource.data.botin.oro <= resource.data.botin.oro && request.resource.data.botin.comida <= resource.data.botin.comida
+          && request.resource.data.botin.madera <= resource.data.botin.madera && request.resource.data.botin.piedra <= resource.data.botin.piedra)
+        || (resource.data.defensor == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['visto'])
+          && request.resource.data.visto == true)
+        || (resource.data.atacante == request.auth.uid && resource.data.get('resuelto', true) == true
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cobrado'])
+          && request.resource.data.cobrado == true)
+      );
       allow delete: if false;
     }
 

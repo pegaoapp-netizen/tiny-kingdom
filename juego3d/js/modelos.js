@@ -374,6 +374,27 @@ var M = (function () {
   // =================================================================
   //  EDIFICIOS NUEVOS: almacén, mercado, herrería, establo y galería de tiro
   // =================================================================
+  // Puesto de vigía: torre de madera alta con plataforma, techo y bandera
+  function vigia(nivel) {
+    nivel = Math.min(3, nivel); var g = new THREE.Group();
+    g.add(caja(1.9, 0.2, 1.9, P.osc, 0, 0.1, 0));
+    var alto = 3.4;
+    [[-0.6, -0.6], [0.6, -0.6], [-0.6, 0.6], [0.6, 0.6]].forEach(function (s) { var p = cil(0.09, 0.12, alto, 6, C.madera, s[0], alto / 2 + 0.2, s[1]); p.rotation.z = -s[0] * 0.04; p.rotation.x = s[1] * 0.04; g.add(p); });
+    [0.9, 1.9].forEach(function (y) {
+      [[0, -0.6, 1.3, 0.07], [0, 0.6, 1.3, 0.07]].forEach(function (q) { g.add(caja(q[2], 0.07, q[3], P.vigaOsc, q[0], y, q[1])); });
+      [[-0.6, 0, 0.07, 1.3], [0.6, 0, 0.07, 1.3]].forEach(function (q) { g.add(caja(q[2], 0.07, q[3], P.vigaOsc, q[0], y, q[1])); });
+    });
+    g.add(caja(1.7, 0.12, 1.7, C.madera, 0, alto + 0.2, 0));
+    for (var i = -1; i <= 1; i += 2) { g.add(caja(1.7, 0.45, 0.06, P.viga, 0, alto + 0.48, i * 0.82)); g.add(caja(0.06, 0.45, 1.7, P.viga, i * 0.82, alto + 0.48, 0)); }
+    [[-0.78, -0.78], [0.78, -0.78], [-0.78, 0.78], [0.78, 0.78]].forEach(function (s) { g.add(cil(0.05, 0.05, 1.1, 5, C.madera, s[0], alto + 0.75, s[1])); });
+    g.add(cono(1.35, 0.8, 4, rojoNivel(nivel), 0, alto + 1.65, 0));
+    g.add(esfera(0.1, adornoNivel(nivel), 0, alto + 2.1, 0, 6, 4));
+    var esc = new THREE.Group(); for (var e = 0; e < 8; e++) esc.add(caja(0.42, 0.04, 0.06, C.madera, 0, 0.4 + e * 0.42, 0)); [-0.2, 0.2].forEach(function (x) { esc.add(caja(0.05, alto, 0.06, C.madera, x, alto / 2 + 0.2, 0)); });
+    esc.position.set(0, 0, 0.72); esc.rotation.x = -0.08; g.add(esc);
+    var b = bandera(0xc0503a, 1.3); b.position.set(0.3, alto + 1.9, 0); g.add(b);
+    g.userData.tela = b.userData.tela;
+    return g;
+  }
   function almacen(nivel) {
     nivel = Math.min(3, nivel); var g = new THREE.Group();
     casaPiedra(g, 0, -0.4, 3.0, 2.0, 1.4, nivel, true);
@@ -2188,7 +2209,7 @@ var M = (function () {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
-    almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
+    vigia: vigia, almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,

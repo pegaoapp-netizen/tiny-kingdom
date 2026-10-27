@@ -172,6 +172,21 @@ var Cuentas = (function () {
         .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
     },
     marcarVisto: function (id) { return db.collection('ataques').doc(id).update({ visto: true }); },
+    // ataques con marcha: el defensor los escucha en vivo; el atacante revisa los suyos
+    escucharAtaques: function (fn) {
+      if (!usuario) return function () {};
+      return db.collection('ataques').where('defensor', '==', usuario.uid).where('resuelto', '==', false).limit(20)
+        .onSnapshot(function (q) { fn(q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; })); }, function () {});
+    },
+    ataquesEnviados: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('ataques').where('atacante', '==', usuario.uid).where('cobrado', '==', false).limit(20).get()
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    leerAtaque: function (id) { return db.collection('ataques').doc(id).get().then(function (d) { var x = d.data(); x.id = d.id; return x; }); },
+    resolverAtaque: function (id, datos) { return db.collection('ataques').doc(id).update(datos); },
+    cobrarAtaque: function (id) { return db.collection('ataques').doc(id).update({ cobrado: true }); },
+    leerAldea: function (uid) { return db.collection('aldeas').doc(uid).get().then(function (d) { return d.exists ? d.data() : null; }); },
     // ---------------- REFUERZOS ENTRE ALIADOS ----------------
     enviarRefuerzo: function (r) { return db.collection('refuerzos').add(r); },
     refuerzosRecibidos: function () {

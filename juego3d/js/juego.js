@@ -1757,7 +1757,7 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
+    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
     return M.mejorarPorTramo(m, tramo, tipo);
   }
 
@@ -2918,6 +2918,7 @@
       botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>');
     if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') h += botonMenu2('entrenar', '⚔️', T('entrenar'));
     if (tipo === 'mercado') h += botonMenu2('comerciar', '⚖️', T('mb_comerciar'));
+    if (tipo === 'vigia') h += botonMenu2('vigilar', '👁️', T('mb_vigilar'));
     if (tipo === 'herreria') h += botonMenu2('forjar', '⚒️', T('mb_forjar'));
     if (tipo === 'academia') h += botonMenu2('investigar', '📚', T('mb_investigar'));
     if (s) h += botonMenu2('demoler', '🧨', T('mb_demoler'), oleadaActiva);
@@ -2941,6 +2942,7 @@
       vistaTropa.rango = null; cerrarMenuEdif(); abrirPanelTropas(); return;
     }
     if (a === 'comerciar') { cerrarMenuEdif(); abrirPanelMercado(); return; }
+    if (a === 'vigilar') { cerrarMenuEdif(); abrirPanelVigia(); return; }
     if (a === 'forjar') { cerrarMenuEdif(); abrirPanelHerreria(); return; }
     if (a === 'investigar') { cerrarMenuEdif(); abrirPanelInvestigacion(ramaInv); return; }
     var pr = progresoMenu();
@@ -3047,7 +3049,7 @@
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
-      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
+      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria', 'vigia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
       HEROES.forEach(function (h) { var hu = M.heroe(h, 1); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 1.55 * hu.escala, (hu.cabezaY - 0.12) * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
@@ -3132,6 +3134,7 @@
     else if (p.tipo === 'heroe') abrirPanelHeroe(p.id);
     else if (p.tipo === 'obtener') abrirPanelObtener(p.id);
     else if (p.tipo === 'mercado') abrirPanelMercado();
+    else if (p.tipo === 'vigia') abrirPanelVigia();
     else if (p.tipo === 'herreria') abrirPanelHerreria();
   }
 
@@ -3161,6 +3164,7 @@
     if (tipo === 'cuartel') return '<span>⚔️ ' + T('sin_tope') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
     if (tipo === 'almacen') return '<span>🔒 ' + T('protege_txt', { n: d.protege[i] }) + '</span>';
+    if (tipo === 'vigia') return '<span>🛡️ ' + T('vig_txt', { n: Math.round(d.defensa[i] * 100) }) + '</span><span>👁️ ' + T('vig_ve') + '</span>';
     if (tipo === 'mercado') return '<span>⚖️ ' + T('tasa_txt', { n: Math.round(d.tasa[i] * 100) }) + '</span>';
     if (tipo === 'herreria') return '<span>⚒️ ' + T('herreria_txt', { n: ARMAS.herreria.filter(function (r) { return r <= i + 1; }).length }) + '</span>';
     if (tipo === 'establo' || tipo === 'galeria') return '<span>' + d.icono + ' ' + N(tipo === 'establo' ? 'caballeria' : 'arquero') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
@@ -3195,7 +3199,7 @@
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
     var sl = slotElegido !== null ? slots[slotElegido] : null;
-    ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
+    ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado', 'vigia'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
       html += '<div class="carta compacta" title="' + D(t) + '"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
         '<div class="stats">' + statsEdificio(t, 1) + '</div>' +
         botonCosto(costoEdif(t, 0), 'construir', 'data-tipo="' + t + '"', T('construir')) + '</div>';
@@ -3914,7 +3918,7 @@
     slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'torre') d += EDIFICIOS.torre.dano[s.edificio.nivel - 1] * (1 + bono('flechas')) * 6; });
     barricadas.forEach(function (b) { if (b.nivel) d += b.max / 10; });
     d += fuerzaEjercito() * 0.8;
-    return Math.round(d);
+    return Math.round(d * (1 + vigiaBono()));
   }
   function botinMaximo(nivel) {
     var n = Math.max(1, nivel || 1);
@@ -3985,34 +3989,115 @@
     $('bp-x2').addEventListener('click', function () { vel = vel === 1 ? 2 : 1; this.textContent = vel === 2 ? 'x1' : 'x2'; this.classList.toggle('naranja', vel === 2); });
     $('bp-saltar').addEventListener('click', function () { acum = dur; paso(); });
   }
+  // ---------- ATAQUES CON MARCHA ----------
+  // Las tropas salen, tardan en llegar y la batalla se decide al llegar.
+  function vigiaBono() { var n = nivelMayor('vigia'); return n ? EDIFICIOS.vigia.defensa[n - 1] : 0; }
+  function tiempoMarcha(a) {
+    var yo = hayCuenta() ? celdaDe(Cuentas.lugar().x, Cuentas.lugar().y) : { x: 20, y: 20 }, el = celdaDe(a.x || 50, a.y || 50);
+    return Math.round(60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) * 1000;
+  }
+  var marchas = [], entrantes = [], dejarDeEscuchar = null, resolviendo = {};
   function realizarAtaque(a) {
     var no = puedeAtacar(a);
     if (no) { abrirAtaque(a); return; }
-    var f = fuerzaEjercito(), d = Math.max(1, a.defensa || 1);
-    var fa = f * (0.85 + Math.random() * 0.3), fd = d * (0.85 + Math.random() * 0.3);
-    var gano = fa > fd;
-    var bajasFrac = gano ? Math.min(0.6, Math.max(0.1, fd / fa * 0.5)) : Math.min(1, Math.max(0.4, fd / fa * 0.6));
-    var bm = botinMaximo(a.nivel), margen = gano ? Math.min(1, 0.5 + (fa - fd) / fd) : 0;
-    var botin = { oro: Math.floor(bm.oro * margen), comida: Math.floor(bm.comida * margen), madera: Math.floor(bm.madera * margen), piedra: Math.floor(bm.piedra * margen) };
-    $('mundo-info').innerHTML = '';
+    var f = Math.round(fuerzaEjercito()), viaje = tiempoMarcha(a), bm = botinMaximo(a.nivel);
+    var doc = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
+      gano: false, botin: { oro: bm.oro, comida: bm.comida, madera: bm.madera, piedra: bm.piedra }, fuerza: f, defensa: Math.round(a.defensa || 1),
+      fecha: Date.now(), llega: Date.now() + viaje, visto: false, resuelto: false, cobrado: false, bajas: 0 };
     sonar('cuerno');
-    var resultado = null, mostrar = null;
-    escenaBatalla(a, f, d, gano, function (cb) { mostrar = cb; if (resultado) cb(resultado); });
-    function avisar(html) { resultado = html; if (mostrar) mostrar(html); }
-    var reporte = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
-      gano: gano, botin: botin, fuerza: Math.round(f), defensa: Math.round(d), fecha: Date.now(), visto: false };
-    Cuentas.atacar(reporte).then(function () {
-      // bajas: algunas tropas caen (las normales pueden ir a la Enfermería)
-      var vivos = tropas.slice(), nb = Math.round(vivos.length * bajasFrac), caidas = 0;
-      vivos.sort(function () { return Math.random() - 0.5; });
-      for (var i = 0; i < nb && i < vivos.length; i++) { vivos[i].vida = 0; morir(vivos[i]); caidas++; }
-      if (gano) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); }
-      else sonar('derrota');
+    Cuentas.atacar(doc).then(function (ref) {
+      doc.id = ref.id; marchas.push(doc);
       estado.escudoHasta = 0; // atacar quita tu protección
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 10 * 60 * 1000;
       guardar(true); publicarAldea(true); actualizarEscudo();
-      avisar('<h3 class="bp-gran ' + (gano ? 'si' : 'no') + '">' + (gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (gano ? T('at_gano', { b: textoBotin(botin) }) : T('at_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>');
-    }).catch(function () { avisar('<p class="aviso-rojo"><b>' + T('at_error') + '</b></p>'); sonar('error'); });
+      $('mundo-info').innerHTML = '<div class="carta"><h3>' + T('mar_salen', { n: escaparHTML(a.nombre), t: fmtTiempo(viaje / 1000) }) + '</h3></div>';
+      actualizarAlertas();
+    }).catch(function () { $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); });
+  }
+  // decide la batalla (la misma cuenta para el defensor y para el atacante)
+  function decidirAtaque(r, defensa) {
+    var res = resolverBatalla(r.fuerza, defensa), b = {};
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { b[k] = Math.floor((r.botin[k] || 0) * res.margen); });
+    return { gano: res.gano, botin: b, bajas: Math.round(res.bajas * 100) / 100, defensa: Math.round(defensa), resuelto: true };
+  }
+  // el atacante: al llegar, si nadie la resolvió, la resuelve con la defensa que el defensor tenía publicada; luego cobra
+  function llegarMarcha(m) {
+    if (resolviendo[m.id]) return; resolviendo[m.id] = true;
+    var paso = m.resuelto ? Promise.resolve(m) : Cuentas.leerAldea(m.defensor).then(function (al) {
+      var datos = decidirAtaque(m, Math.max(1, (al && al.defensa) || m.defensa || 1));
+      return Cuentas.resolverAtaque(m.id, datos).then(function () { for (var k in datos) m[k] = datos[k]; return m; })
+        .catch(function () { return Cuentas.leerAtaque(m.id); });
+    });
+    paso.then(function (r) {
+      if (!r || !r.resuelto) { resolviendo[m.id] = false; return; }
+      marchas = marchas.filter(function (x) { return x.id !== m.id; });
+      var caidas = bajasEjercito(r.bajas || 0);
+      if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
+      Cuentas.cobrarAtaque(r.id).catch(function () {});
+      guardar(true); actualizarHUD(); actualizarAlertas();
+      escenaBatalla({ nombre: r.defensorNombre, nivel: 1 }, r.fuerza, r.defensa, r.gano, function (cb) {
+        cb('<h3 class="bp-gran ' + (r.gano ? 'si' : 'no') + '">' + (r.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (r.gano ? T('at_gano', { b: textoBotin(r.botin) }) : T('at_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>');
+      });
+    }).catch(function () { resolviendo[m.id] = false; });
+  }
+  // el defensor: al llegar el ataque, lo resuelve con la defensa que tiene en ese momento
+  function llegarAtaque(r) {
+    if (resolviendo[r.id]) return; resolviendo[r.id] = true;
+    var datos = decidirAtaque(r, Math.max(1, defensaReino()));
+    Cuentas.resolverAtaque(r.id, datos).then(function () { setTimeout(function () { revisarAtaques(true); }, 800); })
+      .catch(function () { setTimeout(function () { resolviendo[r.id] = false; revisarAtaques(true); }, 5000); });
+  }
+  var vigilandoUid = null, relojesVigia = [];
+  function iniciarVigilancia() {
+    if (!hayCuenta()) return;
+    var uid = Cuentas.usuario().uid;
+    if (dejarDeEscuchar && vigilandoUid === uid) return;
+    // cambió la cuenta: se deja de escuchar a la anterior
+    if (dejarDeEscuchar) { dejarDeEscuchar(); relojesVigia.forEach(clearInterval); relojesVigia = []; entrantes = []; marchas = []; }
+    vigilandoUid = uid;
+    dejarDeEscuchar = Cuentas.escucharAtaques(function (lista) {
+      var antes = entrantes.map(function (x) { return x.id; });
+      entrantes = lista;
+      if (lista.some(function (x) { return antes.indexOf(x.id) < 0; })) { sonar('cuerno'); setTimeout(function () { sonar('golpe'); }, 350); }
+      actualizarAlertas();
+    });
+    Cuentas.ataquesEnviados().then(function (l) { marchas = l; actualizarAlertas(); }).catch(function () {});
+    relojesVigia.push(setInterval(function () { if (hayCuenta()) Cuentas.ataquesEnviados().then(function (l) { marchas = l; }).catch(function () {}); }, 30000));
+    relojesVigia.push(setInterval(actualizarAlertas, 1000));
+  }
+  function actualizarAlertas() {
+    var ahora = Date.now();
+    entrantes.forEach(function (r) { if (r.llega <= ahora) llegarAtaque(r); });
+    marchas.forEach(function (m) { if (m.resuelto || m.llega <= ahora) llegarMarcha(m); });
+    var vivos = entrantes.filter(function (r) { return r.llega > ahora; }).sort(function (a, b) { return a.llega - b.llega; });
+    var al = $('alerta-ataque');
+    if (vivos.length) {
+      if (!al) {
+        al = document.createElement('button'); al.id = 'alerta-ataque';
+        al.addEventListener('click', function () { sonar('click'); if (enMundo) entrarCiudad(); cerrarPanel(); cerrarMenuEdif(); cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial(); });
+        document.body.appendChild(al);
+      }
+      var r = vivos[0], vn = nivelMayor('vigia');
+      al.innerHTML = '<b>' + T('al_te_ataca', { n: escaparHTML(r.atacanteNombre) }) + '</b><span class="al-t">' + T('al_llega', { t: fmtTiempo((r.llega - ahora) / 1000) }) + '</span>' +
+        '<span class="al-sub">' + (vn ? T('al_fuerza', { f: formatoNumero(Math.round(r.fuerza / 100) * 100), d: formatoNumero(Math.round(defensaReino())) }) : T('al_sin_vigia')) + (vivos.length > 1 ? ' · ' + T('al_mas', { n: vivos.length - 1 }) : '') + '</span><span class="al-sub">' + T('al_tocar') + '</span>';
+    } else if (al) al.remove();
+    var mv = marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).sort(function (a, b) { return a.llega - b.llega; });
+    var mi = $('marcha-info');
+    if (mv.length) {
+      if (!mi) { mi = document.createElement('div'); mi.id = 'marcha-info'; document.body.appendChild(mi); }
+      mi.innerHTML = T('mar_hacia', { n: escaparHTML(mv[0].defensorNombre) }) + ' · <b>' + T('mar_llega', { t: fmtTiempo((mv[0].llega - ahora) / 1000) }) + '</b>' + (mv.length > 1 ? ' · ' + T('al_mas', { n: mv.length - 1 }) : '');
+    } else if (mi) mi.remove();
+    if (panelActual && panelActual.tipo === 'vigia') pintarVigia();
+  }
+  function abrirPanelVigia() { abrirPanel(T('p_vigia'), '<div id="vigia-lista"></div>', { tipo: 'vigia' }); pintarVigia(); }
+  function pintarVigia() {
+    var box = $('vigia-lista'); if (!box) return;
+    var ahora = Date.now(), vn = nivelMayor('vigia');
+    var ent = entrantes.filter(function (r) { return r.llega > ahora; }), sal = marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; });
+    var h = '<p class="nota">🛡️ ' + T('at_defensa') + ': <b>' + formatoNumero(Math.round(defensaReino())) + '</b>' + (vn ? ' (' + T('vig_txt', { n: Math.round(vigiaBono() * 100) }) + ')' : '') + '</p>';
+    h += '<h3>⚔️ ' + T('vig_entrantes') + '</h3>' + (ent.length ? ent.map(function (r) { return '<div class="ob-fila"><span class="ob-ico">⚔️</span><div class="ob-txt"><b>' + escaparHTML(r.atacanteNombre) + '</b><span>' + T('al_llega', { t: fmtTiempo((r.llega - ahora) / 1000) }) + (vn ? ' · ' + T('at_fuerza') + ' ~' + formatoNumero(Math.round(r.fuerza / 100) * 100) : '') + '</span></div></div>'; }).join('') : '<p class="nota">' + T('vig_nada') + '</p>');
+    h += '<h3>🏇 ' + T('vig_salientes') + '</h3>' + (sal.length ? sal.map(function (m) { return '<div class="ob-fila"><span class="ob-ico">🏇</span><div class="ob-txt"><b>' + escaparHTML(m.defensorNombre) + '</b><span>' + T('mar_llega', { t: fmtTiempo((m.llega - ahora) / 1000) }) + '</span></div></div>'; }).join('') : '<p class="nota">' + T('vig_nada') + '</p>');
+    if (box.innerHTML !== h) box.innerHTML = h;
   }
   // El defensor revisa si lo atacaron (al entrar y cada minuto)
   var ultimaRevision = 0, revisando = false;
@@ -4020,8 +4105,10 @@
     if (!hayCuenta() || enMenu || revisando) return;
     if (!forzar && Date.now() - ultimaRevision < 60000) return;
     ultimaRevision = Date.now(); revisando = true;
+    iniciarVigilancia();
     Cuentas.ataquesNuevos().then(function (lista) {
       revisando = false;
+      lista = lista.filter(function (r) { return r.resuelto !== false; });
       if (!lista.length) return;
       var perdio = false, html = '';
       lista.sort(function (a, b) { return a.fecha - b.fecha; }).forEach(function (r) {
@@ -4039,6 +4126,7 @@
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
         Cuentas.marcarVisto(r.id).catch(function () {});
       });
+      if (perdio) bajasEjercito(0.25);
       if (perdio && !protegido()) { estado.escudoHasta = Date.now() + 30 * 60 * 1000; html += '<p class="nota">🛡️ ' + T('rep_escudo') + '</p>'; }
       actualizarHUD(); guardar(true); publicarAldea(true); actualizarEscudo();
       abrirPanel(T('rep_titulo'), html, { tipo: 'reporte' });
