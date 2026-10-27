@@ -776,7 +776,7 @@
     var ahora = Date.now();
     if (!forzar && ahora - ultimaPublicacion < 60000) return;
     ultimaPublicacion = ahora;
-    var l = Cuentas.lugar();
+    var l = miLugar();
     Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, defensa: defensaReino() })
       .catch(function () {
         // si la alianza ya no existe, la quitamos y probamos otra vez
@@ -984,6 +984,7 @@
     var d = M3.dist;
     M3.cam.position.set(M3.obj.x, d * 0.85, M3.obj.z + d * 0.62); M3.cam.lookAt(M3.obj);
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
+    actualizarEfectosPortal();
     M3.r.render(M3.e, M3.cam);
     requestAnimationFrame(dibujarMundo3D);
   }
@@ -1036,9 +1037,17 @@
     if (mia) html += '<p class="nota"><b>' + T('cas_tuya') + '</b></p><button class="comprar" id="cas-soltar">' + T('cas_abandonar') + '</button>';
     else if (deOtro) html += '<p class="nota">' + T('cas_de', { n: escaparHTML(nube.nombre || '?') }) + '</p><button class="comprar rojo boton-oleada-grande" id="cas-conquistar">⚔️ ' + T('cas_quitar') + '</button>';
     else html += '<p class="nota">' + T('cas_libre', { n: misCasillas().length, m: maxCasillas() }) + '</p><button class="comprar rojo boton-oleada-grande" id="cas-conquistar">🚩 ' + T('cas_conquistar') + '</button>';
+    if (celdaLibre(c.x, c.y)) { var np = (estado.mochila && estado.mochila.portal_elegir) || 0, pt = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0]; html += '<button class="comprar morado" id="cas-portal" style="margin-top:6px">✨ ' + T('tel_aqui') + ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) + '</button>'; }
     $('mundo-info').innerHTML = html + '</div>';
     var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { this.disabled = true; conquistarCasilla(c, deOtro ? nube : null); });
     var bs = $('cas-soltar'); if (bs) bs.addEventListener('click', function () { soltarCasilla(c); });
+    var bp = $('cas-portal'); if (bp) bp.addEventListener('click', function () {
+      var no = puedeTeleportar(); if (no) { consejoTemporal(no); sonar('error'); return; }
+      confirmarJuego('✨ ' + T('tel_titulo'), T('tel_txt', { x: c.x, y: c.y }), T('tel_aqui'), function () {
+        if (!(estado.mochila.portal_elegir > 0)) { var pt = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0]; if (!pagar(0, pt.gemas)) return; estado.mochila.portal_elegir = (estado.mochila.portal_elegir || 0) + 1; }
+        teletransportar(c.x, c.y, 'portal_elegir');
+      });
+    });
   }
   function conquistarCasilla(c, deOtro) {
     if (!tropas.some(function (u) { return !u.heroeId; })) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCasilla(c); return; }
@@ -1095,6 +1104,73 @@
     if (mostrar) mostrar(listo);
     guardar(true); actualizarHUD(); mostrarCampamento(i);
   }
+  // ---------- PORTALES: mudar el reino a otro lugar del mapa ----------
+  function miLugar() { return estado.lugar || (hayCuenta() ? Cuentas.lugar() : { x: 50, y: 50 }); }
+  function aCoord(c) { return Math.round(c * 100 / TAM_MUNDO + 1.25); } // el centro de la casilla, en coordenadas 0..99
+  function celdaLibre(x, y) {
+    if (x < 1 || y < 1 || x > TAM_MUNDO - 2 || y > TAM_MUNDO - 2) return false;
+    var c = casillaMundo(x, y), k = x + '_' + y;
+    if (c.tipo === 'lago' || c.tipo === 'montana') return false;
+    if (ocupadasMundo[k]) return false;
+    if (CAMPAMENTOS.some(function (cm) { var q = celdaDe(cm.x, cm.y); return q.x === x && q.y === y; })) return false;
+    if (aldeasCache.some(function (a) { var q = celdaDe(a.x, a.y); return q.x === x && q.y === y; })) return false;
+    return true;
+  }
+  function puedeTeleportar() {
+    if (oleadaActiva) return T('tel_oleada');
+    if (marchas.some(function (m) { return !m.resuelto && m.llega > Date.now(); })) return T('tel_marcha');
+    if (entrantes.some(function (r) { return r.llega > Date.now(); })) return T('tel_atacado');
+    return '';
+  }
+  function teletransportar(x, y, tipo) {
+    var no = puedeTeleportar();
+    if (no) { consejoTemporal(no); sonar('error'); return false; }
+    if (!celdaLibre(x, y)) { consejoTemporal(T('tel_ocupada')); sonar('error'); return false; }
+    if (!(estado.mochila[tipo] > 0)) { consejoTemporal(T('tel_sin')); sonar('error'); return false; }
+    estado.mochila[tipo]--;
+    var antes = celdaDe(miLugar().x, miLugar().y);
+    estado.lugar = { x: aCoord(x), y: aCoord(y) };
+    var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
+    aldeasCache.forEach(function (a) { if (a.uid === yo) { a.x = estado.lugar.x; a.y = estado.lugar.y; } });
+    guardar(true); publicarAldea(true);
+    sonar('magia'); setTimeout(function () { sonar('poder'); }, 300);
+    consejoTemporal(T('tel_ok', { x: x, y: y }));
+    if (M3) {
+      efectoPortal(antes); efectoPortal({ x: x, y: y });
+      setTimeout(function () { if (enMundo) { pintarAldeas(aldeasCache); var p = posCelda(x, y); M3.obj.copy(p); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true; $('mundo-info').innerHTML = '<div class="carta"><h3>' + T('tel_ok', { x: x, y: y }) + '</h3></div>'; } }, 600);
+    }
+    return true;
+  }
+  function portalAlAzar() {
+    var actual = celdaDe(miLugar().x, miLugar().y);
+    for (var i = 0; i < 600; i++) {
+      var x = 2 + Math.floor(Math.random() * (TAM_MUNDO - 4)), y = 2 + Math.floor(Math.random() * (TAM_MUNDO - 4));
+      if (Math.hypot(x - actual.x, y - actual.y) > 5 && celdaLibre(x, y)) return teletransportar(x, y, 'portal_azar');
+    }
+    return false;
+  }
+  // luz del portal: una columna brillante y un aro que crece
+  function efectoPortal(c) {
+    if (!M3) return;
+    var p = posCelda(c.x, c.y), g = new THREE.Group();
+    var luz = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.85, 9, 18, 1, true), new THREE.MeshBasicMaterial({ color: 0x9fe0ff, transparent: true, opacity: 0.75, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    luz.position.y = 4.5; g.add(luz);
+    var aro = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.95, 32), new THREE.MeshBasicMaterial({ color: 0xd8b4ff, transparent: true, opacity: 0.9, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    aro.rotation.x = -Math.PI / 2; aro.position.y = 0.08; g.add(aro);
+    g.position.copy(p); M3.e.add(g);
+    (M3.efectos = M3.efectos || []).push({ g: g, luz: luz, aro: aro, t0: performance.now() });
+  }
+  function actualizarEfectosPortal() {
+    if (!M3 || !M3.efectos || !M3.efectos.length) return;
+    var ahora = performance.now();
+    M3.efectos = M3.efectos.filter(function (f) {
+      var k = (ahora - f.t0) / 1800;
+      if (k >= 1) { M3.e.remove(f.g); return false; }
+      f.aro.scale.setScalar(1 + k * 3); f.aro.material.opacity = 0.9 * (1 - k);
+      f.luz.material.opacity = 0.75 * (1 - k * k); f.luz.scale.set(1 - k * 0.6, 1, 1 - k * 0.6);
+      return true;
+    });
+  }
   function cerrarMundo() { $('mundo').classList.add('oculto'); enMundo = false; }
   // volver a la ciudad desde el mapa: la cámara baja desde lo alto hasta el reino
   function entrarCiudad() {
@@ -1109,9 +1185,9 @@
   function pintarAldeas(lista) {
     var cont = $('mundo-aldeas'), h = '';
     var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
-    var miLugar = hayCuenta() ? Cuentas.lugar() : { x: 50, y: 50 };
+    var lugarYo = miLugar();
     var hayYo = lista.some(function (a) { return a.uid === yo; });
-    if (!hayYo) lista = lista.concat([{ uid: yo, nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: miLugar.x, y: miLugar.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0 }]);
+    if (!hayYo) lista = lista.concat([{ uid: yo, nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: lugarYo.x, y: lugarYo.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0 }]);
     CAMPAMENTOS.forEach(function (c, i) {
       h += '<button class="aldea trasgo" data-campamento="' + i + '" style="left:' + c.x + '%;top:' + c.y + '%"><span class="ic">' + iconoMapa('mapa_campamento', '⛺') + '</span><span class="nom">' + T('leyenda_trasgos') + '</span><span class="niv">' + c.nivel + '</span></button>';
     });
@@ -3993,7 +4069,7 @@
   // Las tropas salen, tardan en llegar y la batalla se decide al llegar.
   function vigiaBono() { var n = nivelMayor('vigia'); return n ? EDIFICIOS.vigia.defensa[n - 1] : 0; }
   function tiempoMarcha(a) {
-    var yo = hayCuenta() ? celdaDe(Cuentas.lugar().x, Cuentas.lugar().y) : { x: 20, y: 20 }, el = celdaDe(a.x || 50, a.y || 50);
+    var yo = celdaDe(miLugar().x, miLugar().y), el = celdaDe(a.x || 50, a.y || 50);
     return Math.round(60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) * 1000;
   }
   var marchas = [], entrantes = [], dejarDeEscuchar = null, resolviendo = {};
@@ -4267,6 +4343,8 @@
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
     if (o.segundos) { consejoTemporal(T('acel_desde_menu')); sonar('error'); return; }
+    if (o.portal === 'elegir') { consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
+    if (o.portal === 'azar') { if (portalAlAzar()) { cerrarPanel(); abrirMundo(); } return; }
     if (o.exp || o.pergamino) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
     if (o.escudo) {
       if (protegido()) { consejoTemporal(T('escudo_activo', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) })); sonar('error'); return; }
@@ -4955,6 +5033,7 @@
       estado.ofertaFrag = g.ofertaFrag || '';
       estado.casillas = g.casillas || {};
       estado.armas = g.armas || {};
+      estado.lugar = g.lugar || null;
       estado.cdCamp = g.cdCamp || {};
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
