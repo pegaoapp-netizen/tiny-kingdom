@@ -32,7 +32,9 @@
       var inv = {};
       tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; if (u.invocada) inv[u.tipo] = (inv[u.tipo] || 0) + 1; else t[u.tipo] = (t[u.tipo] || 0) + 1; });
       estado.invocadas = inv;
-      colaEntreno.forEach(function (c) { t[c.tipo] = (t[c.tipo] || 0) + 1; });
+      var cola = [];
+      colaEntreno.forEach(function (c, i) { var q = cola[cola.length - 1]; if (q && i > 0 && q[0] === c.tipo) q[1]++; else cola.push([c.tipo, 1, i === 0 ? Math.round(c.t * 10) / 10 : 0]); });
+      estado.colaEntreno = cola;
       estado.tropas = t;
       estado.heroe = tropas.some(function (u) { return u.tipo === 'heroe'; });
       estado.barricadas = barricadas.map(function (b) { return b.nivel; });
@@ -1702,7 +1704,7 @@
     if (hechas > 1) consejoTemporal(T('entrenando_n', { n: hechas }));
     sonar('click');
     actualizarHUD();
-    actualizarPanel();
+    if (panelActual && panelActual.tipo === 'tropas') { vistaTropa.n = 1; abrirPanelTropas(); } else actualizarPanel();
   }
   function costoArmadura(n) { return { oro: ARMADURA.costo[n], piedra: ARMADURA.piedra[n] }; }
   function mejorarArmadura(tipo, conGemas) {
@@ -1710,6 +1712,7 @@
     if (n >= ARMADURA.max) return;
     if (!(conGemas ? pagar(0, ARMADURA.gemas[n]) : pagar(costoArmadura(n)))) return;
     estado.armadura[tipo] = n + 1;
+    vistaTropa.rango = null;
     // las tropas que ya tienes también se ponen la armadura nueva
     tropas.forEach(function (u) {
       if (u.tipo !== tipo) return;
@@ -2492,23 +2495,161 @@
     abrirPanel(T('p_construir'), html, { tipo: 'construir', slot: slotElegido });
   }
 
+  // ------------------------------------------------------------------
+  //  PANTALLA DE TROPAS: muñeco 3D grande que gira, rangos, barra de cantidad
+  // ------------------------------------------------------------------
+  var PESTANAS_TROPA = { cuartel: ['espadachin', 'guardian'], establo: ['caballeria'], tiro: ['arquero'] };
+  var ICONO_PESTANA = { cuartel: '🏰', establo: '🐎', tiro: '🏹' };
+  var ROMANO = ['I', 'II', 'III', 'IV'];
+  var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1 };
+  var visor = null;
+  function visorTropa(cont, tipo, rango) {
+    try {
+      if (!visor) {
+        var r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+        var e = new THREE.Scene();
+        e.add(new THREE.HemisphereLight(0xffffff, 0x8a7a5a, 0.7));
+        var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(3, 6, 5); e.add(l);
+        var l2 = new THREE.DirectionalLight(0xffe0b0, 0.35); l2.position.set(-4, 2, -3); e.add(l2);
+        var base = new THREE.Group();
+        var piedra = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.08, 0.16, 32), new THREE.MeshLambertMaterial({ color: 0xa8957a }));
+        piedra.position.y = -0.08; base.add(piedra);
+        var borde = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.035, 8, 40), new THREE.MeshLambertMaterial({ color: 0xd9b04a }));
+        borde.rotation.x = Math.PI / 2; borde.position.y = 0.005; base.add(borde);
+        e.add(base);
+        visor = { r: r, e: e, c: new THREE.PerspectiveCamera(28, 1, 0.1, 200), base: base, m: null, clave: '', giro: 0.5, arrastre: null, t: 0, ultimo: 0 };
+        var el = r.domElement;
+        el.style.touchAction = 'none';
+        el.addEventListener('pointerdown', function (ev) { visor.arrastre = ev.clientX; try { el.setPointerCapture(ev.pointerId); } catch (x) {} });
+        el.addEventListener('pointermove', function (ev) { if (visor.arrastre === null) return; visor.giro += (ev.clientX - visor.arrastre) * 0.012; visor.arrastre = ev.clientX; });
+        el.addEventListener('pointerup', function () { visor.arrastre = null; });
+        el.addEventListener('pointercancel', function () { visor.arrastre = null; });
+      }
+      var clave = tipo + ':' + rango;
+      if (visor.clave !== clave) {
+        if (visor.m) visor.e.remove(visor.m.grupo);
+        var m = M.unidad(tipo, undefined, rango);
+        m.grupo.rotation.y = 0;
+        var caja = new THREE.Box3().setFromObject(m.grupo), tam = new V3(); caja.getSize(tam);
+        var ancho = Math.max(tam.x, tam.z);
+        visor.base.scale.set(ancho * 0.72, 1, ancho * 0.72);
+        visor.h = tam.y; visor.dist = Math.max(tam.y, ancho * 0.9) * 2.35;
+        visor.e.add(m.grupo);
+        visor.m = m; visor.clave = clave;
+      }
+      cont.appendChild(visor.r.domElement);
+      var w = cont.clientWidth || 320, hh = cont.clientHeight || 260;
+      visor.r.setSize(w, hh);
+      visor.c.aspect = w / hh; visor.c.updateProjectionMatrix();
+      dibujarVisor(0);
+      if (!visor.corriendo) { visor.corriendo = true; visor.ultimo = performance.now(); requestAnimationFrame(pasoVisor); }
+    } catch (err) { /* sin 3D: queda el fondo */ }
+  }
+  function dibujarVisor(dt) {
+    visor.t += dt;
+    if (visor.arrastre === null) visor.giro += dt * 0.6;
+    visor.m.grupo.rotation.y = visor.giro;
+    try { M.animarUnidad(visor.m, visor.t, false, 0); } catch (x) {}
+    var c = visor.c, d = visor.dist, h = visor.h;
+    c.position.set(0, h * 0.5 + d * 0.22, d); c.lookAt(0, h * 0.36, 0);
+    visor.r.render(visor.e, c);
+  }
+  function pasoVisor(ahora) {
+    if (!visor) return;
+    if (!visor.r.domElement.isConnected || $('panel').classList.contains('oculto')) { visor.corriendo = false; return; }
+    var dt = Math.min(0.1, Math.max(0, (ahora - visor.ultimo) / 1000)); visor.ultimo = ahora;
+    dibujarVisor(dt);
+    requestAnimationFrame(pasoVisor);
+  }
+  function segTropas(tipo, n) { return n * TROPAS[tipo].tiempo / rapidezEntreno(); }
+  function costoTropas(tipo, n, conGemas) {
+    var c = costoTropa(tipo), t = { oro: c.oro * n, comida: c.comida * n };
+    if (conGemas) t.gemas = gemasParaTerminar(segTropas(tipo, n));
+    return t;
+  }
   function abrirPanelTropas() {
+    var v = vistaTropa, t = v.tipo, d = TROPAS[t], na = nivelArmadura(t);
+    if (v.rango === null || v.rango > ARMADURA.max) v.rango = na;
+    var r = v.rango, bloq = r > na, lista = PESTANAS_TROPA[v.pest];
+    var arriba = panelActual && panelActual.tipo === 'tropas' ? $('panel').scrollTop : 0;
     var html = subtabsHeroes('tropas');
     if (!cuartelesListos().length) html += '<p class="nota aviso-rojo">' + T('necesitas_cuartel') + '</p>';
-    html += '<div class="lista">';
-    ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
-      var d = TROPAS[t], na = nivelArmadura(t);
-      html += '<div class="carta compacta" title="' + D(t) + '"><div class="cab"><div class="foto">' + fotoHTML(t, d.icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
-        '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * na)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span>' +
-        (na ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * na) + '%</span>' : '') + '</div>' +
-        '<div class="botones">' + botonCosto(costoTropa(t), 'entrenar', 'data-tipo="' + t + '"', T('entrenar')) +
-        '<div class="multi">' + [5, 10].map(function (n) { return '<button class="comprar mini" data-accion="entrenar" data-n="' + n + '" data-tipo="' + t + '" data-costo=\'' + JSON.stringify(costoTropa(t)) + '\'>×' + n + '</button>'; }).join('') + '<button class="comprar mini naranja" data-accion="entrenar" data-n="max" data-tipo="' + t + '" data-costo=\'' + JSON.stringify(costoTropa(t)) + '\'>' + T('maximo') + '</button></div>' +
-        (na < ARMADURA.max ? botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '" title="' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '"', '🛡️ ' + T('armadura') + ' ' + (na + 1) + ' ').replace('class="comprar"', 'class="comprar armadura"') + botonGemas(ARMADURA.gemas[na], 'armadura-gemas', 'data-tipo="' + t + '"', '🛡️ ' + (na + 1))
-          : '<span class="nivel-arm">' + T('armadura_max') + '</span>') + '</div></div>';
-    });
-    html += '</div><div class="cola" id="cola"></div>';
+    html += '<div class="subtabs pest-tropa">' + Object.keys(PESTANAS_TROPA).map(function (k) {
+      return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
+    }).join('') + '</div>';
+    // escena con el muñeco
+    html += '<div class="tropa-escena"><div class="visor-tropa" id="visor-tropa"></div>' +
+      '<div class="tropa-nombre"><h3>' + N(t) + '</h3><span class="rango-chapa r' + r + '">' + T('rango') + ' ' + ROMANO[r] + '</span></div>' +
+      (lista.length > 1 ? '<div class="tropa-elegir">' + lista.map(function (k) {
+        return '<button data-accion="tropa-tipo" data-tipo="' + k + '" class="' + (k === t ? 'activo' : '') + '" title="' + N(k) + '">' + fotoHTML(k, TROPAS[k].icono) + '</button>';
+      }).join('') + '</div>' : '') +
+      '<div class="rangos">' + ROMANO.map(function (rn, i) {
+        return '<button data-accion="tropa-rango" data-r="' + i + '" class="r' + i + (i > na ? ' bloq' : '') + (i === r ? ' activo' : '') + '">' + rn + (i > na ? ' 🔒' : '') + '</button>';
+      }).join('') + '</div></div>';
+    html += '<p class="nota tropa-desc">' + D(t) + '</p>';
+    html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * r)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span>' +
+      (r ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * r) + '%</span>' : '') + '</div>';
+    var subir = na < ARMADURA.max ? '<div class="carta compacta subir-rango"><h3>⬆️ ' + T('subir_rango', { r: ROMANO[na + 1] }) + '</h3><p class="nota">' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '</p><div class="botones-tropa">' +
+      botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '"', '🛡️ ').replace('class="comprar"', 'class="comprar armadura"') +
+      botonGemas(ARMADURA.gemas[na], 'armadura-gemas', 'data-tipo="' + t + '"', '🛡️') + '</div></div>' : '<p class="nota"><b>' + T('armadura_max') + '</b></p>';
+    if (bloq) {
+      html += '<p class="nota aviso-rojo">' + T(r === na + 1 ? 'rango_bloq' : 'rango_antes', { r: ROMANO[r === na + 1 ? r : na + 1] }) + '</p>' + subir;
+    } else {
+      var max = maxEntrenar(t);
+      v.n = Math.max(1, Math.min(v.n, Math.max(1, max)));
+      html += '<div class="tropa-cantidad"><button class="redondo" data-accion="tropa-menos">−</button>' +
+        '<input type="range" id="tropa-n" min="1" max="' + Math.max(1, max) + '" value="' + v.n + '"' + (max < 1 ? ' disabled' : '') + '>' +
+        '<button class="redondo" data-accion="tropa-mas">+</button><span class="tropa-num" id="tropa-num">' + v.n + '</span>' +
+        '<button class="comprar mini naranja" data-accion="tropa-max">' + T('maximo') + '</button></div>' +
+        (max < 1 && cuartelesListos().length ? '<p class="nota aviso-rojo">' + T('sin_recursos_tropa') + '</p>' : '') +
+        '<div class="tropa-total" id="tropa-total"></div>' +
+        '<div class="botones-tropa">' +
+        '<button class="comprar morado" id="btn-tropa-ya" data-accion="tropa-ya" data-tipo="' + t + '"></button>' +
+        '<button class="comprar" id="btn-tropa-ent" data-accion="entrenar" data-tipo="' + t + '"></button></div>' +
+        '<div class="cola" id="cola"></div><div id="cola-gemas" class="cola-gemas"></div>' + subir;
+    }
     abrirPanel(T('p_heroes'), html, { tipo: 'tropas' });
+    if (!bloq) refrescarCantidad();
+    $('panel').scrollTop = arriba;
+    visorTropa($('visor-tropa'), t, r);
   }
+  function refrescarCantidad() {
+    var v = vistaTropa, t = v.tipo, n = v.n;
+    var sl = $('tropa-n'); if (!sl) return;
+    sl.value = n; $('tropa-num').textContent = n;
+    var tot = costoTropas(t, n), ya = costoTropas(t, n, true);
+    $('tropa-total').innerHTML = htmlCosto(tot) + '<span class="costo-r">⏱ ' + fmtTiempo(segTropas(t, n) / velReal()) + '</span>';
+    var be = $('btn-tropa-ent');
+    be.setAttribute('data-n', n); be.setAttribute('data-costo', JSON.stringify(tot));
+    be.innerHTML = '⚔️ ' + T('entrenar') + ' ×' + n;
+    var by = $('btn-tropa-ya');
+    by.setAttribute('data-costo', JSON.stringify(ya));
+    by.innerHTML = '⏩ ' + T('terminar_ya') + ' <span class="ico gema"></span>' + ya.gemas;
+    actualizarPanel();
+  }
+  function cambiarCantidad(d) {
+    var max = Math.max(1, maxEntrenar(vistaTropa.tipo));
+    vistaTropa.n = Math.max(1, Math.min(max, vistaTropa.n + d));
+    refrescarCantidad();
+  }
+  // entrenar y terminar al momento pagando gemas
+  function entrenarYa(tipo, n) {
+    if (!cuartelesListos().length) { consejoTemporal(T('necesitas_cuartel')); sonar('error'); return; }
+    n = Math.min(n, maxEntrenar(tipo));
+    if (n < 1) { consejoTemporal(T('sin_recursos_tropa')); sonar('error'); return; }
+    if (!pagar(costoTropas(tipo, n, true))) return;
+    var p = puertaCuartel();
+    for (var k = 0; k < n; k++) crearTropa(tipo, p.clone().add(new V3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5)));
+    chispas(p.clone().setY(1), 0xd59bff, 20, 3);
+    sonar('magia');
+    consejoTemporal(T('entrenadas_ya', { n: n, t: N(tipo) }));
+    vistaTropa.n = 1;
+    actualizarHUD();
+    guardar(true);
+    reabrirPanel();
+  }
+  function gemasEntreno() { return gemasParaTerminar(faltaEntreno() * velReal()); }
 
   function abrirPanelInvocar() {
     var d = TROPAS.heroe;
@@ -3058,6 +3199,13 @@
     abrirPanel(T('p_mochila'), html + '</div>', { tipo: 'mochila' });
   }
   function terminarConGemas(que) {
+    if (que === 'entreno') {
+      if (!colaEntreno.length) return;
+      if (!pagar(0, gemasEntreno())) return;
+      while (colaEntreno.length) { var ce = colaEntreno.shift(); crearTropa(ce.tipo, puertaCuartel()); }
+      sonar('magia'); consejoTemporal(T('terminado_gemas')); actualizarHUD(); guardar(true); reabrirPanel();
+      return;
+    }
     var o = que === 'castillo' ? estado.obraCastillo : que === 'muralla' ? obraMuralla : (slots[+String(que).split(':')[1]] || {}).obra;
     if (!o) return;
     var g = gemasParaTerminar((o.total - o.t) / velObras());
@@ -3318,6 +3466,13 @@
     else if (a === 'armadura') mejorarArmadura(b.getAttribute('data-tipo'));
     else if (a === 'armadura-gemas') mejorarArmadura(b.getAttribute('data-tipo'), true);
     else if (a === 'sub-tropas') abrirPanelTropas();
+    else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-tipo') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-rango') { vistaTropa.rango = +b.getAttribute('data-r'); sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-menos') cambiarCantidad(-1);
+    else if (a === 'tropa-mas') cambiarCantidad(1);
+    else if (a === 'tropa-max') { vistaTropa.n = Math.max(1, maxEntrenar(vistaTropa.tipo)); refrescarCantidad(); }
+    else if (a === 'tropa-ya') entrenarYa(vistaTropa.tipo, vistaTropa.n);
     else if (a === 'investigacion') abrirPanelInvestigacion(b.getAttribute('data-rama') || ramaInv);
     else if (a === 'investigar') empezarInvestigacion(b.getAttribute('data-id'));
     else if (a === 'sub-invocar') abrirPanelInvocar();
@@ -3360,6 +3515,9 @@
     else if (a === 'borrar') { if (window.confirm(T('borrar_ok'))) { cerrarPanel(); empezarPartida(null); guardar(true); } }
   });
 
+  $('panel-cuerpo').addEventListener('input', function (ev) {
+    if (ev.target.id === 'tropa-n') { vistaTropa.n = +ev.target.value || 1; refrescarCantidad(); }
+  });
   // Actualiza solo lo que cambia (botones activos, barra de entrenamiento)
   function actualizarPanel() {
     if (!panelActual) return;
@@ -3369,7 +3527,7 @@
       try { c = c ? JSON.parse(c) : 0; } catch (e) { c = +c || 0; }
       var ok = puedePagar(c, g);
       var a = b.getAttribute('data-accion');
-      if (a === 'entrenar') ok = ok && cuartelesListos().length > 0 && tropasOcupadas() < capacidad();
+      if (a === 'entrenar' || a === 'tropa-ya') ok = ok && cuartelesListos().length > 0 && tropasOcupadas() < capacidad();
       if (a === 'muralla') ok = ok && !obraMuralla && estado.muralla < NIVEL_MAX;
       if (a === 'mejorar-castillo') ok = ok && !estado.obraCastillo;
       if (a === 'investigar') ok = ok && !estado.investigando && !!academiaLista();
@@ -3396,6 +3554,17 @@
           '<div class="reloj-panel">⏱ ' + T('entrenando_t', { t: fmtTiempo(faltaEntreno()) }) + '</div>';
       } else h += '<div style="opacity:.7">' + T('cola_vacia') + '</div>';
       cola.innerHTML = h;
+      var cg = $('cola-gemas');
+      if (cg) {
+        if (!colaEntreno.length) cg.innerHTML = '';
+        else {
+          var gq = gemasEntreno();
+          if (!cg.firstChild) cg.innerHTML = botonGemas(gq, 'terminar-gemas', 'data-que="entreno"', '⏩ ' + T('terminar_cola'));
+          var bq = cg.firstChild;
+          if (+bq.getAttribute('data-gemas') !== gq) { bq.setAttribute('data-gemas', gq); bq.innerHTML = '⏩ ' + T('terminar_cola') + ' <span class="ico gema"></span>' + gq; }
+          bq.disabled = !puedePagar(0, gq);
+        }
+      }
     }
   }
 
@@ -3745,6 +3914,17 @@
       });
       var iv = g.invocadas || {};
       Object.keys(iv).forEach(function (tipo) { for (var k = 0; k < iv[tipo]; k++) crearTropa(tipo, reunion.clone(), true); });
+      // la cola de entrenamiento sigue avanzando con el juego cerrado
+      colaEntreno = [];
+      (g.colaEntreno || []).forEach(function (q) {
+        if (!q || !TROPAS[q[0]] || q[0] === 'heroe') return;
+        for (var k = 0; k < Math.min(q[1] || 0, 5000); k++) colaEntreno.push({ tipo: q[0], t: k === 0 ? (q[2] || 0) : 0, total: TROPAS[q[0]].tiempo });
+      });
+      var avance = cuartelesListos().length ? cerrado * rapidezEntreno() : 0;
+      while (colaEntreno.length && avance > 0) {
+        var ce = colaEntreno[0], falta = ce.total - ce.t;
+        if (avance >= falta) { avance -= falta; colaEntreno.shift(); crearTropa(ce.tipo, reunion.clone()); } else { ce.t += avance; avance = 0; }
+      }
       tropas.forEach(guardarDentro);
     }
     ponerCastillo();

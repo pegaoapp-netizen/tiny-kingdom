@@ -841,3 +841,38 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .reclutados .reclutado:nth-child(4) { animation-delay: .24s; } .reclutados .reclutado:nth-child(5) { animation-delay: .32s; }
 .reclutados .reclutado:nth-child(n+6) { animation-delay: .4s; }
 @keyframes aparecer { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---- Pantalla de tropas ---- */
+.pest-tropa button { font-size: 14px; padding: 7px 4px; }
+.tropa-escena { position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 8px; border: 3px solid #c99a4a;
+  background: radial-gradient(ellipse at 50% 72%, #fff8e0 0%, #ecd6a0 45%, #b88f55 100%); }
+.visor-tropa { width: 100%; height: 270px; }
+.visor-tropa canvas { display: block; width: 100% !important; height: 100% !important; cursor: grab; }
+.tropa-nombre { position: absolute; top: 8px; left: 10px; pointer-events: none; }
+.tropa-nombre h3 { margin: 0 0 4px; font-size: 20px; color: #3a2414; text-shadow: 0 1px 0 #fff8e0; }
+.rango-chapa { display: inline-block; padding: 2px 10px; border-radius: 10px; font-weight: 900; font-size: 13px; color: #fff; border: 2px solid rgba(0,0,0,.35); }
+.r0 { background: linear-gradient(#e0a070, #a86a3a); }
+.r1 { background: linear-gradient(#f2f5f8, #aab4bf); color: #2a3440 !important; }
+.r2 { background: linear-gradient(#a9c3e6, #5677a6); }
+.r3 { background: linear-gradient(#ffe27a, #d29a12); color: #4a2a00 !important; }
+.tropa-elegir { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 6px; }
+.tropa-elegir button { width: 54px; height: 54px; border-radius: 12px; border: 3px solid #c99a4a; background: #fffaf0; padding: 2px; }
+.tropa-elegir button.activo { border-color: #e09a10; box-shadow: 0 0 0 3px #ffe27a; }
+.tropa-elegir img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; display: block; }
+.rangos { position: absolute; bottom: 10px; left: 0; right: 0; display: flex; justify-content: center; gap: 8px; }
+.rangos button { min-width: 50px; height: 40px; border-radius: 10px; border: 3px solid rgba(58,36,20,.7); font-weight: 900; font-size: 16px; color: #fff; padding: 0 6px; }
+.rangos button.activo { transform: translateY(-4px); box-shadow: 0 0 0 3px #fff, 0 5px 10px rgba(0,0,0,.35); }
+.rangos button.bloq { filter: grayscale(.75); opacity: .7; }
+.tropa-desc { margin: 4px 0 6px; }
+.tropa-cantidad { display: flex; align-items: center; gap: 8px; margin: 10px 0 6px; }
+.tropa-cantidad input[type=range] { flex: 1; min-width: 0; accent-color: #e09a10; height: 30px; }
+.tropa-cantidad .comprar.mini { flex: 0 0 auto; padding: 8px 10px; margin: 0; }
+.redondo { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; border: 3px solid #7a4a00; background: linear-gradient(#ffe27a, #e09a10); font-size: 24px; font-weight: 900; color: #4a2a00; line-height: 1; padding: 0; }
+.redondo:active { transform: scale(.92); }
+.tropa-num { min-width: 44px; text-align: center; font-weight: 900; font-size: 20px; color: #4a2a00; }
+.tropa-total { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; font-weight: 800; margin: 4px 0 8px; }
+.botones-tropa { display: flex; gap: 8px; }
+.botones-tropa .comprar { flex: 1; min-width: 0; font-size: 15px; padding: 12px 6px; margin: 0; }
+.subir-rango { margin-top: 10px; }
+.subir-rango h3 { margin: 0 0 4px; }
+.cola-gemas .comprar { width: 100%; margin-top: 6px; }
