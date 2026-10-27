@@ -19,6 +19,7 @@
       tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {}, castillo: 1, obraCastillo: null,
       heroes: { sol: { nivel: 1, estrellas: 1, frag: 0 } }, equipo: ['sol'], reclutaGratis: '',
       eqItems: [{ i: 'r1', t: 'arma', r: 'comun', n: 1, h: null }, { i: 'r2', t: 'casco', r: 'comun', n: 1, h: null }], eqRegalo: true,
+      logros: { recolectas: 0, tropas: 0, campamentos: 0 }, tropasDefienden: true,
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -130,18 +131,22 @@
 
   var camara = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 400);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
-  function distInicial() { return window.innerWidth < window.innerHeight ? 84 : 62; }
-  var CENTRO_REINO = new V3(-5, 0, -2);
+  // de lejos: se ve el reino entero con el castillo en el centro
+  function distInicial() { return window.innerWidth < window.innerHeight ? 122 : 92; }
+  // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
+  var AZ_CAM = 3.55;
+  var CENTRO_REINO = new V3(0, 0, 0);
   var LIMITE_CAM = 62;
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
   var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
-  var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
+  var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: AZ_CAM, polar: 1.0 };
 
   var hemi = new THREE.HemisphereLight(0xe6e2d4, 0x6a5a3a, 0.56);
   escena.add(hemi);
   // Sol de la tarde: dirección fija, luz cálida y sombras suaves
   // viene de atrás a la izquierda de la cámara: las sombras se ven hacia la derecha
-  var DIR_SOL = new V3(-18, 44, 36);
+  // (girado junto con la cámara para que la luz se vea igual desde el nuevo ángulo)
+  var DIR_SOL = new V3(14, 44, -38);
   var sol = new THREE.DirectionalLight(0xffdcae, 1.12);
   sol.castShadow = true;
   sol.shadow.mapSize.set(2048, 2048);
@@ -504,9 +509,33 @@
     [[-3.8, -3.8], [3.8, -3.8], [-3.8, 3.8], [3.8, 3.8]].forEach(function (q) { var a = M.andamio(); a.scale.setScalar(1.25); a.position.set(q[0], 0, q[1]); escena.add(a); andamiosCastillo.push(a); });
     barraCastillo = M.barraVida(false, 4); barraCastillo.position.set(0, 12.6, 0); escena.add(barraCastillo);
   }
+  // ---------- TRABAJOS: además de pagar, para subir de nivel hay que haber jugado ----------
+  function logro(k) { return (estado.logros && estado.logros[k]) || 0; }
+  function sumarLogro(k, n) { estado.logros = estado.logros || {}; estado.logros[k] = (estado.logros[k] || 0) + (n || 1); }
+  function trabajosPara(que, L) {
+    var tabla = que === 'castillo' ? TRABAJOS_CASTILLO : TRABAJOS_EDIFICIO, lista = [];
+    for (var k in tabla) {
+      var need = tabla[k][L] || 0; if (!need) continue;
+      var have = k === 'oleadas' ? Math.max(0, (estado.oleada || 1) - 1) : logro(k);
+      lista.push({ k: k, need: need, have: Math.min(have, need), ok: have >= need });
+    }
+    return lista;
+  }
+  // el dueño del juego no tiene límites
+  function trabajosPendientes(que, L) { return estado.dueno ? [] : trabajosPara(que, L).filter(function (x) { return !x.ok; }); }
+  function htmlTrabajos(que, L) {
+    var l = trabajosPara(que, L); if (!l.length) return '';
+    return '<div class="trabajos"><b>📋 ' + T('tr_titulo') + '</b>' + l.map(function (x) {
+      var ok = x.ok || estado.dueno;
+      return '<div class="tr-fila ' + (ok ? 'si' : 'no') + '"><span>' + (ok ? '✅' : '⬜') + ' ' + T('tr_' + x.k, { n: x.need }) + '</span><b>' + x.have + '/' + x.need + '</b></div>';
+    }).join('') + '</div>';
+  }
+  function botonBloqueadoTrabajos(pend) { return '<button class="comprar bloqueado-tr" disabled>' + T('tr_falta', { t: T('tr_' + pend[0].k, { n: pend[0].need }) }) + '</button>'; }
+  function avisoTrabajos(pend) { consejoTemporal(T('tr_falta', { t: T('tr_' + pend[0].k, { n: pend[0].need }) })); sonar('error'); }
   function mejorarCastillo() {
     var n = estado.castillo || 1;
     if (estado.obraCastillo || n >= NIVEL_MAX) return;
+    var pendC = trabajosPendientes('castillo', n + 1); if (pendC.length) { avisoTrabajos(pendC); return; }
     if (!pagar(costoCastillo(n + 1))) return;
     estado.obraCastillo = { nivel: n + 1, t: 0, total: tiempoCastillo(n + 1) };
     andamiosDelCastillo(true);
@@ -1099,9 +1128,9 @@
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento' }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas);
-    if (res.gano) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
+    if (res.gano) { sumarLogro('campamentos'); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
-    listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
+    listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
     guardar(true); actualizarHUD(); mostrarCampamento(i);
   }
@@ -1857,6 +1886,7 @@
     var d = EDIFICIOS[s.edificio.tipo], n = s.edificio.nivel;
     if (n >= NIVEL_MAX) return;
     if (n + 1 > (estado.castillo || 1)) { consejoTemporal(T('castillo_bloquea', { n: n + 1 })); sonar('error'); return; }
+    var pendE = trabajosPendientes('edificio', n + 1); if (pendE.length) { avisoTrabajos(pendE); return; }
     if (!pagar(costoEdif(s.edificio.tipo, n))) return;
     empezarObra(s, s.edificio.tipo, n + 1);
     sonar('martillo');
@@ -1935,7 +1965,7 @@
     var d = document.createElement('div'); d.id = 'acelerar-elegir';
     var filas = ACELERADORES.map(function (k) {
       var n = (estado.mochila && estado.mochila[k]) || 0, it = TIENDA.filter(function (x) { return x.id === k; })[0];
-      return '<div class="ac-fila"><span class="ac-ico">' + OBJETOS[k].icono + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>×' + n + '</span></div>' +
+      return '<div class="ac-fila"><span class="ac-ico">' + OBJETOS[k].icono + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>×' + n + ' · ' + T('acel_recorta', { t: fmtTiempo(OBJETOS[k].segundos) }) + '</span></div>' +
         (n > 0 ? '<button class="comprar mini naranja" data-ac="' + k + '">' + T('acel_usar') + '</button>' : (it ? '<button class="comprar mini morado" data-ac-comprar="' + k + '"><span class="ico gema"></span>' + it.gemas + '</button>' : '')) + '</div>';
     }).join('');
     var real = (estado.mochila && estado.mochila.acelerador) || 0;
@@ -1970,7 +2000,7 @@
   // recursos que el almacén protege de los saqueos
   function proteccionAlmacen() { return edificiosDe('almacen').reduce(function (a, s) { return a + EDIFICIOS.almacen.protege[s.edificio.nivel - 1]; }, 0); }
   // armas: +10% de daño por nivel (hasta 3), se forjan en la Herrería
-  var ARMAS = { costo: [80, 160, 280], piedra: [40, 90, 160], gemas: [25, 50, 100], herreria: [1, 4, 7], dano: 0.1, max: 3 };
+  var ARMAS = { costo: [250, 600, 1400], piedra: [120, 300, 700], gemas: [25, 50, 100], herreria: [1, 4, 7], dano: 0.1, max: 3 };
   function nivelArmas(tipo) { return (estado.armas && estado.armas[tipo]) || 0; }
   function factorArmas(tipo) { return 1 + ARMAS.dano * nivelArmas(tipo); }
   function forjarArmas(tipo, conGemas) {
@@ -2081,6 +2111,7 @@
     var n = Math.floor(s.guardado || 0), r = EDIFICIOS[s.edificio.tipo].recurso;
     if (n < 1) return;
     s.guardado -= n;
+    sumarLogro('recolectas');
     sumarRecurso(r, n, s.pos.clone().setY(3.5));
     sonar('moneda');
     guardar();
@@ -2306,6 +2337,7 @@
       hechas++;
     }
     if (!hechas) return;
+    sumarLogro('tropas', hechas);
     if (hechas > 1) consejoTemporal(T('entrenando_n', { n: hechas }));
     sonar('click');
     actualizarHUD();
@@ -2794,7 +2826,7 @@
     cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
     cam.objetivo.lerp(cam.meta, kp);
     // de cerca la cámara baja (más cinematográfica); de lejos sube para ver el reino entero
-    var u = Math.max(0, Math.min(1, (cam.dist - 16) / 94));
+    var u = Math.max(0, Math.min(1, (cam.dist - 16) / 110));
     cam.polar = 1.17 - u * 0.37;
     var o = cam.objetivo, s = Math.sin(cam.polar);
     camara.position.set(o.x + cam.dist * s * Math.cos(cam.az), o.y + cam.dist * Math.cos(cam.polar), o.z + cam.dist * s * Math.sin(cam.az));
@@ -2830,7 +2862,7 @@
     if (pellizco && ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       var d = Math.hypot(a.x - b.x, a.y - b.y);
-      cam.distMeta = Math.max(16, Math.min(110, pellizco.dist * pellizco.d / Math.max(20, d)));
+      cam.distMeta = Math.max(16, Math.min(150, pellizco.dist * pellizco.d / Math.max(20, d)));
       camSigue = false;
       return;
     }
@@ -2862,7 +2894,7 @@
   lienzo.addEventListener('pointercancel', function (ev) { delete punteros[ev.pointerId]; arrastre = null; pellizco = null; });
   lienzo.addEventListener('wheel', function (ev) {
     ev.preventDefault();
-    cam.distMeta = Math.max(16, Math.min(110, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
+    cam.distMeta = Math.max(16, Math.min(150, cam.distMeta * (ev.deltaY > 0 ? 1.1 : 0.9)));
     camSigue = false;
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
@@ -2973,7 +3005,7 @@
     var s = slots[menuEdif.slot];
     if (!s) return null;
     if (s.obra) return { que: 'obra:' + s.i, gemas: gemasParaTerminar((s.obra.total - s.obra.t) / velObras()) };
-    if (s.edificio && s.edificio.tipo === 'cuartel' && colaEntreno.length) return { que: 'entreno', gemas: gemasEntreno() };
+    if (s.edificio && s.edificio.tipo === 'cuartel' && colaEntreno.length) return { que: 'entreno', gemas: 0, sinGemas: true };
     if (s.edificio && s.edificio.tipo === 'academia' && estado.investigando) return { que: 'invest', gemas: gemasParaTerminar(faltaInvestigacion() * velReal()) };
     return null;
   }
@@ -2991,7 +3023,7 @@
     var h = '<div class="me-titulo"><span class="me-nivel">' + nivel + '</span>' + nombre + '</div><div class="me-botones">' +
       (rec >= 0 ? botonMenu2('recolectar', ICONO_RECURSO[EDIFICIOS[s.edificio.tipo].recurso], T('mb_recolectar'), rec < 1, '<span class="mb-gema">+' + corto(rec) + '</span>') : '') +
       botonMenu2('detalles', '📜', T('mb_detalles')) +
-      botonMenu2('terminar', '⚡', T('mb_terminar'), !pr, pr ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '') +
+      botonMenu2('terminar', '⚡', T('mb_terminar'), !pr || pr.sinGemas, pr && !pr.sinGemas ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '') +
       botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>');
     if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') h += botonMenu2('entrenar', '⚔️', T('entrenar'));
     if (tipo === 'mercado') h += botonMenu2('comerciar', '⚖️', T('mb_comerciar'));
@@ -3278,7 +3310,7 @@
     var sl = slotElegido !== null ? slots[slotElegido] : null;
     ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado', 'vigia'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
       html += '<div class="carta compacta" title="' + D(t) + '"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
-        '<div class="stats">' + statsEdificio(t, 1) + '</div>' +
+        '<div class="stats">' + statsEdificio(t, 1) + '<span class="t-obra">⏱ ' + fmtTiempo(EDIFICIOS[t].tiempo[0] * (1 - bono('obras'))) + '</span></div>' +
         botonCosto(costoEdif(t, 0), 'construir', 'data-tipo="' + t + '"', T('construir')) + '</div>';
     });
     if (!sl || !sl.campo) html += htmlBarricada() + htmlMuralla();
@@ -3382,7 +3414,7 @@
         return '<button data-accion="tropa-rango" data-r="' + i + '" class="r' + i + (i > na ? ' bloq' : '') + (i === r ? ' activo' : '') + '">' + rn + (i > na ? ' 🔒' : '') + '</button>';
       }).join('') + '</div></div>';
     html += '<p class="nota tropa-desc">' + D(t) + '</p>';
-    html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * r)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + d.tiempo + 's</span>' +
+    html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * r)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + fmtTiempo(d.tiempo / rapidezEntreno()) + '</span>' +
       (r ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * r) + '%</span>' : '') + '</div>';
     var subir = na < ARMADURA.max ? '<div class="carta compacta subir-rango"><h3>⬆️ ' + T('subir_rango', { r: ROMANO[na + 1] }) + '</h3><p class="nota">' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '</p><div class="botones-tropa">' +
       botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '"', '🛡️ ').replace('class="comprar"', 'class="comprar armadura"') +
@@ -3399,7 +3431,6 @@
         (max < 1 && cuartelesListos().length ? '<p class="nota aviso-rojo">' + T('sin_recursos_tropa') + '</p>' : '') +
         '<div class="tropa-total" id="tropa-total"></div>' +
         '<div class="botones-tropa">' +
-        '<button class="comprar morado" id="btn-tropa-ya" data-accion="tropa-ya" data-tipo="' + t + '"></button>' +
         '<button class="comprar" id="btn-tropa-ent" data-accion="entrenar" data-tipo="' + t + '"></button></div>' +
         '<div class="cola" id="cola"></div><div id="cola-gemas" class="cola-gemas"></div>' + subir;
     }
@@ -3417,9 +3448,6 @@
     var be = $('btn-tropa-ent');
     be.setAttribute('data-n', n); be.setAttribute('data-costo', JSON.stringify(tot));
     be.innerHTML = '⚔️ ' + T('entrenar') + ' ×' + n;
-    var by = $('btn-tropa-ya');
-    by.setAttribute('data-costo', JSON.stringify(ya));
-    by.innerHTML = '⏩ ' + T('terminar_ya') + ' <span class="ico gema"></span>' + ya.gemas;
     actualizarPanel();
   }
   function cambiarCantidad(d) {
@@ -3429,6 +3457,7 @@
   }
   // entrenar y terminar al momento pagando gemas
   function entrenarYa(tipo, n) {
+    return; // v4.9: entrenar siempre toma tiempo (se acelera con aceleradores)
     if (!puedeEntrenarTipo(tipo)) { consejoTemporal(avisoEdificioTropa(tipo)); sonar('error'); return; }
     n = Math.min(n, maxEntrenar(tipo));
     if (n < 1) { consejoTemporal(T('sin_recursos_tropa')); sonar('error'); return; }
@@ -3471,8 +3500,9 @@
       if (nivel < NIVEL_MAX && nivel + 1 > (estado.castillo || 1)) {
         html += '<p class="nota aviso-rojo"><b>' + T('castillo_bloquea', { n: nivel + 1 }) + '</b></p>';
       } else if (nivel < NIVEL_MAX) {
-        html += '<p class="nota"><b>' + T('sube_a', { n: nivel + 1 }) + '</b></p><div class="stats">' + statsEdificio(tipo, nivel + 1) + '<span>⏱ ' + fmtTiempo(EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'))) + '</span></div>' +
-          botonCosto(costoEdif(tipo, nivel), 'mejorar', 'data-slot="' + i + '"', T('mejorar'));
+        var pendP = trabajosPendientes('edificio', nivel + 1);
+        html += '<p class="nota"><b>' + T('sube_a', { n: nivel + 1 }) + '</b></p><div class="stats">' + statsEdificio(tipo, nivel + 1) + '<span>⏱ ' + fmtTiempo(EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'))) + '</span></div>' + htmlTrabajos('edificio', nivel + 1) +
+          (pendP.length ? botonBloqueadoTrabajos(pendP) : botonCosto(costoEdif(tipo, nivel), 'mejorar', 'data-slot="' + i + '"', T('mejorar')));
       } else html += '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
     }
     html += '</div>';
@@ -3823,6 +3853,14 @@
     estado.heroes[suerte].frag += fr;
     var pg = 1 + Math.floor(n / 10);
     estado.mochila.pergamino = (estado.mochila.pergamino || 0) + pg;
+    var lp = 1 + Math.floor(n / 8);
+    estado.mochila.libro_peq = (estado.mochila.libro_peq || 0) + lp;
+    if (n % 5 === 0) estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1;
+    // aceleradores ganados jugando
+    estado.mochila.acel_5m = (estado.mochila.acel_5m || 0) + 1;
+    if (n % 3 === 0) estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1;
+    if (n % 5 === 0) estado.mochila.acel_1h = (estado.mochila.acel_1h || 0) + 1;
+    setTimeout(function () { consejoTemporal(T('mat_ganado', { n: lp + (n % 5 === 0 ? 1 : 0) })); }, 4200);
     consejoTemporal(T('heroes_premio', { x: exp, f: fr, n: NH(suerte) }));
   }
   function estrellasHTML(n) { var s = ''; for (var i = 1; i <= 5; i++) s += '<span class="' + (i <= n ? 'si' : 'no') + '">★</span>'; return s; }
@@ -3847,8 +3885,11 @@
     if (e) {
       var tope2 = topeNivel(id), libros = librosQueTienes();
       html += '<div class="hf-bloque"><div class="hf-tit">⬆️ ' + T('mejorar') + '</div>';
-      if (e.nivel < tope2) html += '<div class="hf-fila">' + botonCosto(costoMejorarHeroe(id), 'heroe-nivel', 'data-id="' + id + '"', T('mejorar') + ' ') +
-        '<button class="comprar morado" data-accion="heroe-libros" data-id="' + id + '"' + (libros ? '' : ' disabled') + '>📘 ' + T('usar_libros') + ' ×' + libros + '</button></div>';
+      if (e.nivel < tope2) html += '<div class="hf-mat"><b>' + T('mat_titulo') + '</b>' +
+        '<div class="mat-fila"><span>' + T('mat_peq') + '</span><b>×' + ((estado.mochila && estado.mochila.libro_peq) || 0) + '</b></div>' +
+        '<div class="mat-fila"><span>' + T('mat_gra') + '</span><b>×' + ((estado.mochila && estado.mochila.libro_gra) || 0) + '</b></div>' +
+        (libros ? '' : '<p class="nota aviso-rojo">' + T('mat_falta') + '</p>') + '<p class="nota">' + T('mat_no_tienda') + '</p></div>' +
+        '<div class="hf-fila"><button class="comprar morado" data-accion="heroe-libros" data-id="' + id + '"' + (libros ? '' : ' disabled') + '>📘 ' + T('usar_libros') + ' ×' + libros + '</button></div>';
       else if (e.nivel < HEROE_NIVEL_MAX) html += '<p class="nota">' + T('nivel_tope', { n: tope2 }) + '</p>';
       else html += '<p class="nota">' + T('nivel_max') + '</p>';
       html += '</div><div class="hf-bloque"><div class="hf-tit">★ ' + T('estrellas') + '</div>';
@@ -3867,6 +3908,7 @@
     visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv) + ':' + M.etapaArmadura(nv) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv); });
   }
   function subirNivelHeroe(id) {
+    return; // v4.9: los niveles ya no se compran con oro: se usan libros ganados jugando
     var e = estado.heroes[id]; if (!e || e.nivel >= topeNivel(id)) return;
     if (!pagar(costoMejorarHeroe(id))) return;
     e.exp = 0; e.nivel++;
@@ -3894,11 +3936,10 @@
     var html = '<button class="volver-mini" data-accion="heroe-ver" data-id="' + id + '">' + T('volver') + '</button>' +
       '<div class="ob-cab">' + fotoHTML('h_' + id, '🦸') + '<div><b>' + NH(id) + '</b><span class="nota">🧩 ' + (e ? e.frag + ' / ' + (fragParaEstrella(id) || '—') : T('bloqueado')) + '</span></div></div>' +
       fila('🎁', T('ob_oferta'), T('ob_oferta_txt', { n: OFERTA_FRAG }), e ? '<button class="comprar mini naranja" data-accion="ob-oferta" data-id="' + id + '"' + (ofertaHoy ? ' disabled' : '') + '>' + (ofertaHoy ? '✓' : T('reclamar')) + '</button>' : ir('reclutar')) +
-      fila('💱', T('ob_canje'), T('ob_canje_txt', { n: CANJE_FRAG.frag }), e ? botonGemas(CANJE_FRAG.gemas, 'ob-canje', 'data-id="' + id + '"').replace('class="comprar morado"', 'class="comprar mini morado"') : ir('reclutar')) +
       fila('🦸', T('ob_reclutar'), T('ob_reclutar_txt', { n: RECLUTAR.repetido }), ir('reclutar')) +
       fila('⚔️', T('ob_oleadas'), T('ob_oleadas_txt'), ir('oleadas')) +
       fila('📅', T('ob_diario'), T('ob_diario_txt'), ir('diario')) +
-      fila('🛒', T('ob_tienda'), T('ob_tienda_txt'), ir('tienda'));
+      '<p class="nota">' + T('mat_no_tienda') + '</p>';
     abrirPanel(T('obtener_mas'), html, { tipo: 'obtener', id: id });
   }
   function irDesdeObtener(a) {
@@ -3914,6 +3955,7 @@
     guardar(true); abrirPanelObtener(id);
   }
   function canjeFragmentos(id) {
+    return; // v4.9: los materiales de héroe no se compran
     var e = estado.heroes[id]; if (!e) return;
     if (!pagar(0, CANJE_FRAG.gemas)) return;
     e.frag += CANJE_FRAG.frag;
@@ -4096,7 +4138,7 @@
     torresPuerta.forEach(function () { d += (TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * 6; });
     slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'torre') d += EDIFICIOS.torre.dano[s.edificio.nivel - 1] * (1 + bono('flechas')) * 6; });
     barricadas.forEach(function (b) { if (b.nivel) d += b.max / 10; });
-    d += fuerzaEjercito() * 0.8;
+    if (estado.tropasDefienden !== false) d += fuerzaEjercito() * 0.8;
     return Math.round(d * (1 + vigiaBono()));
   }
   function botinMaximo(nivel) {
@@ -4306,7 +4348,8 @@
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
         Cuentas.marcarVisto(r.id).catch(function () {});
       });
-      if (perdio) bajasEjercito(0.25);
+      // tropas en ON: defienden y algunas mueren (más si se pierde); en OFF no mueren
+      if (estado.tropasDefienden !== false) { var muertas = bajasEjercito(perdio ? 0.5 : 0.15); if (muertas) html += '<p class="aviso-rojo">⚔️ ' + T('at_bajas', { n: muertas }) + '</p>'; }
       if (perdio && !protegido()) { estado.escudoHasta = Date.now() + 30 * 60 * 1000; html += '<p class="nota">🛡️ ' + T('rep_escudo') + '</p>'; }
       actualizarHUD(); guardar(true); publicarAldea(true); actualizarEscudo();
       abrirPanel(T('rep_titulo'), html, { tipo: 'reporte' });
@@ -4426,6 +4469,7 @@
       return;
     }
     if (que === 'entreno') {
+      return; // v4.9: el entrenamiento solo se acelera con aceleradores
       if (!colaEntreno.length) return;
       if (!pagar(0, gemasEntreno())) return;
       while (colaEntreno.length) { var ce = colaEntreno.shift(); crearTropa(ce.tipo, puertaCuartel()); }
@@ -4468,9 +4512,8 @@
       if (estado.obraCastillo) estado.obraCastillo.t = Math.min(estado.obraCastillo.total, estado.obraCastillo.t + ACELERADOR_SEG);
       slots.forEach(function (s) { if (s.obra) s.obra.t = Math.min(s.obra.total, s.obra.t + ACELERADOR_SEG); });
       if (obraMuralla) obraMuralla.t = Math.min(obraMuralla.total, obraMuralla.t + ACELERADOR_SEG);
-      colaEntreno.forEach(function (c) { c.t = c.total; });
-      // el entrenamiento sale de a uno por cuadro: lo sacamos todo ya
-      while (colaEntreno.length) { var c = colaEntreno.shift(); crearTropa(c.tipo, puertaCuartel()); }
+      // el entrenamiento avanza el mismo tiempo (ya no termina todo de golpe)
+      aplicarAcelerador('entreno', ACELERADOR_SEG);
       consejoTemporal(T('acelerador_usado'));
     } else if (o.da) { premio = o.da; }
     else if (o.equipo) { estado.mochila[k]--; darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); sonar('magia'); guardar(true); reabrirPanel(); return; }
@@ -4540,7 +4583,7 @@
   function abrirPanelCastillo() {
     var nc = estado.castillo || 1, oc = estado.obraCastillo, mej = '';
     if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velObras()) + '</p>' + botonGemas(gemasParaTerminar((oc.total - oc.t) / velObras()), 'terminar-gemas', 'data-que="castillo"', '⏩ ' + T('terminar_ya'));
-    else if (nc < NIVEL_MAX) mej = '<p class="nota"><b>' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + '</b> ⏱ ' + fmtTiempo(tiempoCastillo(nc + 1)) + '</p>' + botonCosto(costoCastillo(nc + 1), 'mejorar-castillo', '', T('mejorar_castillo') + ' ');
+    else if (nc < NIVEL_MAX) mej = '<p class="nota"><b>' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + '</b> ⏱ ' + fmtTiempo(tiempoCastillo(nc + 1)) + '</p>' + htmlTrabajos('castillo', nc + 1) + (trabajosPendientes('castillo', nc + 1).length ? botonBloqueadoTrabajos(trabajosPendientes('castillo', nc + 1)) : botonCosto(costoCastillo(nc + 1), 'mejorar-castillo', '', T('mejorar_castillo') + ' '));
     else mej = '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo_nivel', { n: nc, m: NIVEL_MAX }) + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
       '<p class="nota">🏗️ ' + T('castillo_tope', { n: nc }) + '</p>' + mej +
@@ -4814,11 +4857,8 @@
       if (cg) {
         if (!colaEntreno.length) cg.innerHTML = '';
         else {
-          var gq = gemasEntreno();
-          if (!cg.firstChild) cg.innerHTML = botonGemas(gq, 'terminar-gemas', 'data-que="entreno"', '⏩ ' + T('terminar_cola')) + '<button class="comprar" data-accion="acel-entreno">⏱️ ' + T('acel_cola') + '</button>';
-          var bq = cg.firstChild;
-          if (+bq.getAttribute('data-gemas') !== gq) { bq.setAttribute('data-gemas', gq); bq.innerHTML = '⏩ ' + T('terminar_cola') + ' <span class="ico gema"></span>' + gq; }
-          bq.disabled = !puedePagar(0, gq);
+          // solo aceleradores (ganados o del Colmado): ya no se termina al momento con gemas
+          if (!cg.firstChild) cg.innerHTML = '<button class="comprar naranja" data-accion="acel-entreno">⏱️ ' + T('acel_cola') + '</button>';
         }
       }
     }
@@ -4835,6 +4875,7 @@
     $('avatar').classList.toggle('dueno', !!estado.dueno);
     $('gemas').textContent = estado.gemasInfinitas ? '∞' : corto(estado.gemas);
     $('tropas').textContent = textoTropas();
+    actualizarBotonDefensa(); actualizarPillEntreno();
     $('oleada').textContent = textoOleada();
     $('vida-castillo-fill').style.width = (estado.vidaCastillo / vidaMaxCastillo() * 100) + '%';
     $('vida-castillo').querySelector('.etq').textContent = T('castillo') + '  ❤ ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo();
@@ -4960,6 +5001,7 @@
     $('btn-velocidad').title = T('velocidad');
     $('btn-sonido').title = T('sonido');
     $('btn-ajustes').title = T('p_ajustes');
+    actualizarBotonSalir();
     if (enMenu && pantallaModo === 'inicio') pantallaInicio();
     actualizarHUD();
   }
@@ -5009,22 +5051,27 @@
     if (nube && !Cuentas.usuario() && !modoInvitado) { pantallaCuenta(); return; }
     var g = cargar();
     if (window.Cuentas && Cuentas.usuario() && partidaNube && (!g || (partidaNube.actualizado || 0) > (g.actualizado || 0))) g = partidaNube;
-    var botones = [];
+    // Sin cartel de bienvenida: con la sesión lista se entra directo al reino.
+    // Idioma y cerrar sesión están siempre arriba, junto a los recursos.
     var hayPartida = g && (g.oleada > 1 || (g.edificios || []).some(function (e) { return e; }));
-    if (hayPartida) {
-      botones.push({ texto: T('continuar') + ' (' + T('oleada') + ' ' + g.oleada + ')', accion: function () { empezarPartida(g); } });
-    } else botones.push({ texto: T('jugar'), accion: function () { empezarPartida(null); } });
-    var texto = T('intro');
-    if (nube && Cuentas.usuario()) {
-      texto = T('hola', { n: Cuentas.nombre() }) + (esCuentaDueno() ? ' 👑' : '') + ' ☁️';
-      botones.push({ texto: T('cerrar_sesion'), clase: 'rojo', accion: function () { Cuentas.salir(); } });
-    } else if (nube) {
-      texto = T('invitado_txt');
-      botones.push({ texto: T('entrar_o_crear'), clase: 'naranja', accion: function () { modoInvitado = false; guardarPreferencias(); pantallaInicio(); } });
-    }
-    botones.push(botonIdioma());
-    mostrarPantalla('🏰', NOMBRE_JUEGO, texto, botones);
+    empezarPartida(hayPartida ? g : null);
+    if (nube && Cuentas.usuario()) consejoTemporal(T('hola', { n: Cuentas.nombre() }) + (esCuentaDueno() ? ' 👑' : ''));
+    actualizarBotonSalir();
   }
+  function actualizarBotonSalir() {
+    var b = $('btn-salir'); if (!b) return;
+    var nube = window.Cuentas && Cuentas.disponible(), conCuenta = nube && Cuentas.usuario();
+    b.textContent = conCuenta ? '⏻' : '👤';
+    b.title = conCuenta ? T('cerrar_sesion') : T('entrar_o_crear');
+    b.classList.toggle('oculto', !nube);
+  }
+  $('btn-salir').addEventListener('click', function () {
+    if (enMenu) return;
+    sonar('click');
+    if (window.Cuentas && Cuentas.usuario()) {
+      confirmarJuego('⏻ ' + T('cerrar_sesion'), T('salir_txt'), T('cerrar_sesion'), function () { guardar(true); Cuentas.salir(); });
+    } else { guardar(); modoInvitado = false; guardarPreferencias(true); pantallaCuenta(); }
+  });
   function pantallaCuenta() {
     var f = '<input class="campo" id="campo-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="' + T('usuario') + '">' +
       '<input class="campo" id="campo-clave" type="password" autocomplete="' + (modoCrear ? 'new-password' : 'current-password') + '" placeholder="' + T('contrasena') + '">' +
@@ -5151,6 +5198,8 @@
       estado.eqRegalo = true;
       estado.cdCamp = g.cdCamp || {};
       estado.cdAtaque = g.cdAtaque || {};
+      estado.logros = g.logros || { recolectas: 0, tropas: 0, campamentos: 0 };
+      estado.tropasDefienden = g.tropasDefienden !== false;
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
       var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
       estado.castillo = g.castillo || maxEd;
@@ -5238,6 +5287,29 @@
     $('btn-pausa').classList.toggle('pausado', pausado);
   }
   $('btn-pausa').addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarPausa(); });
+  // cola de entrenamiento siempre a la vista
+  function actualizarPillEntreno() {
+    var p = $('pill-entreno'); if (!p) return;
+    if (!colaEntreno.length) { p.classList.add('oculto-pill'); return; }
+    p.classList.remove('oculto-pill');
+    $('entreno-t').textContent = '×' + colaEntreno.length + ' · ' + fmtTiempo(faltaEntreno());
+  }
+  $('pill-entreno').addEventListener('click', function () { if (enMenu) return; sonar('click'); abrirPanelTropas(); });
+  // ON: las tropas defienden cuando te atacan (y pueden morir). OFF: se quedan guardadas.
+  function actualizarBotonDefensa() {
+    var b = $('btn-defensa'); if (!b) return;
+    var on = estado.tropasDefienden !== false;
+    b.textContent = on ? T('def_on') : T('def_off');
+    b.classList.toggle('apagado', !on);
+    b.title = T('def_titulo') + ': ' + (on ? 'ON' : 'OFF');
+  }
+  $('btn-defensa').addEventListener('click', function () {
+    if (enMenu) return;
+    estado.tropasDefienden = estado.tropasDefienden === false;
+    sonar('click'); actualizarBotonDefensa();
+    consejoTemporal(T(estado.tropasDefienden ? 'def_on_txt' : 'def_off_txt'));
+    guardar(true); publicarAldea(true);
+  });
   // volver a ver el castillo si la cámara se fue lejos
   // ------------------------------------------------------------------
   //  CHAT: global y de la hermandad, en vivo, con bloquear, reportar y filtro de groserías
@@ -5362,10 +5434,10 @@
     } else {
       // en el menú la cámara gira despacio
       tiempo += dtReal;
-      cam.az = 0.52 + Math.sin(tiempo * 0.15) * 0.25;
+      cam.az = AZ_CAM + Math.sin(tiempo * 0.15) * 0.25;
       castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     }
-    if (!enMenu) cam.az += (0.52 - cam.az) * Math.min(1, dtReal * 3);
+    if (!enMenu) cam.az += (AZ_CAM - cam.az) * Math.min(1, dtReal * 3);
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
     // nubes
@@ -5388,7 +5460,7 @@
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); }
     render.render(escena, camara);
   }
 
@@ -5404,7 +5476,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); },
+    refuerzos: function () { revisarRefuerzos(true); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 

@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '4.8';
+var VERSION_JUEGO = '4.9';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -83,7 +83,7 @@ var TEXTOS = {
     invitado_txt: 'Sin cuenta, la partida solo se guarda en este teléfono.',
     login_txt: 'Entra con tu usuario para guardar tu reino en la nube y jugar en cualquier teléfono.',
     crear_txt: 'Elige un usuario (3 a 20 letras o números) o tu correo, y una contraseña de 6 o más.',
-    hola: '¡Hola, {n}!', cerrar_sesion: 'Cerrar sesión', cargando: 'Cargando...', guardado_nube: 'Guardado en la nube ☁️',
+    tr_titulo: 'Trabajos para subir de nivel', tr_oleadas: 'Gana {n} oleadas', tr_recolectas: 'Recoge {n} veces en tus campos', tr_tropas: 'Entrena {n} tropas', tr_campamentos: 'Vence {n} campamentos de trasgos (Islas)', tr_falta: '🔒 Falta un trabajo: {t}', tr_bloqueado: '🔒 Completa los trabajos para mejorar', mat_titulo: 'Materiales para subir de nivel', mat_peq: '📘 Libro pequeño (+300 EXP): se gana en las oleadas y en el cofre diario', mat_gra: '📗 Libro grande (+1500 EXP): se gana venciendo campamentos de trasgos y en el cofre diario', mat_perg: '📜 Pergamino (habilidades): se gana en las oleadas', mat_falta: 'Te faltan libros: juega oleadas y vence campamentos para conseguirlos.', mat_no_tienda: 'Estos materiales no se venden en el Colmado: se ganan jugando.', mat_ganado: '📘 +{n} libro(s) de experiencia para tus héroes', def_on: '⚔️ ON', def_off: '⚔️ OFF', def_titulo: 'Tropas defienden', def_on_txt: 'Tus tropas defienden el reino cuando te atacan. ¡Cuidado: pueden morir y tendrás que entrenar otras!', def_off_txt: 'Tus tropas se quedan guardadas y no defienden: no mueren, pero tu reino se defiende solo con el castillo, la muralla y las torres.', acel_recorta: 'recorta {t}', entreno_cola_pill: 'Entrenando', hola: '¡Hola, {n}!', salir_txt: 'Tu partida queda guardada en la nube. ¿Seguro que quieres salir?', cerrar_sesion: 'Cerrar sesión', cargando: 'Cargando...', guardado_nube: 'Guardado en la nube ☁️',
     cuenta_de: 'Conectado como', entrar_o_crear: 'Entrar o crear cuenta',
     e_clave: 'Usuario o contraseña incorrectos.', e_existe: 'Ese usuario ya existe. Elige otro o entra.',
     e_debil: 'La contraseña debe tener 6 o más caracteres.', e_usuario: 'Usuario no válido: usa 3 a 20 letras, números, _ o punto.',
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🧰 <b>Equipo de héroes</b>: 6 espacios (arma, casco, pechera, guantes, botas y amuleto). Cada pieza tiene rareza y nivel, se mejora y da daño, vida, defensa, velocidad o recarga. Botones Equipar rápido y Desequipar todo.</li><li>🎁 Las piezas salen en oleadas, campamentos y en el Cofre de equipo del Colmado. ¡Te regalamos 2 para empezar!</li><li>💬 <b>Chat</b>: botón 💬 a la derecha con pestañas Global y Hermandad, en vivo. Toca el nombre de alguien para bloquearlo o reportarlo; los insultos se tapan solos.</li><li>🌀 <b>Portales de teletransportación</b>: muda tu reino a otro lugar del mapa del mundo. Portal al azar (lugar libre al azar) o Portal elegido (toca una casilla libre en el mapa y elige Mover mi reino aquí). Con columna de luz y aro mágico.</li><li>🚨 <b>Aviso de ataque</b>: si alguien te ataca, sale una alerta roja con sonido, quién es y cuánto falta para que llegue. Tócala para ir a tu ciudad y preparar la defensa.</li><li>🏇 Los ataques ahora tardan en llegar (1 a 3 minutos) y se deciden al llegar, con la defensa que tengas en ese momento.</li><li>👁️ <b>Puesto de vigía</b> nuevo: ves la fuerza de quien te ataca y tu reino defiende más.</li><li>🏗️ <b>5 edificios nuevos</b>: Almacén (protege recursos de los saqueos), Mercado (cambia recursos y envíalos a tu hermandad), Herrería (forja armas: más daño), Establo (caballería) y Galería de tiro (arqueros).</li><li>⏱️ <b>Aceleradores</b> de 1 min, 5 min, 15 min, 1 hora, 8 y 12 horas para obras, entrenamientos e investigación. Toca Acelerar en el edificio.</li><li>🌍 <b>Mapa del mundo nuevo en 3D y en cuadrícula</b>: llanuras, bosques, colinas, lagos y montañas. Arrastra para moverte y pellizca para acercar.</li><li>🚩 <b>Conquista casillas</b>: gana a sus guardianes y su bonus ayuda a tus campos (bosque → madera, colina → piedra, lago y llanura → comida, montaña → oro). Puedes tener tantas como el nivel de tu Castillo.</li><li>⛺ Ahora puedes atacar los campamentos de trasgos para ganar botín.</li><li>🧨 <b>Demoler</b>: toca un edificio y elige Demoler (te pregunta antes). La parcela queda libre para construir otra cosa.</li><li>🔓 <b>Parcelas por nivel del Castillo</b>: con el Castillo nivel 1 tienes 4 parcelas y cada nivel abre 3 más (hasta 37). Las próximas se ven con un candado.</li><li>🗺️ <b>Reino en cuadrícula</b>: la ciudad tiene parcelas ordenadas y cada edificio muestra su nombre y nivel.</li><li>🌾 <b>Campos fuera de la muralla</b>: Granja, Aserradero, Mina de oro y Cantera (nueva). Guardan lo que producen, incluso con el juego cerrado: tócalos y pulsa Recolectar.</li><li>🔁 Tus granjas, aserraderos y minas se mudaron solos a los campos con su nivel (la mina vieja ahora es Cantera).</li><li>⚔️ <b>Ataca a otros jugadores</b> desde el mapa de Islas, aunque sean más poderosos. Ahora hay una escena de batalla con los dos ejércitos, x2 y Saltar.</li><li>🔄 El juego avisa cuando hay una versión nueva y se actualiza solo.</li><li>✨ <b>Habilidades con nivel</b>: en la ficha del héroe, pestaña Habilidades. El Poder sube hasta nivel 5 (cada estrella abre un nivel) y se ve qué mejora: más daño, más duración y menos recarga.</li><li>💪 <b>Talento</b> nuevo para cada clase: se abre con 2★.</li><li>📜 Pergaminos de habilidad: se ganan en las oleadas y en el Colmado.</li><li>🏹 Los héroes de distancia lanzan su poder desde más lejos y avanzan hacia los enemigos.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>🏰 <b>Entras directo a tu reino</b>: ya no sale el cartel de bienvenida. Los botones de idioma (ES/EN) y cerrar sesión (⏻) están arriba, junto a tus recursos.</li><li>🎥 <b>Cámara nueva</b>: más lejos y con el castillo de frente, para ver todo el reino.</li><li>⏱️ <b>Construir y mejorar toma tiempo</b>: minutos al principio y horas en los niveles altos. Cada nivel cuesta más que el anterior.</li><li>📋 <b>Trabajos</b>: para subir el castillo y los edificios hay que ganar oleadas, recolectar, entrenar tropas y vencer campamentos. El botón dice qué falta.</li><li>⚔️ <b>Entrenar toma tiempo de verdad</b> (minutos para pocas tropas, horas para muchas). Se acelera con aceleradores; la cola se ve arriba a la derecha.</li><li>📘 Los libros y pergaminos de los héroes ya no se venden: se ganan en oleadas, campamentos y el cofre diario.</li><li>🛡️ <b>Botón ⚔️ ON/OFF</b>: decide si tus tropas defienden cuando te atacan (si defienden, pueden morir).</li><li>🧰 <b>Equipo de héroes</b>: 6 espacios (arma, casco, pechera, guantes, botas y amuleto). Cada pieza tiene rareza y nivel, se mejora y da daño, vida, defensa, velocidad o recarga. Botones Equipar rápido y Desequipar todo.</li><li>🎁 Las piezas salen en oleadas, campamentos y en el Cofre de equipo del Colmado. ¡Te regalamos 2 para empezar!</li><li>💬 <b>Chat</b>: botón 💬 a la derecha con pestañas Global y Hermandad, en vivo. Toca el nombre de alguien para bloquearlo o reportarlo; los insultos se tapan solos.</li><li>🌀 <b>Portales de teletransportación</b>: muda tu reino a otro lugar del mapa del mundo. Portal al azar (lugar libre al azar) o Portal elegido (toca una casilla libre en el mapa y elige Mover mi reino aquí). Con columna de luz y aro mágico.</li><li>🚨 <b>Aviso de ataque</b>: si alguien te ataca, sale una alerta roja con sonido, quién es y cuánto falta para que llegue. Tócala para ir a tu ciudad y preparar la defensa.</li><li>🏇 Los ataques ahora tardan en llegar (1 a 3 minutos) y se deciden al llegar, con la defensa que tengas en ese momento.</li><li>👁️ <b>Puesto de vigía</b> nuevo: ves la fuerza de quien te ataca y tu reino defiende más.</li><li>🏗️ <b>5 edificios nuevos</b>: Almacén (protege recursos de los saqueos), Mercado (cambia recursos y envíalos a tu hermandad), Herrería (forja armas: más daño), Establo (caballería) y Galería de tiro (arqueros).</li><li>⏱️ <b>Aceleradores</b> de 1 min, 5 min, 15 min, 1 hora, 8 y 12 horas para obras, entrenamientos e investigación. Toca Acelerar en el edificio.</li><li>🌍 <b>Mapa del mundo nuevo en 3D y en cuadrícula</b>: llanuras, bosques, colinas, lagos y montañas. Arrastra para moverte y pellizca para acercar.</li><li>🚩 <b>Conquista casillas</b>: gana a sus guardianes y su bonus ayuda a tus campos (bosque → madera, colina → piedra, lago y llanura → comida, montaña → oro). Puedes tener tantas como el nivel de tu Castillo.</li><li>⛺ Ahora puedes atacar los campamentos de trasgos para ganar botín.</li><li>🧨 <b>Demoler</b>: toca un edificio y elige Demoler (te pregunta antes). La parcela queda libre para construir otra cosa.</li><li>🔓 <b>Parcelas por nivel del Castillo</b>: con el Castillo nivel 1 tienes 4 parcelas y cada nivel abre 3 más (hasta 37). Las próximas se ven con un candado.</li><li>🗺️ <b>Reino en cuadrícula</b>: la ciudad tiene parcelas ordenadas y cada edificio muestra su nombre y nivel.</li><li>🌾 <b>Campos fuera de la muralla</b>: Granja, Aserradero, Mina de oro y Cantera (nueva). Guardan lo que producen, incluso con el juego cerrado: tócalos y pulsa Recolectar.</li><li>🔁 Tus granjas, aserraderos y minas se mudaron solos a los campos con su nivel (la mina vieja ahora es Cantera).</li><li>⚔️ <b>Ataca a otros jugadores</b> desde el mapa de Islas, aunque sean más poderosos. Ahora hay una escena de batalla con los dos ejércitos, x2 y Saltar.</li><li>🔄 El juego avisa cuando hay una versión nueva y se actualiza solo.</li><li>✨ <b>Habilidades con nivel</b>: en la ficha del héroe, pestaña Habilidades. El Poder sube hasta nivel 5 (cada estrella abre un nivel) y se ve qué mejora: más daño, más duración y menos recarga.</li><li>💪 <b>Talento</b> nuevo para cada clase: se abre con 2★.</li><li>📜 Pergaminos de habilidad: se ganan en las oleadas y en el Colmado.</li><li>🏹 Los héroes de distancia lanzan su poder desde más lejos y avanzan hacia los enemigos.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -225,7 +225,7 @@ var TEXTOS = {
     invitado_txt: 'Without an account, progress is only saved on this phone.',
     login_txt: 'Sign in with your username to save your kingdom in the cloud and play on any phone.',
     crear_txt: 'Pick a username (3 to 20 letters or numbers) or your email, and a password of 6 or more.',
-    hola: 'Hi, {n}!', cerrar_sesion: 'Sign out', cargando: 'Loading...', guardado_nube: 'Saved to the cloud ☁️',
+    tr_titulo: 'Tasks to level up', tr_oleadas: 'Win {n} waves', tr_recolectas: 'Collect from your fields {n} times', tr_tropas: 'Train {n} troops', tr_campamentos: 'Beat {n} goblin camps (Islands)', tr_falta: '🔒 A task is missing: {t}', tr_bloqueado: '🔒 Finish the tasks to upgrade', mat_titulo: 'Materials to level up', mat_peq: '📘 Small book (+300 EXP): earned in waves and the daily chest', mat_gra: '📗 Big book (+1500 EXP): earned by beating goblin camps and in the daily chest', mat_perg: '📜 Scroll (skills): earned in waves', mat_falta: 'You need books: play waves and beat camps to get them.', mat_no_tienda: 'These materials are not sold at the Market: you earn them by playing.', mat_ganado: '📘 +{n} experience book(s) for your heroes', def_on: '⚔️ ON', def_off: '⚔️ OFF', def_titulo: 'Troops defend', def_on_txt: 'Your troops defend the kingdom when you are attacked. Careful: they can die and you will have to train new ones!', def_off_txt: 'Your troops stay inside and do not defend: they will not die, but your kingdom defends only with the castle, the wall and the towers.', acel_recorta: 'cuts {t}', entreno_cola_pill: 'Training', hola: 'Hi, {n}!', salir_txt: 'Your game stays saved in the cloud. Are you sure you want to sign out?', cerrar_sesion: 'Sign out', cargando: 'Loading...', guardado_nube: 'Saved to the cloud ☁️',
     cuenta_de: 'Signed in as', entrar_o_crear: 'Sign in or create account',
     e_clave: 'Wrong username or password.', e_existe: 'That username already exists. Pick another or sign in.',
     e_debil: 'Password must have 6 or more characters.', e_usuario: 'Invalid username: use 3 to 20 letters, numbers, _ or dot.',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🧰 <b>Hero gear</b>: 6 slots (weapon, helmet, chestplate, gloves, boots and amulet). Each piece has rarity and level, can be upgraded and gives damage, health, defense, speed or cooldown. Quick equip and Unequip all buttons.</li><li>🎁 Pieces drop from waves, camps and the Gear chest at the Market. You get 2 free to start!</li><li>💬 <b>Chat</b>: 💬 button on the right with Global and Guild tabs, live. Tap someone’s name to block or report them; insults are hidden automatically.</li><li>🌀 <b>Teleport portals</b>: move your kingdom to another spot on the world map. Random portal (random free spot) or Chosen portal (tap a free tile on the map and pick Move my kingdom here). With a light beam and magic ring.</li><li>🚨 <b>Attack alert</b>: if someone attacks you, a red alert with sound shows who it is and how long until they arrive. Tap it to go to your city and get ready.</li><li>🏇 Attacks now take time to arrive (1 to 3 minutes) and are decided on arrival, with the defense you have at that moment.</li><li>👁️ New <b>Watch post</b>: see the strength of attackers and your kingdom defends better.</li><li>🏗️ <b>5 new buildings</b>: Warehouse (protects resources from raids), Market square (trade resources and send them to your guild), Forge (weapons: more damage), Stable (cavalry) and Archery range (archers).</li><li>⏱️ <b>Speed-ups</b> of 1 min, 5 min, 15 min, 1 hour, 8 and 12 hours for buildings, training and research. Tap Speed up on the building.</li><li>🌍 <b>New 3D grid world map</b>: plains, forests, hills, lakes and mountains. Drag to move and pinch to zoom.</li><li>🚩 <b>Conquer tiles</b>: beat their guardians and their bonus helps your fields (forest → wood, hill → stone, lake and plains → food, mountain → gold). You can hold as many as your Castle level.</li><li>⛺ You can now attack goblin camps for loot.</li><li>🧨 <b>Demolish</b>: tap a building and choose Demolish (it asks first). The plot becomes free to build something else.</li><li>🔓 <b>Plots by Castle level</b>: Castle level 1 gives 4 plots and each level opens 3 more (up to 37). The next ones show a lock.</li><li>🗺️ <b>Grid kingdom</b>: the city has tidy plots and every building shows its name and level.</li><li>🌾 <b>Fields outside the wall</b>: Farm, Sawmill, Gold mine and Quarry (new). They store what they make, even while the game is closed: tap them and press Collect.</li><li>🔁 Your farms, sawmills and mines moved to the fields with their level (the old mine is now a Quarry).</li><li>⚔️ <b>Attack other players</b> from the Islands map, even stronger ones. There is now a battle scene with both armies, x2 and Skip.</li><li>🔄 The game tells you when there is a new version and updates itself.</li><li>✨ <b>Skills with levels</b>: in the hero sheet, Skills tab. The Power goes up to level 5 (each star unlocks a level) and you see what improves: more damage, longer duration and shorter cooldown.</li><li>💪 New <b>Talent</b> for each class: unlocks at 2★.</li><li>📜 Skill scrolls: earned in waves and at the Market.</li><li>🏹 Ranged heroes cast their power from farther away and move toward enemies.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>🏰 <b>You go straight into your kingdom</b>: no more welcome card. The language (ES/EN) and sign-out (⏻) buttons are at the top, next to your resources.</li><li>🎥 <b>New camera</b>: farther away with the castle facing you, so you see the whole kingdom.</li><li>⏱️ <b>Building and upgrading take time</b>: minutes at first and hours at high levels. Each level costs more than the last.</li><li>📋 <b>Tasks</b>: to level up the castle and buildings you must win waves, collect, train troops and beat camps. The button tells you what is missing.</li><li>⚔️ <b>Training takes real time</b> (minutes for a few troops, hours for many). Use speed-ups; the queue shows at the top right.</li><li>📘 Hero books and scrolls are no longer sold: earn them in waves, camps and the daily chest.</li><li>🛡️ <b>⚔️ ON/OFF button</b>: choose whether your troops defend when you are attacked (if they defend, they can die).</li><li>🧰 <b>Hero gear</b>: 6 slots (weapon, helmet, chestplate, gloves, boots and amulet). Each piece has rarity and level, can be upgraded and gives damage, health, defense, speed or cooldown. Quick equip and Unequip all buttons.</li><li>🎁 Pieces drop from waves, camps and the Gear chest at the Market. You get 2 free to start!</li><li>💬 <b>Chat</b>: 💬 button on the right with Global and Guild tabs, live. Tap someone’s name to block or report them; insults are hidden automatically.</li><li>🌀 <b>Teleport portals</b>: move your kingdom to another spot on the world map. Random portal (random free spot) or Chosen portal (tap a free tile on the map and pick Move my kingdom here). With a light beam and magic ring.</li><li>🚨 <b>Attack alert</b>: if someone attacks you, a red alert with sound shows who it is and how long until they arrive. Tap it to go to your city and get ready.</li><li>🏇 Attacks now take time to arrive (1 to 3 minutes) and are decided on arrival, with the defense you have at that moment.</li><li>👁️ New <b>Watch post</b>: see the strength of attackers and your kingdom defends better.</li><li>🏗️ <b>5 new buildings</b>: Warehouse (protects resources from raids), Market square (trade resources and send them to your guild), Forge (weapons: more damage), Stable (cavalry) and Archery range (archers).</li><li>⏱️ <b>Speed-ups</b> of 1 min, 5 min, 15 min, 1 hour, 8 and 12 hours for buildings, training and research. Tap Speed up on the building.</li><li>🌍 <b>New 3D grid world map</b>: plains, forests, hills, lakes and mountains. Drag to move and pinch to zoom.</li><li>🚩 <b>Conquer tiles</b>: beat their guardians and their bonus helps your fields (forest → wood, hill → stone, lake and plains → food, mountain → gold). You can hold as many as your Castle level.</li><li>⛺ You can now attack goblin camps for loot.</li><li>🧨 <b>Demolish</b>: tap a building and choose Demolish (it asks first). The plot becomes free to build something else.</li><li>🔓 <b>Plots by Castle level</b>: Castle level 1 gives 4 plots and each level opens 3 more (up to 37). The next ones show a lock.</li><li>🗺️ <b>Grid kingdom</b>: the city has tidy plots and every building shows its name and level.</li><li>🌾 <b>Fields outside the wall</b>: Farm, Sawmill, Gold mine and Quarry (new). They store what they make, even while the game is closed: tap them and press Collect.</li><li>🔁 Your farms, sawmills and mines moved to the fields with their level (the old mine is now a Quarry).</li><li>⚔️ <b>Attack other players</b> from the Islands map, even stronger ones. There is now a battle scene with both armies, x2 and Skip.</li><li>🔄 The game tells you when there is a new version and updates itself.</li><li>✨ <b>Skills with levels</b>: in the hero sheet, Skills tab. The Power goes up to level 5 (each star unlocks a level) and you see what improves: more damage, longer duration and shorter cooldown.</li><li>💪 New <b>Talent</b> for each class: unlocks at 2★.</li><li>📜 Skill scrolls: earned in waves and at the Market.</li><li>🏹 Ranged heroes cast their power from farther away and move toward enemies.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',
@@ -416,7 +416,7 @@ var HORAS_ALMACEN = 2;
 var PARCELAS_INICIO = 4, PARCELAS_POR_NIVEL = 3; // un campo lleno guarda 2 horas de producción
 function esCampo(tipo) { return TIPOS_CAMPO.indexOf(tipo) >= 0; }
 // El castillo cobra impuestos: da oro cada cierto tiempo
-var IMPUESTO = { oro: 5, cada: 3 };
+var IMPUESTO = { oro: 3, cada: 4 };
 // Cada tropa come 1 de comida cada tantos segundos. Sin comida pelean más débiles.
 var COMIDA_TROPA = { cada: 15, debilidad: 0.7 };
 
@@ -447,6 +447,47 @@ var MURALLA = { costo: [80, 140, 220], madera: [100, 0, 0], piedra: [0, 150, 260
 // ---------------- NIVELES HASTA EL 12 ----------------
 // Los valores de los niveles 1-3 están escritos arriba; del 4 al 12 se calculan solos.
 var NIVEL_MAX = 12;
+// ---------------- BALANCE (v4.9) ----------------
+// Cada nivel cuesta 1,6 veces el anterior y tarda más: minutos al principio, horas al final.
+// Con los recursos del inicio solo alcanza para 1 o 2 edificios básicos; lo demás se gana jugando.
+var CRECE_COSTO = 1.6;
+var TIEMPO_NIVEL = [60, 180, 420, 900, 1800, 3600, 5400, 9000, 14400, 21600, 32400, 43200]; // segundos: 1 min ... 12 h
+var BASE_EDIFICIO = {
+  //            oro, madera, piedra, tiempo (x TIEMPO_NIVEL)
+  granja:     [60, 40, 0, 0.6],   aserradero: [60, 20, 0, 0.6],   mina:      [90, 70, 0, 0.7],   cantera:  [90, 80, 0, 0.7],
+  cuartel:    [130, 120, 20, 0.8], torre:     [150, 100, 60, 0.9], vigia:     [140, 160, 40, 0.9], almacen:  [160, 190, 50, 0.9],
+  enfermeria: [170, 160, 50, 1.0], establo:   [190, 220, 60, 1.0], galeria:   [190, 220, 60, 1.0], herreria: [210, 170, 120, 1.1],
+  academia:   [220, 230, 90, 1.2], mercado:   [240, 250, 90, 1.1]
+};
+(function balanceEdificios() {
+  function r5(v) { return v >= 100 ? Math.round(v / 5) * 5 : Math.round(v); }
+  for (var tipo in BASE_EDIFICIO) {
+    var b = BASE_EDIFICIO[tipo], d = EDIFICIOS[tipo]; if (!d) continue;
+    d.costo = []; d.madera = []; d.piedra = []; d.tiempo = [];
+    for (var L = 1; L <= NIVEL_MAX; L++) {
+      var k = Math.pow(CRECE_COSTO, L - 1);
+      d.costo.push(r5(b[0] * k)); d.madera.push(r5(b[1] * k));
+      // los que no piden piedra al principio la piden desde el nivel 2
+      d.piedra.push(r5((b[2] || (L > 1 ? b[0] * 0.25 : 0)) * k));
+      d.tiempo.push(Math.round(TIEMPO_NIVEL[L - 1] * b[3]));
+    }
+  }
+  MURALLA.costo = []; MURALLA.madera = []; MURALLA.piedra = []; MURALLA.tiempo = [];
+  for (var M = 1; M <= NIVEL_MAX; M++) {
+    var km = Math.pow(CRECE_COSTO, M - 1);
+    MURALLA.costo.push(r5(200 * km)); MURALLA.madera.push(M === 1 ? 250 : 0); MURALLA.piedra.push(M === 1 ? 0 : r5(220 * km));
+    MURALLA.tiempo.push(Math.round(TIEMPO_NIVEL[M - 1] * 1.2));
+  }
+})();
+// Trabajos: además de pagar, para subir de nivel hay que haber hecho cosas en el juego.
+// El índice es el nivel al que se quiere subir.
+var TRABAJOS_CASTILLO = {
+  oleadas:     [0, 0, 2, 4, 6, 8, 11, 14, 18, 22, 26, 30, 35],
+  recolectas:  [0, 0, 3, 8, 15, 25, 40, 60, 85, 115, 150, 190, 240],
+  tropas:      [0, 0, 5, 15, 30, 50, 80, 120, 170, 230, 300, 380, 470],
+  campamentos: [0, 0, 0, 0, 0, 1, 2, 3, 5, 7, 9, 12, 15]
+};
+var TRABAJOS_EDIFICIO = { oleadas: [0, 0, 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 26] };
 (function extenderNiveles() {
   function redondear(v) { return v >= 100 ? Math.round(v / 5) * 5 : Math.round(v); }
   function extender(arr, regla) {
@@ -472,9 +513,11 @@ var NIVEL_MAX = 12;
 var MEJORA_CASTILLO = (function () {
   var m = { costo: [0], madera: [0], piedra: [0], tiempo: [0], vida: 300, dano: 3 };
   function r5(v) { return Math.round(v / 5) * 5; }
+  // el castillo es lo más caro y lento: de 5 minutos (nivel 2) a 24 horas (nivel 12)
+  var TC = [0, 300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 64800, 86400];
   for (var L = 2; L <= NIVEL_MAX; L++) {
-    m.costo.push(r5(150 * Math.pow(1.45, L - 2))); m.madera.push(r5(180 * Math.pow(1.45, L - 2)));
-    m.piedra.push(r5(60 * Math.pow(1.5, L - 2))); m.tiempo.push(Math.round(30 * Math.pow(1.35, L - 2)));
+    m.costo.push(r5(300 * Math.pow(1.62, L - 2))); m.madera.push(r5(360 * Math.pow(1.62, L - 2)));
+    m.piedra.push(r5(120 * Math.pow(1.65, L - 2))); m.tiempo.push(TC[L - 1]);
   }
   return m;
 })();
@@ -493,7 +536,7 @@ var MURALLA_FORMA = { cx: -4 * ESCALA_REINO, cz: -1 * ESCALA_REINO, rx: 30 * ESC
 
 // Barricada: se pone en los puntos marcados del camino. Los enemigos se paran a romperla.
 // Nivel 1 de madera, nivel 2 de piedra. Se arregla sola al terminar cada oleada.
-var BARRICADA = { costo: [20, 40], madera: [40, 0], piedra: [0, 60], vida: [350, 900], tiempo: [2, 3], icono: '🚧' };
+var BARRICADA = { costo: [40, 120], madera: [80, 0], piedra: [0, 150], vida: [350, 900], tiempo: [60, 300], icono: '🚧' };
 // Campamentos de trasgos en el mapa del mundo (son del juego, no son jugadores)
 var CAMPAMENTOS = [
   { x: 12, y: 18, nivel: 3 }, { x: 80, y: 14, nivel: 6 }, { x: 47, y: 52, nivel: 9 },
@@ -501,8 +544,8 @@ var CAMPAMENTOS = [
 ];
 // Cofre diario: 7 días de racha (al día 8 vuelve a empezar el ciclo pero la racha sigue contando)
 var COFRE_DIARIO = [
-  { oro: 150, comida: 100 }, { madera: 150, piedra: 60 }, { gemas: 5, objeto: 'cofre_madera' },
-  { oro: 250, comida: 200 }, { tropas: { espadachin: 2 } }, { gemas: 10, piedra: 120 }, { gemas: 20, objeto: 'cofre_oro' }
+  { oro: 150, comida: 100 }, { madera: 150, piedra: 60, objeto: 'libro_peq' }, { gemas: 5, objeto: 'cofre_madera' },
+  { oro: 250, comida: 200 }, { tropas: { espadachin: 2 } }, { gemas: 10, piedra: 120, objeto: 'libro_gra' }, { gemas: 20, objeto: 'cofre_oro' }
 ];
 // Objetos de la mochila
 var OBJETOS = {
@@ -536,8 +579,7 @@ var TIENDA = [
   { id: 'bolsa_oro', gemas: 5 }, { id: 'saco_comida', gemas: 4 }, { id: 'saco_madera', gemas: 4 }, { id: 'saco_piedra', gemas: 5 },
   { id: 'acel_1m', gemas: 1 }, { id: 'acel_5m', gemas: 1 }, { id: 'acel_15m', gemas: 2 }, { id: 'acel_1h', gemas: 5 }, { id: 'acel_8h', gemas: 36 }, { id: 'acel_12h', gemas: 50 },
   { id: 'acelerador', gemas: 3 }, { id: 'cofre_equipo', gemas: 30 }, { id: 'portal_azar', gemas: 20 }, { id: 'portal_elegir', gemas: 60 }, { id: 'cofre_plata', gemas: 15 }, { id: 'cofre_oro', gemas: 40 },
-  { id: 'escudo_2h', gemas: 10 }, { id: 'escudo_8h', gemas: 30 }, { id: 'escudo_12h', gemas: 45 },
-  { id: 'libro_peq', gemas: 6 }, { id: 'libro_gra', gemas: 25 }, { id: 'pergamino', gemas: 8 }
+  { id: 'escudo_2h', gemas: 10 }, { id: 'escudo_8h', gemas: 30 }, { id: 'escudo_12h', gemas: 45 }
 ];
 // Investigación: 3 ramas. 'cada' = cuánto mejora cada nivel.
 var INVESTIGACION = {
@@ -569,16 +611,16 @@ var CASTILLO = { dano: 12, alcance: 9.5, ritmo: 1.1 };
 
 // ---------------- Tropas ----------------
 var TROPAS = {
-  espadachin: { costo: 15, comida: 20, tiempo: 3, vida: 150, dano: 18, alcance: 1.3, vel: 3.2, ritmo: 0.9, icono: '🗡️' },
-  arquero:    { costo: 20, comida: 20, tiempo: 4, vida: 85,  dano: 12, alcance: 7.5, vel: 3.0, ritmo: 1.1, distancia: true, icono: '🏹' },
-  caballeria: { costo: 30, comida: 30, tiempo: 5, vida: 200, dano: 20, alcance: 1.6, vel: 5.2, ritmo: 1.0, icono: '🐎' },
-  guardian:   { costo: 30, comida: 35, tiempo: 6, vida: 390, dano: 11, alcance: 1.4, vel: 2.4, ritmo: 1.2, icono: '🛡️' },
+  espadachin: { costo: 25, comida: 30, tiempo: 30, vida: 150, dano: 18, alcance: 1.3, vel: 3.2, ritmo: 0.9, icono: '🗡️' },
+  arquero:    { costo: 35, comida: 30, tiempo: 40, vida: 85,  dano: 12, alcance: 7.5, vel: 3.0, ritmo: 1.1, distancia: true, icono: '🏹' },
+  caballeria: { costo: 60, comida: 50, tiempo: 60, vida: 200, dano: 20, alcance: 1.6, vel: 5.2, ritmo: 1.0, icono: '🐎' },
+  guardian:   { costo: 55, comida: 60, tiempo: 75, vida: 390, dano: 11, alcance: 1.4, vel: 2.4, ritmo: 1.2, icono: '🛡️' },
   heroe:      { costo: 0,  tiempo: 0, vida: 950, dano: 42, alcance: 1.7, vel: 3.4, ritmo: 0.8, cura: 10, icono: '👑' }
 };
 var INVOCAR = { tres: 10, heroe: 30 }; // precio en gemas
 // Armaduras: cada nivel (hasta 3) da +20% de vida y +10% de defensa (recibe menos daño)
 // La armadura se puede mejorar con oro y piedra, o comprar al momento con gemas (precio de cada nivel)
-var ARMADURA = { costo: [60, 120, 200], piedra: [20, 50, 90], gemas: [20, 40, 80], vida: 0.2, defensa: 0.1, max: 3 };
+var ARMADURA = { costo: [200, 500, 1200], piedra: [80, 220, 500], gemas: [20, 40, 80], vida: 0.2, defensa: 0.1, max: 3 };
 
 // ---------------- Enemigos ----------------
 var ENEMIGOS = {
@@ -623,12 +665,7 @@ var PUNTO_REUNION = [-12.5, 2.5];
 
 // Tiempos de construcción (segundos) para llegar a cada nivel. Nada es instantáneo:
 // el que quiera rápido usa gemas o el Acelerador.
-//   nivel 1 = 1 min · 2 = 2 min · 3 = 5 min · 4 = 15 min · 5 = 30 min · 6 = 1 h
-//   7 = 3 h · 8 = 8 h · 9 = 12 h · 10 = 18 h · 11 = 1 día · 12 = 1 día
-var TIEMPOS_OBRA = [60, 120, 300, 900, 1800, 3600, 10800, 28800, 43200, 64800, 86400, 86400];
-Object.keys(EDIFICIOS).forEach(function (k) { EDIFICIOS[k].tiempo = TIEMPOS_OBRA.slice(); });
-MURALLA.tiempo = TIEMPOS_OBRA.slice();
-MEJORA_CASTILLO.tiempo = [0].concat(TIEMPOS_OBRA.slice(1));
+// (v4.9: los tiempos ahora salen de TIEMPO_NIVEL y BASE_EDIFICIO, arriba; el castillo va de 5 min a 24 h)
 // Terminar ya con gemas: 1 gema por cada 10 minutos que falten
 var GEMAS_POR_10MIN = 1;
 // El Acelerador quita este tiempo (segundos) a todas las obras

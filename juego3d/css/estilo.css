@@ -421,7 +421,7 @@ body.colocando #btn-oleada { display: none; }
   .carta.compacta h3 { font-size: 15px; }
   .carta.compacta .comprar { font-size: 14px; padding: 6px 8px; }
   .stats { gap: 4px; font-size: 11px; }
-  #btn-idioma, #btn-velocidad { display: none !important; }
+  #btn-velocidad { display: none !important; }
   #btn-oleada small { font-size: 11px; }
 }
 
@@ -1066,3 +1066,29 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .eq-fila.comun { border-color: #9cc3f0; } .eq-fila.raro { border-color: #c4a8f0; } .eq-fila.legendario { border-color: #e8b84a; background: #fff8e0; }
 .eq-bts { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
 .eq-bts .comprar.mini { width: auto; min-width: 44px; margin: 0; padding: 5px 8px; font-size: 12px; }
+
+/* Idioma y cerrar sesión: siempre visibles junto a los recursos (v4.9) */
+.pill.boton-top { padding: 4px 11px; font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit; color: #fff; }
+.pill.boton-top:active { transform: scale(.94); }
+#btn-salir { color: #ffb4a8; }
+#arriba #btn-idioma { display: flex !important; width: auto; height: auto; }
+@media (max-width: 600px) { .pill.boton-top { padding: 3px 9px; font-size: 13px; } }
+
+/* v4.9: trabajos, materiales, cola de entrenamiento y botón de defensa */
+.trabajos { background: rgba(74,52,36,.08); border: 1px solid rgba(74,52,36,.25); border-radius: 10px; padding: 6px 9px; margin: 6px 0; font-size: 13px; }
+.trabajos > b { display: block; margin-bottom: 3px; }
+.tr-fila { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+.tr-fila.no { color: #9a2a1c; }
+.tr-fila.si { color: #2f6b22; }
+.comprar.bloqueado-tr { background: linear-gradient(#9b8b78, #75685a); border-color: #5c5146; color: #fff; font-size: 13px; }
+.hf-mat { background: rgba(74,52,36,.08); border-radius: 10px; padding: 6px 9px; margin: 4px 0 6px; font-size: 12.5px; }
+.hf-mat > b { display: block; margin-bottom: 3px; }
+.mat-fila { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+#pill-entreno { cursor: pointer; font-family: inherit; color: #fff; font-size: 13px; padding: 3px 10px 3px 8px; }
+#pill-entreno b { min-width: 0; font-size: 13px; }
+#btn-defensa { width: auto; min-width: 52px; padding: 0 8px; font-size: 12px; font-weight: 800; border-radius: 999px; color: #1d5a12; }
+#btn-defensa.apagado { color: #8a1c10; filter: grayscale(.4); }
+.t-obra { font-weight: 700; }
+#pill-entreno.oculto-pill { display: none; }
+#lateral #btn-defensa { width: auto !important; min-width: 62px; height: 34px; padding: 0 9px; font-size: 12.5px; font-weight: 800; white-space: nowrap; color: #fff; background: linear-gradient(#4fa83a, #2f7a22); border-color: #f2c45a; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
+#lateral #btn-defensa.apagado { background: linear-gradient(#c0483a, #8a2418); filter: none; }
