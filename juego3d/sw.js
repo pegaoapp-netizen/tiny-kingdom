@@ -1,9 +1,9 @@
 // Guarda los archivos del juego en el teléfono para que funcione sin internet.
 // Cambia VERSION cada vez que publiques una versión nueva del juego.
-var VERSION = 'tinykingdom-v3.4';
+var VERSION = 'tinykingdom-v3.5';
 var ARCHIVOS = [
   './', 'index.html', 'manifest.webmanifest', 'css/estilo.css',
-  'js/three.min.js', 'js/GLTFLoader.js', 'js/SkeletonUtils.js', 'modelos/sol.glb', 'modelos/trueno.glb', 'js/datos.js', 'js/cuentas.js',
+  'js/three.min.js', 'js/GLTFLoader.js', 'js/SkeletonUtils.js', 'js/datos.js', 'js/cuentas.js',
   'js/firebase-app-compat.js', 'js/firebase-auth-compat.js', 'js/firebase-firestore-compat.js', 'js/modelos.js', 'js/juego.js',
   'iconos/icono-192.png', 'iconos/icono-512.png', 'iconos/apple-touch-icon.png', 'privacidad.html'
 ];

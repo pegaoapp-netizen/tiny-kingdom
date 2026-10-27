@@ -1541,13 +1541,18 @@ var M = (function () {
   //  HÉROES CON MODELO 3D DE ARCHIVO (GLB con huesos y animaciones)
   //  Mientras el archivo carga (o si falla) se usa el héroe hecho con código.
   // =================================================================
-  var GLB_HEROES = { sol: 'modelos/sol.glb', trueno: 'modelos/trueno.glb' };
+  var GLB_HEROES = {};
+  ['sol', 'luna', 'ancla', 'brisa', 'chispa', 'roble', 'trueno', 'pluma'].forEach(function (id) { GLB_HEROES[id] = 'modelos/' + id + '.glb'; });
+  var glbPedidos = {};
   var glbListos = {};
-  function cargarHeroesGLB(alListo) {
+  // solo descarga los héroes que se le piden (los que tiene el jugador), una vez cada uno
+  function cargarHeroesGLB(ids, alListo) {
     if (!THREE.GLTFLoader || !THREE.SkeletonUtils) return;
     var cargador = new THREE.GLTFLoader();
     var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
-    Object.keys(GLB_HEROES).forEach(function (id) {
+    ids.forEach(function (id) {
+      if (!GLB_HEROES[id] || glbPedidos[id]) return;
+      glbPedidos[id] = true;
       cargador.load(GLB_HEROES[id] + v, function (gl) {
         var esc = gl.scene;
         esc.traverse(function (o) {
@@ -1572,7 +1577,7 @@ var M = (function () {
         });
         glbListos[id] = { escena: esc, clips: gl.animations, alto: maxY - minY, minY: minY };
         if (alListo) alListo(id);
-      }, undefined, function () { /* sin archivo: queda el héroe hecho con código */ });
+      }, undefined, function () { glbPedidos[id] = false; /* sin archivo: queda el héroe hecho con código */ });
     });
   }
   function heroeGLB(h, nivel, tam) {

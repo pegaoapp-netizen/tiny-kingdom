@@ -2453,11 +2453,12 @@
       r.dispose(); if (r.forceContextLoss) r.forceContextLoss();
     } catch (err) {}
   }
-  M.cargarHeroesGLB(function (id) {
+  function cargarModelosHeroes() { M.cargarHeroesGLB(Object.keys(estado.heroes || {}), alLlegarModelo); }
+  function alLlegarModelo(id) {
     retratoHeroe(id);
     if (!oleadaActiva && estado.heroes && estado.equipo) ponerEquipo();
     if (panelActual && /heroe|tropas|invocar|reclutado/.test(panelActual.tipo)) reabrirPanel();
-  });
+  }
   function fotoHTML(clave, emoji) {
     return retratos[clave] ? '<img src="' + retratos[clave] + '" alt="">' : emoji;
   }
@@ -2935,7 +2936,7 @@
     var html = '<div class="heroes-grid reclutados">';
     res.forEach(function (id) {
       var nuevo = !estado.heroes[id];
-      if (nuevo) estado.heroes[id] = { nivel: 1, estrellas: 1, frag: 0 }; else estado.heroes[id].frag += RECLUTAR.repetido;
+      if (nuevo) { estado.heroes[id] = { nivel: 1, estrellas: 1, frag: 0 }; cargarModelosHeroes(); } else estado.heroes[id].frag += RECLUTAR.repetido;
       html += '<div class="reclutado">' + tarjetaHeroe(HEROE[id]).replace('data-accion="heroe-ver"', 'data-accion="heroe-ver" tabindex="-1"') +
         '<p class="nota">' + (nuevo ? '<b>' + T('heroe_nuevo', { n: NH(id) }) + '</b>' : T('heroe_frag', { f: RECLUTAR.repetido, n: NH(id) })) + '</p></div>';
     });
@@ -4003,6 +4004,7 @@
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
     setTimeout(mostrarNovedades, 700);
+    cargarModelosHeroes();
     actualizarHUD();
     guardar();
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
