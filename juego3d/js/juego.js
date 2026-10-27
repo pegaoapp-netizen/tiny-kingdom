@@ -15,7 +15,7 @@
   function nuevoEstado() {
     return {
       monedas: INICIO.monedas, gemas: INICIO.gemas, comida: INICIO.comida, madera: INICIO.madera, piedra: INICIO.piedra, oleada: 1, vidaCastillo: INICIO.vidaCastillo,
-      edificios: TERRENOS.map(function () { return null; }),
+      edificios: [],
       tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {}, castillo: 1, obraCastillo: null,
       heroes: { sol: { nivel: 1, estrellas: 1, frag: 0 } }, equipo: ['sol'], reclutaGratis: '',
       idioma: 'es',
@@ -27,6 +27,8 @@
       // lo que se está construyendo se guarda con su nivel de antes y su obra aparte (con el tiempo que lleva)
       estado.edificios = slots.map(function (s) { return s.edificio ? { tipo: s.edificio.tipo, nivel: s.edificio.nivel } : (s.obra && s.obra.nivel > 1 ? { tipo: s.obra.tipo, nivel: s.obra.nivel - 1 } : null); });
       estado.obras = slots.map(function (s) { return s.obra ? { tipo: s.obra.tipo, nivel: s.obra.nivel, t: s.obra.t, total: s.obra.total } : null; });
+      estado.guardados = slots.map(function (s) { return Math.floor(s.guardado || 0); });
+      estado.mapa2 = true;
       estado.obraMuralla = obraMuralla ? { nivel: obraMuralla.nivel, t: obraMuralla.t, total: obraMuralla.total } : null;
       var t = {};
       var inv = {};
@@ -129,7 +131,7 @@
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   function distInicial() { return window.innerWidth < window.innerHeight ? 84 : 62; }
   var CENTRO_REINO = new V3(-5, 0, -2);
-  var LIMITE_CAM = 32;
+  var LIMITE_CAM = 62;
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
   var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
   var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: 0.52, polar: 1.0 };
@@ -349,6 +351,27 @@
     escena.add(M.fusionar(deco));
   })();
 
+  // ------------------------------------------------------------------
+  //  PARCELAS EN CUADRÍCULA: la ciudad (dentro de la muralla) y los campos (fuera)
+  // ------------------------------------------------------------------
+  var PARCELAS = (function () {
+    function enMuralla(x, z) { var a = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, b = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz; return Math.sqrt(a * a + b * b); }
+    var ciudad = [], campos = [], C1 = 9.5, C2 = 10;
+    for (var i = -5; i <= 5; i++) for (var j = -5; j <= 5; j++) {
+      var x = i * C1, z = j * C1;
+      if (enMuralla(x, z) < 0.8 && Math.hypot(x, z) > 10.5 && distCamino(x, z) > 7.5 &&
+        Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) > 7 && Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) > ESTANQUE.r + 5.5) ciudad.push([x, z]);
+    }
+    for (var a = -9; a <= 9; a++) for (var b = -9; b <= 9; b++) {
+      var fx = MURALLA_FORMA.cx + a * C2, fz = MURALLA_FORMA.cz + b * C2, m = enMuralla(fx, fz);
+      if (m > 1.13 && m < 1.75 && distCamino(fx, fz) > 9 && Math.abs(fx) < 120 && Math.abs(fz) < 120) campos.push([fx, fz]);
+    }
+    function porCercania(p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); }
+    ciudad.sort(porCercania); campos.sort(porCercania);
+    ciudad = ciudad.slice(0, 16); campos = campos.slice(0, 24);
+    return { ciudad: ciudad, campos: campos, todas: ciudad.concat(campos), nCiudad: ciudad.length };
+  })();
+
   (function crearNaturaleza() {
     var arboles = [];
     function libre(x, z, extra) {
@@ -356,7 +379,7 @@
       var mfx = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mfz = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
       if (Math.abs(Math.sqrt(mfx * mfx + mfz * mfz) - 1) < 0.1) return false;
       if (distCamino(x, z) < 3.4 + extra) return false;
-      for (var i = 0; i < TERRENOS.length; i++) if (Math.hypot(x - TERRENOS[i][0], z - TERRENOS[i][1]) < 4 + extra) return false;
+      for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (i < PARCELAS.nCiudad ? 4 : 6) + extra) return false;
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 1.5) return false;
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
       return true;
@@ -585,17 +608,17 @@
     guardar();
   }
 
-  var slots = TERRENOS.map(function (p, i) {
-    var g = new THREE.Group();
+  var slots = PARCELAS.todas.map(function (p, i) {
+    var g = new THREE.Group(), campo = i >= PARCELAS.nCiudad;
     g.position.set(p[0], 0, p[1]);
-    // los edificios miran hacia el camino / el centro
-    var haciaCamino = puntoMasCercano(p[0], p[1]);
-    g.rotation.y = Math.atan2(haciaCamino.x - p[0], haciaCamino.z - p[1]);
-    var t = M.terreno();
+    // los edificios de la ciudad miran hacia el camino; los campos, hacia el castillo
+    var haciaCamino = campo ? new V3(0, 0, 0) : puntoMasCercano(p[0], p[1]);
+    g.rotation.y = campo ? Math.round(Math.atan2(-p[0], -p[1]) / (Math.PI / 2)) * (Math.PI / 2) : Math.atan2(haciaCamino.x - p[0], haciaCamino.z - p[1]);
+    var t = campo ? M.campoParcela() : M.terreno();
     g.add(t);
     g.userData.slot = i;
     escena.add(g);
-    return { i: i, pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0 };
+    return { i: i, campo: campo, pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0, guardado: 0 };
   });
   function puntoMasCercano(x, z) {
     var best = null, m = Infinity;
@@ -1421,13 +1444,14 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.mina(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
+    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
     return M.mejorarPorTramo(m, tramo, tipo);
   }
 
   function construir(i, tipo) {
     var s = slots[i];
     if (s.edificio || s.obra) return;
+    if (s.campo !== esCampo(tipo)) { consejoTemporal(T(s.campo ? 'solo_ciudad' : 'solo_campo')); sonar('error'); return; }
     var d = EDIFICIOS[tipo];
     if (!pagar(costoEdif(tipo, 0))) return;
     empezarObra(s, tipo, 1);
@@ -1482,11 +1506,26 @@
     s.modelo = crearModelo(tipo, tr);
     s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr]);
     if (s.insignia) s.grupo.remove(s.insignia);
-    s.insignia = M.insigniaNivel(nivel);
+    s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' ? 9.5 : 5.2) * ESCALA_TRAMO[tr] + (tr >= 4 ? 0.9 : 0), 0);
     s.grupo.add(s.insignia);
     s.grupo.add(s.modelo);
     s.cd = 0;
+  }
+  // ---- CAMPOS DE RECURSOS ----
+  function ritmoCampo(s) {
+    var d = EDIFICIOS[s.edificio.tipo];
+    return d.produce[s.edificio.nivel - 1] * (1 + bono({ comida: 'cosecha', madera: 'lenadores', piedra: 'canteros' }[d.recurso] || '')) / d.cada;
+  }
+  function capacidadCampo(s) { return s.edificio && esCampo(s.edificio.tipo) ? ritmoCampo(s) * HORAS_ALMACEN * 3600 : 0; }
+  function recolectarCampo(s) {
+    if (!s || !s.edificio) return;
+    var n = Math.floor(s.guardado || 0), r = EDIFICIOS[s.edificio.tipo].recurso;
+    if (n < 1) return;
+    s.guardado -= n;
+    sumarRecurso(r, n, s.pos.clone().setY(3.5));
+    sonar('moneda');
+    guardar();
   }
   function contarEdificios(tipo) {
     return slots.filter(function (s) { return (s.edificio && s.edificio.tipo === tipo) || (s.obra && s.obra.tipo === tipo); }).length;
@@ -1869,14 +1908,13 @@
         s.rebote = Math.min(1, s.rebote + dt * 2.2);
         var k = s.rebote, c1 = 1.70158, c3 = c1 + 1;
         var e = 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
-        s.modelo.scale.setScalar(Math.max(0.05, e) * ESCALA_EDIFICIO);
+        s.modelo.scale.setScalar(Math.max(0.05, e) * ESCALA_EDIFICIO * ESCALA_TRAMO[tramoNivel(s.edificio ? s.edificio.nivel : 1)]);
       }
       if (!s.edificio) return;
       var ed = s.edificio, d = EDIFICIOS[ed.tipo];
       // granja: produce monedas
       if (d.recurso) {
-        s.cd += dt;
-        if (s.cd >= d.cada) { s.cd -= d.cada; sumarRecurso(d.recurso, Math.round(d.produce[ed.nivel - 1] * (1 + bono({ comida: 'cosecha', madera: 'lenadores', piedra: 'canteros' }[d.recurso]))), s.pos.clone().setY(3.2)); }
+        s.guardado = Math.min(capacidadCampo(s), (s.guardado || 0) + ritmoCampo(s) * dt);
         if (s.modelo.userData.aspas) s.modelo.userData.aspas.rotation.z += dt * 1.8;
         if (s.modelo.userData.sierra) s.modelo.userData.sierra.rotation.y += dt * 9;
         if (s.modelo.userData.carro) s.modelo.userData.carro.position.z = 1.7 + Math.sin(tiempo * 1.2 + s.i) * 0.35;
@@ -2391,7 +2429,9 @@
     var nivel = s ? (s.edificio ? s.edificio.nivel : Math.max(1, s.obra.nivel - 1)) : (estado.castillo || 1);
     var nombre = s ? N(tipo) : T('castillo');
     var pr = progresoMenu(), acel = (estado.mochila && estado.mochila.acelerador) || 0;
+    var rec = s && s.edificio && esCampo(s.edificio.tipo) ? Math.floor(s.guardado || 0) : -1;
     var h = '<div class="me-titulo"><span class="me-nivel">' + nivel + '</span>' + nombre + '</div><div class="me-botones">' +
+      (rec >= 0 ? botonMenu2('recolectar', ICONO_RECURSO[EDIFICIOS[s.edificio.tipo].recurso], T('mb_recolectar'), rec < 1, '<span class="mb-gema">+' + corto(rec) + '</span>') : '') +
       botonMenu2('detalles', '📜', T('mb_detalles')) +
       botonMenu2('terminar', '⚡', T('mb_terminar'), !pr, pr ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '') +
       botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>');
@@ -2404,6 +2444,7 @@
     var i = menuEdif.slot, esCastillo = menuEdif.castillo;
     sonar('click');
     if (a === 'detalles') { cerrarMenuEdif(); if (esCastillo) abrirPanelCastillo(); else abrirPanelEdificio(i); return; }
+    if (a === 'recolectar') { recolectarCampo(slots[i]); pintarMenuEdif(); return; }
     if (a === 'entrenar') { cerrarMenuEdif(); abrirPanelTropas(); return; }
     if (a === 'investigar') { cerrarMenuEdif(); abrirPanelInvestigacion(ramaInv); return; }
     var pr = progresoMenu();
@@ -2434,6 +2475,7 @@
     sonar('click');
     if (modoColocar === 'barricada') { consejoTemporal(T('colocando_barr')); sonar('error'); return; }
     if (modoColocar) {
+      if (!s.edificio && !s.obra && s.campo !== esCampo(modoColocar)) { consejoTemporal(T(s.campo ? 'solo_ciudad' : 'solo_campo')); sonar('error'); return; }
       if (!s.edificio && !s.obra) construir(i, modoColocar);
       else { consejoTemporal(T('ocupado')); sonar('error'); }
       return;
@@ -2447,7 +2489,7 @@
   // ------------------------------------------------------------------
   var modoColocar = null, slotElegido = null;
   function entrarModoColocar(tipo) {
-    if (!slots.some(function (s) { return !s.edificio && !s.obra; })) { consejoTemporal(T('sin_terreno')); sonar('error'); return; }
+    if (!slots.some(function (s) { return !s.edificio && !s.obra && s.campo === esCampo(tipo); })) { consejoTemporal(T(esCampo(tipo) ? 'sin_campo' : 'sin_terreno')); sonar('error'); return; }
     var falta = faltante(costoEdif(tipo, 0));
     if (falta) { avisarFalta(falta); return; }
     salirModoColocar();
@@ -2456,7 +2498,7 @@
     $('btn-construir').classList.add('activo');
     // vista previa transparente del edificio en cada terreno libre
     slots.forEach(function (s) {
-      if (s.edificio || s.obra) return;
+      if (s.edificio || s.obra || s.campo !== esCampo(tipo)) return;
       var f = crearModelo(tipo, 1);
       f.traverse(function (o) {
         if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.45; o.material.depthWrite = false; o.castShadow = false; }
@@ -2511,7 +2553,7 @@
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
-      ['aserradero', 'mina', 'academia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
+      ['aserradero', 'mina', 'cantera', 'academia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
       HEROES.forEach(function (h) { var hu = M.heroe(h, 1); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 1.55 * hu.escala, (hu.cabezaY - 0.12) * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
@@ -2619,7 +2661,7 @@
   }
   function statsEdificio(tipo, nivel) {
     var d = EDIFICIOS[tipo], i = nivel - 1;
-    if (d.recurso) return '<span>' + ICONO_RECURSO[d.recurso] + ' ' + T('produce_txt', { n: d.produce[i], r: T('r_' + d.recurso), s: d.cada }) + '</span>';
+    if (d.recurso) return '<span>' + ICONO_RECURSO[d.recurso] + ' ' + T('produce_txt', { n: d.produce[i], r: T('r_' + d.recurso), s: d.cada }) + '</span><span>📦 ' + T('guarda_hasta', { n: Math.round(d.produce[i] * HORAS_ALMACEN * 3600 / d.cada) }) + '</span>';
     if (tipo === 'cuartel') return '<span>⚔️ ' + T('sin_tope') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
     if (tipo === 'academia') return '<span>📜 ' + T('nivel') + ' máx. ' + d.tope[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>⏱ x' + d.rapidez[i] + '</span>' : '');
@@ -2652,12 +2694,14 @@
   function abrirPanelConstruir(slot) {
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
-    ['granja', 'aserradero', 'mina', 'cuartel', 'torre', 'enfermeria', 'academia'].forEach(function (t) {
+    var sl = slotElegido !== null ? slots[slotElegido] : null;
+    ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'torre', 'enfermeria', 'academia'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
       html += '<div class="carta compacta" title="' + D(t) + '"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
         '<div class="stats">' + statsEdificio(t, 1) + '</div>' +
         botonCosto(costoEdif(t, 0), 'construir', 'data-tipo="' + t + '"', T('construir')) + '</div>';
     });
-    html += htmlBarricada() + htmlMuralla() + '</div>';
+    if (!sl || !sl.campo) html += htmlBarricada() + htmlMuralla();
+    html += '</div>';
     if (!slots.some(function (s) { return !s.edificio && !s.obra; })) html += '<p class="nota aviso-rojo">' + T('sin_terreno') + '</p>';
     abrirPanel(T('p_construir'), html, { tipo: 'construir', slot: slotElegido });
   }
@@ -3341,6 +3385,11 @@
         var cu = cuartelesListos()[0];
         if (cu) ponerReloj('entreno', cu.pos.clone().setY(6.4), '⚔️ ' + fmtTiempo(faltaEntreno()) + ' ×' + colaEntreno.length);
       }
+      slots.forEach(function (s) {
+        if (!s.edificio || !esCampo(s.edificio.tipo)) return;
+        var cap = capacidadCampo(s);
+        if ((s.guardado || 0) >= Math.max(1, cap * 0.1)) ponerReloj('rec' + s.i, s.pos.clone().setY(4.2 * ESCALA_TRAMO[tramoNivel(s.edificio.nivel)]), ICONO_RECURSO[EDIFICIOS[s.edificio.tipo].recurso] + ' ' + corto(Math.floor(s.guardado)) + (s.guardado >= cap ? ' ✔' : ''));
+      });
       if (!oleadaActiva) cuartelesListos().forEach(function (c) {
         var n = tropasDentroDe(c);
         if (n) ponerReloj('tropas' + c.i, c.pos.clone().setY(4.6), '🛡️ ' + n);
@@ -4312,10 +4361,27 @@
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
       estado.heridos = g.heridos || {};
-      (g.edificios || []).forEach(function (e, i) { if (e && slots[i]) ponerEdificio(slots[i], e.tipo, e.nivel); });
+      var eds = (g.edificios || []).slice(), obs = (g.obras || []).slice();
+      if (!g.mapa2) {
+        // partidas de antes del mapa en cuadrícula: la mina vieja daba piedra (ahora es la cantera)
+        eds = eds.map(function (e) { return e && e.tipo === 'mina' ? { tipo: 'cantera', nivel: e.nivel } : e; });
+        obs = obs.map(function (o) { return o && o.tipo === 'mina' ? { tipo: 'cantera', nivel: o.nivel, t: o.t, total: o.total } : o; });
+        // los campos que estaban dentro de la ciudad se mudan a las parcelas de fuera
+        var nE = [], nO = [], libreC = PARCELAS.nCiudad;
+        for (var mi = 0; mi < Math.max(eds.length, obs.length); mi++) {
+          var e0 = eds[mi], o0 = obs[mi], tp = (e0 && e0.tipo) || (o0 && o0.tipo);
+          var destino = tp && esCampo(tp) ? libreC++ : (mi < PARCELAS.nCiudad ? mi : -1);
+          if (destino >= 0 && destino < slots.length) { nE[destino] = e0 || null; nO[destino] = o0 || null; }
+        }
+        eds = nE; obs = nO;
+      }
+      eds.forEach(function (e, i) { if (e && slots[i] && EDIFICIOS[e.tipo]) ponerEdificio(slots[i], e.tipo, e.nivel); });
       // tiempo que pasó con el juego cerrado (máximo 14 días)
       var cerrado = g.actualizado ? Math.max(0, Math.min(14 * 86400, (Date.now() - g.actualizado) / 1000)) : 0;
-      (g.obras || []).forEach(function (o, i) {
+      (g.guardados || []).forEach(function (n, i) { if (slots[i] && slots[i].edificio && esCampo(slots[i].edificio.tipo) && g.mapa2) slots[i].guardado = Math.min(capacidadCampo(slots[i]), n || 0); });
+      // lo que produjeron los campos con el juego cerrado (hasta llenarse)
+      slots.forEach(function (s) { if (s.edificio && esCampo(s.edificio.tipo)) s.guardado = Math.min(capacidadCampo(s), (s.guardado || 0) + ritmoCampo(s) * cerrado); });
+      obs.forEach(function (o, i) {
         if (!o || !slots[i] || !EDIFICIOS[o.tipo]) return;
         empezarObra(slots[i], o.tipo, o.nivel);
         slots[i].obra.total = o.total; slots[i].obra.t = Math.min(o.total, (o.t || 0) + cerrado);
@@ -4398,7 +4464,7 @@
     var b = (Math.sin(performance.now() / 250) + 1) / 2;
     slots.forEach(function (s, i) {
       var libre = !s.edificio && !s.obra;
-      var on = (modoColocar && libre) || slotElegido === i;
+      var on = (modoColocar && libre && modoColocar !== 'barricada' && s.campo === esCampo(modoColocar)) || slotElegido === i;
       s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
       // estacas y cuerda: solo en modo construcción
       if (s.terreno.userData.marcas) s.terreno.userData.marcas.visible = !!on;

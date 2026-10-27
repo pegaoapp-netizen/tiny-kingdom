@@ -314,6 +314,63 @@ var M = (function () {
     return g;
   }
 
+  // Parcela de campo (fuera de la muralla): cuadro de tierra con surcos y postes en las esquinas
+  function campoParcela() {
+    var g = new THREE.Group();
+    var base = caja(7.6, 0.1, 7.6, 0x7d9a4a, 0, 0.05, 0); base.castShadow = false; base.receiveShadow = true; g.add(base);
+    var borde = caja(7.9, 0.06, 7.9, 0x6a5232, 0, 0.03, 0); borde.castShadow = false; g.add(borde);
+    for (var r = -3; r <= 3; r++) { var su = caja(7.0, 0.05, 0.28, 0x8c7048, 0, 0.12, r * 1.0); su.castShadow = false; g.add(su); }
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { g.add(cil(0.1, 0.12, 0.7, 5, C.madera, s[0] * 3.75, 0.35, s[1] * 3.75)); });
+    // brillo: se enciende cuando el campo sirve para lo que vas a construir
+    var br = new THREE.Mesh(new THREE.PlaneGeometry(7.8, 7.8), new THREE.MeshBasicMaterial({ color: 0xfff27a, transparent: true, opacity: 0, depthWrite: false }));
+    br.rotation.x = -Math.PI / 2; br.position.y = 0.16; br.renderOrder = 2; g.add(br);
+    g.userData.brillo = br;
+    return g;
+  }
+  // Mina de oro: la mina de siempre con pepitas doradas
+  function minaOro(nivel) {
+    var g = mina(nivel);
+    [[1.1, 1.65], [1.25, 1.75], [0.95, 1.8], [-1.4, 1.2], [-1.2, 1.35]].forEach(function (p, i) { g.add(esfera(0.13 + (i % 2) * 0.04, C.oro, p[0], 0.62 + (i % 3) * 0.05, p[1], 6, 4)); });
+    g.add(caja(0.5, 0.35, 0.5, C.maderaOsc, -1.3, 0.18, 1.3)); g.add(esfera(0.2, C.oro, -1.3, 0.45, 1.3, 8, 6));
+    return g;
+  }
+  // Cantera: la colina con bloques de piedra cortada apilados
+  function cantera(nivel) {
+    var g = mina(nivel);
+    var piedra = 0xc9c3b6;
+    [[-1.5, 1.4], [-0.9, 1.6], [-1.2, 2.1]].forEach(function (p) { g.add(caja(0.55, 0.4, 0.55, piedra, p[0], 0.2, p[1])); });
+    g.add(caja(0.55, 0.4, 0.55, 0xb3ad9f, -1.2, 0.6, 1.5));
+    g.add(cil(0.06, 0.06, 2.2, 6, C.madera, 1.6, 1.1, 1.6)); g.add(caja(1.2, 0.08, 0.08, C.madera, 1.2, 2.15, 1.6));
+    return g;
+  }
+  // Etiqueta con nombre y nivel encima de cada edificio
+  var cacheEtiqueta = {};
+  function etiquetaEdificio(nombre, nivel) {
+    var k = nombre + '|' + nivel;
+    if (!cacheEtiqueta[k]) {
+      var c = document.createElement('canvas'); c.width = 256; c.height = 64;
+      var x = c.getContext('2d');
+      x.font = 'bold 26px sans-serif';
+      var w = Math.min(250, x.measureText(nombre).width + 64);
+      var x0 = (256 - w) / 2;
+      x.fillStyle = 'rgba(42, 26, 14, 0.82)';
+      x.beginPath(); x.moveTo(x0 + 16, 10); x.lineTo(x0 + w - 16, 10); x.quadraticCurveTo(x0 + w, 10, x0 + w, 26); x.lineTo(x0 + w, 38); x.quadraticCurveTo(x0 + w, 54, x0 + w - 16, 54); x.lineTo(x0 + 16, 54); x.quadraticCurveTo(x0, 54, x0, 38); x.lineTo(x0, 26); x.quadraticCurveTo(x0, 10, x0 + 16, 10); x.fill();
+      x.fillStyle = nivel >= 10 ? '#f5c542' : nivel >= 7 ? '#6f8fb5' : nivel >= 4 ? '#c0503a' : '#a07a4a';
+      x.beginPath(); x.arc(x0 + 22, 32, 17, 0, Math.PI * 2); x.fill();
+      x.lineWidth = 3; x.strokeStyle = '#ffe9b0'; x.stroke();
+      x.fillStyle = nivel >= 10 ? '#3a2414' : '#fff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = 'bold 20px sans-serif';
+      x.fillText(String(nivel), x0 + 22, 33);
+      x.fillStyle = '#fff6dc'; x.textAlign = 'left'; x.font = 'bold 24px sans-serif';
+      x.fillText(nombre, x0 + 46, 33);
+      var tx = new THREE.CanvasTexture(c);
+      cacheEtiqueta[k] = new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true });
+    }
+    var s = new THREE.Sprite(cacheEtiqueta[k]);
+    s.scale.set(7.2, 1.8, 1);
+    s.renderOrder = 12;
+    return s;
+  }
+
   // =================================================================
   //  BANDERA
   // =================================================================
@@ -446,10 +503,9 @@ var M = (function () {
   // =================================================================
   function terreno() {
     var g = new THREE.Group();
-    // parcela de tierra removida, con bordes suaves (no una baldosa)
-    var base = malla(geo('parcela', function () { return new THREE.CylinderGeometry(2.45, 2.65, 0.1, 10); }), mat(0x8c6e4a), 0, 0.05, 0, false);
-    base.rotation.y = Math.PI / 10;
-    g.add(base);
+    // parcela cuadrada de la cuadrícula: tierra con borde de piedra
+    var borde = caja(6.4, 0.08, 6.4, 0x9a948a, 0, 0.04, 0); borde.castShadow = false; g.add(borde);
+    var base = caja(5.8, 0.1, 5.8, 0x8c6e4a, 0, 0.06, 0); base.castShadow = false; g.add(base);
     for (var sr = -1; sr <= 1; sr++) { var su = caja(3.4, 0.07, 0.35, 0x7a5d3c, 0, 0.12, sr * 1.1); su.castShadow = false; g.add(su); }
     // estacas y cuerda: solo se ven al elegir dónde construir
     var marcas = new THREE.Group();
@@ -2052,7 +2108,7 @@ var M = (function () {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
-    unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo,
+    unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,

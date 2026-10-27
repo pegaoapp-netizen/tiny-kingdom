@@ -986,3 +986,6 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .bp-res p { margin: 4px 0; }
 /* aviso de versión nueva */
 #aviso-version { position: fixed; left: 50%; top: 64px; transform: translateX(-50%); z-index: 80; padding: 8px 14px; border-radius: 14px; border: 3px solid #7a4a00; background: linear-gradient(#ffe27a, #e09a10); color: #3a2414; font-weight: 900; font-size: 14px; box-shadow: 0 6px 16px rgba(0,0,0,.35); cursor: pointer; }
+
+/* globo de recursos listos en los campos */
+.reloj.rec { background: rgba(255, 246, 220, .92); color: #3a2414; }
