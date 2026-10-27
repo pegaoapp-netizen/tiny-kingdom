@@ -2390,6 +2390,29 @@
       if (r.forceContextLoss) r.forceContextLoss();
     } catch (err) { /* si falla, se usan emojis */ }
   })();
+  function retratoHeroe(id) {
+    try {
+      var r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+      r.setSize(128, 128);
+      var e = new THREE.Scene();
+      e.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.6));
+      var l = new THREE.DirectionalLight(0xffffff, 0.55); l.position.set(3, 5, 4); e.add(l);
+      var c = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+      var hu = M.heroe(HEROE[id], 1); hu.grupo.rotation.y = 0.35;
+      M.animarUnidad(hu, 0, false, 0);
+      e.add(hu.grupo);
+      var dist = 1.55 * hu.escala, alto = (hu.cabezaY - 0.12) * hu.escala;
+      c.position.set(dist * 0.55, alto + dist * 0.35, dist); c.lookAt(0, alto, 0);
+      r.render(e, c);
+      retratos['h_' + id] = r.domElement.toDataURL();
+      r.dispose(); if (r.forceContextLoss) r.forceContextLoss();
+    } catch (err) {}
+  }
+  M.cargarHeroesGLB(function (id) {
+    retratoHeroe(id);
+    if (!oleadaActiva && estado.heroes && estado.equipo) ponerEquipo();
+    if (panelActual && /heroe|tropas|invocar|reclutado/.test(panelActual.tipo)) reabrirPanel();
+  });
   function fotoHTML(clave, emoji) {
     return retratos[clave] ? '<img src="' + retratos[clave] + '" alt="">' : emoji;
   }
@@ -2731,7 +2754,7 @@
     tropas.filter(function (u) { return u.tipo === 'heroe' && !u.heroeId; }).forEach(function (u) { var i = tropas.indexOf(u); if (i >= 0) tropas.splice(i, 1); escena.remove(u.m.grupo); escena.remove(u.barra); });
     estado.equipo.forEach(function (id) {
       var u = tropas.filter(function (x) { return x.heroeId === id; })[0];
-      if (u && (u.m.tier !== M.tierHeroe(estado.heroes[id].nivel) || u.m.etapa !== M.etapaArmadura(estado.heroes[id].nivel))) { var iu = tropas.indexOf(u); if (iu >= 0) tropas.splice(iu, 1); escena.remove(u.m.grupo); escena.remove(u.barra); u = null; }
+      if (u && (!!u.m.glb !== M.tieneGLB(id) || u.m.tier !== M.tierHeroe(estado.heroes[id].nivel) || u.m.etapa !== M.etapaArmadura(estado.heroes[id].nivel))) { var iu = tropas.indexOf(u); if (iu >= 0) tropas.splice(iu, 1); escena.remove(u.m.grupo); escena.remove(u.barra); u = null; }
       if (u) { var s = statsHeroe(id), fr = u.vida / u.max; u.d = s; u.max = s.vida; u.vida = Math.max(1, fr) * s.vida; return; }
       u = crearTropa('heroe', puertaCastillo(), false, id);
       guardarDentro(u);
@@ -3757,7 +3780,6 @@
     var hayPartida = g && (g.oleada > 1 || (g.edificios || []).some(function (e) { return e; }));
     if (hayPartida) {
       botones.push({ texto: T('continuar') + ' (' + T('oleada') + ' ' + g.oleada + ')', accion: function () { empezarPartida(g); } });
-      botones.push({ texto: T('nueva'), clase: 'morado', accion: function () { empezarPartida(null); } });
     } else botones.push({ texto: T('jugar'), accion: function () { empezarPartida(null); } });
     var texto = T('intro');
     if (nube && Cuentas.usuario()) {
@@ -3836,8 +3858,7 @@
   function pantallaVictoria() {
     pantallaModo = 'victoria';
     mostrarPantalla('🏆', T('victoria'), T('victoria_txt', { g: GEMAS_POR_OLEADA * OLEADAS.length + GEMAS_VICTORIA }), [
-      { texto: T('seguir_infinito'), accion: function () { estado.infinito = true; guardar(); ocultarPantalla(); $('btn-oleada').classList.remove('oculto'); actualizarHUD(); } },
-      { texto: T('nueva'), clase: 'morado', accion: function () { empezarPartida(null); } }
+      { texto: T('seguir_infinito'), accion: function () { estado.infinito = true; guardar(); ocultarPantalla(); $('btn-oleada').classList.remove('oculto'); actualizarHUD(); } }
     ]);
   }
   function pantallaDerrota() {
@@ -3852,8 +3873,7 @@
         ocultarPantalla();
         $('btn-oleada').classList.remove('oculto');
         actualizarHUD();
-      } },
-      { texto: T('nueva'), clase: 'morado', accion: function () { empezarPartida(null); } }
+      } }
     ]);
   }
 

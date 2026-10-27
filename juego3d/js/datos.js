@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '3.1';
+var VERSION_JUEGO = '3.2';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -170,7 +170,7 @@ var TEXTOS = {
     premio: 'Premio: +{g} 💎', invocaste: 'Llegaron: {t}',
     pausa: 'PAUSA', pausa_txt: 'Toca ▶ para seguir', enemigos: 'enemigos', tiempo: 'Tiempo', cura: 'Cura',
     borrar_cuenta: 'Borrar mi cuenta', borrar_cuenta_txt: 'Se borrará tu cuenta y tu partida de la nube para siempre. Escribe tu contraseña para confirmar.',
-    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>⚔️ <b>Nueva pantalla de tropas</b>: el soldado grande gira en 3D (muévelo con el dedo).</li><li>🏰 Pestañas Cuartel, Establo y Campo de tiro.</li><li>🎖️ Rangos I, II, III y IV: cada armadura nueva sube el rango y se ve en el muñeco.</li><li>🎚️ Barra para elegir cuántas tropas entrenar, con botones − y +.</li><li>💎 Entrena con tiempo o termina al momento con gemas.</li><li>💾 Lo que estás entrenando sigue avanzando aunque cierres el juego.</li>', novedades_ok: '¡A jugar!',
+    borrar_cuenta_ok: 'Borrar para siempre', cuenta_borrada: 'Tu cuenta fue borrada.', privacidad: 'Privacidad', novedades: '¡Novedades!', novedades_lista: '<li>👑 <b>Sir Sol tiene un modelo nuevo</b>: caballero dorado con capa roja, penacho, espada y escudo con estrella.</li><li>🦵 Ahora camina de verdad, respira cuando está quieto y da el espadazo en las peleas.</li><li>🧹 Se quitó el botón «Nueva partida» para que nadie borre su reino sin querer.</li>', novedades_ok: '¡A jugar!',
     poder: 'Poder', cuenta: 'Cuenta', correo: 'Tu correo', entrar: 'Entrar',
     correo_no: 'Ese correo no es de una cuenta de dueño.', cuenta_jugador: 'Jugador invitado',
     dueno_activo: '👑 Modo DUEÑO activado', dueno_titulo: 'Menú del dueño (pruebas)',
@@ -312,7 +312,7 @@ var TEXTOS = {
     premio: 'Reward: +{g} 💎', invocaste: 'Arrived: {t}',
     pausa: 'PAUSED', pausa_txt: 'Tap ▶ to continue', enemigos: 'enemies', tiempo: 'Time', cura: 'Heal',
     borrar_cuenta: 'Delete my account', borrar_cuenta_txt: 'Your account and cloud save will be deleted forever. Type your password to confirm.',
-    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>⚔️ <b>New troops screen</b>: the big soldier spins in 3D (drag it with your finger).</li><li>🏰 Barracks, Stable and Archery range tabs.</li><li>🎖️ Ranks I, II, III and IV: each new armor raises the rank and shows on the model.</li><li>🎚️ Slider to choose how many troops to train, with − and + buttons.</li><li>💎 Train with a timer or finish right away with gems.</li><li>💾 Training keeps going even when the game is closed.</li>', novedades_ok: 'Let\'s play!',
+    borrar_cuenta_ok: 'Delete forever', cuenta_borrada: 'Your account was deleted.', privacidad: 'Privacy', novedades: 'What\'s new!', novedades_lista: '<li>👑 <b>Sir Sol has a new model</b>: golden knight with a red cape, plume, sword and star shield.</li><li>🦵 He now really walks, breathes while standing and swings his sword in battle.</li><li>🧹 The «New game» button was removed so nobody erases their kingdom by mistake.</li>', novedades_ok: 'Let\'s play!',
     poder: 'Power', cuenta: 'Account', correo: 'Your email', entrar: 'Sign in',
     correo_no: 'That email is not an owner account.', cuenta_jugador: 'Guest player',
     dueno_activo: '👑 OWNER mode on', dueno_titulo: 'Owner menu (testing)',

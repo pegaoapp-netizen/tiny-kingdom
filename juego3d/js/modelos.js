@@ -1537,8 +1537,92 @@ var M = (function () {
     });
   }
 
+  // =================================================================
+  //  HÉROES CON MODELO 3D DE ARCHIVO (GLB con huesos y animaciones)
+  //  Mientras el archivo carga (o si falla) se usa el héroe hecho con código.
+  // =================================================================
+  var GLB_HEROES = { sol: 'modelos/sol.glb' };
+  var glbListos = {};
+  function cargarHeroesGLB(alListo) {
+    if (!THREE.GLTFLoader || !THREE.SkeletonUtils) return;
+    var cargador = new THREE.GLTFLoader();
+    var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
+    Object.keys(GLB_HEROES).forEach(function (id) {
+      cargador.load(GLB_HEROES[id] + v, function (gl) {
+        var esc = gl.scene;
+        esc.traverse(function (o) {
+          if (!o.isMesh) return;
+          var map = o.material && o.material.map;
+          if (map) map.encoding = THREE.LinearEncoding; // igual que las demás texturas del juego
+          o.material = new THREE.MeshLambertMaterial({ map: map || null, color: 0xffffff });
+          o.frustumCulled = false; // con huesos la caja cambia al moverse: que nunca desaparezca
+        });
+        // medir el alto real (con los huesos en su lugar) para pararlo en el suelo
+        esc.updateMatrixWorld(true);
+        var minY = 1e9, maxY = -1e9, v = new THREE.Vector3();
+        esc.traverse(function (o) {
+          if (!o.isMesh) return;
+          var P = o.geometry.attributes.position;
+          for (var i = 0; i < P.count; i += 3) {
+            v.fromBufferAttribute(P, i);
+            if (o.isSkinnedMesh) o.boneTransform(i, v);
+            v.applyMatrix4(o.matrixWorld);
+            if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+          }
+        });
+        glbListos[id] = { escena: esc, clips: gl.animations, alto: maxY - minY, minY: minY };
+        if (alListo) alListo(id);
+      }, undefined, function () { /* sin archivo: queda el héroe hecho con código */ });
+    });
+  }
+  function heroeGLB(h, nivel, tam) {
+    var L = glbListos[h.id];
+    var g = new THREE.Group(), cuerpo = new THREE.Group(); g.add(cuerpo);
+    var modelo = THREE.SkeletonUtils.clone(L.escena);
+    var k = 2.1 / L.alto;
+    modelo.scale.setScalar(k); modelo.position.y = -L.minY * k;
+    modelo.rotation.y = Math.PI; // el archivo mira hacia atrás; las tropas del juego miran hacia +Z
+    cuerpo.add(modelo);
+    var blob = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
+    blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.renderOrder = 1; blob.scale.setScalar(1.2);
+    g.add(blob);
+    if (h.rareza) {
+      var aroR = new THREE.Mesh(geo('aroRareza', function () { return new THREE.RingGeometry(0.5, 0.62, 32); }), new THREE.MeshBasicMaterial({ color: COLOR_RAREZA[h.rareza], transparent: true, opacity: 0.55, depthWrite: false }));
+      aroR.rotation.x = -Math.PI / 2; aroR.position.y = 0.04; aroR.renderOrder = 1; g.add(aroR);
+    }
+    var p = { glb: true, mixer: new THREE.AnimationMixer(modelo), acciones: {}, actual: null, ultT: null, ultAtaque: 0 };
+    L.clips.forEach(function (c) { p.acciones[c.name] = p.mixer.clipAction(c); });
+    if (p.acciones.Ataque) { p.acciones.Ataque.setLoop(THREE.LoopOnce); p.acciones.Ataque.clampWhenFinished = true; }
+    if (p.acciones.Caminar) p.acciones.Caminar.timeScale = 1.25;
+    if (p.acciones.Quieto) { p.acciones.Quieto.play(); p.actual = 'Quieto'; }
+    // piezas vacías por si algún código busca brazos o piernas
+    ['piernaI', 'piernaD', 'izq', 'brazo', 'cabeza'].forEach(function (n) { p[n] = new THREE.Group(); });
+    var escala = HEROE_TAM * (tam || TAM_UNIDAD);
+    g.scale.setScalar(escala);
+    return { grupo: g, cuerpo: cuerpo, p: p, escala: escala, baseY: 0, alto: 2.2 * escala, cabezaY: 1.57, tier: tierHeroe(nivel), etapa: etapaArmadura(nivel), glb: true };
+  }
+  function animarGLB(u, t, caminando, ataque) {
+    var p = u.p, dt = p.ultT === null ? 0 : Math.max(0, Math.min(0.1, t - p.ultT));
+    p.ultT = t;
+    var quiere = ataque > 0 ? 'Ataque' : caminando ? 'Caminar' : 'Quieto';
+    if (!p.acciones[quiere]) quiere = 'Quieto';
+    var reinicio = quiere === 'Ataque' && ataque > p.ultAtaque + 0.3; // empezó otro golpe
+    p.ultAtaque = ataque;
+    if ((quiere !== p.actual || reinicio) && p.acciones[quiere]) {
+      var nueva = p.acciones[quiere], vieja = p.acciones[p.actual];
+      nueva.reset();
+      // el golpe dura lo mismo que el movimiento del brazo de las demás tropas (1/3 de segundo)
+      if (quiere === 'Ataque') nueva.timeScale = nueva.getClip().duration * 3;
+      nueva.play();
+      if (vieja && vieja !== nueva) nueva.crossFadeFrom(vieja, quiere === 'Ataque' ? 0.05 : 0.2, false);
+      p.actual = quiere;
+    }
+    p.mixer.update(dt);
+  }
+
   // Animación de caminar / atacar
   function animarUnidad(u, t, caminando, ataque) {
+    if (u.p && u.p.glb) { animarGLB(u, t, caminando, ataque); return; }
     var p = u.p, v = caminando ? 1 : 0;
     var s = Math.sin(t * 11);
     if (p.patas) {
@@ -1878,6 +1962,7 @@ var M = (function () {
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
     ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar,
-    heroe: function (h, nivel) { return heroeModelo2(h.look, undefined, nivel, h.rareza); }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
+    heroe: function (h, nivel) { return glbListos[h.id] ? heroeGLB(h, nivel) : heroeModelo2(h.look, undefined, nivel, h.rareza); },
+    cargarHeroesGLB: cargarHeroesGLB, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };
 })();
