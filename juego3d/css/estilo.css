@@ -989,3 +989,9 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 
 /* globo de recursos listos en los campos */
 .reloj.rec { background: rgba(255, 246, 220, .92); color: #3a2414; }
+
+/* ventana de confirmación */
+#confirmar-juego { position: fixed; inset: 0; z-index: 75; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(20, 12, 6, .6); }
+.cj-caja { width: 100%; max-width: 340px; padding: 14px; border-radius: 14px; background: linear-gradient(#fff6dc, #f0dcae); border: 3px solid #7a4a00; box-shadow: 0 10px 30px rgba(0,0,0,.5); text-align: center; color: #3a2414; }
+.cj-caja h3 { margin: 0 0 6px; font-size: 18px; } .cj-caja p { margin: 0 0 12px; font-size: 14px; }
+.cj-botones { display: flex; gap: 8px; } .cj-botones .comprar { flex: 1; margin: 0; padding: 10px 6px; font-size: 15px; }
