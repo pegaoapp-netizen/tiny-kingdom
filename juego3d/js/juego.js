@@ -1069,12 +1069,16 @@
     var t = TIPOS_CASILLA[c.tipo], mia = !!(estado.casillas || {})[c.id], nube = casillasNube[c.id];
     var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
     var deOtro = nube && nube.dueno !== yo && !mia;
+    var libreTel = celdaLibre(c.x, c.y), ocupante = mia ? T('cas_tuya') : deOtro ? escaparHTML(nube.nombre || '?') : (libreTel ? T('cas_libre_corto') : '—');
+    var np = (estado.mochila && estado.mochila.portal_elegir) || 0, pt = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0];
     var html = '<div class="carta casilla-info"><h3>' + t.icono + ' ' + T('cas_' + c.tipo) + ' <span class="me-nivel">' + c.nivel + '</span></h3>' +
-      '<div class="stats"><span>📍 ' + c.x + ', ' + c.y + '</span><span>' + ICONO_RECURSO[t.r] + ' +' + Math.round(2 * c.nivel) + '% ' + T('r_' + t.r) + '</span><span>🛡️ ' + T('cas_guardianes') + ' ' + formatoNumero(defensaCasilla(c)) + '</span></div>';
-    if (mia) html += '<p class="nota"><b>' + T('cas_tuya') + '</b></p><button class="comprar" id="cas-soltar">' + T('cas_abandonar') + '</button>';
-    else if (deOtro) html += '<p class="nota">' + T('cas_de', { n: escaparHTML(nube.nombre || '?') }) + '</p><button class="comprar rojo boton-oleada-grande" id="cas-conquistar">⚔️ ' + T('cas_quitar') + '</button>';
-    else html += '<p class="nota">' + T('cas_libre', { n: misCasillas().length, m: maxCasillas() }) + '</p><button class="comprar rojo boton-oleada-grande" id="cas-conquistar">🚩 ' + T('cas_conquistar') + '</button>';
-    if (celdaLibre(c.x, c.y)) { var np = (estado.mochila && estado.mochila.portal_elegir) || 0, pt = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0]; html += '<button class="comprar morado" id="cas-portal" style="margin-top:6px">✨ ' + T('tel_aqui') + ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) + '</button>'; }
+      '<div class="casilla-tabla"><span>' + T('cas_terreno') + '</span><b>' + t.icono + ' ' + T('cas_' + c.tipo) + '</b>' +
+      '<span>' + T('cas_coord') + '</span><b>X ' + c.x + ' · Y ' + c.y + '</b>' +
+      '<span>' + T('cas_ocupada_por') + '</span><b>' + ocupante + '</b>' +
+      '<span>' + ICONO_RECURSO[t.r] + '</span><b>+' + Math.round(2 * c.nivel) + '% ' + T('r_' + t.r) + ' · 🛡️ ' + formatoNumero(defensaCasilla(c)) + '</b></div>' +
+      '<div class="casilla-botones"><button class="comprar morado" id="cas-portal"' + (libreTel ? '' : ' disabled') + '>' + T('cas_reubicar') + (libreTel ? ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) : '') + '</button>' +
+      (mia ? '<button class="comprar" id="cas-soltar">' + T('cas_abandonar') + '</button>' : '<button class="comprar rojo" id="cas-conquistar">' + T('cas_ocupar') + '</button>') + '</div>';
+    if (!mia) html += '<p class="nota">' + (deOtro ? T('cas_de', { n: escaparHTML(nube.nombre || '?') }) : T('cas_libre', { n: misCasillas().length, m: maxCasillas() })) + '</p>';
     $('mundo-info').innerHTML = html + '</div>';
     var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { this.disabled = true; conquistarCasilla(c, deOtro ? nube : null); });
     var bs = $('cas-soltar'); if (bs) bs.addEventListener('click', function () { soltarCasilla(c); });
@@ -1156,7 +1160,10 @@
   function puedeTeleportar() {
     if (oleadaActiva) return T('tel_oleada');
     if (marchas.some(function (m) { return !m.resuelto && m.llega > Date.now(); })) return T('tel_marcha');
-    if (entrantes.some(function (r) { return r.llega > Date.now(); })) return T('tel_atacado');
+    // antes de que llegue el ataque sí puedes huir; cuando ya empezó la batalla, no
+    if (entrantes.some(function (r) { return r.llega <= Date.now() && !r.resuelto; })) return T('tel_batalla');
+    var espera = (estado.ultimoPortal || 0) + 24 * 3600 * 1000 - Date.now();
+    if (espera > 0 && !estado.dueno) return T('tel_espera24', { t: fmtTiempo(espera / 1000) });
     return '';
   }
   function teletransportar(x, y, tipo) {
@@ -1169,6 +1176,8 @@
     estado.lugar = { x: aCoord(x), y: aCoord(y) };
     var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
     aldeasCache.forEach(function (a) { if (a.uid === yo) { a.x = estado.lugar.x; a.y = estado.lugar.y; } });
+    estado.ultimoPortal = Date.now(); estado.sinAtacarHasta = Date.now() + 3600 * 1000;
+    cancelarAtaquesEntrantes();
     guardar(true); publicarAldea(true);
     sonar('magia'); setTimeout(function () { sonar('poder'); }, 300);
     consejoTemporal(T('tel_ok', { x: x, y: y }));
@@ -1177,6 +1186,18 @@
       setTimeout(function () { if (enMundo) { pintarAldeas(aldeasCache); var p = posCelda(x, y); M3.obj.copy(p); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true; $('mundo-info').innerHTML = '<div class="carta"><h3>' + T('tel_ok', { x: x, y: y }) + '</h3></div>'; } }, 600);
     }
     return true;
+  }
+  // si te mudas antes de que llegue un ataque, el atacante no encuentra tu ciudad: se cancela y sus tropas regresan
+  function cancelarAtaquesEntrantes() {
+    var ahora = Date.now();
+    entrantes.filter(function (r) { return r.llega > ahora; }).forEach(function (r) {
+      if (!hayCuenta() || r.prueba) { setTimeout(function () { consejoTemporal(T('tel_cancelado', { n: r.atacanteNombre })); }, 2600); r.resuelto = true; r.cancelado = true; return; }
+      Cuentas.resolverAtaque(r.id, { cancelado: true, resuelto: true, gano: false, bajas: 0, defensa: 0, botin: { oro: 0, comida: 0, madera: 0, piedra: 0 } })
+        .then(function () { setTimeout(function () { consejoTemporal(T('tel_cancelado', { n: r.atacanteNombre })); }, 2600); }).catch(function () {});
+      r.resuelto = true; r.cancelado = true;
+    });
+    entrantes = entrantes.filter(function (r) { return !r.cancelado; });
+    actualizarAlertas();
   }
   function portalAlAzar() {
     var actual = celdaDe(miLugar().x, miLugar().y);
@@ -1268,6 +1289,7 @@
   //  ALIANZAS
   // ------------------------------------------------------------------
   function abrirPanelAlianza() {
+    vistos().alianza = true;
     if (!hayCuenta()) {
       abrirPanel(T('p_alianza'), '<div class="carta"><p>' + T('mundo_cuenta') + '</p><button class="comprar naranja" data-accion="ir-cuenta">' + T('entrar_o_crear') + '</button></div>', { tipo: 'alianza' });
       return;
@@ -2179,7 +2201,10 @@
   })();
   var reunion = new V3(PUNTO_REUNION[0], 0, PUNTO_REUNION[1]);
 
-  function vidaTropa(tipo, na) { return TROPAS[tipo].vida * (1 + ARMADURA.vida * (na || 0) + bono('escudos')); }
+  // bonus de la investigación de cada tipo de tropa (Ataque, Vida, Defensa, Velocidad)
+  function bonoTropa(tipo, stat) { var tc = buscarTec('t_' + tipo + '_' + stat); return tc ? ((estado.invest && estado.invest[tc.id]) || 0) * tc.cada : 0; }
+  function velU(u) { return u.d.vel * (1 + bonoTropa(u.tipo, 'velocidad')); }
+  function vidaTropa(tipo, na) { return TROPAS[tipo].vida * (1 + ARMADURA.vida * (na || 0) + bono('escudos') + bonoTropa(tipo, 'vida')); }
   function nivelArmadura(tipo) { return (estado.armadura && estado.armadura[tipo]) || 0; }
   function crearTropa(tipo, desde, invocada, heroeId) {
     var hd = heroeId ? HEROE[heroeId] : null;
@@ -2189,7 +2214,7 @@
     m.grupo.position.copy(desde);
     escena.add(m.grupo);
     var u = {
-      tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: hd ? (d.defensa || 0) : ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
+      tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: hd ? (d.defensa || 0) : ARMADURA.defensa * na + bonoTropa(tipo, 'defensa'), armadura: na, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
       barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: m.alto || 1.75 * m.escala
     };
@@ -2665,7 +2690,7 @@
       }
       if (u.volviendo) {
         u.barra.visible = false;
-        var llego = moverHacia(u, u.casa.x, u.casa.z, d.vel * 1.3, dt) || Math.hypot(u.pos.x - u.casa.x, u.pos.z - u.casa.z) < 1.2;
+        var llego = moverHacia(u, u.casa.x, u.casa.z, velU(u) * 1.3, dt) || Math.hypot(u.pos.x - u.casa.x, u.pos.z - u.casa.z) < 1.2;
         M.animarUnidad(u.m, tiempo + u.radio * 10, !llego, 0);
         if (llego) guardarDentro(u);
         return;
@@ -2678,23 +2703,23 @@
         obj = masCercano(enemigos, u.pos, d.alcance);
         if (obj) {
           encararHacia(u, obj.pos.x, obj.pos.z, dt);
-          if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u) * factorArmas(u.tipo), Math.random() < 0.5); }
+          if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas') + bonoTropa(u.tipo, 'ataque')) * furia(u) * factorArmas(u.tipo), Math.random() < 0.5); }
         } else {
           // los héroes de distancia avanzan hacia los enemigos que se acercan a su puesto
           var lejos = u.heroeId ? masCercano(enemigos.filter(function (e) { return e.pos.distanceTo(u.puesto) < 17; }), u.pos, 99) : null;
-          caminando = lejos ? !moverHacia(u, lejos.pos.x, lejos.pos.z, d.vel, dt) : !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
+          caminando = lejos ? !moverHacia(u, lejos.pos.x, lejos.pos.z, velU(u), dt) : !moverHacia(u, u.puesto.x, u.puesto.z, velU(u), dt);
         }
       } else {
         var correa = u.tipo === 'heroe' ? 13 : 9.5;
         obj = masCercano(enemigos.filter(function (e) { return e.pos.distanceTo(u.puesto) < correa; }), u.pos, 99);
         if (obj) {
           var dist = u.pos.distanceTo(obj.pos) - obj.radio - u.radio;
-          if (dist > d.alcance - 0.3) caminando = !moverHacia(u, obj.pos.x, obj.pos.z, d.vel, dt);
+          if (dist > d.alcance - 0.3) caminando = !moverHacia(u, obj.pos.x, obj.pos.z, velU(u), dt);
           else {
             encararHacia(u, obj.pos.x, obj.pos.z, dt);
-            if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u) * factorArmas(u.tipo), u); sonar('golpe'); }
+            if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas') + bonoTropa(u.tipo, 'ataque')) * furia(u) * factorArmas(u.tipo), u); sonar('golpe'); }
           }
-        } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
+        } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, velU(u), dt);
         if (!obj && !caminando) encararHacia(u, u.pos.x + dirFrente.x, u.pos.z + dirFrente.z, dt);
       }
       M.animarUnidad(u.m, tiempo + u.radio * 10, caminando, u.ataque);
@@ -3413,6 +3438,7 @@
     return t;
   }
   function abrirPanelTropas() {
+    vistos().tropasDia = hoyTexto();
     var v = vistaTropa, t = v.tipo, d = TROPAS[t], na = nivelArmadura(t);
     if (v.rango === null || v.rango > ARMADURA.max) v.rango = na;
     var r = v.rango, bloq = r > na, lista = PESTANAS_TROPA[v.pest];
@@ -3431,7 +3457,7 @@
       '<div class="rangos">' + ROMANO.map(function (rn, i) {
         return '<button data-accion="tropa-rango" data-r="' + i + '" class="r' + i + (i > na ? ' bloq' : '') + (i === r ? ' activo' : '') + '">' + rn + (i > na ? ' 🔒' : '') + '</button>';
       }).join('') + '</div></div>';
-    html += '<p class="nota tropa-desc">' + D(t) + '</p>';
+    html += '<p class="nota tropa-desc">' + D(t) + '</p><button class="comprar morado inv-tropa-btn" data-accion="inv-tropa" data-tipo="' + t + '">' + T('investigar_tropa') + ' · ' + N(t) + '</button>';
     html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * r)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + fmtTiempo(d.tiempo / rapidezEntreno()) + '</span>' +
       (r ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * r) + '%</span>' : '') + '</div>';
     var subir = na < ARMADURA.max ? '<div class="carta compacta subir-rango"><h3>⬆️ ' + T('subir_rango', { r: ROMANO[na + 1] }) + '</h3><p class="nota">' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '</p><div class="botones-tropa">' +
@@ -3530,7 +3556,7 @@
   function abrirPanelUnidad(u) {
     unidadSel = u;
     var d = u.d, nombre = u.heroeId ? NH(u.heroeId) : N(u.tipo), aliado = u.aliado;
-    var dano = aliado ? d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) : u.dano;
+    var dano = aliado ? d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas') + bonoTropa(u.tipo, 'ataque')) : u.dano;
     var clFoto = u.heroeId ? 'h_' + u.heroeId : u.tipo;
     var foto = retratos[clFoto] ? '<img src="' + retratos[clFoto] + '" alt="">' : (aliado ? '🛡️' : '👹');
     var frac = Math.max(0, u.vida / u.max);
@@ -3642,6 +3668,7 @@
       '<span class="nom">' + NH(h.id) + '</span><span class="nv">' + (e ? T('nivel_corto') + ' ' + e.nivel : '🔒') + '</span><span class="est">' + est + '</span></button>';
   }
   function abrirPanelHeroes() {
+    vistos().tropasDia = hoyTexto();
     var orden = { legendario: 0, raro: 1, comun: 2 };
     var lista = HEROES.slice().sort(function (a, b) { return (estado.heroes[b.id] ? 1 : 0) - (estado.heroes[a.id] ? 1 : 0) || orden[a.rareza] - orden[b.rareza]; });
     var html = subtabsHeroes('heroes') + '<p class="nota">' + T('heroes_txt') + ' <b>' + T('equipo_n', { n: estado.equipo.length }) + '</b></p>' +
@@ -3741,7 +3768,7 @@
       var que = b.getAttribute('data-eq'), p = piezas().filter(function (x) { return x.i === b.getAttribute('data-i'); })[0]; if (!p) return;
       if (que === 'equipar') { equiparPieza(id, p.i); ponerEquipo(); guardar(true); d.remove(); abrirPanelHeroe(id); return; }
       if (que === 'quitar') { p.h = null; sonar('click'); ponerEquipo(); guardar(true); d.remove(); abrirPanelHeroe(id); return; }
-      if (que === 'mejorar') { if (p.n >= EQ_NIVEL_MAX || !pagar(costoMejoraPieza(p))) return; p.n++; sonar('martillo'); consejoTemporal(T('eq_mejorada', { n: nombrePieza(p), v: p.n })); ponerEquipo(); guardar(true); abrirHueco(id, t); return; }
+      if (que === 'mejorar') { if (p.n >= EQ_NIVEL_MAX || !pagar(costoMejoraPieza(p))) return; p.n++; sonar('martillo'); consejoTemporal(T('eq_mejorada', { n: nombrePieza(p), v: p.n }) + ' · ' + T('poder_subio', { n: formatoNumero(calcularPoder()) })); ponerEquipo(); actualizarHUD(); guardar(true); abrirHueco(id, t); return; }
       if (que === 'fundir') {
         var oro = oroAlFundir(p);
         confirmarJuego('🔥 ' + T('eq_fundir'), T('eq_fundir_txt', { n: nombrePieza(p), o: oro }), T('eq_fundir'), function () {
@@ -4023,16 +4050,17 @@
   }
 
   // ---------- INVESTIGACIÓN ----------
-  var ramaInv = 'crecimiento';
+  var ramaInv = 'crecimiento', filtroInv = 'espadachin';
   function academiaLista() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'academia'; }).sort(function (a, b) { return b.edificio.nivel - a.edificio.nivel; })[0]; }
   function buscarTec(id) { for (var r in INVESTIGACION) for (var k = 0; k < INVESTIGACION[r].length; k++) if (INVESTIGACION[r][k].id === id) return INVESTIGACION[r][k]; return null; }
   function textoTec(t, lv) { var v = t.cada * lv; return D('inv_' + t.id).replace('{v}', t.cada >= 1 ? v : Math.round(v * 100)); }
   function abrirPanelInvestigacion(rama) {
     ramaInv = rama || ramaInv;
     var aca = academiaLista();
-    var html = '<div class="subtabs">' + ['crecimiento', 'economia', 'batalla'].map(function (r) {
-      return '<button data-accion="investigacion" data-rama="' + r + '" class="' + (r === ramaInv ? 'activo' : '') + '">' + ({ crecimiento: '🌱', economia: '💰', batalla: '⚔️' })[r] + ' ' + T('rama_' + r) + '</button>';
+    var html = '<div class="subtabs">' + ['crecimiento', 'economia', 'batalla', 'tropas'].map(function (r) {
+      return '<button data-accion="investigacion" data-rama="' + r + '" class="' + (r === ramaInv ? 'activo' : '') + '">' + ({ crecimiento: '🌱', economia: '💰', batalla: '⚔️', tropas: '🪖' })[r] + ' ' + T('rama_' + r) + '</button>';
     }).join('') + '</div>';
+    if (ramaInv === 'tropas') html += '<div class="subtabs inv-filtro">' + ['espadachin', 'arquero', 'guardian', 'caballeria'].map(function (tp) { return '<button data-accion="inv-filtro" data-tipo="' + tp + '" class="' + (tp === filtroInv ? 'activo' : '') + '">' + TROPAS[tp].icono + ' ' + N(tp) + '</button>'; }).join('') + '</div>';
     if (!aca) html += '<p class="nota aviso-rojo">' + T('inv_necesitas') + '</p>';
     else html += '<p class="nota">' + T('inv_txt') + '</p>';
     var inv = estado.investigando;
@@ -4044,7 +4072,7 @@
     }
     html += '<div class="lista">';
     var tope = aca ? EDIFICIOS.academia.tope[aca.edificio.nivel - 1] : 0;
-    INVESTIGACION[ramaInv].forEach(function (t) {
+    INVESTIGACION[ramaInv].filter(function (t) { return !t.tropa || t.tropa === filtroInv; }).forEach(function (t) {
       var lv = estado.invest[t.id] || 0, sig = lv + 1;
       html += '<div class="carta compacta" title="' + textoTec(t, 1) + '"><div class="cab"><div class="foto">' + t.icono + '</div><div><h3>' + N('inv_' + t.id) + '</h3></div></div>' +
         '<div class="stats"><span>⭐ ' + lv + '/' + t.max + '</span>' +
@@ -4052,7 +4080,7 @@
         (lv < t.max ? '<span>' + T('inv_siguiente') + ': ' + textoTec(t, sig) + '</span>' : '<span>' + T('nivel_max') + '</span>') + '</div>';
       if (lv < t.max) {
         if (aca && sig > tope) html += '<span class="nota aviso-rojo" style="grid-area:boton">' + T('inv_tope', { n: tope }) + '</span>';
-        else html += botonCosto(costoInvestigacion(sig), 'investigar', 'data-id="' + t.id + '"' + (!aca || inv ? ' disabled' : ''), T('investigar') + ' ⏱' + tiempoInvestigacion(sig) + 's ');
+        else html += botonCosto(costoInvestigacion(sig), 'investigar', 'data-id="' + t.id + '"' + (!aca || inv ? ' disabled' : ''), T('investigar') + ' ⏱' + fmtTiempo(tiempoInvestigacion(sig)) + ' · ' + T('poder_sube', { n: PODER_INVEST }) + ' ');
       }
       html += '</div>';
     });
@@ -4073,7 +4101,8 @@
     var antesCastillo = vidaMaxCastillo();
     estado.invest[inv.id] = inv.nivel;
     // aplicar lo que mejoró a lo que ya existe
-    if (inv.id === 'escudos') tropas.forEach(function (u) { if (u.tipo === 'heroe') return; var f = u.vida / u.max; u.max = vidaTropa(u.tipo, u.armadura); u.vida = f * u.max; });
+    if (inv.id === 'escudos' || /^t_.*_vida$/.test(inv.id)) tropas.forEach(function (u) { if (u.tipo === 'heroe') return; var f = u.vida / u.max; u.max = vidaTropa(u.tipo, u.armadura); u.vida = f * u.max; });
+    if (/^t_.*_defensa$/.test(inv.id)) tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.heroeId) return; u.defensa = ARMADURA.defensa * (u.armadura || 0) + bonoTropa(u.tipo, 'defensa'); });
     if (inv.id === 'muros') {
       estado.vidaCastillo += vidaMaxCastillo() - antesCastillo;
       barricadas.forEach(function (b) { if (b.nivel) { var f = b.vida / b.max; b.max = Math.round(BARRICADA.vida[b.nivel - 1] * (1 + bono('muros'))); b.vida = f * b.max; } });
@@ -4081,8 +4110,8 @@
     var aca = academiaLista();
     if (aca) chispas(aca.pos.clone().setY(4), 0x9fc8ff, 20, 4);
     sonar('listo');
-    consejoTemporal(T('inv_lista', { n: N('inv_' + inv.id), l: inv.nivel }));
-    actualizarHUD();
+    consejoTemporal(T('inv_lista', { n: N('inv_' + inv.id), l: inv.nivel }) + ' · ' + T('poder_subio', { n: formatoNumero(calcularPoder()) }));
+    actualizarHUD(); pulso('poder');
     guardar(true);
     if (panelActual && panelActual.tipo === 'investigacion') reabrirPanel();
   }
@@ -4149,7 +4178,7 @@
     for (var k2 in relojesDiv) if (!relojesDiv[k2].dataset.vivo) relojesDiv[k2].classList.add('oculto');
   }
   // ---------- ATAQUES ENTRE JUGADORES ----------
-  function valorTropa(u) { return u.max * 0.5 + u.d.dano * 5 * (1 + bono('espadas')) * factorArmas(u.tipo) * (1 + (u.defensa || 0)); }
+  function valorTropa(u) { return u.max * 0.5 + u.d.dano * 5 * (1 + bono('espadas') + bonoTropa(u.tipo, 'ataque')) * factorArmas(u.tipo) * (1 + (u.defensa || 0)); }
   function fuerzaEjercito() { return Math.round(tropas.reduce(function (a, u) { return a + valorTropa(u); }, 0)); }
   function defensaReino() {
     var d = vidaMaxCastillo() / 8 + danoCastillo() * 8;
@@ -4171,6 +4200,7 @@
     var cd = (estado.cdAtaque || {})[a.uid] || 0;
     if (cd > Date.now() && !estado.dueno) return T('at_espera', { t: fmtTiempo((cd - Date.now()) / 1000) });
     if (!tropas.length) return T('at_sin_tropas');
+    if ((estado.sinAtacarHasta || 0) > Date.now() && !estado.dueno) return T('tel_no_atacar', { t: fmtTiempo((estado.sinAtacarHasta - Date.now()) / 1000) });
     return '';
   }
   function abrirAtaque(a) {
@@ -4270,6 +4300,7 @@
     paso.then(function (r) {
       if (!r || !r.resuelto) { resolviendo[m.id] = false; return; }
       marchas = marchas.filter(function (x) { return x.id !== m.id; });
+      if (r.cancelado) { Cuentas.cobrarAtaque(r.id).catch(function () {}); consejoTemporal(T('mar_cancelada', { n: r.defensorNombre })); sonar('magia'); guardar(true); actualizarAlertas(); return; }
       var caidas = bajasEjercito(r.bajas || 0);
       if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
       Cuentas.cobrarAtaque(r.id).catch(function () {});
@@ -4306,19 +4337,23 @@
   }
   function actualizarAlertas() {
     var ahora = Date.now();
-    entrantes.forEach(function (r) { if (r.llega <= ahora) llegarAtaque(r); });
+    entrantes.forEach(function (r) { if (r.llega <= ahora && !r.prueba) llegarAtaque(r); });
     marchas.forEach(function (m) { if (m.resuelto || m.llega <= ahora) llegarMarcha(m); });
     var vivos = entrantes.filter(function (r) { return r.llega > ahora; }).sort(function (a, b) { return a.llega - b.llega; });
     var al = $('alerta-ataque');
     if (vivos.length) {
       if (!al) {
         al = document.createElement('button'); al.id = 'alerta-ataque';
-        al.addEventListener('click', function () { sonar('click'); if (enMundo) entrarCiudad(); cerrarPanel(); cerrarMenuEdif(); cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial(); });
+        al.addEventListener('click', function (ev) {
+          sonar('click');
+          if (ev.target.closest('[data-portal]')) { cerrarPanel(); cerrarMenuEdif(); if (!enMundo) abrirMundo(); setTimeout(function () { consejoTemporal(T('tel_elige_casilla')); }, 400); return; }
+          if (enMundo) entrarCiudad(); cerrarPanel(); cerrarMenuEdif(); cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial();
+        });
         document.body.appendChild(al);
       }
       var r = vivos[0], vn = nivelMayor('vigia');
       al.innerHTML = '<b>' + T('al_te_ataca', { n: escaparHTML(r.atacanteNombre) }) + '</b><span class="al-t">' + T('al_llega', { t: fmtTiempo((r.llega - ahora) / 1000) }) + '</span>' +
-        '<span class="al-sub">' + (vn ? T('al_fuerza', { f: formatoNumero(Math.round(r.fuerza / 100) * 100), d: formatoNumero(Math.round(defensaReino())) }) : T('al_sin_vigia')) + (vivos.length > 1 ? ' · ' + T('al_mas', { n: vivos.length - 1 }) : '') + '</span><span class="al-sub">' + T('al_tocar') + '</span>';
+        '<span class="al-sub">' + (vn ? T('al_fuerza', { f: formatoNumero(Math.round(r.fuerza / 100) * 100), d: formatoNumero(Math.round(defensaReino())) }) : T('al_sin_vigia')) + (vivos.length > 1 ? ' · ' + T('al_mas', { n: vivos.length - 1 }) : '') + '</span><span class="al-sub">' + T('al_tocar') + '</span><span class="al-portal" data-portal="1">' + T('al_portal') + '</span>';
     } else if (al) al.remove();
     var mv = marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).sort(function (a, b) { return a.llega - b.llega; });
     var mi = $('marcha-info');
@@ -4348,7 +4383,7 @@
     iniciarChat();
     Cuentas.ataquesNuevos().then(function (lista) {
       revisando = false;
-      lista = lista.filter(function (r) { return r.resuelto !== false; });
+      lista = lista.filter(function (r) { if (r.cancelado) { Cuentas.marcarVisto(r.id).catch(function () {}); return false; } return r.resuelto !== false; });
       if (!lista.length) return;
       var perdio = false, html = '';
       lista.sort(function (a, b) { return a.fecha - b.fecha; }).forEach(function (r) {
@@ -4400,6 +4435,7 @@
   }
   // ---------- CONQUISTA (oleadas) ----------
   function abrirPanelConquista() {
+    vistos().campana = estado.oleada;
     var n = oleadaActiva ? oleadaActual : estado.oleada, total = OLEADAS.length;
     var puntos = '<div class="oleada-puntos">';
     for (var i = 1; i <= total; i++) puntos += '<span class="' + (i < n || (i === n && false) ? 'hecha' : i === n ? 'ahora' : '') + '">' + (i < n ? '✓' : i) + '</span>';
@@ -4449,7 +4485,82 @@
     reabrirPanel();
   }
   // ---------- MOCHILA ----------
-  function abrirPanelMochila() {
+  // ---------- INVENTARIO: 5 pestañas, cuadrícula, punto rojo solo en lo nuevo ----------
+  var pestanaInv = 'recursos';
+  var CAT_INV = ['recursos', 'acelerar', 'ingresos', 'equipo', 'otros'];
+  var ICONO_CAT_INV = { recursos: '🪙', acelerar: '⏱️', ingresos: '🎁', equipo: '🧰', otros: '📦' };
+  function categoriaObjeto(k) { var o = OBJETOS[k] || {}; if (o.da) return 'recursos'; if (o.segundos || o.acelera) return 'acelerar'; if (o.cofre || o.equipo) return 'ingresos'; return 'otros'; }
+  function copiaMochila() { var c = {}; for (var k in estado.mochila) if (OBJETOS[k] && estado.mochila[k] > 0) c[k] = estado.mochila[k]; return c; }
+  function idsPiezas() { return piezas().map(function (p) { return p.i; }); }
+  function vistos() {
+    if (!estado.vistos) estado.vistos = { mochila: copiaMochila(), tabs: copiaMochila(), eq: idsPiezas(), eqTab: idsPiezas(), campana: estado.oleada, tropasDia: '', alianza: false, diario: '', diarioTab: '' };
+    return estado.vistos;
+  }
+  // cuántos objetos llegaron desde la foto 'snap' (si gastaste, la foto baja para contar bien lo próximo que llegue)
+  function nuevosInvEn(snap, filtro) {
+    var n = 0;
+    for (var k in snap) if ((estado.mochila[k] || 0) < snap[k]) snap[k] = estado.mochila[k] || 0;
+    for (var j in estado.mochila) { if (!OBJETOS[j] || (filtro && !filtro(j))) continue; n += Math.max(0, (estado.mochila[j] || 0) - (snap[j] || 0)); }
+    return n;
+  }
+  function eqNuevas(lista) { return piezas().filter(function (p) { return lista.indexOf(p.i) < 0; }).length; }
+  function contarNuevosInv() { var v = vistos(); return nuevosInvEn(v.mochila) + eqNuevas(v.eq) + (diarioDisponible() && v.diario !== hoyTexto() ? 1 : 0); }
+  function puntoTab(c) {
+    var v = vistos();
+    if (c === 'equipo') return eqNuevas(v.eqTab) > 0;
+    var n = nuevosInvEn(v.tabs, function (k) { return categoriaObjeto(k) === c; });
+    if (c === 'ingresos' && diarioDisponible() && v.diarioTab !== hoyTexto()) n++;
+    return n > 0;
+  }
+  function marcarTab(c) {
+    var v = vistos();
+    if (c === 'equipo') { v.eqTab = idsPiezas(); return; }
+    for (var k in estado.mochila) if (OBJETOS[k] && categoriaObjeto(k) === c) v.tabs[k] = estado.mochila[k] || 0;
+    if (c === 'ingresos') v.diarioTab = hoyTexto();
+  }
+  function celdaObjeto(k) {
+    var o = OBJETOS[k], boton = o.escudo && protegido() ? '<button class="comprar mini" disabled>🛡️ ' + fmtTiempo((estado.escudoHasta - Date.now()) / 1000) + '</button>'
+      : '<button class="comprar mini" data-accion="usar" data-obj="' + k + '">' + (o.cofre || o.equipo ? T('abrir') : T('usar')) + '</button>';
+    return '<div class="inv-celda" title="' + escaparHTML(D(k)) + '"><span class="inv-ico">' + o.icono + '</span><b class="inv-n">×' + corto(estado.mochila[k]) + '</b><span class="inv-nom">' + N(k) + '</span>' + boton + '</div>';
+  }
+  function abrirPanelMochila(tab) {
+    if (tab) pestanaInv = tab;
+    var v = vistos();
+    // al entrar al inventario todo cuenta como visto (el número de abajo se borra)
+    v.mochila = copiaMochila(); v.eq = idsPiezas(); if (diarioDisponible()) v.diario = hoyTexto();
+    var puntos = {}; CAT_INV.forEach(function (c) { puntos[c] = c !== pestanaInv && puntoTab(c); });
+    marcarTab(pestanaInv);
+    var html = '<div class="subtabs inv-tabs">' + CAT_INV.map(function (c) {
+      return '<button data-accion="inv-tab" data-tab="' + c + '" class="' + (c === pestanaInv ? 'activo' : '') + '">' + ICONO_CAT_INV[c] + ' ' + T('inv_tab_' + c) + (puntos[c] ? '<span class="punto-rojo"></span>' : '') + '</button>';
+    }).join('') + '</div>';
+    var objs = Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0 && categoriaObjeto(k) === pestanaInv; });
+    var celdas = '';
+    if (pestanaInv === 'recursos') {
+      html += '<p class="nota">' + T('inv_recurso_txt') + '</p>';
+      [['oro', 'monedas', '🪙'], ['comida', 'comida', '🍞'], ['madera', 'madera', '🪵'], ['piedra', 'piedra', '🪨'], ['gemas', 'gemas', '💎']].forEach(function (r) {
+        celdas += '<div class="inv-celda recurso"><span class="inv-ico">' + r[2] + '</span><b class="inv-n">' + corto(estado[r[1]]) + '</b><span class="inv-nom">' + T('r_' + r[0]) + '</span></div>';
+      });
+    }
+    if (pestanaInv === 'ingresos') html += htmlDiario();
+    if (pestanaInv === 'equipo') {
+      piezas().slice().sort(function (a, b) { return MULT_RAREZA_EQ[b.r] - MULT_RAREZA_EQ[a.r] || b.n - a.n; }).forEach(function (p) {
+        celdas += '<div class="inv-celda rz-' + p.r + '" title="' + escaparHTML(textoPieza(p)) + '"><span class="inv-ico">' + EQ[p.t].icono + '</span><b class="inv-n">' + T('nivel_corto') + ' ' + p.n + '</b><span class="inv-nom">' + nombrePieza(p) + '</span><span class="inv-sub">' + (p.h && HEROE[p.h] ? T('inv_equipada', { n: NH(p.h) }) : T('inv_libre')) + '</span>' +
+          (p.n < EQ_NIVEL_MAX ? '<span class="inv-sub poder-mas">' + T('poder_sube', { n: Math.round(PODER_PIEZA * MULT_RAREZA_EQ[p.r]) }) + '</span>' + botonCosto(costoMejoraPieza(p), 'inv-mejorar', 'data-i="' + p.i + '"', '⬆️ ').replace('class="comprar"', 'class="comprar mini"') : '<span class="inv-sub">MAX</span>') + '</div>';
+      });
+    }
+    objs.forEach(function (k) { celdas += celdaObjeto(k); });
+    html += celdas ? '<div class="inv-grid">' + celdas + '</div>' : (pestanaInv === 'ingresos' ? '' : '<p class="nota">' + T('inv_vacio_tab') + '</p>');
+    abrirPanel(T('p_mochila'), html, { tipo: 'mochila' });
+    guardar();
+  }
+  function mejorarPiezaInv(i) {
+    var p = piezas().filter(function (x) { return x.i === i; })[0];
+    if (!p || p.n >= EQ_NIVEL_MAX || !pagar(costoMejoraPieza(p))) return;
+    p.n++; sonar('martillo'); ponerEquipo(); actualizarHUD();
+    consejoTemporal(T('poder_subio', { n: formatoNumero(calcularPoder()) })); pulso('poder');
+    guardar(true); reabrirPanel();
+  }
+  function htmlDiario() {
     var racha = rachaDeHoy(), disp = diarioDisponible();
     var cal = '<div class="diario">';
     for (var i = 1; i <= 7; i++) {
@@ -4463,20 +4574,7 @@
       '<p class="nota"><b>' + T('diario_racha', { n: disp ? racha - 1 : racha }) + '</b></p>' +
       (disp ? '<p class="nota">' + textoPremio(COFRE_DIARIO[(racha - 1) % 7]) + '</p><button class="comprar naranja boton-oleada-grande" data-accion="diario">' + T('diario_reclamar', { n: racha }) + '</button>'
             : '<p class="nota">' + T('diario_listo', { n: racha + 1 }) + '</p><p class="reloj-panel" id="reloj-diario">' + T('proximo_cofre', { t: fmtTiempo(segHastaManana()) }) + '</p>') + '</div>';
-    var objs = Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0; });
-    html += '<div class="carta" style="margin-top:10px"><h3>🎒 ' + T('mis_objetos') + '</h3>';
-    if (!objs.length) html += '<p>' + T('mochila_vacia') + '</p>';
-    else {
-      html += '<div class="lista">';
-      objs.forEach(function (k) {
-        html += '<div class="carta compacta" title="' + D(k) + '"><div class="cab"><div class="foto">' + OBJETOS[k].icono + '</div><div><h3>' + N(k) + ' ×' + estado.mochila[k] + '</h3></div></div>' +
-          '<div class="stats"><span>' + D(k) + '</span></div>' + (OBJETOS[k].escudo && protegido() ?
-            '<button class="comprar" disabled data-escudo-boton="1">🛡️ ' + T('escudo_activo_btn', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) }) + '</button>' :
-            '<button class="comprar" data-accion="usar" data-obj="' + k + '">' + (OBJETOS[k].cofre ? T('abrir') : T('usar')) + '</button>') + '</div>';
-      });
-      html += '</div>';
-    }
-    abrirPanel(T('p_mochila'), html + '</div>', { tipo: 'mochila' });
+    return html;
   }
   function terminarConGemas(que) {
     if (que === 'invest') {
@@ -4575,12 +4673,14 @@
   // ---------- AVISOS (numeritos) del menú ----------
   function ponerBadge(id, txt) { var e = $(id); if (e && e.textContent !== String(txt)) e.textContent = txt; }
   function actualizarBadges() {
-    ponerBadge('badge-conquista', !oleadaActiva && !enMenu ? '!' : '');
-    var puedeEntrenar = cuartelesListos().length && tropasOcupadas() < capacidad() && !colaEntreno.length && puedePagar(costoTropa('espadachin'));
-    ponerBadge('badge-heroes', reclutaGratisHoy() ? '1' : puedeEntrenar ? '+' : '');
-    var objetos = 0; for (var k in estado.mochila) objetos += estado.mochila[k] || 0;
-    ponerBadge('badge-mochila', (diarioDisponible() ? 1 : 0) + objetos || '');
-    ponerBadge('badge-alianza', hayCuenta() && !estado.alianza ? '!' : '');
+    // cada número solo cuenta lo NUEVO desde la última vez que entraste (y se borra al entrar)
+    var v = vistos();
+    ponerBadge('badge-conquista', !oleadaActiva && !enMenu && estado.oleada > (v.campana || 0) ? '1' : '');
+    ponerBadge('badge-heroes', reclutaGratisHoy() && v.tropasDia !== hoyTexto() ? '1' : '');
+    var nn = contarNuevosInv();
+    ponerBadge('badge-mochila', nn ? (nn > 99 ? '99+' : nn) : '');
+    ponerBadge('badge-alianza', hayCuenta() && !estado.alianza && !v.alianza ? '!' : '');
+    actualizarBuzon();
     // pestaña activa
     var act = enMundo ? 'btn-mundo' : !panelActual ? '' : ({ conquista: 'btn-conquista', tropas: 'btn-heroes', invocar: 'btn-heroes', heroes: 'btn-heroes', heroe: 'btn-heroes', reclutado: 'btn-heroes', mochila: 'btn-mochila', tienda: 'btn-tienda', alianza: 'btn-alianza' })[panelActual.tipo] || '';
     document.querySelectorAll('#abajo .pestana').forEach(function (p) { p.classList.toggle('activo', p.id === act); });
@@ -4680,14 +4780,22 @@
     }
     return H.map(function (x) { return ('00000000' + (x >>> 0).toString(16)).slice(-8); }).join('');
   }
-  function mostrarNovedades() {
-    var visto = null;
-    try { visto = localStorage.getItem('tinykingdom_novedades'); } catch (e) {}
-    if (visto === VERSION_JUEGO || enMenu) return;
-    try { localStorage.setItem('tinykingdom_novedades', VERSION_JUEGO); } catch (e) {}
-    abrirPanel(T('novedades') + ' v' + VERSION_JUEGO, '<div class="carta"><ul style="margin:0;padding-left:18px;line-height:1.5">' + T('novedades_lista') + '</ul>' +
-      '<button class="comprar" data-accion="cerrar-panel" style="margin-top:10px">' + T('novedades_ok') + '</button></div>', { tipo: 'novedades' });
+  // ---------- BUZÓN: las novedades llegan aquí (ya no tapan el reino al entrar) ----------
+  function novedadesLeidas() {
+    if (estado.novedadesVistas === VERSION_JUEGO) return true;
+    try { return localStorage.getItem('tinykingdom_novedades') === VERSION_JUEGO; } catch (e) { return false; }
   }
+  function actualizarBuzon() { var b = $('badge-buzon'); if (b) { var t = novedadesLeidas() ? '' : '1'; if (b.textContent !== t) b.textContent = t; } }
+  function abrirBuzon() {
+    var nueva = !novedadesLeidas();
+    try { localStorage.setItem('tinykingdom_novedades', VERSION_JUEGO); } catch (e) {}
+    estado.novedadesVistas = VERSION_JUEGO;
+    abrirPanel(T('buzon_titulo'), '<div class="carta buzon-msg"><h3>' + (nueva ? '🔴 ' : '') + '📜 ' + T('buzon_nov', { v: VERSION_JUEGO }) + '</h3><ul style="margin:0;padding-left:18px;line-height:1.5">' + T('novedades_lista') + '</ul>' +
+      '<p class="nota">✓ ' + T('buzon_leido') + '</p></div>', { tipo: 'buzon' });
+    actualizarBuzon(); guardar();
+  }
+  function mostrarNovedades() { actualizarBuzon(); }
+  $('btn-buzon').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'buzon') cerrarPanel(); else abrirBuzon(); });
 
   function abrirPanelAjustes() {
     var html = '<div class="lista">' +
@@ -4799,6 +4907,10 @@
     else if (a === 'empezar-oleada') { cerrarPanel(); empezarOleada(); }
     else if (a === 'diario') reclamarDiario();
     else if (a === 'usar') usarObjeto(b.getAttribute('data-obj'));
+    else if (a === 'inv-tab') { sonar('click'); abrirPanelMochila(b.getAttribute('data-tab')); }
+    else if (a === 'inv-mejorar') mejorarPiezaInv(b.getAttribute('data-i'));
+    else if (a === 'inv-tropa') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas'); }
+    else if (a === 'inv-filtro') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas'); }
     else if (a === 'terminar-gemas') terminarConGemas(b.getAttribute('data-que'));
     else if (a === 'comprar') comprarTienda(+b.getAttribute('data-i'));
     else if (a === 'invocar3') invocarTres();
@@ -4924,7 +5036,8 @@
     tropas.forEach(function (u) { p += Math.round(u.d.vida * 2 + u.d.dano * 25); });
     slots.forEach(function (s) { if (s.edificio) p += s.edificio.nivel * 450; });
     p += estado.muralla * 600 + ((estado.castillo || 1) - 1) * 800;
-    for (var ik in estado.invest) p += (estado.invest[ik] || 0) * 250;
+    for (var ik in estado.invest) p += (estado.invest[ik] || 0) * PODER_INVEST;
+    piezas().forEach(function (pz) { p += pz.n * PODER_PIEZA * MULT_RAREZA_EQ[pz.r]; });
     barricadas.forEach(function (b) { p += b.nivel * 300; });
     return p + (estado.oleada - 1) * 1000;
   }
@@ -5218,6 +5331,10 @@
       estado.cdAtaque = g.cdAtaque || {};
       estado.logros = g.logros || { recolectas: 0, tropas: 0, campamentos: 0 };
       estado.tropasDefienden = g.tropasDefienden !== false;
+      estado.vistos = g.vistos || null;
+      estado.novedadesVistas = g.novedadesVistas || '';
+      estado.ultimoPortal = g.ultimoPortal || 0;
+      estado.sinAtacarHasta = g.sinAtacarHasta || 0;
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
       var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
       estado.castillo = g.castillo || maxEd;
@@ -5283,6 +5400,7 @@
     cam.objetivo.copy(CENTRO_REINO); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
+    vistos(); // foto de lo que ya tienes: los números solo cuentan lo que llegue después
     setTimeout(mostrarNovedades, 700);
     cargarModelosHeroes();
     actualizarParcelas();
@@ -5291,7 +5409,6 @@
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
     setTimeout(function () { if (!enMenu) publicarAldea(true); }, 800);
     setTimeout(function () { revisarAtaques(true); }, 2500);
-    setTimeout(function () { if (!enMenu && diarioDisponible() && !panelActual) abrirPanelMochila(); }, 1200);
   }
 
   // ------------------------------------------------------------------
@@ -5495,7 +5612,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 

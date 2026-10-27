@@ -1092,3 +1092,36 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 #pill-entreno.oculto-pill { display: none; }
 #lateral #btn-defensa { width: auto !important; min-width: 62px; height: 34px; padding: 0 9px; font-size: 12.5px; font-weight: 800; white-space: nowrap; color: #fff; background: linear-gradient(#4fa83a, #2f7a22); border-color: #f2c45a; text-shadow: 0 1px 0 rgba(0,0,0,.4); }
 #lateral #btn-defensa.apagado { background: linear-gradient(#c0483a, #8a2418); filter: none; }
+
+/* ===== v5.1: paneles pequeños y centrados, buzón, inventario con pestañas, casilla, portal ===== */
+#panel { width: min(520px, 90vw) !important; border-radius: 22px !important; }
+@media (min-width: 760px) { #panel .lista { grid-template-columns: 1fr 1fr; } }
+#btn-buzon { position: relative; }
+#btn-buzon .badge { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #d9302a; color: #fff; font-size: 11px; font-weight: 900; line-height: 18px; border: 2px solid #fff; display: none; }
+#btn-buzon .badge:not(:empty) { display: block; }
+.inv-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.inv-tabs button, .inv-filtro button { position: relative; white-space: nowrap; }
+.punto-rojo { position: absolute; top: 2px; right: 3px; width: 10px; height: 10px; border-radius: 50%; background: #e33b2b; box-shadow: 0 0 0 2px #fff; }
+.inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 6px; }
+.inv-celda { position: relative; background: linear-gradient(#fffdf6, #f3e3c0); border: 2px solid #d9b56a; border-radius: 12px; padding: 10px 6px 6px; text-align: center; display: flex; flex-direction: column; gap: 3px; align-items: center; }
+.inv-celda.recurso { padding-bottom: 10px; }
+.inv-ico { font-size: 30px; line-height: 1.1; }
+.inv-n { position: absolute; top: 4px; right: 5px; font-size: 11.5px; background: #4a2e18; color: #ffe9b0; border-radius: 8px; padding: 0 6px; }
+.inv-celda.recurso .inv-n { position: static; font-size: 13px; }
+.inv-nom { font-size: 11.5px; font-weight: 800; line-height: 1.15; }
+.inv-sub { font-size: 10.5px; opacity: .75; line-height: 1.1; }
+.inv-celda .comprar { font-size: 11px; padding: 4px 6px; width: 100%; min-height: 0; }
+.inv-celda.rz-raro { border-color: #5b8fd6; background: linear-gradient(#f6fbff, #dfeafa); }
+.inv-celda.rz-legendario { border-color: #e0a821; background: linear-gradient(#fff7da, #f6dc8e); }
+.inv-tropa-btn { margin: 4px 0 8px; width: 100%; }
+#alerta-ataque .al-portal { display: inline-block; margin-top: 6px; background: linear-gradient(#8a5ad6, #5c35a6); color: #fff; border-radius: 10px; padding: 5px 12px; font-weight: 900; border: 2px solid #f2c45a; }
+.casilla-tabla { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; margin: 6px 0 8px; }
+.casilla-tabla span { opacity: .75; }
+.casilla-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.casilla-botones .comprar { font-size: 13px; }
+.inv-celda .comprar { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 4px; }
+.inv-celda .comprar .ico { width: 14px; height: 14px; }
+.inv-sub.poder-mas { color: #2f6b22; font-weight: 800; opacity: 1; }
+.inv-tabs { flex-wrap: wrap; overflow: visible; gap: 5px; }
+.inv-tabs button { flex: 1 1 auto; font-size: 13px; padding: 6px 8px; }
+#panel .subtabs { flex-wrap: wrap; }
