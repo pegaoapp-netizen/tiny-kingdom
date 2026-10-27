@@ -1541,7 +1541,7 @@ var M = (function () {
   //  HÉROES CON MODELO 3D DE ARCHIVO (GLB con huesos y animaciones)
   //  Mientras el archivo carga (o si falla) se usa el héroe hecho con código.
   // =================================================================
-  var GLB_HEROES = { sol: 'modelos/sol.glb' };
+  var GLB_HEROES = { sol: 'modelos/sol.glb', trueno: 'modelos/trueno.glb' };
   var glbListos = {};
   function cargarHeroesGLB(alListo) {
     if (!THREE.GLTFLoader || !THREE.SkeletonUtils) return;

@@ -876,3 +876,8 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .subir-rango { margin-top: 10px; }
 .subir-rango h3 { margin: 0 0 4px; }
 .cola-gemas .comprar { width: 100%; margin-top: 6px; }
+
+/* nombre del edificio al pasar el mouse */
+#etiqueta-hover { position: fixed; z-index: 60; pointer-events: none; padding: 5px 11px; border-radius: 10px; font-weight: 900; font-size: 14px; color: #3a2414;
+  background: #fff6dc; border: 2px solid #c99a4a; box-shadow: 0 3px 8px rgba(0,0,0,.3); white-space: nowrap; }
+#etiqueta-hover.oculto { display: none; }

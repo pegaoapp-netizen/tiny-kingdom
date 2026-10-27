@@ -2291,6 +2291,49 @@
     if (modoColocar) { consejoTemporal(modoColocar === 'barricada' ? T('colocando_barr') : T('colocando', { n: N(modoColocar) })); sonar('error'); return; }
     cerrarPanel();
   }
+  // ---- nombre del edificio al pasar el mouse por encima (solo con mouse, no en el teléfono) ----
+  var etiquetaHover = document.createElement('div');
+  etiquetaHover.id = 'etiqueta-hover'; etiquetaHover.className = 'oculto';
+  document.body.appendChild(etiquetaHover);
+  var hoverUltimo = 0;
+  function nombreBajoMouse(x, y) {
+    mouse.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1);
+    rayo.setFromCamera(mouse, camara);
+    var lista = slots.map(function (s) { return s.grupo; }).concat(barricadas.map(function (b) { return b.grupo; })).concat([castillo]).concat(torresPuerta.map(function (tp) { return tp.grupo; }));
+    if (murallaModelo) lista.push(murallaModelo);
+    var hits = rayo.intersectObjects(lista, true);
+    for (var i = 0; i < hits.length; i++) {
+      var o = hits[i].object;
+      while (o) {
+        if (o === murallaModelo) return N('muralla') + ' — ' + T('nivel_corto') + ' ' + estado.muralla;
+        if (o === castillo) return '🏰 ' + T('castillo') + ' — ' + T('nivel_corto') + ' ' + (estado.castillo || 1);
+        if (o.userData.castillo) return N('torre') + ' — ' + T('castillo');
+        if (o.userData.barricada !== undefined) { var bb = barricadas[o.userData.barricada]; return bb && bb.nivel ? N('barricada') + ' — ' + T('nivel_corto') + ' ' + bb.nivel : null; }
+        if (o.userData.slot !== undefined) {
+          var s = slots[o.userData.slot];
+          if (s.edificio) return N(s.edificio.tipo) + ' — ' + T('nivel_corto') + ' ' + s.edificio.nivel;
+          if (s.obra) return N(s.obra.tipo) + ' — ' + T('construyendo');
+          return null;
+        }
+        o = o.parent;
+      }
+    }
+    return null;
+  }
+  lienzo.addEventListener('pointermove', function (ev) {
+    if (ev.pointerType !== 'mouse') return;
+    var ahora = performance.now();
+    if (ev.buttons || enMenu || modoColocar || ahora - hoverUltimo < 60) { if (ev.buttons || enMenu) etiquetaHover.classList.add('oculto'); return; }
+    hoverUltimo = ahora;
+    var n = nombreBajoMouse(ev.clientX, ev.clientY);
+    if (!n) { etiquetaHover.classList.add('oculto'); lienzo.style.cursor = ''; return; }
+    etiquetaHover.textContent = n;
+    etiquetaHover.style.left = Math.min(window.innerWidth - etiquetaHover.offsetWidth - 8, ev.clientX + 16) + 'px';
+    etiquetaHover.style.top = (ev.clientY + 18) + 'px';
+    etiquetaHover.classList.remove('oculto');
+    lienzo.style.cursor = 'pointer';
+  });
+  lienzo.addEventListener('pointerleave', function () { etiquetaHover.classList.add('oculto'); lienzo.style.cursor = ''; });
   function tocarSlot(i) {
     var s = slots[i];
     sonar('click');
