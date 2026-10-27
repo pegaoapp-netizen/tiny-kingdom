@@ -3372,11 +3372,10 @@
   function textoBotin(b) { return ['oro', 'comida', 'madera', 'piedra'].filter(function (r) { return b[r]; }).map(function (r) { return '+' + b[r] + ' ' + ICONO_RECURSO[r]; }).join(', ') || '—'; }
   function puedeAtacar(a) {
     if (!hayCuenta()) return T('at_cuenta');
-    if (estado.dueno) return T('at_dueno');
     if ((a.escudo || 0) > Date.now()) return T('at_protegido', { t: fmtTiempo((a.escudo - Date.now()) / 1000) });
     if (estado.alianza && a.alianza === estado.alianza) return T('at_aliado');
     var cd = (estado.cdAtaque || {})[a.uid] || 0;
-    if (cd > Date.now()) return T('at_espera', { t: fmtTiempo((cd - Date.now()) / 1000) });
+    if (cd > Date.now() && !estado.dueno) return T('at_espera', { t: fmtTiempo((cd - Date.now()) / 1000) });
     if (!tropas.length) return T('at_sin_tropas');
     return '';
   }
@@ -3391,6 +3390,50 @@
       '<button class="comprar rojo boton-oleada-grande" id="btn-atacar-ya">' + T('atacar_ya') + '</button></div>';
     $('btn-atacar-ya').addEventListener('click', function () { this.disabled = true; realizarAtaque(a); });
   }
+  // ---------- ESCENA DE BATALLA CONTRA OTRO REINO ----------
+  // El resultado ya está decidido; la escena muestra a los dos ejércitos chocando.
+  function escenaBatalla(a, f, d, gano, alTerminar) {
+    var viejo = $('batalla-pvp'); if (viejo) viejo.remove();
+    var caja = document.createElement('div'); caja.id = 'batalla-pvp';
+    var retr = estado.equipo.slice(0, 3).map(function (id) { return retratos['h_' + id] ? '<img src="' + retratos['h_' + id] + '" alt="">' : ''; }).join('');
+    var tipos = {}; tropas.forEach(function (u) { if (!u.heroeId) tipos[u.tipo] = (tipos[u.tipo] || 0) + 1; });
+    var mios = Object.keys(tipos).map(function (k) { return '<span>' + (TROPAS[k] ? TROPAS[k].icono : '⚔️') + ' ' + tipos[k] + '</span>'; }).join('');
+    var tam = a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3;
+    caja.innerHTML = '<div class="bp-caja"><div class="bp-titulo">⚔️ ' + T('at_batalla') + '</div><div class="bp-arena">' +
+      '<div class="bp-lado yo"><div class="bp-retratos">' + (retr || '🛡️') + '</div><b>' + escaparHTML(Cuentas.nombrePublico ? Cuentas.nombrePublico() : T('tu_reino')) + '</b>' +
+      '<div class="bp-tropas">' + mios + '</div><div class="bp-barra"><div id="bp-b1"></div></div><span class="bp-num" id="bp-n1">' + formatoNumero(Math.round(f)) + '</span></div>' +
+      '<div class="bp-vs"><span>VS</span><div class="bp-choque" id="bp-choque">💥</div></div>' +
+      '<div class="bp-lado el"><div class="bp-retratos">' + (retratos['mapa_castillo' + tam] ? '<img src="' + retratos['mapa_castillo' + tam] + '" alt="">' : '🏰') + '</div><b>' + escaparHTML(a.nombre) + '</b>' +
+      '<div class="bp-tropas"><span>⭐ ' + a.nivel + '</span></div><div class="bp-barra rojo"><div id="bp-b2"></div></div><span class="bp-num" id="bp-n2">' + formatoNumero(Math.round(d)) + '</span></div>' +
+      '</div><div class="bp-pie"><button class="comprar mini" id="bp-x2">x2</button><button class="comprar mini" id="bp-saltar">' + T('bp_saltar') + '</button></div><div class="bp-res" id="bp-res"></div></div>';
+    document.body.appendChild(caja);
+    var dur = 4200, t0 = Date.now(), vel = 1, acum = 0, ult = t0, hecho = false;
+    // cuánto le queda a cada uno al final
+    var fin1 = gano ? Math.max(0.15, 1 - d / Math.max(f, 1) * 0.7) : 0, fin2 = gano ? 0 : Math.max(0.15, 1 - f / Math.max(d, 1) * 0.7);
+    function paso() {
+      var ahora = Date.now(); acum += (ahora - ult) * vel; ult = ahora;
+      var k = Math.min(1, acum / dur), e = 1 - Math.pow(1 - k, 2);
+      var v1 = 1 - (1 - fin1) * e, v2 = 1 - (1 - fin2) * e;
+      $('bp-b1').style.width = (v1 * 100) + '%'; $('bp-b2').style.width = (v2 * 100) + '%';
+      $('bp-n1').textContent = formatoNumero(Math.round(f * v1)); $('bp-n2').textContent = formatoNumero(Math.round(d * v2));
+      var ch = $('bp-choque'); ch.style.transform = 'scale(' + (1 + 0.35 * Math.abs(Math.sin(acum / 90))) + ')';
+      if (Math.random() < 0.08 * vel) sonar(Math.random() < 0.5 ? 'golpe' : 'flecha');
+      if (k >= 1) return terminar();
+    }
+    var reloj = setInterval(paso, 50);
+    function terminar() {
+      if (hecho) return; hecho = true; clearInterval(reloj);
+      $('bp-b1').style.width = (fin1 * 100) + '%'; $('bp-b2').style.width = (fin2 * 100) + '%';
+      $('bp-choque').textContent = gano ? '🏆' : '💔';
+      caja.querySelector('.bp-pie').style.display = 'none';
+      alTerminar(function (html) {
+        $('bp-res').innerHTML = html + '<button class="comprar naranja boton-oleada-grande" id="bp-volver">' + T('bp_volver') + '</button>';
+        $('bp-volver').addEventListener('click', function () { sonar('click'); caja.remove(); });
+      });
+    }
+    $('bp-x2').addEventListener('click', function () { vel = vel === 1 ? 2 : 1; this.textContent = vel === 2 ? 'x1' : 'x2'; this.classList.toggle('naranja', vel === 2); });
+    $('bp-saltar').addEventListener('click', function () { acum = dur; paso(); });
+  }
   function realizarAtaque(a) {
     var no = puedeAtacar(a);
     if (no) { abrirAtaque(a); return; }
@@ -3400,8 +3443,11 @@
     var bajasFrac = gano ? Math.min(0.6, Math.max(0.1, fd / fa * 0.5)) : Math.min(1, Math.max(0.4, fd / fa * 0.6));
     var bm = botinMaximo(a.nivel), margen = gano ? Math.min(1, 0.5 + (fa - fd) / fd) : 0;
     var botin = { oro: Math.floor(bm.oro * margen), comida: Math.floor(bm.comida * margen), madera: Math.floor(bm.madera * margen), piedra: Math.floor(bm.piedra * margen) };
-    $('mundo-info').innerHTML = '<div class="carta"><h3>' + T('at_batalla') + '</h3><p style="font-size:34px;text-align:center;margin:6px 0">⚔️ 🛡️ ⚔️</p></div>';
+    $('mundo-info').innerHTML = '';
     sonar('cuerno');
+    var resultado = null, mostrar = null;
+    escenaBatalla(a, f, d, gano, function (cb) { mostrar = cb; if (resultado) cb(resultado); });
+    function avisar(html) { resultado = html; if (mostrar) mostrar(html); }
     var reporte = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
       gano: gano, botin: botin, fuerza: Math.round(f), defensa: Math.round(d), fecha: Date.now(), visto: false };
     Cuentas.atacar(reporte).then(function () {
@@ -3414,10 +3460,8 @@
       estado.escudoHasta = 0; // atacar quita tu protección
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 10 * 60 * 1000;
       guardar(true); publicarAldea(true); actualizarEscudo();
-      setTimeout(function () {
-        $('mundo-info').innerHTML = '<div class="carta"><h3>' + (gano ? T('at_gano', { b: textoBotin(botin) }) : T('at_perdio')) + '</h3><p class="nota">' + T('at_bajas', { n: caidas }) + '</p></div>';
-      }, 1600);
-    }).catch(function () { $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('at_error') + '</b></p></div>'; sonar('error'); });
+      avisar('<h3 class="bp-gran ' + (gano ? 'si' : 'no') + '">' + (gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (gano ? T('at_gano', { b: textoBotin(botin) }) : T('at_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>');
+    }).catch(function () { avisar('<p class="aviso-rojo"><b>' + T('at_error') + '</b></p>'); sonar('error'); });
   }
   // El defensor revisa si lo atacaron (al entrar y cada minuto)
   var ultimaRevision = 0, revisando = false;
@@ -4388,8 +4432,30 @@
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
-    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').then(function (reg) { try { reg.update(); } catch (e) {} setInterval(function () { try { reg.update(); } catch (e) {} }, 5 * 60 * 1000); }).catch(function () {});
+    });
+    var yaRecargo = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (yaRecargo) return; if (enMenu) { yaRecargo = true; location.reload(); } else avisarVersionNueva(); });
   }
+  // Mira si en internet hay una versión más nueva del juego; si la hay, avisa (o recarga si estás en el menú)
+  function revisarVersion() {
+    if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
+    fetch('js/datos.js?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (txt) {
+      var m = /VERSION_JUEGO = '([^']+)'/.exec(txt);
+      if (m && m[1] !== VERSION_JUEGO) { if (enMenu) location.reload(); else avisarVersionNueva(m[1]); }
+    }).catch(function () {});
+  }
+  function avisarVersionNueva(v) {
+    if ($('aviso-version')) return;
+    var d = document.createElement('button'); d.id = 'aviso-version';
+    d.textContent = '🔄 ' + T('version_nueva', { v: v || '' });
+    d.addEventListener('click', function () { try { guardar(true); } catch (e) {} setTimeout(function () { location.reload(); }, 400); });
+    document.body.appendChild(d);
+  }
+  setTimeout(revisarVersion, 4000);
+  setInterval(revisarVersion, 3 * 60 * 1000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) revisarVersion(); });
   document.title = NOMBRE_JUEGO;
   aplicarIdioma();
   if (window.Cuentas && Cuentas.disponible()) Cuentas.alCambiar(alCambiarCuenta);
