@@ -4344,17 +4344,15 @@
     if (vivos.length) {
       if (!al) {
         al = document.createElement('button'); al.id = 'alerta-ataque';
-        al.addEventListener('click', function (ev) {
-          sonar('click');
-          if (ev.target.closest('[data-portal]')) { cerrarPanel(); cerrarMenuEdif(); if (!enMundo) abrirMundo(); setTimeout(function () { consejoTemporal(T('tel_elige_casilla')); }, 400); return; }
-          if (enMundo) entrarCiudad(); cerrarPanel(); cerrarMenuEdif(); cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial();
-        });
+        al.addEventListener('click', function () { sonar('click'); opcionesAtaque(); });
         document.body.appendChild(al);
       }
       var r = vivos[0], vn = nivelMayor('vigia');
-      al.innerHTML = '<b>' + T('al_te_ataca', { n: escaparHTML(r.atacanteNombre) }) + '</b><span class="al-t">' + T('al_llega', { t: fmtTiempo((r.llega - ahora) / 1000) }) + '</span>' +
-        '<span class="al-sub">' + (vn ? T('al_fuerza', { f: formatoNumero(Math.round(r.fuerza / 100) * 100), d: formatoNumero(Math.round(defensaReino())) }) : T('al_sin_vigia')) + (vivos.length > 1 ? ' · ' + T('al_mas', { n: vivos.length - 1 }) : '') + '</span><span class="al-sub">' + T('al_tocar') + '</span><span class="al-portal" data-portal="1">' + T('al_portal') + '</span>';
-    } else if (al) al.remove();
+      // aviso chiquito arriba a la izquierda: quién ataca y cuánto falta (no tapa la ciudad)
+      var h = '<span class="al-nombre">⚔️ ' + escaparHTML(r.atacanteNombre) + (vivos.length > 1 ? ' +' + (vivos.length - 1) : '') + '</span><span class="al-t">⏱ ' + fmtTiempo((r.llega - ahora) / 1000) + '</span>';
+      infoAtaque = vn ? T('al_fuerza', { f: formatoNumero(Math.round(r.fuerza / 100) * 100), d: formatoNumero(Math.round(defensaReino())) }) : T('al_sin_vigia');
+      if (al.innerHTML !== h) al.innerHTML = h;
+    } else if (al) { al.remove(); var oa = $('opciones-ataque'); if (oa) oa.remove(); }
     var mv = marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).sort(function (a, b) { return a.llega - b.llega; });
     var mi = $('marcha-info');
     if (mv.length) {
@@ -4362,6 +4360,16 @@
       mi.innerHTML = T('mar_hacia', { n: escaparHTML(mv[0].defensorNombre) }) + ' · <b>' + T('mar_llega', { t: fmtTiempo((mv[0].llega - ahora) / 1000) }) + '</b>' + (mv.length > 1 ? ' · ' + T('al_mas', { n: mv.length - 1 }) : '');
     } else if (mi) mi.remove();
     if (panelActual && panelActual.tipo === 'vigia') pintarVigia();
+  }
+  // El jugador decide: defender en su ciudad o usar un portal (nunca automático)
+  var infoAtaque = '';
+  function opcionesAtaque() {
+    var v = $('opciones-ataque'); if (v) { v.remove(); return; }
+    var d = document.createElement('div'); d.id = 'opciones-ataque';
+    d.innerHTML = '<p class="oa-info">' + infoAtaque + '</p><p>' + T('al_decide') + '</p><button class="comprar mini" id="oa-defender">🛡️ ' + T('al_defender') + '</button><button class="comprar mini morado" id="oa-portal">🌀 ' + T('al_portal_corto') + '</button>';
+    document.body.appendChild(d);
+    $('oa-defender').addEventListener('click', function () { sonar('click'); d.remove(); if (enMundo) entrarCiudad(); cerrarPanel(); cerrarMenuEdif(); cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial(); });
+    $('oa-portal').addEventListener('click', function () { sonar('click'); d.remove(); cerrarPanel(); cerrarMenuEdif(); if (!enMundo) abrirMundo(); setTimeout(function () { consejoTemporal(T('tel_elige_casilla')); }, 400); });
   }
   function abrirPanelVigia() { abrirPanel(T('p_vigia'), '<div id="vigia-lista"></div>', { tipo: 'vigia' }); pintarVigia(); }
   function pintarVigia() {

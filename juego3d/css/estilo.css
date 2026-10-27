@@ -1125,3 +1125,18 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .inv-tabs { flex-wrap: wrap; overflow: visible; gap: 5px; }
 .inv-tabs button { flex: 1 1 auto; font-size: 13px; padding: 6px 8px; }
 #panel .subtabs { flex-wrap: wrap; }
+
+/* v5.2: aviso de ataque chiquito arriba a la izquierda + opciones que elige el jugador */
+#alerta-ataque { left: calc(10px + env(safe-area-inset-left)) !important; top: calc(96px + env(safe-area-inset-top)) !important; transform: none !important; width: auto !important; max-width: 190px; padding: 4px 9px !important; border-radius: 10px !important; display: flex !important; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; font-size: 11px; line-height: 1.2; box-shadow: 0 2px 0 rgba(0,0,0,.3) !important; animation: none !important; }
+#alerta-ataque .al-nombre { font-weight: 900; font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
+#alerta-ataque .al-t { font-size: 13px !important; font-weight: 900; }
+#alerta-ataque .al-sub { font-size: 9.5px !important; opacity: .9; }
+#opciones-ataque { position: fixed; left: calc(10px + env(safe-area-inset-left)); top: calc(150px + env(safe-area-inset-top)); z-index: 66; background: linear-gradient(#fff7e2, #f1dcae); border: 2px solid #7a4a00; border-radius: 12px; padding: 7px; display: grid; gap: 5px; width: 160px; box-shadow: 0 3px 0 rgba(0,0,0,.3); }
+#opciones-ataque p { margin: 0 0 2px; font-size: 11.5px; font-weight: 800; color: #4a2e18; }
+#opciones-ataque .comprar { font-size: 12px; padding: 5px 8px; }
+#alerta-ataque { top: calc(112px + env(safe-area-inset-top)) !important; border-width: 2px !important; max-width: 150px; padding: 3px 8px !important; }
+#alerta-ataque .al-nombre { font-size: 11px; max-width: 132px; }
+#alerta-ataque .al-t { font-size: 12px !important; }
+#opciones-ataque { top: calc(150px + env(safe-area-inset-top)); }
+#opciones-ataque .oa-info { font-size: 10.5px; font-weight: 700; opacity: .8; }
+@media (min-width: 760px) { #alerta-ataque { top: calc(72px + env(safe-area-inset-top)) !important; } #opciones-ataque { top: calc(112px + env(safe-area-inset-top)); } }
