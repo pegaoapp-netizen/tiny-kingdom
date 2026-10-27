@@ -2559,6 +2559,8 @@
   function lugarDeNube(uid) { var l = lugarDe(uid); if (l) return Promise.resolve(l); return Cuentas.leerAldea(uid).then(function (a) { return a && typeof a.x === 'number' ? { x: a.x, y: a.y } : miLugar(); }).catch(function () { return miLugar(); }); }
   function modeloCarreta() {
     var g = new THREE.Group();
+    var fc = M.figura('carreta'), fh = M.figura('caballo');
+    if (fc && fh) { var ad = new THREE.Group(); ad.add(fc); fh.position.set(-1.45, 0, 0); ad.add(fh); ad.rotation.y = Math.PI; ad.position.x = -0.4; g.add(ad); g.scale.setScalar(0.85); return g; }
     g.add(M.caja ? M.caja(0.7, 0.3, 0.45, 0x9a5e2c, 0, 0.32, 0) : new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.45), new THREE.MeshLambertMaterial({ color: 0x9a5e2c })));
     var saco = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8d39a })); saco.position.set(0, 0.55, 0); g.add(saco);
     [[-0.25, 0.26], [0.25, 0.26], [-0.25, -0.26], [0.25, -0.26]].forEach(function (p) { var r = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), new THREE.MeshLambertMaterial({ color: 0x5c3418 })); r.rotation.x = Math.PI / 2; r.position.set(p[0], 0.15, p[1]); g.add(r); });
@@ -3701,7 +3703,20 @@
       r.dispose(); if (r.forceContextLoss) r.forceContextLoss();
     } catch (err) {}
   }
-  function cargarModelosHeroes() { M.cargarHeroesGLB(Object.keys(estado.heroes || {}), alLlegarModelo); }
+  function cargarModelosHeroes() { M.cargarHeroesGLB(Object.keys(estado.heroes || {}), alLlegarModelo); M.cargarFiguras(alLlegarFigura); }
+  // cuando llega una figura de archivo, las tropas de ese tipo se cambian por la nueva
+  function alLlegarFigura(id) {
+    Object.keys(M.FIGURA_TROPA).forEach(function (tipo) {
+      if (M.FIGURA_TROPA[tipo] !== id) return;
+      tropas.forEach(function (u) {
+        if (u.tipo !== tipo || u.heroeId) return;
+        var viejo = u.m, nuevo = M.unidad(tipo, undefined, nivelArmadura(tipo));
+        nuevo.grupo.position.copy(viejo.grupo.position); nuevo.grupo.rotation.copy(viejo.grupo.rotation); nuevo.grupo.visible = viejo.grupo.visible;
+        escena.remove(viejo.grupo); escena.add(nuevo.grupo); u.m = nuevo;
+      });
+    });
+    if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
+  }
   function alLlegarModelo(id) {
     retratoHeroe(id);
     if (!oleadaActiva && estado.heroes && estado.equipo) ponerEquipo();

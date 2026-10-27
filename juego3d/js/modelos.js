@@ -1506,6 +1506,7 @@ var M = (function () {
     }
     [cuerpo, p.cabeza, p.brazo, p.izq, arma, p.piernaI, p.piernaD].forEach(function (gr) { if (gr) fusionar(gr, true); });
     if (p.caballo) { fusionar(p.caballo, true); p.patas.forEach(function (pt) { fusionar(pt, true); }); }
+    if (FIGURA_TROPA[tipo] && !look) ponerFiguraTropa(tipo, g, cuerpo, p, armadura);
     var blob = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
     blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.renderOrder = 1;
     if (tipo === 'caballeria') blob.scale.set(1.3, 2.4, 1);
@@ -1904,6 +1905,53 @@ var M = (function () {
   //  HÉROES CON MODELO 3D DE ARCHIVO (GLB con huesos y animaciones)
   //  Mientras el archivo carga (o si falla) se usa el héroe hecho con código.
   // =================================================================
+  // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
+  // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
+  var FIGURAS = {
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0 },
+    carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }
+  };
+  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin' };
+  var figListas = {}, figPedidas = false;
+  function cargarFiguras(alListo) {
+    if (figPedidas || !THREE.GLTFLoader) return; figPedidas = true;
+    var cargador = new THREE.GLTFLoader(), v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
+    Object.keys(FIGURAS).forEach(function (id) {
+      cargador.load('modelos/' + id + '.glb' + v, function (gl) {
+        var esc = gl.scene;
+        esc.traverse(function (o) {
+          if (!o.isMesh) return;
+          var map = o.material && o.material.map;
+          if (map) map.encoding = THREE.LinearEncoding;
+          o.material = new THREE.MeshLambertMaterial({ map: map || null, color: 0xffffff });
+          o.castShadow = true;
+        });
+        var caja3 = new THREE.Box3().setFromObject(esc), tam = new THREE.Vector3(), cen = new THREE.Vector3();
+        caja3.getSize(tam); caja3.getCenter(cen);
+        var k = FIGURAS[id].alto / tam.y, raiz = new THREE.Group();
+        esc.position.set(-cen.x, -caja3.min.y, -cen.z); raiz.add(esc);
+        raiz.scale.setScalar(k); raiz.rotation.y = FIGURAS[id].gira;
+        var hold = new THREE.Group(); hold.add(raiz);
+        figListas[id] = { obj: hold, largo: Math.max(tam.x, tam.z) * k };
+        if (alListo) alListo(id);
+      }, undefined, function () { /* sin archivo: queda la figura hecha con código */ });
+    });
+  }
+  function figura(id) { var f = figListas[id]; return f ? f.obj.clone() : null; }
+  // pone la figura de archivo en lugar del cuerpo hecho con código (se queda el aro del rango)
+  function ponerFiguraTropa(tipo, g, cuerpo, p, armadura) {
+    var f = figura(FIGURA_TROPA[tipo]); if (!f) return false;
+    g.traverse(function (o) { if (o.isMesh && !(o.userData && o.userData.noFusionar)) o.visible = false; });
+    (p.caballo || cuerpo).add(f);
+    if (p.caballo) f.position.y = 0; else f.position.y = 0;
+    // aro de color por rango (el IV ya tiene el dorado)
+    if (armadura === 1 || armadura === 2) {
+      var aro = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.64, 28), new THREE.MeshBasicMaterial({ color: armadura === 1 ? 0xd6dde5 : 0x4a8aff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+      aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro);
+    }
+    p.figura = f;
+    return true;
+  }
   var GLB_HEROES = {};
   ['sol', 'luna', 'ancla', 'brisa', 'chispa', 'roble', 'trueno', 'pluma'].forEach(function (id) { GLB_HEROES[id] = 'modelos/' + id + '.glb'; });
   var glbPedidos = {};
@@ -2332,6 +2380,6 @@ var M = (function () {
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
     ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar,
     heroe: function (h, nivel) { return glbListos[h.id] ? heroeGLB(h, nivel) : heroeModelo2(h.look, undefined, nivel, h.rareza); },
-    cargarHeroesGLB: cargarHeroesGLB, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
+    cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };
 })();
