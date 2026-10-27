@@ -2327,6 +2327,15 @@ var M = (function () {
   function animal(tipo) {
     var g = new THREE.Group(), cuerpo = new THREE.Group(), patas = [];
     g.add(cuerpo);
+    if (tipo === 'caballo') {
+      // caballo de archivo: si todavía no llegó, se pone cuando llegue (ponerFiguraAnimal)
+      var blobC = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
+      blobC.rotation.x = -Math.PI / 2; blobC.position.y = 0.03; blobC.scale.set(1.0, 2.0, 1); g.add(blobC);
+      g.scale.setScalar(1.3);
+      var an = { grupo: g, cuerpo: cuerpo, patas: patas, tipo: tipo };
+      ponerFiguraAnimal(an);
+      return an;
+    }
     if (tipo === 'gallina') {
       var col = Math.random() < 0.5 ? 0xf2ece0 : 0xa8683a;
       var tor = esfera(0.22, col, 0, 0.32, 0, 8, 6); tor.scale.set(1, 0.9, 1.25); cuerpo.add(tor);
@@ -2352,6 +2361,11 @@ var M = (function () {
     fusionar(cuerpo, true);
     g.scale.setScalar(tipo === 'gallina' ? 1.2 : 1.3);
     return { grupo: g, cuerpo: cuerpo, patas: patas, tipo: tipo };
+  }
+  function ponerFiguraAnimal(a) {
+    if (a.fig) return true;
+    var f = figura(a.tipo); if (!f) return false;
+    f.rotation.y = Math.PI / 2; f.scale.multiplyScalar(1.75); a.cuerpo.add(f); a.fig = f; return true;
   }
   function animarAnimal(a, t, camina) {
     var v = camina ? 1 : 0, s = Math.sin(t * (a.tipo === 'gallina' ? 18 : 10));
@@ -2380,6 +2394,6 @@ var M = (function () {
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
     ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar,
     heroe: function (h, nivel) { return glbListos[h.id] ? heroeGLB(h, nivel) : heroeModelo2(h.look, undefined, nivel, h.rareza); },
-    cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
+    cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, ponerFiguraAnimal: ponerFiguraAnimal, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };
 })();

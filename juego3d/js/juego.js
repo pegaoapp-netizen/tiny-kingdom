@@ -1943,12 +1943,12 @@
     }
     return new V3(8, 0, 8);
   }
-  ['gallina', 'gallina', 'gallina', 'gallina', 'gallina', 'cabra', 'cabra', 'cabra', 'cabra'].forEach(function (tipo) {
+  ['gallina', 'gallina', 'gallina', 'gallina', 'gallina', 'cabra', 'cabra', 'cabra', 'cabra', 'caballo', 'caballo', 'caballo', 'caballo'].forEach(function (tipo) {
     var an = M.animal(tipo), p0 = puntoAnimal(tipo);
     an.grupo.position.copy(p0);
     an.grupo.rotation.y = Math.random() * 6;
     escena.add(an.grupo);
-    animales.push({ a: an, meta: puntoAnimal(tipo), espera: Math.random() * 5, vel: tipo === 'gallina' ? 1.1 : 0.6 });
+    animales.push({ a: an, meta: puntoAnimal(tipo), espera: Math.random() * 5, vel: tipo === 'gallina' ? 1.1 : tipo === 'caballo' ? 0.9 : 0.6 });
   });
   function moverAnimales(dt, t) {
     animales.forEach(function (o, i) {
@@ -3715,6 +3715,7 @@
         escena.remove(viejo.grupo); escena.add(nuevo.grupo); u.m = nuevo;
       });
     });
+    if (id === 'caballo') animales.forEach(function (o) { if (o.a.tipo === 'caballo') M.ponerFiguraAnimal(o.a); });
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
   }
   function alLlegarModelo(id) {
