@@ -51,7 +51,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if request.auth != null
         && tag.matches('^[A-Z0-9]{2,4}$')
-        && request.resource.data.keys().hasOnly(['nombre', 'tag', 'lider', 'liderNombre', 'creada'])
+        && request.resource.data.keys().hasOnly(['nombre', 'tag', 'lider', 'liderNombre', 'creada', 'idioma', 'descripcion'])
         && request.resource.data.tag == tag
         && request.resource.data.lider == request.auth.uid
         && request.resource.data.nombre is string
@@ -59,7 +59,11 @@ service cloud.firestore {
         && request.resource.data.liderNombre is string && request.resource.data.liderNombre.size() <= 30
         && request.resource.data.creada is int;
       allow delete: if request.auth != null && resource.data.lider == request.auth.uid;
-      allow update: if false;
+      // solo el líder cambia el idioma y la descripción
+      allow update: if request.auth != null && resource.data.lider == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion'])
+        && (!('idioma' in request.resource.data) || (request.resource.data.idioma is string && request.resource.data.idioma.size() <= 12))
+        && (!('descripcion' in request.resource.data) || (request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 120));
     }
 
     // Ataques entre jugadores: el atacante crea el reporte; el defensor lo lee y lo marca como visto.

@@ -165,6 +165,7 @@ var Cuentas = (function () {
       });
     },
     borrarAlianza: function (tag) { return db.collection('alianzas').doc(tag).delete(); },
+    ajustesAlianza: function (tag, datos) { return db.collection('alianzas').doc(tag).update(datos); },
     atacar: function (r) { return db.collection('ataques').add(r); },
     ataquesNuevos: function () {
       if (!usuario) return Promise.resolve([]);
