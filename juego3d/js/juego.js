@@ -1810,6 +1810,7 @@
     var g = GEMAS_POR_OLEADA + (ultima ? GEMAS_VICTORIA : 0);
     sumarGemas(g, castilloPos.clone().setY(10));
     sonar('gemas');
+    premioHeroesOleada(n);
     estado.oleada = n + 1;
     estado.vidaCastillo = vidaMaxCastillo();
     setTimeout(function () { guardar(true); }, 50);
@@ -2588,6 +2589,8 @@
     else if (p.tipo === 'mochila') abrirPanelMochila();
     else if (p.tipo === 'tienda') abrirPanelTienda();
     else if (p.tipo === 'ajustes') abrirPanelAjustes();
+    else if (p.tipo === 'heroe') abrirPanelHeroe(p.id);
+    else if (p.tipo === 'obtener') abrirPanelObtener(p.id);
   }
 
   function htmlCosto(c) {
@@ -2663,7 +2666,9 @@
   var ROMANO = ['I', 'II', 'III', 'IV'];
   var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1 };
   var visor = null;
-  function visorTropa(cont, tipo, rango) {
+  function visorTropa(cont, tipo, rango) { visorModelo(cont, tipo + ':' + rango, function () { return M.unidad(tipo, undefined, rango); }); }
+  // visor 3D que gira: lo usan la pantalla de tropas y la ficha del héroe
+  function visorModelo(cont, clave, fabrica) {
     try {
       if (!visor) {
         var r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -2686,11 +2691,11 @@
         el.addEventListener('pointerup', function () { visor.arrastre = null; });
         el.addEventListener('pointercancel', function () { visor.arrastre = null; });
       }
-      var clave = tipo + ':' + rango;
       if (visor.clave !== clave) {
         if (visor.m) visor.e.remove(visor.m.grupo);
-        var m = M.unidad(tipo, undefined, rango);
+        var m = fabrica();
         m.grupo.rotation.y = 0;
+        m.grupo.updateMatrixWorld(true);
         var caja = new THREE.Box3().setFromObject(m.grupo), tam = new V3(); caja.getSize(tam);
         var ancho = Math.max(tam.x, tam.z);
         visor.base.scale.set(ancho * 0.72, 1, ancho * 0.72);
@@ -2882,7 +2887,7 @@
   function fragParaEstrella(id) { var e = estado.heroes[id]; return e.estrellas >= 5 ? 0 : HEROE_FRAGMENTOS[e.estrellas - 1]; }
   function heroeMejorable(id) {
     var e = estado.heroes[id]; if (!e) return false;
-    return (e.nivel < topeNivel(id) && puedePagar(costoNivelHeroe(id))) || (e.estrellas < 5 && e.frag >= fragParaEstrella(id));
+    return (e.nivel < topeNivel(id) && (puedePagar(costoMejorarHeroe(id)) || librosQueTienes() > 0)) || (e.estrellas < 5 && e.frag >= fragParaEstrella(id));
   }
   // Pone en el reino a los héroes del equipo (guardados en el castillo) y quita los que ya no están
   function ponerEquipo() {
@@ -2952,7 +2957,7 @@
     for (var i = 1; i <= 5; i++) est += i <= (e ? e.estrellas : 0) ? '★' : '☆';
     return '<button class="hcard ' + h.rareza + (e ? '' : ' bloq') + '" data-accion="heroe-ver" data-id="' + h.id + '">' +
       '<span class="clase">' + CLASES_HEROE[h.clase] + '</span>' + (e && heroeMejorable(h.id) ? '<span class="sube">⬆</span>' : '') +
-      fotoHTML('h_' + h.id, '🦸') + (e && estado.equipo.indexOf(h.id) >= 0 ? '<span class="eq">' + T('en_equipo') + '</span>' : '') +
+      fotoHTML('h_' + h.id, '🦸') + '<span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span>' + (e && estado.equipo.indexOf(h.id) >= 0 ? '<span class="eq">' + T('en_equipo') + '</span>' : '') +
       '<span class="nom">' + NH(h.id) + '</span><span class="nv">' + (e ? T('nivel_corto') + ' ' + e.nivel : '🔒') + '</span><span class="est">' + est + '</span></button>';
   }
   function abrirPanelHeroes() {
@@ -2965,36 +2970,125 @@
       botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>';
     abrirPanel(T('p_heroes'), html, { tipo: 'heroes' });
   }
+  // ---------- EXPERIENCIA DEL HÉROE ----------
+  function expNivel(n) { return Math.round(50 * Math.pow(n, 1.35)); }
+  // suma experiencia y sube de nivel solo mientras no llegue al tope de sus estrellas
+  function darExp(id, cant) {
+    var e = estado.heroes[id]; if (!e) return 0;
+    e.exp = (e.exp || 0) + cant;
+    var subio = 0, tope = topeNivel(id);
+    while (e.nivel < tope && e.exp >= expNivel(e.nivel)) { e.exp -= expNivel(e.nivel); e.nivel++; subio++; }
+    if (e.nivel >= tope) e.exp = Math.min(e.exp, expNivel(e.nivel));
+    return subio;
+  }
+  // el botón Mejorar paga con oro lo que falta para el siguiente nivel
+  function costoMejorarHeroe(id) {
+    var e = estado.heroes[id], falta = 1 - Math.min(1, (e.exp || 0) / expNivel(e.nivel));
+    return { oro: Math.max(1, Math.ceil(costoNivelHeroe(id).oro * falta)) };
+  }
+  function librosQueTienes() { return ['libro_peq', 'libro_gra'].reduce(function (a, k) { return a + ((estado.mochila && estado.mochila[k]) || 0); }, 0); }
+  // al ganar una oleada: experiencia para el equipo y fragmentos para uno al azar
+  function premioHeroesOleada(n) {
+    if (!estado.equipo.length) return;
+    var exp = 30 + 12 * n;
+    estado.equipo.forEach(function (id) {
+      var s = darExp(id, exp);
+      if (s) flotar('⬆️ ' + NH(id) + ' ' + T('nivel_corto') + ' ' + estado.heroes[id].nivel, castilloPos.clone().setY(12), 'oro');
+    });
+    var suerte = estado.equipo[Math.floor(Math.random() * estado.equipo.length)], fr = Math.min(5, 1 + Math.floor(n / 5));
+    estado.heroes[suerte].frag += fr;
+    consejoTemporal(T('heroes_premio', { x: exp, f: fr, n: NH(suerte) }));
+  }
+  function estrellasHTML(n) { var s = ''; for (var i = 1; i <= 5; i++) s += '<span class="' + (i <= n ? 'si' : 'no') + '">★</span>'; return s; }
   function abrirPanelHeroe(id) {
-    var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab), est = '';
-    for (var i = 1; i <= 5; i++) est += i <= (e ? e.estrellas : 0) ? '★' : '☆';
-    var html = '<button class="comprar mini" data-accion="sub-heroes" style="width:auto;margin-bottom:8px">' + T('volver') + '</button>' +
-      '<div class="carta heroe-ficha ' + h.rareza + '"><div class="heroe-grande">' + fotoHTML('h_' + id, '🦸') + '</div><div style="flex:1;min-width:0">' +
-      '<h3>' + NH(id) + '</h3><p class="nota">' + T('rareza_' + h.rareza) + ' · ' + CLASES_HEROE[h.clase] + ' ' + T('clase_' + h.clase) + '</p>' +
-      '<p class="estrellas-grandes">' + est + '</p>' +
-      (e ? '<p><b>' + T('nivel') + ' ' + e.nivel + ' / ' + topeNivel(id) + '</b></p>' : '<p class="nota">' + T('bloqueado') + '</p>') + '</div></div>' +
-      '<div class="carta" style="margin-top:8px"><div class="stats"><span>❤ ' + T('vida') + ' ' + s.vida + '</span><span>⚔ ' + T('dano') + ' ' + s.dano + '</span><span>🎯 ' + T('alcance') + ' ' + s.alcance + '</span><span>✚ ' + T('cura') + ' ' + s.cura + '/s</span></div>' +
-      '<p style="margin-top:8px"><b>' + T('poder_heroe') + ': ' + hb.nombre + '</b> <span class="nota">(' + T('cada_s', { s: HABILIDADES[h.hab].cd }) + ')</span><br>' + hb.des + '</p></div>';
+    var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab);
+    var html = '<button class="volver-mini" data-accion="sub-heroes">' + T('volver') + '</button>' +
+      '<div class="hf ' + h.rareza + '"><div class="hf-foto"><div class="hf-visor" id="visor-heroe"></div><span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span></div>' +
+      '<div class="hf-datos"><div class="hf-nombre">' + NH(id) + '</div><div class="hf-clase">' + CLASES_HEROE[h.clase] + ' ' + T('clase_' + h.clase) + '</div>' +
+      '<div class="hf-est">' + estrellasHTML(e ? e.estrellas : 0) + '</div>';
     if (e) {
-      html += '<div class="carta" style="margin-top:8px">';
-      if (e.nivel < topeNivel(id)) html += botonCosto(costoNivelHeroe(id), 'heroe-nivel', 'data-id="' + id + '"', '⬆️ ' + T('subir_nivel') + ' ');
-      else if (e.nivel < HEROE_NIVEL_MAX) html += '<p class="nota">' + T('nivel_tope', { n: topeNivel(id) }) + '</p>';
+      var need = expNivel(e.nivel), ex = Math.min(e.exp || 0, need), tope = topeNivel(id);
+      html += '<div class="hf-nv"><b>' + T('nivel_corto') + ' ' + e.nivel + '</b><span>/ ' + tope + '</span></div>' +
+        '<div class="hf-barra"><div style="width:' + Math.round(ex / need * 100) + '%"></div><span>' + (e.nivel >= tope ? T('exp_llena') : ex + ' / ' + need + ' EXP') + '</span></div>';
+    } else html += '<p class="nota">' + T('bloqueado') + '</p>';
+    html += '</div></div>' +
+      '<div class="hf-stats"><span>❤ ' + s.vida + '</span><span>⚔ ' + s.dano + '</span><span>🎯 ' + s.alcance + '</span><span>✚ ' + s.cura + '/s</span></div>' +
+      '<div class="hf-hab"><b>' + hb.nombre + '</b> <span class="nota">' + T('cada_s', { s: HABILIDADES[h.hab].cd }) + '</span><div class="nota">' + hb.des + '</div></div>';
+    if (e) {
+      var tope2 = topeNivel(id), libros = librosQueTienes();
+      html += '<div class="hf-bloque"><div class="hf-tit">⬆️ ' + T('mejorar') + '</div>';
+      if (e.nivel < tope2) html += '<div class="hf-fila">' + botonCosto(costoMejorarHeroe(id), 'heroe-nivel', 'data-id="' + id + '"', T('mejorar') + ' ') +
+        '<button class="comprar morado" data-accion="heroe-libros" data-id="' + id + '"' + (libros ? '' : ' disabled') + '>📘 ' + T('usar_libros') + ' ×' + libros + '</button></div>';
+      else if (e.nivel < HEROE_NIVEL_MAX) html += '<p class="nota">' + T('nivel_tope', { n: tope2 }) + '</p>';
+      else html += '<p class="nota">' + T('nivel_max') + '</p>';
+      html += '</div><div class="hf-bloque"><div class="hf-tit">★ ' + T('estrellas') + '</div>';
       if (e.estrellas < 5) {
         var nf = fragParaEstrella(id);
-        html += '<p class="nota" style="margin-top:8px">🧩 ' + T('fragmentos') + ': ' + e.frag + ' / ' + nf + '</p><div class="cola"><div class="barra"><div style="width:' + Math.min(100, Math.round(e.frag / nf * 100)) + '%"></div></div></div>' +
-          '<button class="comprar naranja" data-accion="heroe-estrella" data-id="' + id + '"' + (e.frag >= nf ? '' : ' disabled') + '>' + T('subir_estrella') + '</button>';
+        html += '<div class="hf-frag">🧩 <div class="hf-barra mini"><div style="width:' + Math.min(100, Math.round(e.frag / nf * 100)) + '%"></div><span>' + e.frag + ' / ' + nf + '</span></div></div>' +
+          '<p class="nota">' + T('estrella_da', { a: e.estrellas + 1, n: Math.min(HEROE_NIVEL_MAX, (e.estrellas + 1) * 10) }) + '</p>' +
+          '<div class="hf-fila"><button class="comprar naranja" data-accion="heroe-estrella" data-id="' + id + '"' + (e.frag >= nf ? '' : ' disabled') + '>★ ' + T('subir_estrella_c') + '</button>' +
+          '<button class="comprar" data-accion="heroe-obtener" data-id="' + id + '">➕ ' + T('obtener_mas') + '</button></div>';
       } else html += '<p class="nota">' + T('estrellas_max') + '</p>';
       var enEq = estado.equipo.indexOf(id) >= 0;
-      html += '<button class="comprar ' + (enEq ? 'rojo' : '') + '" data-accion="heroe-equipo" data-id="' + id + '" style="margin-top:8px">' + (enEq ? T('quitar_equipo') : T('poner_equipo')) + '</button></div>';
-    }
+      html += '</div><button class="comprar ' + (enEq ? 'rojo' : '') + '" data-accion="heroe-equipo" data-id="' + id + '">' + (enEq ? T('quitar_equipo') : T('poner_equipo')) + '</button>';
+    } else html += '<button class="comprar" data-accion="heroe-obtener" data-id="' + id + '">➕ ' + T('obtener_mas') + '</button>';
     abrirPanel(NH(id), html, { tipo: 'heroe', id: id });
+    var nv = e ? e.nivel : 1;
+    visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv) + ':' + M.etapaArmadura(nv) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv); });
   }
   function subirNivelHeroe(id) {
     var e = estado.heroes[id]; if (!e || e.nivel >= topeNivel(id)) return;
-    if (!pagar(costoNivelHeroe(id))) return;
-    e.nivel++;
+    if (!pagar(costoMejorarHeroe(id))) return;
+    e.exp = 0; e.nivel++;
     sonar('listo'); consejoTemporal(T('heroe_sube', { n: NH(id), v: e.nivel }));
     ponerEquipo(); guardar(); abrirPanelHeroe(id);
+  }
+  // usa libros de experiencia (primero los grandes) hasta llegar al tope de nivel
+  function usarLibrosHeroe(id) {
+    var e = estado.heroes[id]; if (!e) return;
+    var antes = e.nivel, usados = 0;
+    ['libro_gra', 'libro_peq'].forEach(function (k) {
+      while ((estado.mochila[k] || 0) > 0 && e.nivel < topeNivel(id)) { estado.mochila[k]--; usados++; darExp(id, OBJETOS[k].exp); }
+    });
+    if (!usados) { consejoTemporal(T('sin_libros')); sonar('error'); return; }
+    sonar(e.nivel > antes ? 'listo' : 'magia');
+    consejoTemporal(e.nivel > antes ? T('heroe_sube', { n: NH(id), v: e.nivel }) : T('libros_usados', { n: usados }));
+    ponerEquipo(); guardar(true); abrirPanelHeroe(id);
+  }
+  // ---------- OBTENER MÁS FRAGMENTOS ----------
+  var CANJE_FRAG = { frag: 10, gemas: 60 }, OFERTA_FRAG = 3;
+  function abrirPanelObtener(id) {
+    var e = estado.heroes[id], ofertaHoy = estado.ofertaFrag === hoyTexto();
+    function fila(icono, tit, des, boton) { return '<div class="ob-fila"><span class="ob-ico">' + icono + '</span><div class="ob-txt"><b>' + tit + '</b><span>' + des + '</span></div>' + boton + '</div>'; }
+    var ir = function (a) { return '<button class="comprar mini ir" data-accion="ob-ir" data-a="' + a + '" data-id="' + id + '">' + T('ir') + '</button>'; };
+    var html = '<button class="volver-mini" data-accion="heroe-ver" data-id="' + id + '">' + T('volver') + '</button>' +
+      '<div class="ob-cab">' + fotoHTML('h_' + id, '🦸') + '<div><b>' + NH(id) + '</b><span class="nota">🧩 ' + (e ? e.frag + ' / ' + (fragParaEstrella(id) || '—') : T('bloqueado')) + '</span></div></div>' +
+      fila('🎁', T('ob_oferta'), T('ob_oferta_txt', { n: OFERTA_FRAG }), e ? '<button class="comprar mini naranja" data-accion="ob-oferta" data-id="' + id + '"' + (ofertaHoy ? ' disabled' : '') + '>' + (ofertaHoy ? '✓' : T('reclamar')) + '</button>' : ir('reclutar')) +
+      fila('💱', T('ob_canje'), T('ob_canje_txt', { n: CANJE_FRAG.frag }), e ? botonGemas(CANJE_FRAG.gemas, 'ob-canje', 'data-id="' + id + '"').replace('class="comprar morado"', 'class="comprar mini morado"') : ir('reclutar')) +
+      fila('🦸', T('ob_reclutar'), T('ob_reclutar_txt', { n: RECLUTAR.repetido }), ir('reclutar')) +
+      fila('⚔️', T('ob_oleadas'), T('ob_oleadas_txt'), ir('oleadas')) +
+      fila('📅', T('ob_diario'), T('ob_diario_txt'), ir('diario')) +
+      fila('🛒', T('ob_tienda'), T('ob_tienda_txt'), ir('tienda'));
+    abrirPanel(T('obtener_mas'), html, { tipo: 'obtener', id: id });
+  }
+  function irDesdeObtener(a) {
+    if (a === 'reclutar') { abrirPanelHeroes(); setTimeout(function () { $('panel').scrollTop = 99999; }, 30); }
+    else if (a === 'oleadas') abrirPanelConquista();
+    else if (a === 'diario') abrirPanelMochila();
+    else if (a === 'tienda') abrirPanelTienda();
+  }
+  function ofertaFragmentos(id) {
+    var e = estado.heroes[id]; if (!e || estado.ofertaFrag === hoyTexto()) return;
+    estado.ofertaFrag = hoyTexto(); e.frag += OFERTA_FRAG;
+    sonar('gemas'); consejoTemporal(T('heroe_frag', { f: OFERTA_FRAG, n: NH(id) }));
+    guardar(true); abrirPanelObtener(id);
+  }
+  function canjeFragmentos(id) {
+    var e = estado.heroes[id]; if (!e) return;
+    if (!pagar(0, CANJE_FRAG.gemas)) return;
+    e.frag += CANJE_FRAG.frag;
+    sonar('gemas'); consejoTemporal(T('heroe_frag', { f: CANJE_FRAG.frag, n: NH(id) }));
+    guardar(true); abrirPanelObtener(id);
   }
   function subirEstrellaHeroe(id) {
     var e = estado.heroes[id]; if (!e || e.estrellas >= 5) return;
@@ -3388,6 +3482,7 @@
   function usarObjeto(k) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
+    if (o.exp) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
     if (o.escudo) {
       if (protegido()) { consejoTemporal(T('escudo_activo', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) })); sonar('error'); return; }
       estado.escudoHasta = Date.now() + o.escudo * 3600 * 1000;
@@ -3648,6 +3743,11 @@
     else if (a === 'heroe-ver') abrirPanelHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-nivel') subirNivelHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-libros') usarLibrosHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-obtener') abrirPanelObtener(b.getAttribute('data-id'));
+    else if (a === 'ob-ir') irDesdeObtener(b.getAttribute('data-a'));
+    else if (a === 'ob-oferta') ofertaFragmentos(b.getAttribute('data-id'));
+    else if (a === 'ob-canje') canjeFragmentos(b.getAttribute('data-id'));
     else if (a === 'heroe-equipo') cambiarEquipo(b.getAttribute('data-id'));
     else if (a === 'reclutar') reclutar(b.getAttribute('data-n'));
     else if (a === 'empezar-oleada') { cerrarPanel(); empezarOleada(); }
@@ -4053,6 +4153,7 @@
       estado.heroes = g.heroes || { sol: { nivel: 1, estrellas: 1, frag: 0 } };
       estado.equipo = (g.equipo || ['sol']).filter(function (id) { return estado.heroes[id]; }).slice(0, 3);
       estado.reclutaGratis = g.reclutaGratis || '';
+      estado.ofertaFrag = g.ofertaFrag || '';
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto
       var maxEd = Math.max(1, g.muralla || 0); (g.edificios || []).forEach(function (e) { if (e && e.nivel > maxEd) maxEd = e.nivel; });
