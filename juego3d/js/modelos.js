@@ -1908,7 +1908,7 @@ var M = (function () {
   // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
-    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0 },
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' },
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }
   };
   var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin' };
@@ -1917,27 +1917,34 @@ var M = (function () {
     if (figPedidas || !THREE.GLTFLoader) return; figPedidas = true;
     var cargador = new THREE.GLTFLoader(), v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
     Object.keys(FIGURAS).forEach(function (id) {
-      cargador.load('modelos/' + id + '.glb' + v, function (gl) {
-        var esc = gl.scene;
+      cargador.load('modelos/' + (FIGURAS[id].archivo || id) + '.glb' + v, function (gl) {
+        var esc = gl.scene, anim = gl.animations && gl.animations.length && THREE.SkeletonUtils;
         esc.traverse(function (o) {
           if (!o.isMesh) return;
           var map = o.material && o.material.map;
           if (map) map.encoding = THREE.LinearEncoding;
           o.material = new THREE.MeshLambertMaterial({ map: map || null, color: 0xffffff });
           o.castShadow = true;
+          if (o.isSkinnedMesh) o.frustumCulled = false;
         });
-        var caja3 = new THREE.Box3().setFromObject(esc), tam = new THREE.Vector3(), cen = new THREE.Vector3();
+        esc.updateMatrixWorld(true);
+        var caja3 = new THREE.Box3(), tam = new THREE.Vector3(), cen = new THREE.Vector3(), pv = new THREE.Vector3();
+        esc.traverse(function (o) {
+          if (!o.isMesh) return;
+          var P = o.geometry.attributes.position;
+          for (var i = 0; i < P.count; i += 3) { pv.fromBufferAttribute(P, i); if (o.isSkinnedMesh) o.boneTransform(i, pv); pv.applyMatrix4(o.matrixWorld); caja3.expandByPoint(pv); }
+        });
         caja3.getSize(tam); caja3.getCenter(cen);
         var k = FIGURAS[id].alto / tam.y, raiz = new THREE.Group();
         esc.position.set(-cen.x, -caja3.min.y, -cen.z); raiz.add(esc);
         raiz.scale.setScalar(k); raiz.rotation.y = FIGURAS[id].gira;
         var hold = new THREE.Group(); hold.add(raiz);
-        figListas[id] = { obj: hold, largo: Math.max(tam.x, tam.z) * k };
+        figListas[id] = { obj: hold, largo: Math.max(tam.x, tam.z) * k, clips: anim ? gl.animations : null };
         if (alListo) alListo(id);
       }, undefined, function () { /* sin archivo: queda la figura hecha con código */ });
     });
   }
-  function figura(id) { var f = figListas[id]; return f ? f.obj.clone() : null; }
+  function figura(id) { var f = figListas[id]; return f ? (f.clips ? THREE.SkeletonUtils.clone(f.obj) : f.obj.clone()) : null; }
   // pone la figura de archivo en lugar del cuerpo hecho con código (se queda el aro del rango)
   function ponerFiguraTropa(tipo, g, cuerpo, p, armadura) {
     var f = figura(FIGURA_TROPA[tipo]); if (!f) return false;
@@ -1950,7 +1957,30 @@ var M = (function () {
       aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro);
     }
     p.figura = f;
+    // figura con animaciones: caminar de verdad
+    var cl = figListas[FIGURA_TROPA[tipo]].clips;
+    if (cl) {
+      p.mixer = new THREE.AnimationMixer(f); p.acc = {};
+      cl.forEach(function (c) { p.acc[c.name] = p.mixer.clipAction(c); });
+      p.andar = p.acc.Walking || p.acc.Running || null; p.quieto = p.acc.Idle || null; p.golpe = p.acc.Attack || null;
+      if (p.andar) p.andar.play();
+      if (p.quieto) p.quieto.play();
+      p.ultT = null;
+    }
     return true;
+  }
+  function animarFiguraTropa(u, t, caminando, ataque) {
+    var p = u.p, dt = p.ultT === null ? 0 : Math.max(0, Math.min(0.1, t - p.ultT)); p.ultT = t;
+    if (p.andar) {
+      var w = caminando ? 1 : 0;
+      p.peso = p.peso === undefined ? w : p.peso + (w - p.peso) * Math.min(1, dt * 8);
+      if (p.quieto) { p.andar.setEffectiveWeight(p.peso); p.quieto.setEffectiveWeight(1 - p.peso); }
+      else { p.andar.timeScale = p.peso > 0.05 ? 1.2 : 0; if (p.peso <= 0.05) p.andar.time = p.andar.time * 0.85; }
+    }
+    // golpe hacia delante (hasta que llegue una animación de ataque)
+    var k = ataque > 0 ? Math.sin(ataque * Math.PI) : 0;
+    p.figura.rotation.x = k * 0.32; p.figura.position.z = k * 0.22;
+    p.mixer.update(dt);
   }
   var GLB_HEROES = {};
   ['sol', 'luna', 'ancla', 'brisa', 'chispa', 'roble', 'trueno', 'pluma'].forEach(function (id) { GLB_HEROES[id] = 'modelos/' + id + '.glb'; });
@@ -2039,6 +2069,7 @@ var M = (function () {
   // Animación de caminar / atacar
   function animarUnidad(u, t, caminando, ataque) {
     if (u.p && u.p.glb) { animarGLB(u, t, caminando, ataque); return; }
+    if (u.p && u.p.mixer) animarFiguraTropa(u, t, caminando, ataque);
     var p = u.p, v = caminando ? 1 : 0;
     var s = Math.sin(t * 11);
     if (p.patas) {
