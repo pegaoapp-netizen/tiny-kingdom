@@ -106,6 +106,24 @@ service cloud.firestore {
     // Refuerzos entre aliados: solo entre jugadores de la MISMA hermandad.
     // El que envía crea el documento y lo puede borrar (retirar). El que recibe solo puede
     // bajar el número de tropas (las que murieron) o marcarlo como devuelto.
+    // Envíos de recursos entre miembros de la misma hermandad (máximo 5000 de cada uno por envío)
+    function recursoValido(v) { return v is int && v >= 0 && v <= 5000; }
+    match /envios/{id} {
+      allow read: if request.auth != null && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'recursos', 'alianza', 'fecha'])
+        && request.resource.data.de == request.auth.uid
+        && request.resource.data.para is string && request.resource.data.para != request.auth.uid
+        && request.resource.data.deNombre is string && request.resource.data.deNombre.size() <= 30
+        && request.resource.data.fecha is int
+        && request.resource.data.alianza is string
+        && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.alianza == request.resource.data.alianza
+        && get(/databases/$(database)/documents/aldeas/$(request.resource.data.para)).data.alianza == request.resource.data.alianza
+        && request.resource.data.recursos.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
+        && recursoValido(request.resource.data.recursos.oro) && recursoValido(request.resource.data.recursos.comida)
+        && recursoValido(request.resource.data.recursos.madera) && recursoValido(request.resource.data.recursos.piedra);
+      allow delete: if request.auth != null && resource.data.para == request.auth.uid;
+    }
     match /refuerzos/{id} {
       allow read: if request.auth != null
         && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);

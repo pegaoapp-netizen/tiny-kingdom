@@ -1311,6 +1311,7 @@
     if (!hayCuenta() || enMenu || revisandoRef || oleadaActiva) return;
     if (!forzar && Date.now() - ultimaRevRef < 30000) return;
     ultimaRevRef = Date.now(); revisandoRef = true;
+    recibirEnvios();
     Promise.all([Cuentas.refuerzosRecibidos(), Cuentas.refuerzosEnviados()]).then(function (r) {
       revisandoRef = false;
       if (oleadaActiva || enMenu) return;
@@ -1756,7 +1757,7 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
+    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
     return M.mejorarPorTramo(m, tramo, tipo);
   }
 
@@ -1825,6 +1826,173 @@
     s.grupo.add(s.modelo);
     s.cd = 0;
   }
+  // ---------- ACELERADORES CON TIEMPO ----------
+  var ACELERADORES = ['acel_1m', 'acel_5m', 'acel_15m', 'acel_1h', 'acel_8h', 'acel_12h'];
+  function totalAceleradores() { return ACELERADORES.concat(['acelerador']).reduce(function (a, k) { return a + ((estado.mochila && estado.mochila[k]) || 0); }, 0); }
+  function rapidezAcademia() { var ia = academiaLista(); return ia ? EDIFICIOS.academia.rapidez[ia.edificio.nivel - 1] : 1; }
+  // segundos reales que faltan para terminar
+  function faltaDe(que) {
+    if (que === 'castillo') { var oc = estado.obraCastillo; return oc ? (oc.total - oc.t) / velObras() : 0; }
+    if (que === 'entreno') return faltaEntreno() * velReal();
+    if (que === 'invest') return faltaInvestigacion() * velReal();
+    var s = slots[+String(que).split(':')[1]];
+    return s && s.obra ? (s.obra.total - s.obra.t) / velObras() : 0;
+  }
+  function aplicarAcelerador(que, seg) {
+    if (que === 'castillo' && estado.obraCastillo) { var oc = estado.obraCastillo; oc.t = Math.min(oc.total, oc.t + seg); return; }
+    if (que === 'invest' && estado.investigando) { var ii = estado.investigando; ii.t = Math.min(ii.total, ii.t + seg * rapidezAcademia()); return; }
+    if (que === 'entreno') {
+      var r = seg * rapidezEntreno();
+      while (r > 0 && colaEntreno.length) {
+        var c = colaEntreno[0], f = c.total - c.t;
+        if (r >= f) { r -= f; colaEntreno.shift(); crearTropa(c.tipo, puertaCuartel()); } else { c.t += r; r = 0; }
+      }
+      return;
+    }
+    var s = slots[+String(que).split(':')[1]];
+    if (s && s.obra) s.obra.t = Math.min(s.obra.total, s.obra.t + seg);
+  }
+  function abrirAcelerar(que) {
+    var v = $('acelerar-elegir'); if (v) v.remove();
+    var falta = faltaDe(que);
+    var d = document.createElement('div'); d.id = 'acelerar-elegir';
+    var filas = ACELERADORES.map(function (k) {
+      var n = (estado.mochila && estado.mochila[k]) || 0, it = TIENDA.filter(function (x) { return x.id === k; })[0];
+      return '<div class="ac-fila"><span class="ac-ico">' + OBJETOS[k].icono + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>×' + n + '</span></div>' +
+        (n > 0 ? '<button class="comprar mini naranja" data-ac="' + k + '">' + T('acel_usar') + '</button>' : (it ? '<button class="comprar mini morado" data-ac-comprar="' + k + '"><span class="ico gema"></span>' + it.gemas + '</button>' : '')) + '</div>';
+    }).join('');
+    var real = (estado.mochila && estado.mochila.acelerador) || 0;
+    if (real) filas += '<div class="ac-fila"><span class="ac-ico">⏩</span><div class="ac-txt"><b>' + N('acelerador') + '</b><span>' + T('acel_todo') + ' · ×' + real + '</span></div><button class="comprar mini naranja" data-ac="acelerador">' + T('acel_usar') + '</button></div>';
+    d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>⏩ ' + T('acel_titulo') + '</h3><button class="cerrar" id="ac-cerrar">✕</button></div><p class="ac-falta" id="ac-falta">' + (falta > 0 ? '⏱ ' + T('acel_falta', { t: fmtTiempo(falta) }) : T('acel_listo')) + '</p>' + filas + '</div>';
+    document.body.appendChild(d);
+    $('ac-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); });
+    d.addEventListener('click', function (ev) {
+      if (ev.target === d) { d.remove(); return; }
+      var b = ev.target.closest('[data-ac]'), bc = ev.target.closest('[data-ac-comprar]');
+      if (bc) { var it = TIENDA.filter(function (x) { return x.id === bc.getAttribute('data-ac-comprar'); })[0]; if (it && pagar(0, it.gemas)) { estado.mochila[it.id] = (estado.mochila[it.id] || 0) + 1; sonar('moneda'); guardar(true); abrirAcelerar(que); } return; }
+      if (!b) return;
+      var k = b.getAttribute('data-ac');
+      if (!(estado.mochila[k] > 0) || faltaDe(que) <= 0) return;
+      if (k === 'acelerador') { usarObjeto('acelerador'); d.remove(); return; }
+      var seg = OBJETOS[k].segundos;
+      estado.mochila[k]--;
+      aplicarAcelerador(que, seg);
+      sonar('magia'); consejoTemporal(T('acel_usado', { t: fmtTiempo(seg) }));
+      actualizarHUD(); guardar(true);
+      if (faltaDe(que) <= 0.5) { d.remove(); sonar('listo'); if (menuAbierto()) pintarMenuEdif(); if (panelActual) reabrirPanel(); return; }
+      abrirAcelerar(que);
+    });
+  }
+  // ---------- ALMACÉN, HERRERÍA, ESTABLO, GALERÍA Y MERCADO ----------
+  function edificiosDe(tipo) { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === tipo; }); }
+  function nivelMayor(tipo) { return edificiosDe(tipo).reduce(function (a, s) { return Math.max(a, s.edificio.nivel); }, 0); }
+  // qué edificio entrena cada tropa
+  function edificioTropa(tipo) { return tipo === 'caballeria' ? 'establo' : tipo === 'arquero' ? 'galeria' : 'cuartel'; }
+  function puedeEntrenarTipo(tipo) { return edificiosDe(edificioTropa(tipo)).length > 0; }
+  function avisoEdificioTropa(tipo) { var e = edificioTropa(tipo); return T(e === 'establo' ? 'necesitas_establo' : e === 'galeria' ? 'necesitas_galeria' : 'necesitas_cuartel_t'); }
+  // recursos que el almacén protege de los saqueos
+  function proteccionAlmacen() { return edificiosDe('almacen').reduce(function (a, s) { return a + EDIFICIOS.almacen.protege[s.edificio.nivel - 1]; }, 0); }
+  // armas: +10% de daño por nivel (hasta 3), se forjan en la Herrería
+  var ARMAS = { costo: [80, 160, 280], piedra: [40, 90, 160], gemas: [25, 50, 100], herreria: [1, 4, 7], dano: 0.1, max: 3 };
+  function nivelArmas(tipo) { return (estado.armas && estado.armas[tipo]) || 0; }
+  function factorArmas(tipo) { return 1 + ARMAS.dano * nivelArmas(tipo); }
+  function forjarArmas(tipo, conGemas) {
+    var n = nivelArmas(tipo); if (n >= ARMAS.max) return;
+    if (nivelMayor('herreria') < ARMAS.herreria[n]) { consejoTemporal(T('her_necesita', { n: ARMAS.herreria[n] })); sonar('error'); return; }
+    if (!(conGemas ? pagar(0, ARMAS.gemas[n]) : pagar({ oro: ARMAS.costo[n], piedra: ARMAS.piedra[n] }))) return;
+    estado.armas = estado.armas || {}; estado.armas[tipo] = n + 1;
+    sonar('martillo'); sonar('listo');
+    consejoTemporal(T('armas_lista', { n: n + 1, t: N(tipo) }));
+    actualizarHUD(); guardar(true); abrirPanelHerreria();
+  }
+  function abrirPanelHerreria() {
+    var hn = nivelMayor('herreria');
+    var html = (hn ? '' : '<p class="nota aviso-rojo">' + T('her_sin') + '</p>') + '<div class="lista">';
+    ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
+      var na = nivelArmadura(t), nw = nivelArmas(t);
+      html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, TROPAS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p class="nota">🛡️ ' + T('her_armadura') + ' ' + na + '/' + ARMADURA.max + ' · ⚔️ ' + T('her_armas') + ' ' + nw + '/' + ARMAS.max + '</p></div></div><div class="botones">';
+      if (nw < ARMAS.max) {
+        var req = ARMAS.herreria[nw], ok = hn >= req;
+        html += '<p class="nota">' + T('her_armas_sube', { n: nw + 1, d: Math.round(ARMAS.dano * 100 * (nw + 1)) }) + (ok ? '' : ' — <b class="aviso-rojo">' + T('her_necesita', { n: req }) + '</b>') + '</p>';
+        if (ok) html += '<div class="hf-fila">' + botonCosto({ oro: ARMAS.costo[nw], piedra: ARMAS.piedra[nw] }, 'armas', 'data-tipo="' + t + '"', '⚔️ ') + botonGemas(ARMAS.gemas[nw], 'armas-gemas', 'data-tipo="' + t + '"', '⚔️') + '</div>';
+      } else html += '<p class="nota"><b>⚔️ ' + T('nivel_max') + '</b></p>';
+      if (na < ARMADURA.max) html += '<div class="hf-fila" style="margin-top:6px">' + botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '"', '🛡️ ').replace('class="comprar"', 'class="comprar armadura"') + botonGemas(ARMADURA.gemas[na], 'armadura-gemas', 'data-tipo="' + t + '"', '🛡️') + '</div>';
+      html += '</div></div>';
+    });
+    abrirPanel(T('p_herreria'), html + '</div>', { tipo: 'herreria' });
+  }
+  // ---- MERCADO ----
+  var mer = { da: 'madera', recibe: 'oro', n: 100, envio: { oro: 0, comida: 0, madera: 0, piedra: 0 }, para: '' };
+  function tasaMercado() { var n = nivelMayor('mercado'); return n ? EDIFICIOS.mercado.tasa[n - 1] : 0; }
+  function abrirPanelMercado() {
+    var tasa = tasaMercado(), R = ['oro', 'comida', 'madera', 'piedra'];
+    if (mer.da === mer.recibe) mer.recibe = R.filter(function (r) { return r !== mer.da; })[0];
+    var max = Math.max(0, Math.floor(cantidad(mer.da)));
+    mer.n = Math.max(0, Math.min(mer.n, max));
+    function fila(cual) {
+      return '<div class="mer-fila">' + R.map(function (r) { return '<button class="mer-r' + (mer[cual] === r ? ' activo' : '') + '" data-accion="mer-elegir" data-cual="' + cual + '" data-r="' + r + '">' + ICONO_RECURSO[r] + '</button>'; }).join('') + '</div>';
+    }
+    var html = '<div class="carta compacta"><h3>⚖️ ' + T('mer_cambiar') + '</h3><p class="nota">' + T('tasa_txt', { n: Math.round(tasa * 100) }) + '</p>' +
+      '<div class="mer-lado"><b>' + T('mer_das') + '</b>' + fila('da') + '</div><div class="mer-lado"><b>' + T('mer_recibes') + '</b>' + fila('recibe') + '</div>' +
+      '<div class="tropa-cantidad"><input type="range" id="mer-n" min="0" max="' + max + '" step="' + Math.max(1, Math.round(max / 100)) + '" value="' + mer.n + '"><span class="tropa-num" id="mer-num">' + mer.n + '</span></div>' +
+      '<p class="mer-res" id="mer-res">' + ICONO_RECURSO[mer.da] + ' ' + mer.n + ' → ' + ICONO_RECURSO[mer.recibe] + ' ' + Math.floor(mer.n * tasa) + '</p>' +
+      '<button class="comprar naranja" data-accion="mer-cambiar"' + (mer.n > 0 && tasa ? '' : ' disabled') + '>⚖️ ' + T('mer_cambiar') + '</button></div>';
+    html += '<div class="carta compacta" style="margin-top:8px"><h3>📦 ' + T('mer_enviar') + '</h3><div id="mer-envio">';
+    if (!hayCuenta()) html += '<p class="nota">' + T('mer_sin_cuenta') + '</p>';
+    else if (!estado.alianza) html += '<p class="nota">' + T('mer_sin_alianza') + '</p>';
+    else html += '<p class="nota">' + T('mundo_cargando') + '</p>';
+    html += '</div></div>';
+    abrirPanel(T('p_mercado'), html, { tipo: 'mercado' });
+    if (hayCuenta() && estado.alianza) Cuentas.miembros(estado.alianza).then(function (lista) {
+      var otros = lista.filter(function (a) { return a.uid !== Cuentas.usuario().uid; });
+      var box = $('mer-envio'); if (!box) return;
+      if (!otros.length) { box.innerHTML = '<p class="nota">' + T('mer_nadie') + '</p>'; return; }
+      if (!otros.some(function (a) { return a.uid === mer.para; })) mer.para = otros[0].uid;
+      box.innerHTML = '<label class="nota">' + T('mer_a') + ' <select id="mer-para">' + otros.map(function (a) { return '<option value="' + a.uid + '"' + (a.uid === mer.para ? ' selected' : '') + '>' + escaparHTML(a.nombre) + '</option>'; }).join('') + '</select></label>' +
+        R.map(function (r) { var mx = Math.min(5000, Math.floor(cantidad(r))); return '<div class="tropa-cantidad"><span style="width:26px">' + ICONO_RECURSO[r] + '</span><input type="range" class="mer-env" data-r="' + r + '" min="0" max="' + mx + '" step="' + Math.max(1, Math.round(mx / 50)) + '" value="' + Math.min(mer.envio[r], mx) + '"><span class="tropa-num" id="mer-env-' + r + '">' + Math.min(mer.envio[r], mx) + '</span></div>'; }).join('') +
+        '<button class="comprar" data-accion="mer-enviar">' + T('mer_enviar_btn') + '</button>';
+      mer.nombres = {}; otros.forEach(function (a) { mer.nombres[a.uid] = a.nombre; });
+    }).catch(function () {});
+  }
+  function cambiarMercado() {
+    var tasa = tasaMercado(), n = Math.min(mer.n, Math.floor(cantidad(mer.da))), recibe = Math.floor(n * tasa);
+    if (n <= 0 || !recibe) return;
+    var c = {}; c[mer.da] = n;
+    if (!pagar(c)) return;
+    sumarRecurso(mer.recibe, recibe);
+    sonar('moneda');
+    consejoTemporal(T('mer_cambio_ok', { a: ICONO_RECURSO[mer.da] + ' ' + n, b: ICONO_RECURSO[mer.recibe] + ' ' + recibe }));
+    guardar(true); abrirPanelMercado();
+  }
+  function enviarMercado(boton) {
+    var R = ['oro', 'comida', 'madera', 'piedra'], rec = {}, tot = 0;
+    R.forEach(function (r) { rec[r] = Math.max(0, Math.min(5000, Math.floor(mer.envio[r] || 0), Math.floor(cantidad(r)))); tot += rec[r]; });
+    if (!tot) { consejoTemporal(T('mer_nada')); sonar('error'); return; }
+    var para = $('mer-para') ? $('mer-para').value : mer.para;
+    if (!pagar(rec)) return;
+    boton.disabled = true;
+    Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: para, recursos: rec, alianza: estado.alianza, fecha: Date.now() }).then(function () {
+      sonar('moneda'); consejoTemporal(T('mer_enviado', { n: escaparHTML((mer.nombres || {})[para] || '') }));
+      mer.envio = { oro: 0, comida: 0, madera: 0, piedra: 0 };
+      guardar(true); abrirPanelMercado();
+    }).catch(function () {
+      R.forEach(function (r) { if (rec[r]) sumarRecurso(r, rec[r]); });
+      consejoTemporal(T('mer_error')); sonar('error'); boton.disabled = false;
+    });
+  }
+  function recibirEnvios() {
+    if (!hayCuenta() || !Cuentas.enviosRecibidos) return;
+    Cuentas.enviosRecibidos().then(function (lista) {
+      lista.forEach(function (e) {
+        Cuentas.borrarEnvio(e.id).then(function () {
+          var b = e.recursos || {};
+          ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (b[r] > 0) sumarRecurso(r, Math.min(5000, b[r])); });
+          sonar('moneda'); consejoTemporal(T('mer_recibiste', { n: escaparHTML(e.deNombre || '?'), b: textoBotin(b) }));
+          guardar(true);
+        }).catch(function () {});
+      });
+    }).catch(function () {});
+  }
   // ---- CAMPOS DE RECURSOS ----
   function ritmoCampo(s) {
     var d = EDIFICIOS[s.edificio.tipo];
@@ -1845,7 +2013,7 @@
   }
   function cuartelesListos() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; }); }
   function capacidad() {
-    var c = cuartelesListos().reduce(function (a, s) { return a + EDIFICIOS.cuartel.capacidad[s.edificio.nivel - 1]; }, 0);
+    var c = cuartelesListos().reduce(function (a, s) { return a + EDIFICIOS.cuartel.capacidad[s.edificio.nivel - 1]; }, 0) + edificiosDe('establo').length + edificiosDe('galeria').length;
     // sin tope: se entrena mientras haya materiales (el límite es la comida, porque las tropas comen)
     return c ? 100000 : 0;
   }
@@ -2049,7 +2217,7 @@
     return Math.max(0, n);
   }
   function entrenar(tipo, cuantas) {
-    if (!cuartelesListos().length) { consejoTemporal(T('necesitas_cuartel')); sonar('error'); return; }
+    if (!puedeEntrenarTipo(tipo)) { consejoTemporal(avisoEdificioTropa(tipo)); sonar('error'); return; }
     if (tropasOcupadas() >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
     var n = cuantas === 'max' ? maxEntrenar(tipo) : Math.max(1, cuantas || 1);
     var hechas = 0;
@@ -2324,7 +2492,7 @@
     }
 
     // ---- entrenamiento ----
-    if (colaEntreno.length && cuartelesListos().length) {
+    if (colaEntreno.length && (cuartelesListos().length || edificiosDe('establo').length || edificiosDe('galeria').length)) {
       var c = colaEntreno[0];
       c.t += dt * rapidezEntreno();
       if (c.t >= c.total) {
@@ -2383,7 +2551,7 @@
         obj = masCercano(enemigos, u.pos, d.alcance);
         if (obj) {
           encararHacia(u, obj.pos.x, obj.pos.z, dt);
-          if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u), Math.random() < 0.5); }
+          if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; disparar(u.pos.clone().setY(1.0), obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u) * factorArmas(u.tipo), Math.random() < 0.5); }
         } else {
           // los héroes de distancia avanzan hacia los enemigos que se acercan a su puesto
           var lejos = u.heroeId ? masCercano(enemigos.filter(function (e) { return e.pos.distanceTo(u.puesto) < 17; }), u.pos, 99) : null;
@@ -2397,7 +2565,7 @@
           if (dist > d.alcance - 0.3) caminando = !moverHacia(u, obj.pos.x, obj.pos.z, d.vel, dt);
           else {
             encararHacia(u, obj.pos.x, obj.pos.z, dt);
-            if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u), u); sonar('golpe'); }
+            if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas')) * furia(u) * factorArmas(u.tipo), u); sonar('golpe'); }
           }
         } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, d.vel, dt);
         if (!obj && !caminando) encararHacia(u, u.pos.x + dirFrente.x, u.pos.z + dirFrente.z, dt);
@@ -2741,14 +2909,16 @@
     var tipo = s ? (s.edificio ? s.edificio.tipo : s.obra.tipo) : null;
     var nivel = s ? (s.edificio ? s.edificio.nivel : Math.max(1, s.obra.nivel - 1)) : (estado.castillo || 1);
     var nombre = s ? N(tipo) : T('castillo');
-    var pr = progresoMenu(), acel = (estado.mochila && estado.mochila.acelerador) || 0;
+    var pr = progresoMenu(), acel = totalAceleradores();
     var rec = s && s.edificio && esCampo(s.edificio.tipo) ? Math.floor(s.guardado || 0) : -1;
     var h = '<div class="me-titulo"><span class="me-nivel">' + nivel + '</span>' + nombre + '</div><div class="me-botones">' +
       (rec >= 0 ? botonMenu2('recolectar', ICONO_RECURSO[EDIFICIOS[s.edificio.tipo].recurso], T('mb_recolectar'), rec < 1, '<span class="mb-gema">+' + corto(rec) + '</span>') : '') +
       botonMenu2('detalles', '📜', T('mb_detalles')) +
       botonMenu2('terminar', '⚡', T('mb_terminar'), !pr, pr ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '') +
       botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>');
-    if (tipo === 'cuartel') h += botonMenu2('entrenar', '⚔️', T('entrenar'));
+    if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') h += botonMenu2('entrenar', '⚔️', T('entrenar'));
+    if (tipo === 'mercado') h += botonMenu2('comerciar', '⚖️', T('mb_comerciar'));
+    if (tipo === 'herreria') h += botonMenu2('forjar', '⚒️', T('mb_forjar'));
     if (tipo === 'academia') h += botonMenu2('investigar', '📚', T('mb_investigar'));
     if (s) h += botonMenu2('demoler', '🧨', T('mb_demoler'), oleadaActiva);
     h += '</div>';
@@ -2765,15 +2935,18 @@
       confirmarJuego('🧨 ' + T('demoler_titulo', { n: N(ed.tipo) }), T('demoler_txt', { v: nv }), T('demoler_si'), function () { demoler(i); });
       return;
     }
-    if (a === 'entrenar') { cerrarMenuEdif(); abrirPanelTropas(); return; }
+    if (a === 'entrenar') {
+      var te = slots[i] && slots[i].edificio && slots[i].edificio.tipo;
+      if (te === 'establo') { vistaTropa.pest = 'establo'; vistaTropa.tipo = 'caballeria'; } else if (te === 'galeria') { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; } else if (te === 'cuartel' && vistaTropa.pest !== 'cuartel') { vistaTropa.pest = 'cuartel'; vistaTropa.tipo = 'espadachin'; }
+      vistaTropa.rango = null; cerrarMenuEdif(); abrirPanelTropas(); return;
+    }
+    if (a === 'comerciar') { cerrarMenuEdif(); abrirPanelMercado(); return; }
+    if (a === 'forjar') { cerrarMenuEdif(); abrirPanelHerreria(); return; }
     if (a === 'investigar') { cerrarMenuEdif(); abrirPanelInvestigacion(ramaInv); return; }
     var pr = progresoMenu();
     if (!pr) return;
     if (a === 'terminar') { terminarConGemas(pr.que); pintarMenuEdif(); return; }
-    if (a === 'acelerar') {
-      if ((estado.mochila && estado.mochila.acelerador) > 0) { usarObjeto('acelerador'); pintarMenuEdif(); }
-      else { cerrarMenuEdif(); consejoTemporal(T('mb_sin_acelerador')); abrirPanelTienda(); }
-    }
+    if (a === 'acelerar') { abrirAcelerar(pr.que); return; }
   }
   function posicionarMenuEdif() {
     if (!menuAbierto()) return;
@@ -2874,7 +3047,7 @@
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
-      ['aserradero', 'mina', 'cantera', 'academia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
+      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
       HEROES.forEach(function (h) { var hu = M.heroe(h, 1); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 1.55 * hu.escala, (hu.cabezaY - 0.12) * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
@@ -2958,6 +3131,8 @@
     else if (p.tipo === 'ajustes') abrirPanelAjustes();
     else if (p.tipo === 'heroe') abrirPanelHeroe(p.id);
     else if (p.tipo === 'obtener') abrirPanelObtener(p.id);
+    else if (p.tipo === 'mercado') abrirPanelMercado();
+    else if (p.tipo === 'herreria') abrirPanelHerreria();
   }
 
   function htmlCosto(c) {
@@ -2985,6 +3160,10 @@
     if (d.recurso) return '<span>' + ICONO_RECURSO[d.recurso] + ' ' + T('produce_txt', { n: d.produce[i], r: T('r_' + d.recurso), s: d.cada }) + '</span><span>📦 ' + T('guarda_hasta', { n: Math.round(d.produce[i] * HORAS_ALMACEN * 3600 / d.cada) }) + '</span>';
     if (tipo === 'cuartel') return '<span>⚔️ ' + T('sin_tope') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
+    if (tipo === 'almacen') return '<span>🔒 ' + T('protege_txt', { n: d.protege[i] }) + '</span>';
+    if (tipo === 'mercado') return '<span>⚖️ ' + T('tasa_txt', { n: Math.round(d.tasa[i] * 100) }) + '</span>';
+    if (tipo === 'herreria') return '<span>⚒️ ' + T('herreria_txt', { n: ARMAS.herreria.filter(function (r) { return r <= i + 1; }).length }) + '</span>';
+    if (tipo === 'establo' || tipo === 'galeria') return '<span>' + d.icono + ' ' + N(tipo === 'establo' ? 'caballeria' : 'arquero') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'academia') return '<span>📜 ' + T('nivel') + ' máx. ' + d.tope[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>⏱ x' + d.rapidez[i] + '</span>' : '');
     return '<span>' + T('dano') + ': ' + d.dano[i] + '</span><span>' + T('alcance') + ': ' + d.alcance[i] + '</span>';
   }
@@ -3016,7 +3195,7 @@
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
     var sl = slotElegido !== null ? slots[slotElegido] : null;
-    ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'torre', 'enfermeria', 'academia'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
+    ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
       html += '<div class="carta compacta" title="' + D(t) + '"><div class="cab"><div class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div></div>' +
         '<div class="stats">' + statsEdificio(t, 1) + '</div>' +
         botonCosto(costoEdif(t, 0), 'construir', 'data-tipo="' + t + '"', T('construir')) + '</div>';
@@ -3108,7 +3287,7 @@
     var r = v.rango, bloq = r > na, lista = PESTANAS_TROPA[v.pest];
     var arriba = panelActual && panelActual.tipo === 'tropas' ? $('panel').scrollTop : 0;
     var html = subtabsHeroes('tropas');
-    if (!cuartelesListos().length) html += '<p class="nota aviso-rojo">' + T('necesitas_cuartel') + '</p>';
+    if (!puedeEntrenarTipo(t)) html += '<p class="nota aviso-rojo">' + avisoEdificioTropa(t) + '</p>';
     html += '<div class="subtabs pest-tropa">' + Object.keys(PESTANAS_TROPA).map(function (k) {
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
@@ -3169,7 +3348,7 @@
   }
   // entrenar y terminar al momento pagando gemas
   function entrenarYa(tipo, n) {
-    if (!cuartelesListos().length) { consejoTemporal(T('necesitas_cuartel')); sonar('error'); return; }
+    if (!puedeEntrenarTipo(tipo)) { consejoTemporal(avisoEdificioTropa(tipo)); sonar('error'); return; }
     n = Math.min(n, maxEntrenar(tipo));
     if (n < 1) { consejoTemporal(T('sin_recursos_tropa')); sonar('error'); return; }
     if (!pagar(costoTropas(tipo, n, true))) return;
@@ -3206,6 +3385,8 @@
       html += '<div class="stats">' + statsEdificio(tipo, nivel) + '</div>';
       if (tipo === 'enfermeria') html += '<p class="nota">' + T('en_enfermeria', { n: totalHeridos() }) + '</p>';
       if (tipo === 'academia') html += '<button class="comprar naranja boton-oleada-grande" data-accion="investigacion">' + T('inv_abrir') + '</button>';
+      if (tipo === 'mercado') html += '<button class="comprar naranja boton-oleada-grande" data-accion="abrir-mercado">⚖️ ' + T('mb_comerciar') + '</button>';
+      if (tipo === 'herreria') html += '<button class="comprar naranja boton-oleada-grande" data-accion="abrir-herreria">⚒️ ' + T('mb_forjar') + '</button>';
       if (nivel < NIVEL_MAX && nivel + 1 > (estado.castillo || 1)) {
         html += '<p class="nota aviso-rojo"><b>' + T('castillo_bloquea', { n: nivel + 1 }) + '</b></p>';
       } else if (nivel < NIVEL_MAX) {
@@ -3725,7 +3906,7 @@
     for (var k2 in relojesDiv) if (!relojesDiv[k2].dataset.vivo) relojesDiv[k2].classList.add('oculto');
   }
   // ---------- ATAQUES ENTRE JUGADORES ----------
-  function valorTropa(u) { return u.max * 0.5 + u.d.dano * 5 * (1 + bono('espadas')) * (1 + (u.defensa || 0)); }
+  function valorTropa(u) { return u.max * 0.5 + u.d.dano * 5 * (1 + bono('espadas')) * factorArmas(u.tipo) * (1 + (u.defensa || 0)); }
   function fuerzaEjercito() { return Math.round(tropas.reduce(function (a, u) { return a + valorTropa(u); }, 0)); }
   function defensaReino() {
     var d = vidaMaxCastillo() / 8 + danoCastillo() * 8;
@@ -3849,7 +4030,7 @@
           perdio = true;
           var real = {};
           ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) {
-            var q = Math.min(cantidad(k), r.botin[k] || 0);
+            var q = Math.min(Math.max(0, cantidad(k) - proteccionAlmacen()), r.botin[k] || 0);
             if (!estado.oroInfinito) estado[claveRecurso(k)] = cantidad(k) - q;
             real[k] = q;
           });
@@ -3997,6 +4178,7 @@
   function usarObjeto(k) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
+    if (o.segundos) { consejoTemporal(T('acel_desde_menu')); sonar('error'); return; }
     if (o.exp || o.pergamino) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
     if (o.escudo) {
       if (protegido()) { consejoTemporal(T('escudo_activo', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) })); sonar('error'); return; }
@@ -4242,6 +4424,14 @@
     else if (a === 'mejorar-barricada') { var bi = +b.getAttribute('data-barr'); if (pagar(costoBarricada(1))) { ponerBarricada(bi, 2); sonar('listo'); cerrarPanel(); guardar(); } }
     else if (a === 'entrenar') entrenar(b.getAttribute('data-tipo'), b.getAttribute('data-n') === 'max' ? 'max' : +(b.getAttribute('data-n') || 1));
     else if (a === 'armadura') mejorarArmadura(b.getAttribute('data-tipo'));
+    else if (a === 'armas') forjarArmas(b.getAttribute('data-tipo'), false);
+    else if (a === 'armas-gemas') forjarArmas(b.getAttribute('data-tipo'), true);
+    else if (a === 'abrir-mercado') abrirPanelMercado();
+    else if (a === 'acel-entreno') abrirAcelerar('entreno');
+    else if (a === 'abrir-herreria') abrirPanelHerreria();
+    else if (a === 'mer-elegir') { mer[b.getAttribute('data-cual')] = b.getAttribute('data-r'); sonar('click'); abrirPanelMercado(); }
+    else if (a === 'mer-cambiar') cambiarMercado();
+    else if (a === 'mer-enviar') enviarMercado(b);
     else if (a === 'armadura-gemas') mejorarArmadura(b.getAttribute('data-tipo'), true);
     else if (a === 'sub-tropas') abrirPanelTropas();
     else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
@@ -4303,6 +4493,9 @@
 
   $('panel-cuerpo').addEventListener('input', function (ev) {
     if (ev.target.id === 'tropa-n') { vistaTropa.n = +ev.target.value || 1; refrescarCantidad(); }
+    if (ev.target.id === 'mer-n') { mer.n = +ev.target.value || 0; $('mer-num').textContent = mer.n; $('mer-res').textContent = ICONO_RECURSO[mer.da] + ' ' + mer.n + ' → ' + ICONO_RECURSO[mer.recibe] + ' ' + Math.floor(mer.n * tasaMercado()); var bm = document.querySelector('[data-accion="mer-cambiar"]'); if (bm) bm.disabled = !(mer.n > 0 && tasaMercado()); }
+    if (ev.target.classList && ev.target.classList.contains('mer-env')) { var rr = ev.target.getAttribute('data-r'); mer.envio[rr] = +ev.target.value || 0; $('mer-env-' + rr).textContent = mer.envio[rr]; }
+    if (ev.target.id === 'mer-para') mer.para = ev.target.value;
   });
   // Actualiza solo lo que cambia (botones activos, barra de entrenamiento)
   function actualizarPanel() {
@@ -4313,7 +4506,7 @@
       try { c = c ? JSON.parse(c) : 0; } catch (e) { c = +c || 0; }
       var ok = puedePagar(c, g);
       var a = b.getAttribute('data-accion');
-      if (a === 'entrenar' || a === 'tropa-ya') ok = ok && cuartelesListos().length > 0 && tropasOcupadas() < capacidad();
+      if (a === 'entrenar' || a === 'tropa-ya') ok = ok && puedeEntrenarTipo(b.getAttribute('data-tipo') || 'espadachin') && tropasOcupadas() < capacidad();
       if (a === 'muralla') ok = ok && !obraMuralla && estado.muralla < NIVEL_MAX;
       if (a === 'mejorar-castillo') ok = ok && !estado.obraCastillo;
       if (a === 'investigar') ok = ok && !estado.investigando && !!academiaLista();
@@ -4345,7 +4538,7 @@
         if (!colaEntreno.length) cg.innerHTML = '';
         else {
           var gq = gemasEntreno();
-          if (!cg.firstChild) cg.innerHTML = botonGemas(gq, 'terminar-gemas', 'data-que="entreno"', '⏩ ' + T('terminar_cola'));
+          if (!cg.firstChild) cg.innerHTML = botonGemas(gq, 'terminar-gemas', 'data-que="entreno"', '⏩ ' + T('terminar_cola')) + '<button class="comprar" data-accion="acel-entreno">⏱️ ' + T('acel_cola') + '</button>';
           var bq = cg.firstChild;
           if (+bq.getAttribute('data-gemas') !== gq) { bq.setAttribute('data-gemas', gq); bq.innerHTML = '⏩ ' + T('terminar_cola') + ' <span class="ico gema"></span>' + gq; }
           bq.disabled = !puedePagar(0, gq);
@@ -4673,6 +4866,7 @@
       estado.reclutaGratis = g.reclutaGratis || '';
       estado.ofertaFrag = g.ofertaFrag || '';
       estado.casillas = g.casillas || {};
+      estado.armas = g.armas || {};
       estado.cdCamp = g.cdCamp || {};
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto

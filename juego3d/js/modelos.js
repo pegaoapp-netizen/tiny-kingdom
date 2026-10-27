@@ -372,6 +372,86 @@ var M = (function () {
   }
 
   // =================================================================
+  //  EDIFICIOS NUEVOS: almacén, mercado, herrería, establo y galería de tiro
+  // =================================================================
+  function almacen(nivel) {
+    nivel = Math.min(3, nivel); var g = new THREE.Group();
+    casaPiedra(g, 0, -0.4, 3.0, 2.0, 1.4, nivel, true);
+    g.add(caja(1.0, 1.05, 0.08, C.maderaOsc, 0, 0.78, 0.64));
+    g.add(caja(1.12, 0.1, 0.1, adornoNivel(nivel), 0, 1.33, 0.66));
+    [-0.25, 0.25].forEach(function (x) { g.add(caja(0.04, 0.95, 0.09, P.vigaOsc, x, 0.75, 0.68)); });
+    barril(g, -1.65, 0.95); barril(g, -1.25, 1.3, 0.8); barril(g, -1.75, 1.45, 0.75);
+    cajas(g, 1.45, 1.0, 0.3); cajas(g, 1.05, 1.45, -0.2);
+    [[0.6, 1.25], [0.85, 1.55], [0.4, 1.6]].forEach(function (p) { var s = esfera(0.24, 0xcfb789, p[0], 0.2, p[1], 7, 5); s.scale.y = 0.8; g.add(s); });
+    return g;
+  }
+  function mercado(nivel) {
+    nivel = Math.min(3, nivel); var g = new THREE.Group();
+    var suelo = caja(4.2, 0.12, 3.6, P.claro, 0, 0.06, 0); suelo.castShadow = false; g.add(suelo);
+    var telas = [0xc0503a, 0x3f6fb5, 0xe0b040];
+    [[-1.3, -0.6, 0], [1.3, -0.6, 1], [0, 0.9, 2]].forEach(function (q) {
+      var x = q[0], z = q[1], col = telas[q[2]];
+      [[-0.6, -0.45], [0.6, -0.45], [-0.6, 0.45], [0.6, 0.45]].forEach(function (s) { g.add(cil(0.05, 0.05, 1.3, 5, C.madera, x + s[0], 0.65, z + s[1])); });
+      var tol = caja(1.45, 0.06, 1.15, col, x, 1.32, z); tol.rotation.x = -0.18; g.add(tol);
+      for (var r = -1; r <= 1; r += 2) { var raya = caja(0.2, 0.065, 1.16, 0xfaf3e0, x + r * 0.35, 1.325, z); raya.rotation.x = -0.18; g.add(raya); }
+      g.add(caja(1.2, 0.1, 0.7, C.madera, x, 0.75, z));
+      g.add(caja(1.2, 0.7, 0.06, P.vigaOsc, x, 0.4, z + 0.34));
+      [0xd84a3a, 0xe0b040, 0x6aa84a, 0xb07a3a].forEach(function (c, i) { g.add(esfera(0.09, c, x - 0.4 + i * 0.27, 0.86, z, 6, 4)); });
+    });
+    var b = bandera(nivel >= 3 ? C.oro : 0xc0503a, 2.4); b.position.set(1.8, 0, 1.5); g.add(b);
+    return g;
+  }
+  function herreria(nivel) {
+    nivel = Math.min(3, nivel); var g = new THREE.Group();
+    casaPiedra(g, -0.55, -0.5, 2.2, 1.8, 1.3, nivel, false);
+    chimenea(g, -1.2, 2.2, -0.9); g.add(caja(0.42, 0.9, 0.42, 0x8a8478, -1.2, 1.9, -0.9));
+    // fragua con fuego y yunque bajo un tejadillo
+    g.add(caja(0.9, 0.7, 0.8, 0x8a8478, 1.15, 0.35, 0.2));
+    var fuego = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.12, 0.5), new THREE.MeshBasicMaterial({ color: 0xff8a2a })); fuego.position.set(1.15, 0.72, 0.2); g.add(fuego);
+    [[0.65, -0.3], [1.65, -0.3], [0.65, 0.8], [1.65, 0.8]].forEach(function (p) { g.add(cil(0.05, 0.05, 1.6, 5, C.madera, p[0], 0.8, p[1])); });
+    var techo = caja(1.3, 0.07, 1.4, rojoNivel(nivel), 1.15, 1.62, 0.25); techo.rotation.z = 0.12; g.add(techo);
+    g.add(cil(0.2, 0.24, 0.4, 7, C.maderaOsc, 0.55, 0.2, 1.1));
+    g.add(caja(0.42, 0.14, 0.18, C.metalOsc, 0.55, 0.47, 1.1)); g.add(caja(0.16, 0.1, 0.12, C.metalOsc, 0.78, 0.5, 1.1));
+    var martillo = caja(0.05, 0.3, 0.05, C.madera, 0.4, 0.62, 1.15); martillo.rotation.z = 0.8; g.add(martillo);
+    [[-1.6, 0.9], [-1.3, 1.1]].forEach(function (p, i) { var es = cil(0.28, 0.28, 0.05, 10, i ? 0x8d99a6 : 0xb0b8c2, p[0], 0.55, p[1]); es.rotation.x = Math.PI / 2; g.add(es); });
+    return g;
+  }
+  function establo(nivel) {
+    nivel = Math.min(3, nivel); var g = new THREE.Group();
+    casaPiedra(g, 0, -0.75, 3.2, 1.7, 1.25, nivel, true);
+    [-0.9, 0, 0.9].forEach(function (x) { g.add(caja(0.6, 0.85, 0.06, C.maderaOsc, x, 0.68, 0.12)); g.add(caja(0.6, 0.05, 0.07, adornoNivel(nivel), x, 1.12, 0.13)); });
+    // corral con heno y un caballo
+    for (var fx = -1.8; fx <= 1.8; fx += 0.6) g.add(caja(0.08, 0.5, 0.08, C.madera, fx, 0.25, 1.85));
+    [0.18, 0.38].forEach(function (y) { g.add(caja(3.7, 0.05, 0.05, C.madera, 0, y, 1.85)); });
+    [[-1.5, 0.75], [-1.5, 1.2]].forEach(function (p) { var h = cil(0.3, 0.3, 0.45, 10, C.paja, p[0], 0.3, p[1]); h.rotation.z = Math.PI / 2; g.add(h); });
+    var cab = new THREE.Group();
+    cab.add(caja(0.9, 0.4, 0.32, 0x8a5a33, 0, 0.62, 0));
+    var cue = caja(0.2, 0.42, 0.2, 0x8a5a33, 0.45, 0.85, 0); cue.rotation.z = -0.5; cab.add(cue);
+    cab.add(caja(0.34, 0.16, 0.18, 0x8a5a33, 0.62, 1.02, 0));
+    cab.add(caja(0.08, 0.3, 0.2, 0x3a2414, 0.38, 0.95, 0));
+    [[-0.32, -0.1], [-0.32, 0.1], [0.32, -0.1], [0.32, 0.1]].forEach(function (p) { cab.add(caja(0.08, 0.45, 0.08, 0x6a4426, p[0], 0.22, p[1])); });
+    cab.add(caja(0.06, 0.32, 0.06, 0x3a2414, -0.48, 0.6, 0));
+    cab.position.set(0.6, 0, 1.15); cab.rotation.y = 0.4; g.add(cab);
+    return g;
+  }
+  function galeria(nivel) {
+    nivel = Math.min(3, nivel); var g = new THREE.Group();
+    casaPiedra(g, -1.25, -1.0, 1.5, 1.2, 1.05, nivel, false);
+    function diana(x, z) {
+      g.add(cil(0.05, 0.05, 1.1, 5, C.madera, x - 0.25, 0.55, z - 0.1)); g.add(cil(0.05, 0.05, 1.1, 5, C.madera, x + 0.25, 0.55, z - 0.1));
+      [[0.48, 0xf2ece0], [0.36, 0xc0503a], [0.24, 0xf2ece0], [0.12, 0xc0503a]].forEach(function (a, i) { var d = cil(a[0], a[0], 0.06 + i * 0.01, 14, a[1], x, 1.05, z + i * 0.012); d.rotation.x = Math.PI / 2; g.add(d); });
+      [[0.06, 1.12], [-0.1, 0.98]].forEach(function (p) { var fl = caja(0.025, 0.025, 0.5, 0x6e4a2a, x + p[0], p[1], z + 0.28); g.add(fl); });
+    }
+    diana(0.4, -0.9); diana(1.5, -0.9);
+    for (var fx = -1.9; fx <= 1.9; fx += 0.95) g.add(caja(0.08, 0.45, 0.08, C.madera, fx, 0.22, 1.6));
+    g.add(caja(3.9, 0.05, 0.05, C.madera, 0, 0.35, 1.6));
+    var mu = new THREE.Group(); mu.add(cil(0.04, 0.04, 1.1, 5, C.madera, 0, 0.55, 0)); mu.add(cil(0.18, 0.22, 0.5, 7, C.paja, 0, 0.85, 0)); mu.add(esfera(0.15, C.paja, 0, 1.22, 0, 7, 5)); mu.add(caja(0.7, 0.06, 0.06, C.madera, 0, 0.95, 0));
+    mu.position.set(-0.6, 0, 0.6); g.add(mu);
+    [[1.0, 0.6], [1.3, 0.75]].forEach(function (p) { var c = cil(0.12, 0.1, 0.5, 7, C.maderaOsc, p[0], 0.25, p[1]); g.add(c); });
+    return g;
+  }
+
+  // =================================================================
   //  BANDERA
   // =================================================================
   function bandera(color, alto) {
@@ -2108,6 +2188,7 @@ var M = (function () {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, terreno: terreno, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
+    almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,

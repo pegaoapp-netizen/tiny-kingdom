@@ -1001,3 +1001,22 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 #mundo-fondo, #mundo-aldeas { display: none !important; }
 .casilla-info h3 { display: flex; align-items: center; gap: 6px; }
 #mundo-info .me-nivel { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(#ffe27a, #d29a12); color: #4a2a00; font-size: 12px; border: 2px solid #7a4a00; }
+
+/* ---- Mercado ---- */
+.mer-lado { display: flex; align-items: center; gap: 8px; margin: 4px 0; } .mer-lado b { width: 64px; font-size: 13px; }
+.mer-fila { display: flex; gap: 6px; flex: 1; }
+.mer-r { flex: 1; height: 38px; border-radius: 10px; border: 2px solid #c99a4a; background: #fffaf0; font-size: 20px; cursor: pointer; }
+.mer-r.activo { border-color: #7a4a00; background: linear-gradient(#ffe27a, #e09a10); }
+.mer-res { text-align: center; font-weight: 900; font-size: 18px; margin: 4px 0 8px; }
+#mer-envio select { padding: 4px 6px; border-radius: 8px; border: 2px solid #c99a4a; font-weight: 800; }
+
+/* ---- Elegir acelerador ---- */
+#acelerar-elegir { position: fixed; inset: 0; z-index: 76; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(20, 12, 6, .6); }
+.ac-caja { width: 100%; max-width: 360px; padding: 12px; border-radius: 14px; background: linear-gradient(#fff6dc, #f0dcae); border: 3px solid #7a4a00; box-shadow: 0 10px 30px rgba(0,0,0,.5); color: #3a2414; }
+.ac-cab { display: flex; align-items: center; justify-content: space-between; } .ac-cab h3 { margin: 0; }
+.ac-falta { text-align: center; font-weight: 900; margin: 6px 0 8px; }
+.ac-fila { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 10px; background: #fffaf0; border: 1px solid #ecdcb4; margin-bottom: 5px; }
+.ac-ico { font-size: 20px; width: 26px; text-align: center; }
+.ac-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; font-size: 13px; } .ac-txt span { font-size: 11px; color: #7a5a30; }
+.ac-fila .comprar.mini { flex: 0 0 auto; width: auto; min-width: 64px; margin: 0; padding: 6px 10px; font-size: 13px; }
+.cola-gemas .comprar + .comprar { margin-top: 6px; }

@@ -204,6 +204,13 @@ var Cuentas = (function () {
     },
     tomarCasilla: function (id, datos) { return db.collection('casillas').doc(id).set(datos); },
     soltarCasilla: function (id) { return db.collection('casillas').doc(id).delete(); },
+    // envíos de recursos dentro de la hermandad
+    enviarRecursos: function (e) { return db.collection('envios').add(e); },
+    enviosRecibidos: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('envios').where('para', '==', usuario.uid).limit(20).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    borrarEnvio: function (id) { return db.collection('envios').doc(id).delete(); },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
 })();
