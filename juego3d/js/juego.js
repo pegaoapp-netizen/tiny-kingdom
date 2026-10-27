@@ -18,6 +18,7 @@
       edificios: [],
       tropas: {}, heroe: false, infinito: false, heridos: {}, muralla: 0, barricadas: [], alianza: null, armadura: {}, mochila: {}, diario: { ultimo: '', racha: 0 }, invest: {}, investigando: null, escudoHasta: 0, cdAtaque: {}, castillo: 1, obraCastillo: null,
       heroes: { sol: { nivel: 1, estrellas: 1, frag: 0 } }, equipo: ['sol'], reclutaGratis: '',
+      eqItems: [{ i: 'r1', t: 'arma', r: 'comun', n: 1, h: null }, { i: 'r2', t: 'casco', r: 'comun', n: 1, h: null }], eqRegalo: true,
       idioma: 'es',
       sonido: true, dueno: false, correo: '', oroInfinito: false, gemasInfinitas: false, actualizado: 0
     };
@@ -1098,7 +1099,7 @@
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento' }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas);
-    if (res.gano) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); } else sonar('derrota');
+    if (res.gano) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
@@ -2139,7 +2140,7 @@
     m.grupo.position.copy(desde);
     escena.add(m.grupo);
     var u = {
-      tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
+      tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: hd ? (d.defensa || 0) : ARMADURA.defensa * na, armadura: na, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
       barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: m.alto || 1.75 * m.escala
     };
@@ -3509,8 +3510,8 @@
   function statsHeroe(id) {
     var h = HEROE[id], e = estado.heroes[id] || { nivel: 1, estrellas: 1 };
     var f = (1 + 0.06 * (e.nivel - 1)) * (1 + 0.2 * (e.estrellas - 1));
-    var tal = TALENTOS[h.clase], tl = e.tal || 0;
-    return { vida: Math.round(h.vida * f * (1 + (tal.vida || 0) * tl)), dano: Math.round(h.dano * f * (1 + (tal.dano || 0) * tl)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4, ritmo: h.distancia ? 1.1 : 0.8,
+    var tal = TALENTOS[h.clase], tl = e.tal || 0, bq = bonosEquipo(id);
+    return { vida: Math.round(h.vida * f * (1 + (tal.vida || 0) * tl) + bq.vida), dano: Math.round((h.dano * f * (1 + (tal.dano || 0) * tl) + bq.dano) * (1 + bq.danoP)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4 * (1 + bq.vel), ritmo: h.distancia ? 1.1 : 0.8, defensa: bq.def,
       cura: Math.round(6 * f), distancia: !!h.distancia, icono: CLASES_HEROE[h.clase] };
   }
   function topeNivel(id) { return Math.min(HEROE_NIVEL_MAX, (estado.heroes[id].estrellas || 1) * 10); }
@@ -3602,6 +3603,105 @@
       botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>';
     abrirPanel(T('p_heroes'), html, { tipo: 'heroes' });
   }
+  // ---------- EQUIPO DE LOS HÉROES: 6 espacios, cada pieza con rareza y nivel ----------
+  var TIPOS_EQ = ['arma', 'casco', 'pechera', 'guantes', 'botas', 'amuleto'];
+  var EQ = {
+    arma: { icono: '⚔️', dano: 6 }, casco: { icono: '⛑️', vida: 60 }, pechera: { icono: '🛡️', vida: 90, def: 0.02 },
+    guantes: { icono: '🧤', danoP: 0.03 }, botas: { icono: '🥾', vida: 40, vel: 0.03 }, amuleto: { icono: '📿', recarga: 0.03 }
+  };
+  var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
+  function piezas() { return estado.eqItems || (estado.eqItems = []); }
+  function nombrePieza(p) { return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
+  function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
+  function textoPieza(p) {
+    var r = [];
+    if (EQ[p.t].dano) r.push('⚔ +' + Math.round(valorPieza(p, 'dano')));
+    if (EQ[p.t].danoP) r.push('⚔ +' + Math.round(valorPieza(p, 'danoP') * 100) + '%');
+    if (EQ[p.t].vida) r.push('❤ +' + Math.round(valorPieza(p, 'vida')));
+    if (EQ[p.t].def) r.push('🛡 +' + Math.round(valorPieza(p, 'def') * 100) + '%');
+    if (EQ[p.t].vel) r.push('🏃 +' + Math.round(valorPieza(p, 'vel') * 100) + '%');
+    if (EQ[p.t].recarga) r.push('⏱ -' + Math.round(valorPieza(p, 'recarga') * 100) + '%');
+    return r.join(' ');
+  }
+  function puntosPieza(p) { return MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
+  function piezasDe(id) { return piezas().filter(function (p) { return p.h === id; }); }
+  function bonosEquipo(id) {
+    var b = { dano: 0, danoP: 0, vida: 0, def: 0, vel: 0, recarga: 0 };
+    piezasDe(id).forEach(function (p) { for (var k in b) b[k] += valorPieza(p, k); });
+    b.def = Math.min(0.5, b.def); b.recarga = Math.min(0.5, b.recarga);
+    return b;
+  }
+  function darPieza(tipo, rareza) {
+    if (piezas().length >= EQ_MAX_PIEZAS) { var floja = piezas().filter(function (p) { return !p.h; }).sort(function (a, b) { return puntosPieza(a) - puntosPieza(b); })[0]; if (floja) piezas().splice(piezas().indexOf(floja), 1); else return null; }
+    var p = { i: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: tipo || TIPOS_EQ[Math.floor(Math.random() * 6)], r: rareza || 'comun', n: 1, h: null };
+    piezas().push(p);
+    consejoTemporal(T('eq_nueva', { n: nombrePieza(p) }));
+    return p;
+  }
+  function rarezaAlAzar(nivel) { var r = Math.random(); return r < 0.03 + nivel * 0.006 ? 'legendario' : r < 0.25 + nivel * 0.02 ? 'raro' : 'comun'; }
+  function costoMejoraPieza(p) { var m = MULT_RAREZA_EQ[p.r]; return { oro: Math.round(60 * m * Math.pow(p.n, 1.35)), piedra: Math.round(20 * m * p.n) }; }
+  function oroAlFundir(p) { return Math.round(40 * MULT_RAREZA_EQ[p.r] * p.n); }
+  function equiparPieza(id, i) {
+    var p = piezas().filter(function (x) { return x.i === i; })[0]; if (!p) return;
+    piezasDe(id).forEach(function (x) { if (x.t === p.t) x.h = null; });
+    p.h = id; sonar('martillo');
+  }
+  function equiparRapido(id) {
+    var puso = 0;
+    TIPOS_EQ.forEach(function (t) {
+      var actual = piezasDe(id).filter(function (p) { return p.t === t; })[0];
+      var mejor = piezas().filter(function (p) { return p.t === t && !p.h; }).sort(function (a, b) { return puntosPieza(b) - puntosPieza(a); })[0];
+      if (mejor && (!actual || puntosPieza(mejor) > puntosPieza(actual))) { if (actual) actual.h = null; mejor.h = id; puso++; }
+    });
+    if (!puso) { consejoTemporal(T('eq_nada_que')); sonar('error'); return; }
+    sonar('martillo'); consejoTemporal(T('eq_listo'));
+    ponerEquipo(); guardar(true); abrirPanelHeroe(id);
+  }
+  function htmlEquipo(id) {
+    var e = estado.heroes[id];
+    var h = '<div class="eq-rejilla">' + TIPOS_EQ.map(function (t) {
+      var p = piezasDe(id).filter(function (x) { return x.t === t; })[0];
+      return '<button class="eq-hueco' + (p ? ' ' + p.r : '') + '" data-accion="eq-hueco" data-id="' + id + '" data-t="' + t + '"' + (e ? '' : ' disabled') + '><span class="eq-ico">' + EQ[t].icono + '</span>' +
+        (p ? '<span class="eq-nv">' + p.n + '</span><span class="eq-nom">' + T('eq_' + t) + '</span>' : '<span class="eq-nom vacio">' + T('eq_' + t) + '</span>') + '</button>';
+    }).join('') + '</div>';
+    var b = bonosEquipo(id), partes = [];
+    if (b.dano) partes.push('⚔ +' + Math.round(b.dano)); if (b.danoP) partes.push('⚔ +' + Math.round(b.danoP * 100) + '%'); if (b.vida) partes.push('❤ +' + Math.round(b.vida));
+    if (b.def) partes.push('🛡 +' + Math.round(b.def * 100) + '%'); if (b.vel) partes.push('🏃 +' + Math.round(b.vel * 100) + '%'); if (b.recarga) partes.push('⏱ -' + Math.round(b.recarga * 100) + '%');
+    h += '<p class="nota">' + T('eq_bonos', { t: partes.join(' · ') || '—' }) + ' · ' + T('eq_tienes', { n: piezas().length }) + '</p>';
+    if (e) h += '<div class="hf-fila"><button class="comprar naranja" data-accion="eq-rapido" data-id="' + id + '">' + T('eq_rapido') + '</button><button class="comprar" data-accion="eq-quitar-todo" data-id="' + id + '">' + T('eq_quitar_todo') + '</button></div>';
+    return h;
+  }
+  // ventana para elegir pieza de un espacio
+  function abrirHueco(id, t) {
+    var v = $('eq-elegir'); if (v) v.remove();
+    var actual = piezasDe(id).filter(function (x) { return x.t === t; })[0];
+    var lista = piezas().filter(function (p) { return p.t === t && p !== actual; }).sort(function (a, b) { return (a.h ? 1 : 0) - (b.h ? 1 : 0) || puntosPieza(b) - puntosPieza(a); });
+    function fila(p, esActual) {
+      var c = costoMejoraPieza(p);
+      return '<div class="eq-fila ' + p.r + '"><span class="eq-ico">' + EQ[p.t].icono + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b><span>' + textoPieza(p) + (p.h && !esActual ? ' · ' + T('eq_de', { n: NH(p.h) }) : '') + '</span></div><div class="eq-bts">' +
+        (esActual ? (p.n < EQ_NIVEL_MAX ? '<button class="comprar mini" data-eq="mejorar" data-i="' + p.i + '" data-costo=\'' + JSON.stringify(c) + '\'>⬆ ' + htmlCosto(c) + '</button>' : '') + '<button class="comprar mini" data-eq="quitar" data-i="' + p.i + '">' + T('eq_quitar') + '</button>'
+          : '<button class="comprar mini naranja" data-eq="equipar" data-i="' + p.i + '">' + T('eq_equipar') + '</button>' + (p.h ? '' : '<button class="comprar mini" data-eq="fundir" data-i="' + p.i + '">🔥</button>')) + '</div></div>';
+    }
+    var d = document.createElement('div'); d.id = 'eq-elegir';
+    d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>' + EQ[t].icono + ' ' + T('eq_' + t) + ' · ' + NH(id) + '</h3><button class="cerrar" id="eq-cerrar">✕</button></div>' +
+      (actual ? fila(actual, true) : '<p class="nota">' + T('eq_vacio') + '</p>') + '<div class="eq-lista">' + (lista.length ? lista.map(function (p) { return fila(p, false); }).join('') : '<p class="nota">' + T('eq_ninguno') + '</p>') + '</div></div>';
+    document.body.appendChild(d);
+    $('eq-cerrar').addEventListener('click', function () { d.remove(); abrirPanelHeroe(id); });
+    d.addEventListener('click', function (ev) {
+      if (ev.target === d) { d.remove(); abrirPanelHeroe(id); return; }
+      var b = ev.target.closest('[data-eq]'); if (!b || b.disabled) return;
+      var que = b.getAttribute('data-eq'), p = piezas().filter(function (x) { return x.i === b.getAttribute('data-i'); })[0]; if (!p) return;
+      if (que === 'equipar') { equiparPieza(id, p.i); ponerEquipo(); guardar(true); d.remove(); abrirPanelHeroe(id); return; }
+      if (que === 'quitar') { p.h = null; sonar('click'); ponerEquipo(); guardar(true); d.remove(); abrirPanelHeroe(id); return; }
+      if (que === 'mejorar') { if (p.n >= EQ_NIVEL_MAX || !pagar(costoMejoraPieza(p))) return; p.n++; sonar('martillo'); consejoTemporal(T('eq_mejorada', { n: nombrePieza(p), v: p.n })); ponerEquipo(); guardar(true); abrirHueco(id, t); return; }
+      if (que === 'fundir') {
+        var oro = oroAlFundir(p);
+        confirmarJuego('🔥 ' + T('eq_fundir'), T('eq_fundir_txt', { n: nombrePieza(p), o: oro }), T('eq_fundir'), function () {
+          piezas().splice(piezas().indexOf(p), 1); sumarRecurso('oro', oro); sonar('moneda'); consejoTemporal(T('eq_fundida', { n: nombrePieza(p), o: oro })); guardar(true); abrirHueco(id, t);
+        });
+      }
+    });
+  }
   // ---------- HABILIDADES CON NIVEL ----------
   // Poder (activo): nivel 1..5, cada estrella abre un nivel. Talento (pasivo por clase): se abre con 2★, nivel máximo = estrellas - 1.
   var HAB_MAX = 5;
@@ -3622,6 +3722,7 @@
     var h = HEROE[id], t = TALENTOS[h.clase], tl = L === undefined ? nivelTal(id) : nivelTal(id);
     var cd = HABILIDADES[h.hab].cd - 0.5 * ((L || nivelHab(id)) - 1);
     if (t.recarga) cd *= 1 - t.recarga * tl;
+    cd *= 1 - bonosEquipo(id).recarga;
     return Math.max(3, Math.round(cd * 10) / 10);
   }
   // valores del poder en un nivel (para la batalla y para la vista previa)
@@ -3717,6 +3818,7 @@
       var s = darExp(id, exp);
       if (s) flotar('⬆️ ' + NH(id) + ' ' + T('nivel_corto') + ' ' + estado.heroes[id].nivel, castilloPos.clone().setY(12), 'oro');
     });
+    if (Math.random() < 0.35) setTimeout(function () { darPieza(null, rarezaAlAzar(n)); guardar(); }, 2500);
     var suerte = estado.equipo[Math.floor(Math.random() * estado.equipo.length)], fr = Math.min(5, 1 + Math.floor(n / 5));
     estado.heroes[suerte].frag += fr;
     var pg = 1 + Math.floor(n / 10);
@@ -3737,7 +3839,8 @@
         '<div class="hf-barra"><div style="width:' + Math.round(ex / need * 100) + '%"></div><span>' + (e.nivel >= tope ? T('exp_llena') : ex + ' / ' + need + ' EXP') + '</span></div>';
     } else html += '<p class="nota">' + T('bloqueado') + '</p>';
     html += '</div></div>' +
-      '<div class="subtabs hf-tabs">' + [['atrib', T('hv_atributos')], ['hab', T('hv_habilidades')]].map(function (p) { return '<button data-accion="heroe-tab" data-tab="' + p[0] + '" data-id="' + id + '" class="' + (pestanaHeroe === p[0] ? 'activo' : '') + '">' + p[1] + '</button>'; }).join('') + '</div>';
+      '<div class="subtabs hf-tabs">' + [['atrib', T('hv_atributos')], ['hab', T('hv_habilidades')], ['equipo', T('hv_equipo')]].map(function (p) { return '<button data-accion="heroe-tab" data-tab="' + p[0] + '" data-id="' + id + '" class="' + (pestanaHeroe === p[0] ? 'activo' : '') + '">' + p[1] + '</button>'; }).join('') + '</div>';
+    if (pestanaHeroe === 'equipo') { html += htmlEquipo(id); abrirPanel(NH(id), html, { tipo: 'heroe', id: id }); var nv1 = e ? e.nivel : 1; visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv1) + ':' + M.etapaArmadura(nv1) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv1); }); return; }
     if (pestanaHeroe === 'hab') { html += htmlHabilidades(id); abrirPanel(NH(id), html, { tipo: 'heroe', id: id }); var nv0 = e ? e.nivel : 1; visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv0) + ':' + M.etapaArmadura(nv0) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv0); }); return; }
     html += '<div class="hf-stats"><span>❤ ' + s.vida + '</span><span>⚔ ' + s.dano + '</span><span>🎯 ' + s.alcance + '</span><span>✚ ' + s.cura + '/s</span></div>' +
       '<div class="hf-hab"><b>' + hb.nombre + ' · ' + T('nivel_corto') + ' ' + nivelHab(id) + '</b> <span class="nota">' + T('cada_s', { s: recargaHab(id) }) + '</span><div class="nota">' + hb.des + '</div></div>';
@@ -4370,6 +4473,7 @@
       while (colaEntreno.length) { var c = colaEntreno.shift(); crearTropa(c.tipo, puertaCuartel()); }
       consejoTemporal(T('acelerador_usado'));
     } else if (o.da) { premio = o.da; }
+    else if (o.equipo) { estado.mochila[k]--; darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); sonar('magia'); guardar(true); reabrirPanel(); return; }
     else if (o.cofre) {
       premio = {};
       Object.keys(o.cofre).forEach(function (r) { var a = o.cofre[r]; premio[r] = a[0] + Math.floor(Math.random() * (a[1] - a[0] + 1)); });
@@ -4621,6 +4725,9 @@
     else if (a === 'heroe-libros') usarLibrosHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-tab') { pestanaHeroe = b.getAttribute('data-tab'); sonar('click'); abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'hab-subir') subirHab(b.getAttribute('data-id'), false);
+    else if (a === 'eq-hueco') abrirHueco(b.getAttribute('data-id'), b.getAttribute('data-t'));
+    else if (a === 'eq-rapido') equiparRapido(b.getAttribute('data-id'));
+    else if (a === 'eq-quitar-todo') { var idq = b.getAttribute('data-id'); piezasDe(idq).forEach(function (p) { p.h = null; }); sonar('click'); ponerEquipo(); guardar(true); abrirPanelHeroe(idq); }
     else if (a === 'tal-subir') subirHab(b.getAttribute('data-id'), true);
     else if (a === 'heroe-obtener') abrirPanelObtener(b.getAttribute('data-id'));
     else if (a === 'ob-ir') irDesdeObtener(b.getAttribute('data-a'));
@@ -5039,6 +5146,9 @@
       estado.armas = g.armas || {};
       estado.lugar = g.lugar || null;
       estado.bloqueados = g.bloqueados || [];
+      estado.eqItems = g.eqItems || [];
+      if (!g.eqRegalo) { estado.eqItems.push({ i: 'r1', t: 'arma', r: 'comun', n: 1, h: null }, { i: 'r2', t: 'casco', r: 'comun', n: 1, h: null }); }
+      estado.eqRegalo = true;
       estado.cdCamp = g.cdCamp || {};
       estado.cdAtaque = g.cdAtaque || {};
       // partidas viejas: el castillo empieza al nivel de su edificio más alto

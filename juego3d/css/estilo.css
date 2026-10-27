@@ -1049,3 +1049,20 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .chat-vacio { text-align: center; margin: auto; }
 #chat-opciones { position: fixed; inset: 0; z-index: 77; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(20, 12, 6, .55); }
 #chat-opciones .cj-botones .comprar { width: 100%; }
+
+/* ---- Equipo de los héroes ---- */
+.eq-rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 6px; }
+.eq-hueco { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px 6px; border-radius: 12px; border: 2px dashed #c9a86a; background: #fffaf0; cursor: pointer; }
+.eq-hueco.comun { border: 2px solid #4a8fd8; background: linear-gradient(#e8f2ff, #c9e0ff); }
+.eq-hueco.raro { border: 2px solid #8a5ad8; background: linear-gradient(#f0e8ff, #dccbff); }
+.eq-hueco.legendario { border: 2px solid #c98a10; background: linear-gradient(#fff3c4, #ffd36a); box-shadow: 0 0 8px rgba(255,190,40,.55); }
+.eq-ico { font-size: 24px; line-height: 1; }
+.eq-nv { position: absolute; top: 3px; right: 5px; min-width: 18px; height: 18px; border-radius: 9px; background: #3a2414; color: #ffe27a; font-size: 11px; font-weight: 900; line-height: 18px; }
+.eq-nom { font-size: 11px; font-weight: 900; color: #3a2414; } .eq-nom.vacio { color: #a08a60; }
+#eq-elegir { position: fixed; inset: 0; z-index: 76; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(20, 12, 6, .6); }
+#eq-elegir .ac-caja { max-width: 400px; }
+.eq-lista { max-height: 50vh; overflow-y: auto; margin-top: 6px; }
+.eq-fila { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 10px; background: #fffaf0; border: 2px solid #ecdcb4; margin-bottom: 5px; }
+.eq-fila.comun { border-color: #9cc3f0; } .eq-fila.raro { border-color: #c4a8f0; } .eq-fila.legendario { border-color: #e8b84a; background: #fff8e0; }
+.eq-bts { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+.eq-bts .comprar.mini { width: auto; min-width: 44px; margin: 0; padding: 5px 8px; font-size: 12px; }
