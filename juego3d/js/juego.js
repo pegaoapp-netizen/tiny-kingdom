@@ -2159,11 +2159,11 @@
     if (Math.hypot(b.x - a.x, b.z - a.z) > 32) b = ESQUINAS.filter(function (q) { return Math.hypot(q.x - a.x, q.z - a.z) < 30; })[Math.floor(Math.random() * 6)] || b;
     return [a, new V3(b.x, 0, a.z), b];
   }
-  for (var al = 0; al < 14; al++) {
-    var tipoAl = ['aldeano', 'aldeana', 'anciano'][al % 3], ma = M.unidad(tipoAl), pa = ESQUINAS.length ? ESQUINAS[Math.floor(Math.random() * ESQUINAS.length)].clone() : puntoPueblo();
+  for (var al = 0; al < 16; al++) {
+    var tipoAl = ['aldeano', 'aldeana', 'nino', 'anciano'][al % 4], ma = M.unidad(tipoAl), pa = ESQUINAS.length ? ESQUINAS[Math.floor(Math.random() * ESQUINAS.length)].clone() : puntoPueblo();
     ma.grupo.position.copy(pa);
     escena.add(ma.grupo);
-    aldeanos.push({ tipo: tipoAl, m: ma, ruta: ESQUINAS.length ? rutaAldeano(pa) : [], meta: pa.clone(), espera: Math.random() * 3, vel: tipoAl === 'anciano' ? 0.75 + Math.random() * 0.2 : 1.2 + Math.random() * 0.6 });
+    aldeanos.push({ tipo: tipoAl, m: ma, ruta: ESQUINAS.length ? rutaAldeano(pa) : [], meta: pa.clone(), espera: Math.random() * 3, vel: tipoAl === 'anciano' ? 0.75 + Math.random() * 0.2 : tipoAl === 'nino' ? 1.5 + Math.random() * 0.5 : 1.2 + Math.random() * 0.6 });
   }
   function moverAldeanos(dt, t) {
     aldeanos.forEach(function (a, i) {
@@ -4066,7 +4066,7 @@
     if (id === 'caballo' || id === 'gallina') animales.forEach(function (o) { if (o.a.tipo === id) M.ponerFiguraAnimal(o.a); });
     if (id === 'carreta' || id === 'caballo') fotoCarreta();
     // los aldeanos que caminan por el pueblo cambian a la figura nueva
-    if (id === 'aldeano' || id === 'aldeana' || id === 'anciano') aldeanos.forEach(function (al2) { if ((al2.tipo || 'aldeano') !== id) return; var vie = al2.m, nue = M.unidad(al2.tipo || 'aldeano'); nue.grupo.position.copy(vie.grupo.position); nue.grupo.rotation.copy(vie.grupo.rotation); escena.remove(vie.grupo); escena.add(nue.grupo); al2.m = nue; });
+    if (id === 'aldeano' || id === 'aldeana' || id === 'anciano' || id === 'nino') aldeanos.forEach(function (al2) { if ((al2.tipo || 'aldeano') !== id) return; var vie = al2.m, nue = M.unidad(al2.tipo || 'aldeano'); nue.grupo.position.copy(vie.grupo.position); nue.grupo.rotation.copy(vie.grupo.rotation); escena.remove(vie.grupo); escena.add(nue.grupo); al2.m = nue; });
     var FAM_FIG = { espadachin: ['espadachin', 'miliciano'], arquero: ['arquero', 'explorador'], guardian: ['guardian'], caballero: ['caballeria', 'jinete', 'caballeria_pesada'] };
     if (FAM_FIG[id]) fotosTropas(FAM_FIG[id]);
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
