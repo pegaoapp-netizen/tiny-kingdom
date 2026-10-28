@@ -233,7 +233,138 @@ var M = (function () {
     3: { gris: 0xc2b49a, osc: 0x968a74, claro: 0xdcd0b8, piedra: 0xe0d3b8, piedraOsc: 0xb3a385, techo: 0x3e5c8c, teja: 0x2b4066, viga: 0x6e4526, vigaOsc: 0x4a2e1a, metal: 0x6f7c8c },
     4: { gris: 0xece6da, osc: 0xcfc6b5, claro: 0xfaf6ee, piedra: 0xf2ece0, piedraOsc: 0xd2c8b4, techo: 0x2a4fa8, teja: 0xe0b040, viga: 0xc9952e, vigaOsc: 0x8a6420, metal: 0xe0b040 }
   };
-  function recolorearTramo(g, tramo) {
+  // color de techo propio de cada edificio: a simple vista se sabe cuál es
+  var TECHO_TIPO = { cuartel: 0xb0302a, academia: 0x6a3fb0, enfermeria: 0x3f9a5a, herreria: 0x4a4c56, almacen: 0x8a5a2a, mercado: 0xd08a2a, establo: 0x8a4a22, galeria: 0x2f7a3a, granja: 0xc96a2a, aserradero: 0x7a5a2a, mina: 0x6a6670, cantera: 0x7a7468, torre: 0x2a4fa8, vigia: 0x9a5a2a };
+  function tonoC(hex, l) { var c = new THREE.Color(hex); c.offsetHSL(0, 0, l); return c.getHex(); }
+  function recolorearTipo(g, tramo, tipo) {
+    var tt = TECHO_TIPO[tipo]; if (!tt) return false;
+    var mapa = {}, piedras = [P.gris, P.osc, P.claro, C.piedra, C.piedraOsc];
+    if (tramo === 1) {
+      // humilde: paredes de madera y techo de paja
+      var mad = [0xa0703e, 0x86592f, 0xb98a52, 0x9a6a3a, 0x7a5230];
+      piedras.forEach(function (c, i) { mapa[c] = mad[i]; });
+      ROJOS.forEach(function (c) { mapa[c] = 0xc9a24e; }); TEJAS.forEach(function (c) { mapa[c] = 0x9a7a34; });
+    } else if (tramo === 2) {
+      ROJOS.forEach(function (c) { mapa[c] = tonoC(tt, -0.05); }); TEJAS.forEach(function (c) { mapa[c] = tonoC(tt, -0.15); });
+    } else if (tramo === 3) {
+      var k3 = COLORES_TRAMO[3]; mapa[P.gris] = k3.gris; mapa[P.osc] = k3.osc; mapa[P.claro] = k3.claro; mapa[C.piedra] = k3.piedra; mapa[C.piedraOsc] = k3.piedraOsc;
+      ROJOS.forEach(function (c) { mapa[c] = tt; }); TEJAS.forEach(function (c) { mapa[c] = tonoC(tt, -0.12); });
+      mapa[C.metalOsc] = k3.metal;
+    } else {
+      var k4 = COLORES_TRAMO[4]; mapa[P.gris] = k4.gris; mapa[P.osc] = k4.osc; mapa[P.claro] = k4.claro; mapa[C.piedra] = k4.piedra; mapa[C.piedraOsc] = k4.piedraOsc;
+      ROJOS.forEach(function (c) { mapa[c] = tonoC(tt, 0.04); }); TEJAS.forEach(function (c) { mapa[c] = C.oro; });
+      mapa[P.viga] = k4.viga; mapa[P.vigaOsc] = k4.vigaOsc; mapa[C.metalOsc] = k4.metal;
+    }
+    g.traverse(function (o) {
+      if (!o.isMesh || !o.material || !o.material.color || o.material.transparent || o.material.isMeshBasicMaterial) return;
+      var nuevo = mapa[o.material.color.getHex()];
+      if (nuevo !== undefined) o.material = mat(nuevo, o.material.side === THREE.DoubleSide ? { side: THREE.DoubleSide } : undefined);
+    });
+    return true;
+  }
+  // el castillo se oscurece con cada tramo: imponente y temible
+  function recolorearCastillo(g, tramo) {
+    var PAL = { 1: null, 2: [0xa39d92, 0x86817a, 0x8a1e16], 3: [0x7a766f, 0x5f5b56, 0x7a1a14], 4: [0x5f5b56, 0x46433f, 0x6a1210] }[tramo];
+    if (!PAL) return true;
+    var vistos = {};
+    g.traverse(function (o) {
+      if (!o.isMesh || !o.material || !o.material.color || o.material.transparent || o.material.isMeshBasicMaterial) return;
+      var c = o.material.color, hsl = {}; c.getHSL(hsl); var hex = c.getHex();
+      var nuevo;
+      if (hsl.s > 0.35 && (hsl.h < 0.08 || hsl.h > 0.9 || (hsl.h > 0.5 && hsl.h < 0.75))) nuevo = PAL[2];
+      else if (hsl.l > 0.55 && hsl.s < 0.5) nuevo = PAL[0];
+      else if (hsl.l > 0.35 && hsl.s < 0.4) nuevo = PAL[1];
+      if (nuevo !== undefined) o.material = mat(nuevo, o.material.side === THREE.DoubleSide ? { side: THREE.DoubleSide } : undefined);
+    });
+    return true;
+  }
+  // ---------- CRECER CON EL NIVEL: cada edificio suma piezas propias en cada tramo ----------
+  var MAT_VENTANA = new THREE.MeshBasicMaterial({ color: 0xffd36a });
+  function torreAnexa(g, x, z, alto, radio, techo, piedra, oro) {
+    g.add(cil(radio, radio * 1.08, alto, 8, piedra, x, alto / 2, z));
+    for (var a = 0; a < 6; a++) { var b = a / 6 * Math.PI * 2; g.add(caja(radio * 0.42, 0.22, radio * 0.42, piedra, x + Math.cos(b) * radio * 0.9, alto + 0.11, z + Math.sin(b) * radio * 0.9)); }
+    g.add(cono(radio * 1.25, radio * 2.2, 8, techo, x, alto + 0.22 + radio * 1.1, z));
+    if (oro) { g.add(cil(0.04, 0.04, 0.5, 5, C.oro, x, alto + 0.22 + radio * 2.2 + 0.2, z)); g.add(esfera(0.09, C.oro, x, alto + 0.22 + radio * 2.2 + 0.48, z, 6, 4)); }
+    var v = new THREE.Mesh(geo('ventanaT', function () { return new THREE.BoxGeometry(0.12, 0.22, 0.04); }), MAT_VENTANA); v.position.set(x, alto * 0.65, z + radio * 1.02); v.userData.noFusionar = false; g.add(v);
+  }
+  function muneco(g, x, z) { g.add(cil(0.04, 0.04, 0.7, 5, C.maderaOsc, x, 0.35, z)); g.add(caja(0.42, 0.06, 0.06, C.maderaOsc, x, 0.55, z)); g.add(cil(0.14, 0.14, 0.32, 6, 0xc9a24e, x, 0.62, z)); g.add(esfera(0.11, 0xc9a24e, x, 0.88, z, 6, 4)); }
+  function soldadito(g, x, z, color, lanzaOro) { g.add(cil(0.11, 0.13, 0.36, 6, color, x, 0.18, z)); g.add(esfera(0.1, 0xe8c6a0, x, 0.44, z, 6, 4)); g.add(cono(0.11, 0.12, 6, 0x9aa3ad, x, 0.55, z)); g.add(cil(0.015, 0.015, 0.85, 4, lanzaOro ? C.oro : C.maderaOsc, x + 0.14, 0.42, z)); }
+  function crecerEdificio(g, tramo, tipo) {
+    if (!TECHO_TIPO[tipo]) return g;
+    g.updateMatrixWorld(true);
+    var bx = new THREE.Box3().setFromObject(g), cen = bx.getCenter(new THREE.Vector3()), tam = bx.getSize(new THREE.Vector3());
+    var w = Math.min(tam.x, 4.6), d = Math.min(tam.z, 4.6), top = bx.max.y, x0 = cen.x - w / 2, x1 = cen.x + w / 2, z0 = cen.z - d / 2, z1 = cen.z + d / 2;
+    var tt = TECHO_TIPO[tipo], piedra = tramo >= 4 ? 0xf2ece0 : tramo === 3 ? 0xd8cbb0 : tramo === 2 ? 0x9a948a : 0x8a5a32, oro = tramo >= 4;
+    var techoT = tramo === 1 ? 0xc9a24e : tramo >= 4 ? tonoC(tt, 0.04) : tt;
+    // tramo 3 y 4: dos torres de esquina con el color del edificio (más altas en el 4)
+    var SIN_TORRES = { torre: 1, vigia: 1, mercado: 1, granja: 1, aserradero: 1, mina: 1, cantera: 1 };
+    if (tramo >= 3 && !SIN_TORRES[tipo]) {
+      var hT = Math.min(top, 2.5) * (tramo >= 4 ? 1.1 : 0.85) + 0.3;
+      torreAnexa(g, x0 - 0.15, z0 + 0.1, hT, 0.38, techoT, piedra, oro);
+      torreAnexa(g, x1 + 0.15, z0 + 0.1, hT * (tramo >= 4 ? 1.15 : 1), 0.38, techoT, piedra, oro);
+    }
+    // ventanas encendidas desde el tramo 3
+    if (tramo >= 3) for (var vi = -1; vi <= 1; vi += 2) { var vv = new THREE.Mesh(geo('ventanaF', function () { return new THREE.BoxGeometry(0.2, 0.26, 0.03); }), MAT_VENTANA); vv.position.set(cen.x + vi * w * 0.25, Math.min(top * 0.45, 1.4), z1 + 0.03); g.add(vv); }
+    if (tipo === 'cuartel') {
+      // patio de entrenamiento: crece con el nivel
+      var px = x1 + 1.0, pw = 1.3 + tramo * 0.25;
+      var patio = caja(pw, 0.04, d * 0.95, 0xb69a6a, px + pw / 2 - 0.4, 0.03, cen.z); patio.castShadow = false; g.add(patio);
+      for (var mn = 0; mn < Math.min(3, tramo); mn++) muneco(g, px + 0.1 + mn * 0.45, z0 + 0.6);
+      if (tramo >= 2) { g.add(caja(0.9, 0.08, 0.08, C.maderaOsc, px + 0.3, 0.7, z1 - 0.3)); for (var ar = 0; ar < 4; ar++) g.add(cil(0.02, 0.02, 0.9, 4, oro ? C.oro : 0x9aa3ad, px - 0.05 + ar * 0.23, 0.45, z1 - 0.32)); }
+      if (tramo >= 2) for (var sx = 0; sx < (tramo >= 4 ? 6 : tramo >= 3 ? 4 : 2); sx++) soldadito(g, px + 0.05 + (sx % 3) * 0.38, cen.z + Math.floor(sx / 3) * 0.42, tramo >= 4 ? 0x2a4fa8 : 0xb0302a, oro);
+      if (tramo >= 3) { var tv = px + pw - 0.6; g.add(caja(0.08, 2.2, 0.08, C.maderaOsc, tv, 1.1, z0 + 0.2)); g.add(caja(0.08, 2.2, 0.08, C.maderaOsc, tv + 0.5, 1.1, z0 + 0.2)); g.add(caja(0.7, 0.08, 0.6, C.madera, tv + 0.25, 2.2, z0 + 0.2)); g.add(cono(0.5, 0.5, 4, techoT, tv + 0.25, 2.55, z0 + 0.2)); }
+    } else if (tipo === 'academia') {
+      // torre de estudio que crece mucho con el nivel
+      var ha = 1.4 + tramo * 0.9, ax = x0 + 0.35, az = z0 + 0.35;
+      g.add(cil(0.48, 0.52, ha, 10, piedra, ax, ha / 2, az));
+      g.add(cono(0.62, 1.1, 10, techoT, ax, ha + 0.55, az));
+      for (var fv = 1; fv <= tramo; fv++) { var vw = new THREE.Mesh(geo('ventanaA', function () { return new THREE.BoxGeometry(0.14, 0.24, 0.04); }), MAT_VENTANA); vw.position.set(ax, fv * (ha / (tramo + 1)), az + 0.52); g.add(vw); }
+      if (tramo >= 2) { g.add(caja(0.5, 0.5, 0.2, C.maderaOsc, x1 + 0.5, 0.25, z1 - 0.2)); for (var lb = 0; lb < 4; lb++) g.add(caja(0.09, 0.14, 0.12, [0xb0302a, 0x2a4fa8, 0x2f7a3a, 0xd0a020][lb], x1 + 0.32 + lb * 0.12, 0.57, z1 - 0.2)); }
+      if (tramo >= 4) { g.add(cil(0.05, 0.08, 0.7, 6, C.oro, cen.x, 0.35, z1 + 0.6)); g.add(esfera(0.3, 0x3f7fd0, cen.x, 0.95, z1 + 0.6, 12, 10)); var anillo = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.03, 6, 20), mat(C.oro)); anillo.position.set(cen.x, 0.95, z1 + 0.6); anillo.rotation.x = 1.1; g.add(anillo); }
+    } else if (tipo === 'enfermeria') {
+      // tiendas de curación, jardín y una cruz grande
+      var nt = Math.min(3, tramo);
+      for (var tn = 0; tn < nt; tn++) { var tx = x1 + 0.6, tz = z0 + 0.5 + tn * 1.1; g.add(cono(0.5, 0.75, 4, 0xf4f1e8, tx, 0.38, tz).rotateY(Math.PI / 4)); g.add(caja(0.18, 0.04, 0.05, 0xc0281e, tx, 0.62, tz + 0.3)); g.add(caja(0.05, 0.18, 0.05, 0xc0281e, tx, 0.62, tz + 0.3)); }
+      var cs = 0.35 + tramo * 0.18, cy = top + 0.25 + cs;
+      g.add(caja(cs * 2.2, cs * 0.7, 0.14, 0x2fa04a, cen.x, cy, cen.z)); g.add(caja(cs * 0.7, cs * 2.2, 0.14, 0x2fa04a, cen.x, cy, cen.z));
+      if (tramo >= 4) { g.add(caja(cs * 2.4, cs * 0.85, 0.1, 0xffffff, cen.x, cy, cen.z - 0.03)); g.add(caja(cs * 0.85, cs * 2.4, 0.1, 0xffffff, cen.x, cy, cen.z - 0.03)); }
+      if (tramo >= 3) { var jx = cen.x, jz = z1 + 0.75; g.add(caja(w * 0.8, 0.05, 0.9, 0x5aa83c, jx, 0.03, jz)); for (var fl = 0; fl < 6; fl++) g.add(esfera(0.08, [0xe49aac, 0xf4efe2, 0xe8c85a][fl % 3], jx - w * 0.35 + fl * w * 0.14, 0.1, jz + (fl % 2 ? 0.25 : -0.25), 5, 4)); }
+      if (tramo >= 4) { g.add(cil(0.4, 0.45, 0.25, 12, 0xf2ece0, cen.x, 0.13, z1 + 0.75)); var ag = cil(0.33, 0.33, 0.04, 12, 0x5ab0e0, cen.x, 0.26, z1 + 0.75); g.add(ag); g.add(cil(0.06, 0.06, 0.5, 6, 0xf2ece0, cen.x, 0.45, z1 + 0.75)); }
+    } else if (tipo === 'herreria') {
+      g.add(caja(0.45, top * 0.7 + tramo * 0.35, 0.45, piedra, x0 + 0.2, (top * 0.7 + tramo * 0.35) / 2, z0 + 0.2));
+      var brasa = new THREE.Mesh(geo('brasaH', function () { return new THREE.BoxGeometry(0.3, 0.06, 0.3); }), MAT_FUEGO); brasa.position.set(x0 + 0.2, top * 0.7 + tramo * 0.35 + 0.04, z0 + 0.2); g.add(brasa);
+      for (var yu = 0; yu < tramo; yu++) { g.add(caja(0.3, 0.12, 0.16, oro ? C.oro : 0x4a4c56, x1 + 0.5, 0.42, z0 + 0.4 + yu * 0.6)); g.add(caja(0.16, 0.3, 0.14, 0x3a3a3a, x1 + 0.5, 0.18, z0 + 0.4 + yu * 0.6)); }
+    } else if (tipo === 'almacen') {
+      for (var cj = 0; cj < tramo * 3; cj++) g.add(caja(0.34, 0.34, 0.34, oro && cj % 3 === 0 ? C.oro : C.madera, x1 + 0.35 + (cj % 3) * 0.38, 0.17 + Math.floor(cj / 3) % 2 * 0.36, z0 + 0.3 + Math.floor(cj / 6) * 0.45));
+      if (tramo >= 3) { g.add(caja(1.2, 0.9, 1.0, piedra, x0 - 0.7, 0.45, z1 - 0.5)); g.add(cono(0.95, 0.6, 4, techoT, x0 - 0.7, 1.2, z1 - 0.5).rotateY(Math.PI / 4)); }
+    } else if (tipo === 'mercado') {
+      for (var pu = 0; pu < tramo; pu++) { var mx = x0 + 0.4 + pu * 1.0, mz = z1 + 0.6; [[-0.35, -0.3], [0.35, -0.3], [-0.35, 0.3], [0.35, 0.3]].forEach(function (q) { g.add(cil(0.03, 0.03, 0.8, 4, C.madera, mx + q[0], 0.4, mz + q[1])); }); g.add(caja(0.8, 0.05, 0.7, [0xd0302a, 0x2a6ad0, 0xe0b040, 0x2f9a4a][pu % 4], mx, 0.82, mz)); g.add(caja(0.7, 0.3, 0.5, C.madera, mx, 0.15, mz)); }
+      if (tramo >= 3) { g.add(cil(0.45, 0.5, 0.3, 12, piedra, cen.x, 0.15, z0 - 0.5)); g.add(cil(0.38, 0.38, 0.04, 12, 0x5ab0e0, cen.x, 0.31, z0 - 0.5)); }
+      if (tramo >= 4) { g.add(cil(0.12, 0.15, 0.6, 8, C.oro, cen.x, 0.6, z0 - 0.5)); g.add(esfera(0.18, C.oro, cen.x, 1.0, z0 - 0.5, 8, 6)); }
+    } else if (tipo === 'establo') {
+      for (var cb = 0; cb < tramo; cb++) { var hx = x1 + 0.6, hz = z0 + 0.4 + cb * 0.8; g.add(caja(0.55, 0.28, 0.2, 0x7a4a2a, hx, 0.42, hz)); g.add(caja(0.18, 0.22, 0.16, 0x7a4a2a, hx + 0.32, 0.6, hz)); [[-0.2, -0.06], [0.2, -0.06], [-0.2, 0.06], [0.2, 0.06]].forEach(function (q) { g.add(caja(0.06, 0.3, 0.06, 0x5a3418, hx + q[0], 0.15, hz + q[1])); }); }
+      if (tramo >= 3) { g.add(caja(1.6, 0.8, 0.9, piedra, cen.x, 0.4, z0 - 0.7)); g.add(caja(1.7, 0.08, 1.0, techoT, cen.x, 0.84, z0 - 0.7)); }
+    } else if (tipo === 'galeria') {
+      for (var di = 0; di < tramo + 1; di++) { var dx = x1 + 0.6, dz = z0 + 0.2 + di * 0.75; g.add(cil(0.25, 0.25, 0.05, 12, 0xf4f1e8, dx, 0.5, dz).rotateZ(Math.PI / 2)); g.add(cil(0.15, 0.15, 0.06, 12, 0xc0281e, dx, 0.5, dz).rotateZ(Math.PI / 2)); g.add(cil(0.03, 0.03, 0.5, 4, C.madera, dx, 0.25, dz)); }
+      if (tramo >= 3) torreAnexa(g, x0 - 0.4, z1 - 0.3, 1.8 + tramo * 0.3, 0.32, techoT, piedra, oro);
+    } else if (tipo === 'granja') {
+      for (var cr = 0; cr < tramo; cr++) { var fx = x0 - 0.2 + cr * 1.2; g.add(caja(1.0, 0.06, 1.2, 0x7a5a32, fx, 0.04, z1 + 0.8)); for (var sr = 0; sr < 4; sr++) g.add(caja(0.12, 0.22, 1.0, cr % 2 ? 0x8fc44a : 0xe0c050, fx - 0.36 + sr * 0.24, 0.16, z1 + 0.8)); }
+      if (tramo >= 3) { g.add(cil(0.35, 0.35, 1.4 + tramo * 0.2, 10, piedra, x0 - 0.4, (1.4 + tramo * 0.2) / 2, z0 + 0.3)); g.add(cono(0.4, 0.45, 10, techoT, x0 - 0.4, 1.4 + tramo * 0.2 + 0.22, z0 + 0.3)); }
+    } else if (tipo === 'aserradero') {
+      for (var tr2 = 0; tr2 < tramo; tr2++) for (var tl = 0; tl < 3; tl++) g.add(cil(0.14, 0.14, 1.2, 7, 0xa9783f, x0 + 0.2 + tr2 * 0.6, 0.14 + tl * 0.0 + (tl === 2 ? 0.24 : 0), z1 + 0.6 + (tl === 1 ? 0.28 : tl === 2 ? 0.14 : 0)).rotateZ(Math.PI / 2).rotateY(Math.PI / 2));
+      if (tramo >= 3) { g.add(caja(1.1, 0.9, 0.9, piedra, x1 + 0.7, 0.45, z0 + 0.5)); g.add(cono(0.85, 0.5, 4, techoT, x1 + 0.7, 1.15, z0 + 0.5).rotateY(Math.PI / 4)); }
+    } else if (tipo === 'mina' || tipo === 'cantera') {
+      var roca = tipo === 'mina' ? 0x8a8478 : 0xb5aea3;
+      for (var rb = 0; rb < tramo * 2; rb++) g.add(caja(0.34, 0.3, 0.34, tipo === 'mina' && oro && rb % 2 ? C.oro : roca, x1 + 0.3 + (rb % 2) * 0.4, 0.15 + Math.floor(rb / 4) * 0.3, z1 + 0.3 - Math.floor(rb / 2) % 2 * 0.4));
+      if (tramo >= 2) { g.add(caja(0.08, 1.6 + tramo * 0.3, 0.08, C.maderaOsc, x0 - 0.2, (1.6 + tramo * 0.3) / 2, z1)); g.add(caja(1.2, 0.08, 0.08, C.maderaOsc, x0 + 0.35, 1.6 + tramo * 0.3, z1)); }
+      if (tramo >= 4) for (var pp = 0; pp < 4; pp++) g.add(esfera(0.13, C.oro, x0 + 0.1 + pp * 0.25, 0.12, z1 + 0.5, 6, 4));
+    } else if (tipo === 'torre' || tipo === 'vigia') {
+      if (tramo >= 3) [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { g.add(caja(0.3, 0.6 + tramo * 0.15, 0.3, piedra, cen.x + q[0] * (w / 2 + 0.2), (0.6 + tramo * 0.15) / 2, cen.z + q[1] * (d / 2 + 0.2))); });
+    }
+    return g;
+  }
+  function recolorearTramo(g, tramo, tipo) {
+    if (tipo && recolorearTipo(g, tramo, tipo)) return;
     var k = COLORES_TRAMO[tramo];
     if (!k) return;
     var mapa = {};
@@ -266,8 +397,44 @@ var M = (function () {
     var f1 = new THREE.Mesh(geo('fuego1', function () { return new THREE.ConeGeometry(0.17, 0.42, 6); }), MAT_FUEGO); f1.position.set(x, 0.92, z); g.add(f1);
     var f2 = new THREE.Mesh(geo('fuego2', function () { return new THREE.ConeGeometry(0.09, 0.3, 5); }), MAT_FUEGO2); f2.position.set(x, 0.9, z); g.add(f2);
   }
+  // ---------- TORRE DEL HOMENAJE: el castillo es el más alto de todos y da miedo ----------
+  function torreonCastillo(g, tramo) {
+    g.updateMatrixWorld(true);
+    var bx = new THREE.Box3().setFromObject(g), cen = bx.getCenter(new THREE.Vector3()), top = bx.max.y;
+    var R = 2.2 + tramo * 0.3, H = top + 0.6 + tramo * 1.4, X = cen.x, Z = cen.z - 0.6;
+    var PIEDRA = tramo >= 4 ? 0x6a6560 : 0x5a5650, PIEDRA2 = 0x45423e, TECHO = 0x6e1812, METAL = 0x2a2a2e;
+    g.add(cil(R, R * 1.12, H, 12, PIEDRA, X, H / 2, Z));
+    // bandas de piedra más oscura
+    for (var b = 1; b <= 3; b++) g.add(cil(R * 1.05, R * 1.05, 0.25, 12, PIEDRA2, X, H * b / 4, Z));
+    // almenas con púas de hierro
+    for (var a = 0; a < 12; a++) {
+      var t = a / 12 * Math.PI * 2, x = X + Math.cos(t) * R * 1.02, z = Z + Math.sin(t) * R * 1.02;
+      g.add(caja(R * 0.42, 0.55, R * 0.42, PIEDRA, x, H + 0.27, z));
+      g.add(cono(0.09, 0.55, 4, METAL, x, H + 0.82, z));
+    }
+    // techo cónico rojo oscuro, muy alto
+    g.add(cono(R * 1.05, R * 2.6, 12, TECHO, X, H + 0.55 + R * 1.3, Z));
+    var cima = H + 0.55 + R * 2.6;
+    if (tramo >= 4) { g.add(cil(0.1, 0.16, 1.2, 8, C.oro, X, cima + 0.5, Z)); g.add(esfera(0.3, C.oro, X, cima + 1.2, Z, 10, 8)); g.add(cono(0.12, 1.0, 6, C.oro, X, cima + 1.9, Z)); }
+    else { g.add(cil(0.06, 0.06, 1.0, 6, METAL, X, cima + 0.4, Z)); }
+    // ventanas con fuego en espiral
+    for (var v = 0; v < 4 + tramo * 2; v++) {
+      var tv = v * 1.3, yv = 1.2 + v * (H - 2) / (4 + tramo * 2);
+      var w = new THREE.Mesh(geo('ventanaC', function () { return new THREE.BoxGeometry(0.28, 0.5, 0.1); }), MAT_FUEGO);
+      w.position.set(X + Math.cos(tv) * R * 1.03, yv, Z + Math.sin(tv) * R * 1.03); w.rotation.y = -tv + Math.PI / 2; g.add(w);
+    }
+    // estandartes grandes colgando (rojo y negro)
+    [0.4, 2.0, 3.6, 5.2].forEach(function (t, i) {
+      var x = X + Math.cos(t) * R * 1.08, z = Z + Math.sin(t) * R * 1.08;
+      var lona = caja(0.9, 2.4 + tramo * 0.3, 0.05, i % 2 ? 0x1a1a1e : 0x9a1a14, x, H - 1.4 - tramo * 0.15, z); lona.rotation.y = -t + Math.PI / 2; lona.castShadow = false; g.add(lona);
+      var franja = caja(0.92, 0.18, 0.06, tramo >= 4 ? C.oro : 0x6a6560, x, H - 0.25, z); franja.rotation.y = -t + Math.PI / 2; g.add(franja);
+    });
+    // braseros encendidos al pie
+    [[-1, 1], [1, 1]].forEach(function (s) { var bxx = X + s[0] * (R + 0.8), bz = Z + R + 0.6; g.add(cil(0.3, 0.22, 0.7, 8, PIEDRA2, bxx, 0.35, bz)); var f = new THREE.Mesh(geo('fuegoC', function () { return new THREE.ConeGeometry(0.25, 0.6, 6); }), MAT_FUEGO); f.position.set(bxx, 0.95, bz); g.add(f); });
+    return g;
+  }
   function mejorarPorTramo(g, tramo, tipo) {
-    recolorearTramo(g, tramo);
+    recolorearTramo(g, tramo, tipo);
     if (tramo < 2) return g;
     g.updateMatrixWorld(true);
     var caja3 = new THREE.Box3().setFromObject(g), tam = new THREE.Vector3(), cen = new THREE.Vector3();
@@ -2577,6 +2744,6 @@ var M = (function () {
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
     ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar,
     heroe: function (h, nivel) { return glbListos[h.id] ? heroeGLB(h, nivel) : heroeModelo2(h.look, undefined, nivel, h.rareza); },
-    cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, ponerFiguraAnimal: ponerFiguraAnimal, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
+    cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, crecerEdificio: crecerEdificio, ponerFiguraAnimal: ponerFiguraAnimal, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };
 })();

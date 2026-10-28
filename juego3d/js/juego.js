@@ -582,9 +582,10 @@
     castillo.userData.castillo = true;
     castillo.scale.setScalar(0.8);
     escena.add(castillo);
+    castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
     if (insigniaCastillo) escena.remove(insigniaCastillo);
     insigniaCastillo = M.insigniaNivel(estado.castillo || 1);
-    insigniaCastillo.position.set(0, 11.2, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
+    insigniaCastillo.position.set(0, altoC + 1.4, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
     escena.add(insigniaCastillo);
   }
   function danoCastillo() { return CASTILLO.dano + ((estado.castillo || 1) - 1) * MEJORA_CASTILLO.dano; }
@@ -2522,6 +2523,7 @@
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
     var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
+    M.crecerEdificio(m, tramo, tipo);
     return M.mejorarPorTramo(m, tramo, tipo);
   }
 
@@ -2581,7 +2583,7 @@
     }
   }
   // Que el edificio quepa en su parcela con aire alrededor (crece un poco con cada tramo de nivel) y quede centrado
-  var MAX_EDIFICIO = [0, 5.4, 5.7, 6.0, 6.3];
+  var MAX_EDIFICIO = [0, 4.7, 5.7, 6.5, 7.3];
   function encajarEnParcela(m, tr) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
     var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = MAX_EDIFICIO[tr] || 6;
@@ -6894,7 +6896,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
