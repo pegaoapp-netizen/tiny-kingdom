@@ -3715,7 +3715,7 @@
         escena.remove(viejo.grupo); escena.add(nuevo.grupo); u.m = nuevo;
       });
     });
-    if (id === 'caballo') animales.forEach(function (o) { if (o.a.tipo === 'caballo') M.ponerFiguraAnimal(o.a); });
+    if (id === 'caballo' || id === 'gallina') animales.forEach(function (o) { if (o.a.tipo === id) M.ponerFiguraAnimal(o.a); });
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
   }
   function alLlegarModelo(id) {

@@ -1909,7 +1909,7 @@ var M = (function () {
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
     caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' },
-    carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }
+    carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
   var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin' };
   var figListas = {}, figPedidas = false;
@@ -2367,6 +2367,13 @@ var M = (function () {
       ponerFiguraAnimal(an);
       return an;
     }
+    if (tipo === 'gallina' && figListas.gallina) {
+      var blobG = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
+      blobG.rotation.x = -Math.PI / 2; blobG.position.y = 0.03; blobG.scale.setScalar(0.6); g.add(blobG);
+      g.scale.setScalar(1.2);
+      var ag = { grupo: g, cuerpo: cuerpo, patas: patas, tipo: tipo };
+      ponerFiguraAnimal(ag); return ag;
+    }
     if (tipo === 'gallina') {
       var col = Math.random() < 0.5 ? 0xf2ece0 : 0xa8683a;
       var tor = esfera(0.22, col, 0, 0.32, 0, 8, 6); tor.scale.set(1, 0.9, 1.25); cuerpo.add(tor);
@@ -2393,10 +2400,13 @@ var M = (function () {
     g.scale.setScalar(tipo === 'gallina' ? 1.2 : 1.3);
     return { grupo: g, cuerpo: cuerpo, patas: patas, tipo: tipo };
   }
+  var GIRO_GALLINA = 0;
   function ponerFiguraAnimal(a) {
     if (a.fig) return true;
     var f = figura(a.tipo); if (!f) return false;
-    f.rotation.y = Math.PI / 2; f.scale.multiplyScalar(1.75); a.cuerpo.add(f); a.fig = f; return true;
+    if (a.tipo === 'caballo') { f.rotation.y = Math.PI / 2; f.scale.multiplyScalar(1.75); }
+    if (a.tipo === 'gallina') { f.rotation.y = GIRO_GALLINA; a.cuerpo.children.slice().forEach(function (c) { a.cuerpo.remove(c); }); a.patas.forEach(function (pt) { pt.visible = false; }); }
+    a.cuerpo.add(f); a.fig = f; return true;
   }
   function animarAnimal(a, t, camina) {
     var v = camina ? 1 : 0, s = Math.sin(t * (a.tipo === 'gallina' ? 18 : 10));
