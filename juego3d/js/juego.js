@@ -1016,7 +1016,7 @@
     $('mundo-volver').querySelector('span').textContent = L('Mi ciudad', 'My city');
     pintarBuscador();
     if (!M3.corriendo) { M3.corriendo = true; requestAnimationFrame(dibujarMundo3D); }
-    $('mundo-leyenda').innerHTML = Object.keys(TIPOS_CASILLA).map(function (k) { return '<span>' + TIPOS_CASILLA[k].icono + ' ' + T('cas_' + k) + '</span>'; }).join('') + '<span>🐗 ' + L('Bestias', 'Beasts') + '</span><span>⛺ ' + L('Campamentos', 'Camps') + '</span><span>🟦 ' + L('Territorio de tu alianza', 'Your alliance territory') + '</span><span>🚩 ' + T('cas_mias', { n: misCasillas().length, m: maxCasillas() }) + '</span>';
+    $('mundo-leyenda').innerHTML = Object.keys(TIPOS_CASILLA).map(function (k) { return '<span>' + TIPOS_CASILLA[k].icono + ' ' + T('cas_' + k) + '</span>'; }).join('') + '<span>🐗 ' + L('Bestias', 'Beasts') + '</span><span>🛖 ' + L('Aldeas bárbaras', 'Barbarian villages') + '</span><span>🟦 ' + L('Territorio de tu alianza', 'Your alliance territory') + '</span><span>🚩 ' + T('cas_mias', { n: misCasillas().length, m: maxCasillas() }) + '</span>';
     pintarAldeas([]);
     if (!hayCuenta()) { $('mundo-estado').textContent = T('mundo_cuenta'); return; }
     $('mundo-estado').textContent = T('mundo_cargando');
@@ -1064,7 +1064,8 @@
     return { id: x + '_' + y, x: x, y: y, tipo: tipo, nivel: nivel };
   }
   function celdaDe(px, py) { return { x: Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(px * TAM_MUNDO / 100))), y: Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(py * TAM_MUNDO / 100))) }; }
-  function posCelda(x, y) { return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
+  var ALT_TIPO = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: 0 };
+  function posCelda(x, y) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, x)), cy = Math.max(0, Math.min(TAM_MUNDO - 1, y)); return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, ALT_TIPO[casillaMundo(cx, cy).tipo] || 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
   function maxCasillas() { return estado.castillo || 1; }
   function misCasillas() { return Object.keys(estado.casillas || {}); }
   // bonus de producción de las casillas conquistadas (2% por nivel de cada casilla de ese recurso)
@@ -1091,39 +1092,75 @@
     var cont = $('mundo-mapa');
     var r = new THREE.WebGLRenderer({ antialias: true });
     r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    r.setClearColor(0x2a5a7a);
+    r.setClearColor(0xbfd8e6);
     r.domElement.id = 'mundo-3d';
     cont.appendChild(r.domElement);
     var e = new THREE.Scene();
-    e.fog = new THREE.Fog(0x2a5a7a, 70, 140);
+    e.fog = new THREE.Fog(0xbfd8e6, 60, 130);
     e.add(new THREE.HemisphereLight(0xffffff, 0x6a7a5a, 0.75));
     var sol = new THREE.DirectionalLight(0xffffff, 0.65); sol.position.set(20, 40, 25); e.add(sol);
     var cam = new THREE.PerspectiveCamera(38, 1, 0.5, 300);
-    // suelo: una baldosa por casilla (con una rendija para que se vea la cuadrícula)
-    var n = TAM_MUNDO * TAM_MUNDO, mat0 = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    var suelo = new THREE.InstancedMesh(new THREE.BoxGeometry(CELDA_M * 0.94, 0.3, CELDA_M * 0.94), mat0, n);
-    var arbol = [], loma = [], pico = [], nieve = [], tmp = new THREE.Object3D(), col = new THREE.Color(), k = 0;
-    for (var y = 0; y < TAM_MUNDO; y++) for (var x = 0; x < TAM_MUNDO; x++) {
-      var c = casillaMundo(x, y), p = posCelda(x, y), t = TIPOS_CASILLA[c.tipo];
-      tmp.position.set(p.x, c.tipo === 'lago' ? -0.18 : -0.15 + (hashM(x, y) - 0.5) * 0.06, p.z); tmp.rotation.set(0, 0, 0); tmp.scale.set(1, 1, 1); tmp.updateMatrix();
-      suelo.setMatrixAt(k, tmp.matrix);
-      col.setHex(t.color).offsetHSL(0, 0, (hashM(y, x) - 0.5) * 0.06); suelo.setColorAt(k, col); k++;
-      if (c.tipo === 'bosque') for (var a = 0; a < 3; a++) arbol.push([p.x + (hashM(x + a, y) - 0.5) * 1.2, p.z + (hashM(x, y + a) - 0.5) * 1.2, 0.7 + hashM(x * a, y) * 0.5]);
-      if (c.tipo === 'colina') for (var b = 0; b < 2; b++) loma.push([p.x + (hashM(x + b, y + 3) - 0.5) * 0.9, p.z + (hashM(x + 5, y + b) - 0.5) * 0.9, 0.6 + hashM(x, y * b + 1) * 0.3]);
-      if (c.tipo === 'montana') { pico.push([p.x, p.z, 1 + c.nivel * 0.12]); }
+    // ---- suelo continuo: los terrenos se mezclan suave, con textura de pasto, colinas y lagos hundidos ----
+    var COL_T = { llanura: new THREE.Color(0x8db455), bosque: new THREE.Color(0x5a8638), colina: new THREE.Color(0xb3a066), montana: new THREE.Color(0x8f8a80), lago: new THREE.Color(0xc9b27a) };
+    var ALT_T = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: -0.3 };
+    var lado = TAM_MUNDO * CELDA_M, seg = TAM_MUNDO * 4;
+    function tipoEn(fx, fy) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fx))), cy = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fy))); return casillaMundo(cx, cy).tipo; }
+    var gs = new THREE.PlaneGeometry(lado + 6, lado + 6, seg + 12, seg + 12); gs.rotateX(-Math.PI / 2);
+    var ps = gs.attributes.position, cols = [], cc = new THREE.Color();
+    for (var iv = 0; iv < ps.count; iv++) {
+      var wx = ps.getX(iv), wz = ps.getZ(iv), fx = wx / CELDA_M + TAM_MUNDO / 2 - 0.5, fy = wz / CELDA_M + TAM_MUNDO / 2 - 0.5;
+      var x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+      // mezcla de las 4 casillas vecinas (bilineal, con curva suave)
+      tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+      var t00 = tipoEn(x0, y0), t10 = tipoEn(x0 + 1, y0), t01 = tipoEn(x0, y0 + 1), t11 = tipoEn(x0 + 1, y0 + 1);
+      var w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
+      var h = ALT_T[t00] * w00 + ALT_T[t10] * w10 + ALT_T[t01] * w01 + ALT_T[t11] * w11;
+      h += (hashM(Math.round(wx * 3), Math.round(wz * 3)) - 0.5) * 0.05 + Math.sin(wx * 0.9) * Math.cos(wz * 0.7) * 0.04;
+      var borde = Math.max(Math.abs(wx), Math.abs(wz)) - lado / 2; if (borde > 0) h -= borde * 0.25;
+      ps.setY(iv, h);
+      cc.setRGB(0, 0, 0);
+      [[t00, w00], [t10, w10], [t01, w01], [t11, w11]].forEach(function (q) { cc.r += COL_T[q[0]].r * q[1]; cc.g += COL_T[q[0]].g * q[1]; cc.b += COL_T[q[0]].b * q[1]; });
+      var nz = (hashM(Math.floor(wx * 1.3), Math.floor(wz * 1.3)) - 0.5) * 0.08 + Math.sin(wx * 0.35 + wz * 0.2) * 0.04;
+      cols.push(Math.min(1, cc.r * (1 + nz)), Math.min(1, cc.g * (1 + nz)), Math.min(1, cc.b * (1 + nz)));
     }
+    gs.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); gs.computeVertexNormals();
+    var texM = texturaPasto(); texM.repeat.set(26, 26);
+    var suelo = new THREE.Mesh(gs, new THREE.MeshLambertMaterial({ map: texM, vertexColors: true }));
     e.add(suelo);
-    function instancias(geo, color, lista, fn) {
+    // agua de los lagos y cuadrícula muy suave (para saber dónde está cada casilla)
+    var tmp = new THREE.Object3D(), col = new THREE.Color(), lagos = [], arboles = [], redondos = [], arbustos = [], flores = [], rocas = [], picos = [];
+    var lineas = [];
+    for (var y = 0; y < TAM_MUNDO; y++) for (var x = 0; x < TAM_MUNDO; x++) {
+      var c = casillaMundo(x, y), p = posCelda(x, y), hh = function (s) { return hashM(x * 7.1 + s, y * 3.3 - s); };
+      if (c.tipo === 'lago') lagos.push([p.x, p.z]);
+      if (c.tipo === 'bosque') { var na = 6 + Math.floor(hh(1) * 3); for (var a = 0; a < na; a++) (hh(a + 9) < 0.6 ? arboles : redondos).push([p.x + (hh(a) - 0.5) * 1.75, p.z + (hh(a + 20) - 0.5) * 1.75, 0.7 + hh(a + 40) * 0.55]); }
+      if (c.tipo === 'llanura') { if (hh(2) < 0.22) redondos.push([p.x + (hh(3) - 0.5) * 1.5, p.z + (hh(4) - 0.5) * 1.5, 0.6 + hh(5) * 0.4]); for (var b = 0; b < 2; b++) if (hh(b + 6) < 0.5) arbustos.push([p.x + (hh(b + 7) - 0.5) * 1.7, p.z + (hh(b + 8) - 0.5) * 1.7, 0.5 + hh(b) * 0.5]); for (var fl = 0; fl < 4; fl++) if (hh(fl + 30) < 0.45) flores.push([p.x + (hh(fl + 31) - 0.5) * 1.8, p.z + (hh(fl + 32) - 0.5) * 1.8, Math.floor(hh(fl + 33) * 4)]); }
+      if (c.tipo === 'colina') { for (var r2 = 0; r2 < 3; r2++) rocas.push([p.x + (hh(r2 + 50) - 0.5) * 1.5, p.z + (hh(r2 + 51) - 0.5) * 1.5, 0.35 + hh(r2 + 52) * 0.4]); if (hh(60) < 0.6) arboles.push([p.x + (hh(61) - 0.5) * 1.4, p.z + (hh(62) - 0.5) * 1.4, 0.7]); arbustos.push([p.x + (hh(63) - 0.5) * 1.4, p.z + (hh(64) - 0.5) * 1.4, 0.6]); }
+      if (c.tipo === 'montana') { var np = 2 + Math.floor(hh(70) * 2); for (var m2 = 0; m2 < np; m2++) picos.push([p.x + (hh(m2 + 71) - 0.5) * 1.0, p.z + (hh(m2 + 72) - 0.5) * 1.0, (m2 === 0 ? 1.0 : 0.6) + c.nivel * 0.05 + hh(m2 + 73) * 0.25]); }
+    }
+    for (var gl = 0; gl <= TAM_MUNDO; gl++) { var v0 = (gl - TAM_MUNDO / 2) * CELDA_M; lineas.push(v0, 0.06, -lado / 2, v0, 0.06, lado / 2, -lado / 2, 0.06, v0, lado / 2, 0.06, v0); }
+    var gLin = new THREE.BufferGeometry(); gLin.setAttribute('position', new THREE.Float32BufferAttribute(lineas, 3));
+    e.add(new THREE.LineSegments(gLin, new THREE.LineBasicMaterial({ color: 0x2a3a1a, transparent: true, opacity: 0.13, depthWrite: false })));
+    function instancias(geo, color, lista, fn, varia) {
       if (!lista.length) return;
-      var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: color }), lista.length);
-      lista.forEach(function (q, i) { fn(q); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); });
+      var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), lista.length);
+      lista.forEach(function (q, i) { tmp.rotation.set(0, 0, 0); fn(q); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); col.setHex(typeof color === 'function' ? color(q) : color); if (varia) col.offsetHSL((hashM(q[0], q[1]) - 0.5) * 0.04, 0, (hashM(q[1], q[0]) - 0.5) * varia); im.setColorAt(i, col); });
       e.add(im);
     }
-    instancias(new THREE.ConeGeometry(0.32, 0.9, 6), 0x4a7a34, arbol, function (q) { tmp.position.set(q[0], 0.45 * q[2] + 0.2, q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, 0, 0); });
-    instancias(new THREE.CylinderGeometry(0.06, 0.08, 0.3, 5), 0x6a4426, arbol, function (q) { tmp.position.set(q[0], 0.12, q[1]); tmp.scale.set(1, 1, 1); });
-    instancias(new THREE.SphereGeometry(0.55, 8, 6), 0x9a9058, loma, function (q) { tmp.position.set(q[0], 0, q[1]); tmp.scale.set(q[2], q[2] * 0.55, q[2]); });
-    instancias(new THREE.ConeGeometry(0.85, 1.6, 6), 0x7a746a, pico, function (q) { tmp.position.set(q[0], 0.8 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); });
-    instancias(new THREE.ConeGeometry(0.36, 0.5, 6), 0xf4f4f4, pico, function (q) { tmp.position.set(q[0], (1.35) * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); });
+    // una sola capa de agua debajo de todo: los lagos (más hundidos) quedan con orillas curvas
+    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), new THREE.MeshLambertMaterial({ color: 0x3f8fc0, transparent: true, opacity: 0.9 }));
+    agua.rotation.x = -Math.PI / 2; agua.position.y = -0.11; e.add(agua);
+    // pinos (dos conos), árboles redondos, arbustos, flores, rocas y montañas de varios picos con nieve
+    instancias(new THREE.ConeGeometry(0.34, 0.75, 7), 0x3f6f30, arboles, function (q) { tmp.position.set(q[0], 0.55 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.08);
+    instancias(new THREE.ConeGeometry(0.26, 0.55, 7), 0x4f8138, arboles, function (q) { tmp.position.set(q[0], 0.95 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.08);
+    instancias(new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5), 0x6a4426, arboles.concat(redondos), function (q) { tmp.position.set(q[0], 0.14 * q[2], q[1]); tmp.scale.setScalar(q[2]); });
+    instancias(new THREE.IcosahedronGeometry(0.3, 0), 0x5a9a3c, redondos, function (q) { tmp.position.set(q[0], 0.48 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.9, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
+    instancias(new THREE.IcosahedronGeometry(0.16, 0), 0x6aa846, arbustos, function (q) { tmp.position.set(q[0], 0.08 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); }, 0.12);
+    var COLF = [0xf4efe2, 0xe8c85a, 0xe49aac, 0xb89ad8];
+    instancias(new THREE.SphereGeometry(0.05, 5, 3), function (q) { return COLF[q[2]]; }, flores, function (q) { tmp.position.set(q[0], 0.05, q[1]); tmp.scale.setScalar(1); });
+    instancias(new THREE.DodecahedronGeometry(0.3, 0), 0x9a958a, rocas, function (q) { tmp.position.set(q[0], 0.12 + 0.1 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 5, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.75, 1.5, 7), 0x7f7a70, picos, function (q) { tmp.position.set(q[0], 0.7 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); }, 0.08);
+    instancias(new THREE.ConeGeometry(0.3, 0.42, 7), 0xf6f6f2, picos.filter(function (q) { return q[2] > 0.9; }), function (q) { tmp.position.set(q[0], (1.28) * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); });
     // marco de madera alrededor del mundo
     var marco = new THREE.Mesh(new THREE.BoxGeometry(TAM_MUNDO * CELDA_M + 1.2, 0.5, TAM_MUNDO * CELDA_M + 1.2), new THREE.MeshLambertMaterial({ color: 0x5e3d24 }));
     marco.position.y = -0.45; e.add(marco);
@@ -1194,15 +1231,27 @@
     requestAnimationFrame(dibujarMundo3D);
   }
   // castillos, campamentos y banderas de las casillas conquistadas
+  function aldeaBarbara(nivel) {
+    var g = new THREE.Group(), n = 3 + Math.min(3, Math.floor(nivel / 4));
+    for (var i = 0; i < n; i++) {
+      var a = i / n * Math.PI * 2 + 0.4, r = 0.42, x = Math.cos(a) * r, z = Math.sin(a) * r;
+      g.add(M.cil(0.2, 0.22, 0.26, 8, 0x8a6038, x, 0.13, z));
+      g.add(M.cono(0.3, 0.32, 8, 0xc9a24e, x, 0.42, z));
+      g.add(M.caja(0.08, 0.14, 0.02, 0x3a2414, x + Math.cos(a) * 0.2, 0.08, z + Math.sin(a) * 0.2).rotateY(-a + Math.PI / 2));
+    }
+    for (var s = 0; s < 18; s++) { var b = s / 18 * Math.PI * 2; if (Math.abs(b - 4.4) < 0.3) continue; g.add(M.cono(0.04, 0.36, 4, 0x6a4424, Math.cos(b) * 0.82, 0.18, Math.sin(b) * 0.82)); }
+    g.add(M.cil(0.12, 0.14, 0.05, 6, 0x5a5048, 0, 0.03, 0)); g.add(M.cono(0.08, 0.2, 5, 0xff8a2a, 0, 0.12, 0));
+    g.add(M.cil(0.02, 0.02, 0.9, 5, 0x4a2c18, 0.15, 0.45, 0.15)); g.add(M.caja(0.24, 0.16, 0.02, 0xb0302a, 0.28, 0.82, 0.15));
+    return g;
+  }
   function ponerCosasMundo(lista, yo) {
     if (!M3) crearMundo3D();
     while (M3.cosas.children.length) M3.cosas.remove(M3.cosas.children[0]);
     ocupadasMundo = {};
     CAMPAMENTOS.forEach(function (cm, i) {
       var c = celdaDe(cm.x, cm.y), p = posCelda(c.x, c.y), g = new THREE.Group();
-      g.add(M.cono(0.55, 0.9, 6, 0x8a5a33, -0.3, 0.45, 0)); g.add(M.cono(0.4, 0.7, 6, 0x6b8a2a, 0.4, 0.35, -0.2));
-      g.add(M.cono(0.12, 0.25, 5, 0xff9a2a, 0.15, 0.12, 0.45));
-      var et = M.etiquetaEdificio('⛺ ' + T('leyenda_trasgos'), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
+      var ab = aldeaBarbara(cm.nivel); ab.scale.setScalar(1.35); g.add(ab);
+      var et = M.etiquetaEdificio('🛖 ' + T('leyenda_trasgos'), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
       g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[c.x + '_' + c.y] = { campamento: i };
     });
@@ -1371,7 +1420,7 @@
   // ---------- BUSCAR objetivos por tipo y nivel ----------
   var busqueda = { tipo: 'bestia', nivel: 0 };
   function pintarBuscador() {
-    var tipos = [['bestia', '🐗 ' + L('Bestias', 'Beasts')], ['campamento', '⛺ ' + L('Campamentos', 'Camps')], ['bosque', '🪵 ' + L('Aserraderos', 'Sawmills')], ['colina', '🪨 ' + L('Canteras', 'Quarries')], ['montana', '🪙 ' + L('Minas', 'Mines')], ['llanura', '🌾 ' + L('Molinos', 'Mills')]];
+    var tipos = [['bestia', '🐗 ' + L('Bestias', 'Beasts')], ['campamento', '🛖 ' + L('Aldeas bárbaras', 'Barbarian villages')], ['bosque', '🪵 ' + L('Aserraderos', 'Sawmills')], ['colina', '🪨 ' + L('Canteras', 'Quarries')], ['montana', '🪙 ' + L('Minas', 'Mines')], ['llanura', '🌾 ' + L('Molinos', 'Mills')]];
     var niveles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     $('mundo-buscar').innerHTML = '<select id="bus-tipo">' + tipos.map(function (q) { return '<option value="' + q[0] + '"' + (q[0] === busqueda.tipo ? ' selected' : '') + '>' + q[1] + '</option>'; }).join('') + '</select>' +
       '<select id="bus-nivel">' + niveles.map(function (n) { return '<option value="' + n + '"' + (n === busqueda.nivel ? ' selected' : '') + '>' + (n ? L('Nivel ', 'Level ') + n : L('Cualquier nivel', 'Any level')) + '</option>'; }).join('') + '</select>' +
@@ -1424,7 +1473,7 @@
   }
   function mostrarCampamento(i) {
     var cm = CAMPAMENTOS[i], c = celdaDe(cm.x, cm.y), espera = ((estado.cdCamp || {})[i] || 0) - Date.now();
-    var html = '<div class="carta"><h3>⛺ ' + T('campamento') + ' <span class="me-nivel">' + cm.nivel + '</span></h3><p>' + T('campamento_txt') + '</p>' +
+    var html = '<div class="carta"><h3>🛖 ' + T('campamento') + ' <span class="me-nivel">' + cm.nivel + '</span></h3><p>' + T('campamento_txt') + '</p>' +
       '<div class="stats"><span>📍 ' + c.x + ', ' + c.y + '</span><span>🛡️ ' + formatoNumero(defensaCampamento(cm.nivel)) + '</span><span>' + T('at_botin') + ': ' + textoBotin(botinMaximo(cm.nivel)) + '</span></div>' +
       (espera > 0 ? '<p class="nota aviso-rojo">' + T('camp_espera', { t: fmtTiempo(espera / 1000) }) + '</p>' : '<button class="comprar rojo boton-oleada-grande" id="camp-atacar">⚔️ ' + T('camp_atacar') + '</button>') + '</div>';
     $('mundo-info').innerHTML = html;
