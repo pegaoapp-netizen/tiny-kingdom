@@ -2401,10 +2401,78 @@ var M = (function () {
     return { grupo: g, cuerpo: cuerpo, patas: patas, tipo: tipo };
   }
   var GIRO_GALLINA = 0;
+  // ---------- MOVER UNA FIGURA SIN HUESOS ----------
+  // El juego dobla las patas (de la panza para abajo) y baja el cuello, moviendo los puntos de la figura en la tarjeta gráfica.
+  function deformarCuadrupedo(f, op) {
+    op = op || {};
+    f.updateMatrixWorld(true);
+    var inv = new THREE.Matrix4().copy(f.matrixWorld).invert(), v = new THREE.Vector3(), mallas = [];
+    f.traverse(function (o) { if (o.isMesh) mallas.push(o); });
+    if (!mallas.length) return null;
+    // medir la figura en su propio espacio: alto, largo, ancho y hacia dónde está la cabeza
+    var mn = new THREE.Vector3(1e9, 1e9, 1e9), mx = new THREE.Vector3(-1e9, -1e9, -1e9), pts = [];
+    mallas.forEach(function (o) {
+      var rel = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld), P = o.geometry.attributes.position;
+      o.userData.rel = rel;
+      for (var i = 0; i < P.count; i += 4) { v.fromBufferAttribute(P, i).applyMatrix4(rel); mn.min(v); mx.max(v); pts.push(v.x, v.y, v.z); }
+    });
+    var H = mx.y - mn.y, largoX = mx.x - mn.x, largoZ = mx.z - mn.z;
+    var eje = largoX > largoZ ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 0, 1), lado = largoX > largoZ ? new THREE.Vector3(0, 0, 1) : new THREE.Vector3(1, 0, 0);
+    var centro = mn.clone().add(mx).multiplyScalar(0.5); centro.y = mn.y;
+    // la cabeza está en la punta donde hay más puntos altos
+    var suma = 0, n = 0;
+    for (var k = 0; k < pts.length; k += 3) if (pts[k + 1] > mn.y + H * 0.8) { suma += (eje.x ? pts[k] - centro.x : pts[k + 2] - centro.z); n++; }
+    if (n && suma < 0) eje.negate();
+    var L = Math.max(largoX, largoZ) / 2, W = Math.min(largoX, largoZ) / 2;
+    var U = {
+      uT: { value: 0 }, uAndar: { value: 0 }, uPastar: { value: 0 },
+      uEje: { value: eje }, uLado: { value: lado }, uCentro: { value: centro },
+      uH: { value: H }, uL: { value: L }, uW: { value: W }, uSuelo: { value: mn.y },
+      uPanza: { value: op.panza || 0.46 }, uCuello: { value: op.cuello || 0.3 }, uPaso: { value: op.paso || 0.45 }
+    };
+    mallas.forEach(function (o) {
+      var m = o.material.clone();
+      var rel = o.userData.rel, relInv = new THREE.Matrix4().copy(rel).invert();
+      m.onBeforeCompile = function (sh) {
+        Object.keys(U).forEach(function (k) { sh.uniforms[k] = U[k]; });
+        sh.uniforms.uRel = { value: rel }; sh.uniforms.uRelInv = { value: relInv };
+        sh.vertexShader = 'uniform float uT, uAndar, uPastar, uH, uL, uW, uSuelo, uPanza, uCuello, uPaso;\nuniform vec3 uEje, uLado, uCentro;\nuniform mat4 uRel, uRelInv;\n' +
+          sh.vertexShader.replace('#include <begin_vertex>', [
+            '#include <begin_vertex>',
+            'vec3 q = (uRel * vec4(transformed, 1.0)).xyz;',
+            'float ay = q.y - uSuelo, a = dot(q - uCentro, uEje), s = dot(q - uCentro, uLado);',
+            // patas: de la panza para abajo, en diagonal (delantera izquierda con trasera derecha)
+            'float tope = uH * uPanza;',
+            'if (ay < tope) {',
+            '  float fr = a > 0.0 ? 1.0 : -1.0, lr = s > 0.0 ? 1.0 : -1.0;',
+            '  float esPata = smoothstep(0.1 * uW, 0.3 * uW, abs(s)) * clamp((tope - ay) / (uH * 0.12), 0.0, 1.0);',
+            '  float ang = sin(uT * 8.0) * uPaso * uAndar * fr * lr;',
+            '  float dy = tope - ay;',
+            '  q += uEje * (sin(ang) * dy * esPata);',
+            '  q.y += (1.0 - cos(ang)) * dy * esPata;',
+            '}',
+            // cuello y cabeza: bajan a pastar
+            'float base = uL * uCuello;',
+            'if (a > base && ay > uH * 0.5) {',
+            '  float g = uPastar * 1.55 * clamp((a - base) / (uL * 0.22), 0.0, 1.0);',
+            '  vec2 r = vec2(a - base, ay - uH * 0.56);',
+            '  float c = cos(-g), sn = sin(-g);',
+            '  vec2 r2 = vec2(r.x * c - r.y * sn, r.x * sn + r.y * c);',
+            '  q += uEje * (r2.x - r.x); q.y += r2.y - r.y;',
+            '}',
+            'transformed = (uRelInv * vec4(q, 1.0)).xyz;'
+          ].join('\n'));
+      };
+      m.customProgramCacheKey = function () { return 'cuadrupedo'; };
+      o.material = m;
+    });
+    return U;
+  }
   function ponerFiguraAnimal(a) {
     if (a.fig) return true;
     var f = figura(a.tipo); if (!f) return false;
-    if (a.tipo === 'caballo') { f.rotation.y = Math.PI / 2; f.scale.multiplyScalar(1.75); }
+    if (a.tipo === 'caballo') a.def = deformarCuadrupedo(f, { panza: 0.46, cuello: 0.3, paso: 0.45 });
+    if (a.tipo === 'caballo') { f.rotation.y = 0; f.scale.multiplyScalar(1.75); }
     if (a.tipo === 'gallina') { f.rotation.y = GIRO_GALLINA; a.cuerpo.children.slice().forEach(function (c) { a.cuerpo.remove(c); }); a.patas.forEach(function (pt) { pt.visible = false; }); }
     a.cuerpo.add(f); a.fig = f; return true;
   }
@@ -2414,6 +2482,14 @@ var M = (function () {
     a.cuerpo.position.y = Math.abs(s) * 0.03 * v;
     // picotear / pastar cuando está quieta
     a.cuerpo.rotation.x = camina ? 0 : Math.max(0, Math.sin(t * 1.3)) * (a.tipo === 'gallina' ? 0.35 : 0.12);
+    if (a.def) {
+      // caballo: patas al caminar, cabeza abajo al pastar (sube de vez en cuando a mirar)
+      var U = a.def; U.uT.value = t;
+      U.uAndar.value += ((camina ? 1 : 0) - U.uAndar.value) * 0.12;
+      var quiere = camina ? 0 : (Math.sin(t * 0.35) > -0.3 ? 1 : 0);
+      U.uPastar.value += (quiere - U.uPastar.value) * 0.04;
+      a.cuerpo.rotation.x = 0; a.cuerpo.position.y = Math.abs(Math.sin(t * 8)) * 0.02 * U.uAndar.value;
+    }
   }
 
   // Moneda 3D pequeña (para efectos)

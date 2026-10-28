@@ -2560,7 +2560,7 @@
   function modeloCarreta() {
     var g = new THREE.Group();
     var fc = M.figura('carreta'), fh = M.figura('caballo');
-    if (fc && fh) { var ad = new THREE.Group(); ad.add(fc); fh.position.set(-1.45, 0, 0); ad.add(fh); ad.rotation.y = Math.PI; ad.position.x = -0.4; g.add(ad); g.scale.setScalar(0.85); return g; }
+    if (fc && fh) { var ad = new THREE.Group(); ad.add(fc); fh.rotation.y = -Math.PI / 2; fh.position.set(-0.85, 0, 0); ad.add(fh); ad.rotation.y = Math.PI; ad.position.x = -0.3; g.add(ad); g.scale.setScalar(0.85); return g; }
     g.add(M.caja ? M.caja(0.7, 0.3, 0.45, 0x9a5e2c, 0, 0.32, 0) : new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.45), new THREE.MeshLambertMaterial({ color: 0x9a5e2c })));
     var saco = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8d39a })); saco.position.set(0, 0.55, 0); g.add(saco);
     [[-0.25, 0.26], [0.25, 0.26], [-0.25, -0.26], [0.25, -0.26]].forEach(function (p) { var r = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), new THREE.MeshLambertMaterial({ color: 0x5c3418 })); r.rotation.x = Math.PI / 2; r.position.set(p[0], 0.15, p[1]); g.add(r); });
