@@ -1246,3 +1246,55 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 @media (max-width: 600px) { #mundo-coord { top: auto; bottom: 52px; } #mundo-info { bottom: 90px; max-height: 42vh; } #mundo-buscar { top: calc(74px + env(safe-area-inset-top)); } #mundo .mundo-cab h2 { font-size: 15px; } }
 .bp-emoji { font-size: 34px; line-height: 1; }
 .carta.al-cab { display: flex !important; flex-direction: row !important; align-items: center; text-align: left; } .al-cab .al-datos { flex: 1; min-width: 0; }
+
+/* ===== v6.0: tabla de requisitos, botones de obra, cuartel, misión, barra de obras, nivel nuevo ===== */
+table.req { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 13px; background: rgba(255,255,255,.55); border-radius: 10px; overflow: hidden; }
+table.req th { background: #6b4422; color: #ffe9b0; font-weight: 800; padding: 5px 6px; text-align: left; font-size: 12px; }
+table.req td { padding: 5px 6px; border-top: 1px solid rgba(107,68,34,.18); font-weight: 700; }
+table.req tr.no td:last-child { color: #c0281e; }
+table.req tr.si td:last-child { color: #2f7a22; }
+table.req tr.tiempo td { background: rgba(242,196,90,.25); }
+.obra-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.obra-botones > *:only-child { grid-column: 1 / -1; }
+.comprar.azul { background: linear-gradient(#5aa2ff, #2a64c8) !important; border-color: #1a3f86 !important; color: #fff !important; }
+.comprar.verde { background: linear-gradient(#5fd35a, #2c9a2a) !important; border-color: #1c661a !important; color: #fff !important; }
+.sig-nivel { background: rgba(255,233,176,.55); border: 1px dashed #b07a24; border-radius: 10px; padding: 6px 8px; margin: 8px 0 4px; }
+.fila-construir, .fila-tropa { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: linear-gradient(#fff6dc, #f3dfae); border: 2px solid #b07a24; border-radius: 12px; padding: 7px 8px; margin: 0 0 7px; font-family: inherit; color: #3a2414; cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+.fila-construir:active, .fila-tropa:active { transform: translateY(2px); box-shadow: none; }
+.fila-construir .foto, .fila-tropa .foto { position: relative; flex: 0 0 54px; width: 54px; height: 54px; display: grid; place-items: center; border-radius: 10px; background: #e8d3a0; overflow: hidden; font-size: 28px; }
+.fila-construir .foto img, .fila-tropa .foto img { width: 100%; height: 100%; object-fit: cover; }
+.fc-txt, .ft-txt { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.fc-txt b, .ft-txt b { font-size: 14.5px; }
+.fc-txt small, .ft-txt small { font-size: 11.5px; line-height: 1.25; opacity: .9; }
+.ft-tienes { color: #c0281e; font-weight: 800; opacity: 1 !important; }
+.fc-flecha { font-size: 30px; font-weight: 900; color: #d2850e; line-height: 1; }
+.fila-tropa .estrellas { position: absolute; left: 0; right: 0; bottom: 0; font-style: normal; font-size: 10px; color: #ffd34a; background: rgba(0,0,0,.45); text-align: center; letter-spacing: -1px; }
+.volver-lista { margin-bottom: 6px; }
+.foto.mini { width: 30px; height: 30px; display: inline-grid; place-items: center; border-radius: 8px; overflow: hidden; background: #e8d3a0; }
+.foto.mini img { width: 100%; height: 100%; object-fit: cover; }
+#ciudad-nombre { position: fixed; left: 8px; top: calc(env(safe-area-inset-top) + 50px); z-index: 30; font-size: 11px; font-weight: 800; color: #ffe9b0; background: rgba(42,26,14,.72); padding: 1px 8px; border-radius: 999px; pointer-events: none; max-width: 46vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#mision { position: fixed; left: 8px; top: calc(env(safe-area-inset-top) + 98px); z-index: 30; max-width: min(62vw, 360px); text-align: left; font-family: inherit; font-weight: 800; font-size: 12.5px; color: #3a2414; background: linear-gradient(#fff3d0, #f0d58e); border: 2px solid #b07a24; border-radius: 12px; padding: 4px 9px; box-shadow: 0 2px 0 rgba(0,0,0,.25); cursor: pointer; }
+#mision.listo { background: linear-gradient(#c9f5a6, #7ad25a); border-color: #3f8a22; animation: misLate 1.2s infinite; }
+#mision .mis-listo { color: #1c5a12; }
+@keyframes misLate { 50% { transform: scale(1.04); } }
+#barra-obra { position: fixed; left: 8px; bottom: calc(env(safe-area-inset-bottom) + 84px); z-index: 30; display: flex; align-items: center; gap: 6px; background: rgba(42,26,14,.85); border: 2px solid #c9902a; border-radius: 999px; padding: 3px 4px 3px 10px; color: #ffe9b0; font-weight: 800; font-size: 12.5px; max-width: 70vw; }
+#bo-txt { cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#bo-acelerar { font-family: inherit; font-weight: 900; font-size: 13px; border: 2px solid #1c661a; border-radius: 999px; background: linear-gradient(#5fd35a, #2c9a2a); color: #fff; padding: 2px 10px; cursor: pointer; }
+#mision.oculto, #barra-obra.oculto { display: none; }
+body.panel-abierto #barra-obra, body.panel-abierto #mision { display: none; }
+#nivel-nuevo { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(0,0,0,.45); }
+.nn-caja { width: min(360px, 90vw); background: linear-gradient(#fff6dc, #f0d9a2); border: 3px solid #8a5a1a; border-radius: 16px; padding: 14px; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.nn-cinta { margin: -28px auto 8px; width: 80%; background: linear-gradient(#e2463a, #a8201a); color: #ffe9b0; font-weight: 900; font-size: 18px; padding: 8px; border-radius: 10px; border: 3px solid #f2c45a; }
+.nn-fila { display: flex; gap: 10px; align-items: center; text-align: left; background: rgba(255,255,255,.6); border: 1px solid #c9a35a; border-radius: 10px; padding: 6px 8px; margin: 5px 0; font-weight: 700; font-size: 13px; }
+.nn-fila span:first-child { font-size: 22px; }
+.banner-rojo { background: #c0281e; color: #fff; font-weight: 800; font-size: 12.5px; border-radius: 8px; padding: 5px 8px; margin: 8px 0 0; text-align: center; } .demoler-panel { width: 100%; margin-top: 10px; }
+/* la misión va arriba a la izquierda; los consejos bajan un poco para no taparla */
+body:has(#mision:not(.oculto)) #consejo { top: 136px !important; }
+#barra-obra { bottom: calc(env(safe-area-inset-bottom) + 78px); }
+@media (max-width: 600px) { #mision { top: calc(env(safe-area-inset-top) + 94px); font-size: 12px; } #barra-obra { font-size: 11.5px; max-width: 54vw; } #ciudad-nombre { font-size: 10px; top: calc(env(safe-area-inset-top) + 47px); } }
+@media (max-width: 480px) {
+  .obra-botones { grid-template-columns: 1fr; }
+  #ciudad-nombre { top: calc(env(safe-area-inset-top) + 97px) !important; }
+  #mision { top: calc(env(safe-area-inset-top) + 117px) !important; }
+  body:has(#mision:not(.oculto)) #consejo { top: 150px !important; }
+}

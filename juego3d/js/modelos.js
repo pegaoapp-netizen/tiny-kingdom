@@ -605,13 +605,15 @@ var M = (function () {
   // Parcela libre (v5.0): el mismo estilo dentro y fuera de la muralla.
   // Caminito de arena alrededor, marco de pasto, borde de piedra, base de tierra lisa y un + para construir.
   var TAM_PARCELA = 7.0;
-  function parcelaLibre() {
+  function parcelaLibre(campo) {
     var g = new THREE.Group();
-    var camino = caja(10, 0.04, 10, 0xcdb88c, 0, 0.02, 0); camino.castShadow = false; camino.receiveShadow = true; g.add(camino);
+    var camino = caja(10, 0.04, 10, 0xb7ad9a, 0, 0.02, 0); camino.castShadow = false; camino.receiveShadow = true; g.add(camino);
     var pasto = caja(8.5, 0.07, 8.5, 0x7fae4e, 0, 0.045, 0); pasto.castShadow = false; pasto.receiveShadow = true; g.add(pasto);
     var borde = caja(7.6, 0.16, 7.6, 0xa7a196, 0, 0.09, 0); borde.castShadow = false; borde.receiveShadow = true; g.add(borde);
     var bordeOsc = caja(7.62, 0.04, 7.62, 0x7f796f, 0, 0.17, 0); bordeOsc.castShadow = false; g.add(bordeOsc);
-    var tierra = caja(TAM_PARCELA, 0.2, TAM_PARCELA, 0xc6a878, 0, 0.1, 0); tierra.castShadow = false; tierra.receiveShadow = true; g.add(tierra);
+    var tierra = caja(TAM_PARCELA, 0.2, TAM_PARCELA, campo ? 0x96724a : 0xc6a878, 0, 0.1, 0); tierra.castShadow = false; tierra.receiveShadow = true; g.add(tierra);
+    // en el campo: tierra arada con surcos
+    if (campo) for (var sf = -3; sf <= 3; sf++) { var su = caja(TAM_PARCELA - 0.5, 0.04, 0.24, 0x7c5c38, 0, 0.215, sf * (TAM_PARCELA / 7.6)); su.castShadow = false; g.add(su); }
     // piedras de las esquinas
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { var p = caja(0.7, 0.26, 0.7, 0x948e84, s[0] * 3.62, 0.13, s[1] * 3.62); p.castShadow = false; g.add(p); });
     // símbolo de construir: un + dentro de un aro (se esconde cuando hay edificio)
@@ -633,6 +635,15 @@ var M = (function () {
     brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.23; brillo.renderOrder = 2;
     g.add(brillo);
     g.userData.brillo = brillo;
+    return fusionar(g);
+  }
+  function parcelaCerrada() {
+    var g = new THREE.Group();
+    var camino = caja(10, 0.04, 10, 0xb7ad9a, 0, 0.02, 0); camino.castShadow = false; camino.receiveShadow = true; g.add(camino);
+    var pasto = caja(8.5, 0.06, 8.5, 0x86a856, 0, 0.04, 0); pasto.castShadow = false; pasto.receiveShadow = true; g.add(pasto);
+    var tierra = caja(7.4, 0.12, 7.4, 0x9c7e56, 0, 0.07, 0); tierra.castShadow = false; tierra.receiveShadow = true; g.add(tierra);
+    // surcos de tierra (que se note que es un terreno por abrir)
+    for (var i = -3; i <= 3; i++) { var s = caja(7.0, 0.03, 0.22, 0x86683f, 0, 0.14, i * 0.95); s.castShadow = false; g.add(s); }
     return fusionar(g);
   }
   function terreno() {
@@ -1033,6 +1044,13 @@ var M = (function () {
     g.userData.sierra = sierra;
     sierra.userData.noFusionar = true;
     g.add(cil(0.14, 0.14, 1.2, 6, 0xa9783f, 1.0, 0.92, 0.9).rotateZ(Math.PI / 2));
+    // rueda de agua al lado de la casa, con su canal
+    var rueda = new THREE.Group(); rueda.position.set(0.95, 0.95, -0.75);
+    rueda.add(cil(0.85, 0.85, 0.22, 16, C.maderaOsc, 0, 0, 0).rotateZ(Math.PI / 2));
+    for (var pa = 0; pa < 8; pa++) { var aa = pa / 8 * Math.PI * 2; rueda.add(caja(0.3, 0.08, 0.34, C.madera, 0, Math.cos(aa) * 0.9, Math.sin(aa) * 0.9).rotateX(-aa)); }
+    rueda.add(cil(0.12, 0.12, 0.5, 6, C.metalOsc, 0, 0, 0).rotateZ(Math.PI / 2));
+    rueda.userData.noFusionar = true; g.add(rueda); g.userData.rueda = rueda;
+    g.add(caja(0.5, 0.16, 2.2, 0x3f8fb0, 0.95, 0.06, -0.55));
     // pila de troncos (crece con el nivel)
     var n = 3 + nivel * 2;
     for (var i = 0; i < n; i++) {
@@ -1154,8 +1172,8 @@ var M = (function () {
   function muralla(nivel, forma) {
     var g = new THREE.Group();
     var f = forma;
-    var alto = nivel === 1 ? 1.6 : nivel === 2 ? 2.2 : 2.8;
-    var color = nivel === 1 ? C.madera : C.piedra;
+    var alto = nivel === 0 ? 1.05 : nivel === 1 ? 1.6 : nivel === 2 ? 2.2 : 2.8;
+    var color = C.piedra;
     var per = 2 * Math.PI * Math.sqrt((f.rx * f.rx + f.rz * f.rz) / 2);
     var N = Math.round(per / 2.6);
     function punto(t) { return { x: f.cx + Math.cos(t) * f.rx, z: f.cz + Math.sin(t) * f.rz }; }
@@ -1166,14 +1184,14 @@ var M = (function () {
       if (enPuerta(tm)) continue;
       var a = punto(t0), b = punto(t1);
       var dx = b.x - a.x, dz = b.z - a.z, largo = Math.hypot(dx, dz) * 1.08;
-      var seg = caja(largo, alto, nivel === 1 ? 0.5 : 0.85, color, (a.x + b.x) / 2, alto / 2, (a.z + b.z) / 2);
+      var seg = caja(largo, alto, 0.85, color, (a.x + b.x) / 2, alto / 2, (a.z + b.z) / 2);
       seg.rotation.y = -Math.atan2(dz, dx);
       g.add(seg);
-      if (nivel > 1) { // franja de piedra oscura abajo: el muro "pisa" el suelo
+      if (nivel >= 1) { // franja de piedra oscura abajo: el muro "pisa" el suelo
         var zc = caja(largo, 0.35, 1.0, C.piedraOsc, (a.x + b.x) / 2, 0.17, (a.z + b.z) / 2);
         zc.rotation.y = seg.rotation.y; zc.castShadow = false; g.add(zc);
       }
-      if (nivel === 1) {
+      if (false) {
         if (i % 2 === 0) { var pu = cono(0.25, 0.5, 4, C.maderaOsc, (a.x + b.x) / 2, alto + 0.22, (a.z + b.z) / 2); pu.castShadow = false; g.add(pu); }
       } else {
         // dos almenas por tramo: silueta de muralla de verdad
@@ -1189,8 +1207,8 @@ var M = (function () {
     var _fin = function () { return fusionar(g); };
     torres.forEach(function (tq) {
       var x = tq.p.x, z = tq.p.z, h = alto + (tq.puerta ? 1.8 : 1.1), r = tq.puerta ? 1.1 : 0.8;
-      g.add(cil(r, r + 0.12, h, 8, nivel === 1 ? C.maderaOsc : C.piedra, x, h / 2, z));
-      if (nivel === 1) g.add(cono(r + 0.2, 0.9, 8, C.maderaOsc, x, h + 0.45, z));
+      g.add(cil(r, r + 0.12, h, 8, C.piedra, x, h / 2, z));
+      if (false) g.add(cono(r + 0.2, 0.9, 8, C.maderaOsc, x, h + 0.45, z));
       else {
         g.add(cil(r + 0.15, r + 0.15, 0.35, 8, C.piedraOsc, x, h + 0.17, z));
         for (var am = 0; am < 6; am++) { var aa = am / 6 * Math.PI * 2; g.add(caja(0.35, 0.4, 0.35, C.piedra, x + Math.cos(aa) * (r + 0.05), h + 0.55, z + Math.sin(aa) * (r + 0.05))); }
@@ -2502,7 +2520,7 @@ var M = (function () {
 
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
-    castillo: castillo, terreno: terreno, parcelaLibre: parcelaLibre, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
+    castillo: castillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
     vigia: vigia, almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
