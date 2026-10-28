@@ -5076,6 +5076,12 @@
     var n = Math.max(1, nivel || 1);
     return { oro: Math.min(5000, 60 + 30 * n), comida: Math.min(5000, 50 + 25 * n), madera: Math.min(5000, 50 + 25 * n), piedra: Math.min(5000, 20 + 12 * n) };
   }
+  var REPARTO_BOTIN = { oro: 0.3, comida: 0.3, madera: 0.25, piedra: 0.15 };
+  function botinAtaque(nivel, nCarretas) {
+    var base = botinMaximo(nivel), b = {}, cap = (nCarretas || 0) * capCarreta();
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { b[r] = Math.min(50000, Math.round(base[r] * 0.4 + cap * REPARTO_BOTIN[r])); });
+    return b;
+  }
   function textoBotin(b) { return ['oro', 'comida', 'madera', 'piedra'].filter(function (r) { return b[r]; }).map(function (r) { return '+' + b[r] + ' ' + ICONO_RECURSO[r]; }).join(', ') || '—'; }
   // ---------- FICHA DE CIUDAD: nunca atacar a ciegas ----------
   function datosEspia() {
@@ -5146,22 +5152,28 @@
     var h = '<button class="fc-x" id="fc-x2">✕</button><div class="fc-cab">⚔️ ' + L('Elige tus tropas', 'Choose your troops') + ' <small>→ ' + escaparHTML(a.nombre) + '</small></div><div class="fc-tropas">';
     Object.keys(tipos).forEach(function (k) { h += '<div class="fc-tr"><span>' + TROPAS[k].icono + ' ' + N(k) + '</span><input type="range" min="0" max="' + tipos[k].n + '" value="' + tipos[k].n + '" data-t="' + k + '"><b id="fc-n-' + k + '">' + tipos[k].n + '</b></div>'; });
     if (!Object.keys(tipos).length) h += '<p class="nota">' + T('at_sin_tropas') + '</p>';
+    var libresC = carretasLibres();
+    h += '<div class="fc-tr fc-car"><span>🛒 ' + L('Carretas', 'Carts') + ' <small>(' + L('libres ', 'free ') + libresC + ')</small></span><input type="range" min="0" max="' + libresC + '" value="' + Math.min(libresC, 2) + '" id="fc-carretas"' + (libresC ? '' : ' disabled') + '><b id="fc-n-car">' + Math.min(libresC, 2) + '</b></div>' +
+      '<p class="nota fc-robo" id="fc-robo"></p>';
     h += '</div><div class="fc-vs"><div><small>' + L('Tu poder', 'Your power') + '</small><b id="fc-mio">0</b></div><span>VS</span><div><small>' + L('Su defensa', 'Their defense') + '</small><b>' + formatoNumero(Math.round((a.defensa || 0) / 100) * 100) + '</b></div></div><p class="fc-aviso" id="fc-dif"></p>' + (((estado.burbujaHasta || 0) > Date.now() || (estado.escudoHasta || 0) > Date.now()) ? '<p class="fc-aviso">🫧 ' + L('Si atacas, pierdes tu protección y tu burbuja.', 'If you attack, you lose your protection and your bubble.') + '</p>' : '') +
       '<div class="fc-botones"><button class="comprar" id="fc-volver">◀ ' + L('Volver', 'Back') + '</button><button class="comprar rojo" id="fc-confirmar">⚔️ ' + L('Confirmar ataque', 'Confirm attack') + '</button></div>';
     caja.innerHTML = h;
     function recalcular() {
       var f = 0;
-      caja.querySelectorAll('input[type=range]').forEach(function (r) { var k = r.dataset.t, n = +r.value; $('fc-n-' + k).textContent = n; f += tipos[k].v / tipos[k].n * n; });
+      caja.querySelectorAll('input[data-t]').forEach(function (r) { var k = r.dataset.t, n = +r.value; $('fc-n-' + k).textContent = n; f += tipos[k].v / tipos[k].n * n; });
       f = Math.round(f); $('fc-mio').textContent = formatoNumero(f);
       var dd = a.defensa || 1, p = f / dd;
       $('fc-dif').textContent = f <= 0 ? L('Elige al menos una tropa.', 'Choose at least one troop.') : p > 1.3 ? '😀 ' + T('at_facil') : p > 0.85 ? '😐 ' + T('at_parejo') : '😬 ' + T('at_dificil') + ' · ' + L('podrías perder tus tropas', 'you could lose your troops');
+      var nc = $('fc-carretas') ? +$('fc-carretas').value : 0; $('fc-n-car').textContent = nc;
+      $('fc-robo').innerHTML = '💰 ' + L('Puedes robar hasta: ', 'You can steal up to: ') + textoBotin(botinAtaque(a.nivel || 1, nc)) + (nc ? '' : '<br><small>' + L('Sin carretas tus soldados cargan muy poco.', 'Without carts your soldiers carry very little.') + '</small>');
       $('fc-confirmar').disabled = f <= 0; return f;
     }
     caja.querySelectorAll('input[type=range]').forEach(function (r) { r.addEventListener('input', recalcular); });
+    if (!Object.keys(tipos).length) { var cr0 = $('fc-carretas'); if (cr0) cr0.disabled = true; }
     recalcular();
     $('fc-x2').addEventListener('click', function () { sonar('click'); cerrarFicha(); });
     $('fc-volver').addEventListener('click', function () { sonar('click'); abrirFichaCiudad(a); });
-    $('fc-confirmar').addEventListener('click', function () { var f = recalcular(); if (f <= 0) return; this.disabled = true; cerrarFicha(); realizarAtaque(a, f); });
+    $('fc-confirmar').addEventListener('click', function () { var f = recalcular(); if (f <= 0) return; this.disabled = true; var nc = $('fc-carretas') ? +$('fc-carretas').value : 0; cerrarFicha(); realizarAtaque(a, f, nc); });
   }
   function puedeAtacar(a) {
     if (!hayCuenta()) return T('at_cuenta');
@@ -5237,10 +5249,11 @@
     return Math.round(60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) * 1000;
   }
   var marchas = [], entrantes = [], dejarDeEscuchar = null, resolviendo = {};
-  function realizarAtaque(a, fuerzaElegida) {
+  function realizarAtaque(a, fuerzaElegida, nCarretas) {
     var no = puedeAtacar(a);
     if (no) { consejoTemporal(no); sonar('error'); return; }
-    var f = Math.round(fuerzaElegida || fuerzaEjercito()), viaje = tiempoMarcha(a), bm = botinMaximo(a.nivel);
+    nCarretas = Math.max(0, Math.min(nCarretas || 0, carretasLibres()));
+    var f = Math.round(fuerzaElegida || fuerzaEjercito()), viaje = tiempoMarcha(a), bm = botinAtaque(a.nivel, nCarretas);
     var doc = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
       gano: false, botin: { oro: bm.oro, comida: bm.comida, madera: bm.madera, piedra: bm.piedra }, fuerza: f, defensa: Math.round(a.defensa || 1),
       fecha: Date.now(), llega: Date.now() + viaje, visto: false, resuelto: false, cobrado: false, bajas: 0 };
@@ -5248,6 +5261,7 @@
     Cuentas.atacar(doc).then(function (ref) {
       doc.id = ref.id; marchas.push(doc);
       estado.destinos = estado.destinos || {}; estado.destinos[ref.id] = { x: a.x, y: a.y };
+      if (nCarretas) { var cv = carretas(), ahoraC = Date.now(); cv.viajes.push({ id: 'va' + ref.id, tipo: 'ataque', de: miLugar(), a: { x: a.x, y: a.y }, sale: ahoraC, llega: ahoraC + viaje, vuelve: ahoraC + 2 * viaje, recursos: null, n: nCarretas, nombre: String(a.nombre || '') }); }
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 10 * 60 * 1000;
       guardar(true); publicarAldea(true); actualizarEscudo();

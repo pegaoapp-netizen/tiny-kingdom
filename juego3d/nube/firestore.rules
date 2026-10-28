@@ -84,8 +84,8 @@ service cloud.firestore {
     // Ataques con marcha: se crean al salir, se resuelven al llegar (lo hace el defensor o el atacante, una sola vez)
     function botinOk(b) {
       return b.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
-        && b.oro is int && b.oro >= 0 && b.oro <= 5000 && b.comida is int && b.comida >= 0 && b.comida <= 5000
-        && b.madera is int && b.madera >= 0 && b.madera <= 5000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 5000;
+        && b.oro is int && b.oro >= 0 && b.oro <= 50000 && b.comida is int && b.comida >= 0 && b.comida <= 50000
+        && b.madera is int && b.madera >= 0 && b.madera <= 50000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 50000;
     }
     match /ataques/{id} {
       allow read: if request.auth != null
