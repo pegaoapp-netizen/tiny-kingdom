@@ -1495,6 +1495,7 @@ var M = (function () {
       return u0;
     }
     if (ASEDIO[tipo]) return maquinaAsedio(tipo, tam);
+    var tipoFig = tipo; if (tipo === 'aldeana') tipo = 'aldeano';
     armadura = armadura || 0;
     var g = new THREE.Group();     // grupo principal (posición en el mundo)
     var cuerpo = new THREE.Group(); // todo lo que se balancea al caminar
@@ -1701,7 +1702,7 @@ var M = (function () {
     }
     [cuerpo, p.cabeza, p.brazo, p.izq, arma, p.piernaI, p.piernaD].forEach(function (gr) { if (gr) fusionar(gr, true); });
     if (p.caballo) { fusionar(p.caballo, true); p.patas.forEach(function (pt) { fusionar(pt, true); }); }
-    if (FIGURA_TROPA[tipo] && !look) ponerFiguraTropa(tipo, g, cuerpo, p, armadura);
+    if (FIGURA_TROPA[tipoFig] && !look && !(figListas[FIGURA_TROPA[tipoFig]] && figListas[FIGURA_TROPA[tipoFig]].esperaAnim)) ponerFiguraTropa(tipoFig, g, cuerpo, p, armadura);
     var blob = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
     blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.renderOrder = 1;
     if (tipo === 'caballeria') blob.scale.set(1.3, 2.4, 1);
@@ -2103,11 +2104,27 @@ var M = (function () {
   // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
-    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' },
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' },
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
-  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano' };
-  var figListas = {}, figPedidas = false;
+  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana' };
+  var figListas = {}, figPedidas = false, pendRet = {};
+  // figuras con esqueleto pero sin animación: usan la de otra figura (mismos huesos, otros nombres)
+  var HUESO_DIF = { Spine: 'Spine02', Spine1: 'Spine01', Spine2: 'Spine', Neck: 'neck' };
+  function intentarRetarget() {
+    Object.keys(pendRet).forEach(function (id) {
+      var src = figListas[FIGURAS[id].animDe], dst = figListas[id]; if (!src || !src.clips || !dst) return;
+      var nombres = {}; dst.obj.traverse(function (o) { if (o.isBone) nombres[o.name] = 1; });
+      dst.clips = src.clips.map(function (c) {
+        var tr = c.tracks.filter(function (t) { return /.quaternion$/.test(t.name); }).map(function (t) {
+          var b = t.name.replace(/.quaternion$/, '').replace(/^mixamorig/, ''), d = HUESO_DIF[b] || b; if (!nombres[d]) return null;
+          var nt = t.clone(); nt.name = d + '.quaternion'; return nt;
+        }).filter(Boolean);
+        return new THREE.AnimationClip(c.name, c.duration, tr);
+      });
+      dst.esperaAnim = false; var cb = pendRet[id]; delete pendRet[id]; if (cb) cb(id);
+    });
+  }
   function cargarFiguras(alListo) {
     if (figPedidas || !THREE.GLTFLoader) return; figPedidas = true;
     var cargador = new THREE.GLTFLoader(), v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
@@ -2135,7 +2152,8 @@ var M = (function () {
         raiz.scale.setScalar(k); raiz.rotation.y = FIGURAS[id].gira;
         var hold = new THREE.Group(); hold.add(raiz);
         figListas[id] = { obj: hold, largo: Math.max(tam.x, tam.z) * k, clips: anim ? gl.animations : null };
-        if (alListo) alListo(id);
+        if (FIGURAS[id].animDe) { figListas[id].clips = null; figListas[id].esperaAnim = true; pendRet[id] = alListo; } else if (alListo) alListo(id);
+        intentarRetarget();
       }, undefined, function () { /* sin archivo: queda la figura hecha con código */ });
     });
   }
