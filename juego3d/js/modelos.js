@@ -2103,10 +2103,10 @@ var M = (function () {
   // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
-    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' },
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' },
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
-  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin' };
+  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano' };
   var figListas = {}, figPedidas = false;
   function cargarFiguras(alListo) {
     if (figPedidas || !THREE.GLTFLoader) return; figPedidas = true;

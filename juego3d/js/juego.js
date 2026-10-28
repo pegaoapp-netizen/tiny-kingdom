@@ -4065,6 +4065,8 @@
     });
     if (id === 'caballo' || id === 'gallina') animales.forEach(function (o) { if (o.a.tipo === id) M.ponerFiguraAnimal(o.a); });
     if (id === 'carreta' || id === 'caballo') fotoCarreta();
+    // los aldeanos que caminan por el pueblo cambian a la figura nueva
+    if (id === 'aldeano') aldeanos.forEach(function (al2) { var vie = al2.m, nue = M.unidad('aldeano'); nue.grupo.position.copy(vie.grupo.position); nue.grupo.rotation.copy(vie.grupo.rotation); escena.remove(vie.grupo); escena.add(nue.grupo); al2.m = nue; });
     var FAM_FIG = { espadachin: ['espadachin', 'miliciano'], arquero: ['arquero', 'explorador'], guardian: ['guardian'], caballero: ['caballeria', 'jinete', 'caballeria_pesada'] };
     if (FAM_FIG[id]) fotosTropas(FAM_FIG[id]);
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
