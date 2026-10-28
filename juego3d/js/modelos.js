@@ -1495,7 +1495,7 @@ var M = (function () {
       return u0;
     }
     if (ASEDIO[tipo]) return maquinaAsedio(tipo, tam);
-    var tipoFig = tipo; if (tipo === 'aldeana') tipo = 'aldeano';
+    var tipoFig = tipo; if (tipo === 'aldeana' || tipo === 'anciano') tipo = 'aldeano';
     armadura = armadura || 0;
     var g = new THREE.Group();     // grupo principal (posición en el mundo)
     var cuerpo = new THREE.Group(); // todo lo que se balancea al caminar
@@ -2104,10 +2104,10 @@ var M = (function () {
   // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
-    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' },
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' }, anciano: { alto: 1.6, gira: 0, archivo: 'anciano_rig', animDe: 'aldeano' },
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
-  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana' };
+  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano' };
   var figListas = {}, figPedidas = false, pendRet = {};
   // figuras con esqueleto pero sin animación: usan la de otra figura (mismos huesos, otros nombres)
   var HUESO_DIF = { Spine: 'Spine02', Spine1: 'Spine01', Spine2: 'Spine', Neck: 'neck' };
