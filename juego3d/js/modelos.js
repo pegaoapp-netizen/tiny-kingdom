@@ -1316,8 +1316,18 @@ var M = (function () {
       if (r >= 3) { arc(0.5, ORO, 0.02); var cp2 = caja(0.58, 0.72, 0.04, 0x2a6a34, 0, 0.52, -0.35); cp2.rotation.x = 0.16; cuerpo.add(cp2); }
     }
   }
+  var FAMILIA_TROPA = { explorador: ['arquero', 0.88, 0x9fd46a], miliciano: ['espadachin', 0.9, 0xc9a06a], jinete: ['caballeria', 0.92, 0x7fd0ff], caballeria_pesada: ['caballeria', 1.1, 0xb0302a] };
+  var ASEDIO = { balista: 1, ariete: 1, catapulta: 1, torre_asedio: 1 };
   function unidad(tipo, tam, armadura, look) {
     if (tipo === 'heroe' && look) return heroeModelo(look, tam);
+    if (FAMILIA_TROPA[tipo]) {
+      var fam = FAMILIA_TROPA[tipo], u0 = unidad(fam[0], tam, tipo === 'caballeria_pesada' ? 3 : 0);
+      u0.grupo.scale.multiplyScalar(fam[1]); u0.escala *= fam[1];
+      var aroF = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.6, 24), new THREE.MeshBasicMaterial({ color: fam[2], transparent: true, opacity: 0.65, side: THREE.DoubleSide, depthWrite: false }));
+      aroF.rotation.x = -Math.PI / 2; aroF.position.y = 0.035; u0.grupo.add(aroF);
+      return u0;
+    }
+    if (ASEDIO[tipo]) return maquinaAsedio(tipo, tam);
     armadura = armadura || 0;
     var g = new THREE.Group();     // grupo principal (posición en el mundo)
     var cuerpo = new THREE.Group(); // todo lo que se balancea al caminar
@@ -1999,6 +2009,44 @@ var M = (function () {
     var k = ataque > 0 ? Math.sin(ataque * Math.PI) : 0;
     p.figura.rotation.x = k * 0.32; p.figura.position.z = k * 0.22;
     p.mixer.update(dt);
+  }
+  // ---------- MÁQUINAS DE ASEDIO (balista, ariete, catapulta, torre) ----------
+  function maquinaAsedio(tipo, tam) {
+    var g = new THREE.Group(), cuerpo = new THREE.Group(); g.add(cuerpo);
+    var M1 = C.madera, M2 = C.maderaOsc, HI = C.metalOsc;
+    function ruedas(x, z, r) { [-1, 1].forEach(function (s) { [-1, 1].forEach(function (q) { var w = cil(r, r, 0.12, 10, M2, q * x, r, s * z); w.rotation.x = Math.PI / 2; cuerpo.add(w); }); }); }
+    if (tipo === 'balista') {
+      cuerpo.add(caja(0.9, 0.12, 1.3, M1, 0, 0.32, 0)); ruedas(0.38, 0.5, 0.22);
+      cuerpo.add(caja(0.12, 0.5, 0.12, M2, 0, 0.6, -0.1));
+      var arco = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.05, 5, 14, Math.PI), mat(M2)); arco.position.set(0, 0.86, 0.25); arco.rotation.x = -Math.PI / 2; cuerpo.add(arco);
+      cuerpo.add(caja(0.08, 0.08, 1.3, M1, 0, 0.86, 0.05)); cuerpo.add(cono(0.06, 0.25, 4, HI, 0, 0.86, 0.82).rotateX(Math.PI / 2));
+    } else if (tipo === 'catapulta') {
+      cuerpo.add(caja(1.0, 0.14, 1.5, M1, 0, 0.34, 0)); ruedas(0.42, 0.6, 0.25);
+      [-1, 1].forEach(function (s) { cuerpo.add(caja(0.1, 0.8, 0.1, M2, s * 0.32, 0.8, 0.1)); });
+      cuerpo.add(caja(0.74, 0.1, 0.1, M2, 0, 1.15, 0.1));
+      var brazo = caja(0.1, 0.1, 1.5, M1, 0, 0.9, -0.15); brazo.rotation.x = -0.5; cuerpo.add(brazo);
+      cuerpo.add(esfera(0.2, 0x8f8a80, 0, 1.25, -0.75, 7, 5));
+    } else if (tipo === 'ariete') {
+      cuerpo.add(caja(0.8, 0.1, 1.8, M2, 0, 0.3, 0)); ruedas(0.36, 0.7, 0.24);
+      var tronco = cil(0.18, 0.2, 2.1, 8, 0x8a5a32, 0, 0.62, 0.15); tronco.rotation.x = Math.PI / 2; cuerpo.add(tronco);
+      cuerpo.add(cono(0.21, 0.3, 8, HI, 0, 0.62, 1.32).rotateX(Math.PI / 2));
+      [-1, 1].forEach(function (s) { cuerpo.add(caja(0.08, 0.8, 0.08, M2, s * 0.36, 0.7, -0.6)); cuerpo.add(caja(0.08, 0.8, 0.08, M2, s * 0.36, 0.7, 0.6)); });
+      var techo = caja(0.95, 0.06, 1.6, 0x6a4424, 0, 1.12, 0); cuerpo.add(techo);
+    } else {
+      cuerpo.add(caja(1.2, 0.14, 1.2, M2, 0, 0.32, 0)); ruedas(0.5, 0.5, 0.26);
+      cuerpo.add(caja(1.0, 2.6, 1.0, M1, 0, 1.7, 0));
+      for (var i = 0; i < 4; i++) cuerpo.add(caja(1.04, 0.06, 1.04, M2, 0, 0.6 + i * 0.7, 0));
+      cuerpo.add(caja(0.9, 0.08, 0.5, M2, 0, 2.6, 0.72).rotateX(-0.5));
+      for (var a = 0; a < 4; a++) cuerpo.add(caja(0.2, 0.25, 0.2, M1, (a % 2 ? 0.4 : -0.4), 3.12, (a < 2 ? 0.4 : -0.4)));
+      var bd = bandera(0x2a6ad0, 0.9); bd.userData.noFusionar = true; bd.position.set(0, 3.1, 0); cuerpo.add(bd);
+    }
+    fusionar(cuerpo, true);
+    var p = { piernaI: new THREE.Group(), piernaD: new THREE.Group(), izq: new THREE.Group(), brazo: new THREE.Group(), cabeza: new THREE.Group() };
+    var blob = new THREE.Mesh(geo('blob', function () { return new THREE.CircleGeometry(0.45, 18); }), MAT_BLOB);
+    blob.rotation.x = -Math.PI / 2; blob.position.y = 0.03; blob.scale.set(1.6, 1.6, 1); g.add(blob);
+    var escala = (tam || TAM_UNIDAD) * (tipo === 'torre_asedio' ? 1.0 : 1.05);
+    g.scale.setScalar(escala);
+    return { grupo: g, cuerpo: cuerpo, p: p, escala: escala, baseY: 0, alto: (tipo === 'torre_asedio' ? 3.4 : 1.4) * escala };
   }
   var GLB_HEROES = {};
   ['sol', 'luna', 'ancla', 'brisa', 'chispa', 'roble', 'trueno', 'pluma'].forEach(function (id) { GLB_HEROES[id] = 'modelos/' + id + '.glb'; });

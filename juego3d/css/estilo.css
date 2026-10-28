@@ -1298,3 +1298,22 @@ body:has(#mision:not(.oculto)) #consejo { top: 136px !important; }
   #mision { top: calc(env(safe-area-inset-top) + 117px) !important; }
   body:has(#mision:not(.oculto)) #consejo { top: 150px !important; }
 }
+
+/* ===== v6.1: candados en listas ===== */
+.fila-construir.bloq, .fila-tropa.bloq { filter: saturate(.55); opacity: .88; }
+.fila-construir .candado, .fila-tropa .candado { position: absolute; top: 2px; right: 2px; font-size: 16px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+.comprar.morado[data-accion="comprar-mejora"] { font-size: 13px; }
+/* ===== v6.1: barra de arriba: jugador con nivel y experiencia, ciudad con coordenadas, gemas con + ===== */
+#perfil-nombre { display: block; font-size: 11px; font-weight: 900; color: #fff4d0; line-height: 1.05; max-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#xp-barra { width: 92px; height: 5px; margin-top: 2px; border-radius: 3px; background: rgba(0,0,0,.45); overflow: hidden; border: 1px solid rgba(255,216,106,.5); }
+#xp-relleno { height: 100%; width: 0; background: linear-gradient(90deg, #ffd34a, #ff9a2a); transition: width .4s; }
+#ciudad-nombre { display: flex !important; align-items: center; gap: 5px; padding: 2px 9px 2px 4px !important; border: 2px solid #c9902a; border-radius: 10px !important; background: linear-gradient(#7a4f24, #4f3216) !important; max-width: 52vw !important; }
+#ciudad-nombre .cn-ico { font-size: 18px; }
+#ciudad-nombre .cn-txt { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
+#ciudad-nombre .cn-txt b { font-size: 11px; color: #fff4d0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#ciudad-nombre .cn-txt small { font-size: 10px; color: #ffd86a; }
+#pill-gemas { background: linear-gradient(#5fd35a, #2c9a2a) !important; border-color: #1c661a !important; cursor: pointer; }
+#pill-gemas b { color: #fff !important; }
+.gemas-mas { margin-left: 3px; font-weight: 900; font-size: 14px; color: #fff; background: rgba(0,0,0,.25); border-radius: 50%; width: 16px; height: 16px; line-height: 15px; text-align: center; display: inline-block; }
+@media (max-width: 480px) { #mision { top: calc(env(safe-area-inset-top) + 133px) !important; } body:has(#mision:not(.oculto)) #consejo { top: 166px !important; } }
+@media (max-width: 480px) { .gemas-mas { display: none; } #xp-barra { width: 70px; } }
