@@ -2722,7 +2722,7 @@
   }
   // ---------- CARRETAS: se entrenan en el Mercado, se mejoran y viajan por el mapa ----------
   function carretas() { return estado.carretas || (estado.carretas = { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] }); }
-  function capCarreta() { return CARRETA.capacidad[carretas().nivel] || CARRETA.capacidad[1]; }
+  function capCarreta() { return Math.round((CARRETA.capacidad[carretas().nivel] || CARRETA.capacidad[1]) * (1 + bono('carga'))); }
   function carretasLibres() { var c = carretas(); return Math.max(0, c.n - c.viajes.reduce(function (s, v) { return s + v.n; }, 0)); }
   function carretasPara(total) { return Math.max(1, Math.ceil(total / capCarreta())); }
   // segundos de viaje entre dos puntos del mapa (coordenadas 0..99)
@@ -2765,7 +2765,7 @@
   }
   function htmlCarretas() {
     var c = carretas(), sig = c.nivel + 1, enCamino = c.viajes.reduce(function (s, v) { return s + v.n; }, 0);
-    var h = '<div class="carta car-carta"><h3>🛒 ' + T('car_titulo') + ' <span class="me-nivel">' + c.nivel + '</span></h3><p class="nota">' + T('car_txt') + '</p>' +
+    var h = '<div class="carta car-carta"><h3>' + iconoCarreta() + ' ' + T('car_titulo') + ' <span class="me-nivel">' + c.nivel + '</span></h3><p class="nota">' + T('car_txt') + '</p>' +
       '<p><b>' + T('car_tienes', { n: c.n, l: carretasLibres(), c: formatoNumero(capCarreta()) }) + '</b>' + (enCamino ? ' · ' + T('car_en_camino', { n: enCamino }) : '') + '</p>';
     if (c.cola.length) h += '<p class="nota reloj-panel">⏱ ' + T('car_entrenando', { n: c.cola.length, t: fmtTiempo((c.cola[0] - Date.now()) / 1000) }) + '</p>';
     h += '<div class="car-botones">' + [1, 5, 10].map(function (k) { return botonCosto({ oro: CARRETA.costo.oro * k, madera: CARRETA.costo.madera * k }, 'car-entrenar', 'data-n="' + k + '"', T('car_entrenar', { n: k }) + ' ⏱' + fmtTiempo(CARRETA.tiempo * k) + ' '); }).join('') + '</div>';
@@ -2853,7 +2853,7 @@
       var p0 = posCelda(celdaDe(v.de.x, v.de.y).x, celdaDe(v.de.x, v.de.y).y), p1 = posCelda(celdaDe(v.a.x, v.a.y).x, celdaDe(v.a.x, v.a.y).y);
       var desde = ida ? p0 : p1, hasta = ida ? p1 : p0;
       var g = M3.carros[v.id];
-      if (!g) { g = new THREE.Group(); g.add(modeloCarreta()); var et = M.etiquetaEdificio('🛒×' + v.n, v.n); et.position.set(0, 1.4, 0); et.scale.multiplyScalar(0.42); g.add(et); g.userData.et = et; M3.e.add(g); M3.carros[v.id] = g; }
+      if (!g) { g = new THREE.Group(); g.add(modeloCarreta()); var et = M.etiquetaEdificio(L('Carretas', 'Carts') + ' ×' + v.n, v.n); et.position.set(0, 1.4, 0); et.scale.multiplyScalar(0.42); g.add(et); g.userData.et = et; M3.e.add(g); M3.carros[v.id] = g; }
       g.position.set(desde.x + (hasta.x - desde.x) * u, 0.05, desde.z + (hasta.z - desde.z) * u);
       g.rotation.y = Math.atan2(-(hasta.z - desde.z), hasta.x - desde.x);
       vivos[v.id] = true;
@@ -4013,6 +4013,7 @@
       });
     });
     if (id === 'caballo' || id === 'gallina') animales.forEach(function (o) { if (o.a.tipo === id) M.ponerFiguraAnimal(o.a); });
+    if (id === 'carreta' || id === 'caballo') fotoCarreta();
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
   }
   function alLlegarModelo(id) {
@@ -4020,6 +4021,18 @@
     if (!oleadaActiva && estado.heroes && estado.equipo) ponerEquipo();
     if (panelActual && /heroe|tropas|invocar|reclutado/.test(panelActual.tipo)) reabrirPanel();
   }
+  function fotoCarreta() {
+    var fc = M.figura('carreta'), fh = M.figura('caballo'); if (!fc || !fh) return;
+    try {
+      var r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(128, 128);
+      var e = new THREE.Scene(); e.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.7)); var l = new THREE.DirectionalLight(0xffffff, 0.6); l.position.set(3, 5, 4); e.add(l);
+      var g = new THREE.Group(); g.add(fc); fh.rotation.y = -Math.PI / 2; fh.position.set(-0.85, 0, 0); g.add(fh); g.rotation.y = Math.PI + 0.55; e.add(g);
+      g.updateMatrixWorld(true); var bx = new THREE.Box3().setFromObject(g), cen = bx.getCenter(new THREE.Vector3()), tam = bx.getSize(new THREE.Vector3()).length();
+      var c = new THREE.PerspectiveCamera(30, 1, 0.1, 100); c.position.set(cen.x + tam * 0.35, cen.y + tam * 0.55, cen.z + tam * 1.55); c.lookAt(cen);
+      r.render(e, c); retratos.carreta = r.domElement.toDataURL(); r.dispose();
+    } catch (er) { }
+  }
+  function iconoCarreta() { return retratos.carreta ? '<img class="ico-carreta" src="' + retratos.carreta + '" alt="">' : '🛒'; }
   function fotoHTML(clave, emoji) {
     return retratos[clave] ? '<img src="' + retratos[clave] + '" alt="">' : emoji;
   }
@@ -4388,7 +4401,7 @@
   }
   function htmlEntrenarLista() {
     return '<div class="tropas-lista">' + TROPAS_LISTA.map(function (t) {
-      if (t === 'carreta') { var cr = carretas(); return '<button class="fila-tropa" data-accion="cuartel-carretas"><span class="foto">🛒<i class="estrellas">★★</i></span><span class="ft-txt"><b>' + N('carreta') + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + cr.n + '</small><small>' + D('carreta') + '</small></span><span class="fc-flecha">›</span></button>'; }
+      if (t === 'carreta') { var cr = carretas(); return '<button class="fila-tropa" data-accion="cuartel-carretas"><span class="foto">' + fotoHTML('carreta', '🛒') + '<i class="estrellas">★★</i></span><span class="ft-txt"><b>' + N('carreta') + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + cr.n + '</small><small>' + D('carreta') + '</small></span><span class="fc-flecha">›</span></button>'; }
       var na = nivelArmadura(t), ok = puedeEntrenarTipo(t), ent = colaEntreno.filter(function (c) { return c.tipo === t; }).length, est = TROPA_RANGO_ESTRELLAS[t] || 1;
       return '<button class="fila-tropa' + (ok ? '' : ' bloq') + '" data-accion="cuartel-tropa" data-tipo="' + t + '"><span class="foto">' + fotoHTML(t, TROPAS[t].icono) + (ok ? '' : '<b class="candado">🔒</b>') + '<i class="estrellas">' + '★'.repeat(Math.min(5, est + na)) + '</i></span>' +
         '<span class="ft-txt"><b>' + N(t) + ' <small class="rango-chapa r' + na + '">' + T('rango') + ' ' + ROMANO[na] + '</small></b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaTipo(t)) + (ent ? ' · ⏱ ' + formatoNumero(ent) : '') + '</small><small>' + D(t) + '</small>' + (ok ? '' : '<small class="aviso-rojo">' + avisoEdificioTropa(t) + '</small>') + '</span><span class="fc-flecha">›</span></button>';
@@ -5153,7 +5166,7 @@
     Object.keys(tipos).forEach(function (k) { h += '<div class="fc-tr"><span>' + TROPAS[k].icono + ' ' + N(k) + '</span><input type="range" min="0" max="' + tipos[k].n + '" value="' + tipos[k].n + '" data-t="' + k + '"><b id="fc-n-' + k + '">' + tipos[k].n + '</b></div>'; });
     if (!Object.keys(tipos).length) h += '<p class="nota">' + T('at_sin_tropas') + '</p>';
     var libresC = carretasLibres();
-    h += '<div class="fc-tr fc-car"><span>🛒 ' + L('Carretas', 'Carts') + ' <small>(' + L('libres ', 'free ') + libresC + ')</small></span><input type="range" min="0" max="' + libresC + '" value="' + Math.min(libresC, 2) + '" id="fc-carretas"' + (libresC ? '' : ' disabled') + '><b id="fc-n-car">' + Math.min(libresC, 2) + '</b></div>' +
+    h += '<div class="fc-tr fc-car"><span>' + iconoCarreta() + ' ' + L('Carretas', 'Carts') + ' <small>(' + L('libres ', 'free ') + libresC + ')</small></span><input type="range" min="0" max="' + libresC + '" value="' + Math.min(libresC, 2) + '" id="fc-carretas"' + (libresC ? '' : ' disabled') + '><b id="fc-n-car">' + Math.min(libresC, 2) + '</b></div>' +
       '<p class="nota fc-robo" id="fc-robo"></p>';
     h += '</div><div class="fc-vs"><div><small>' + L('Tu poder', 'Your power') + '</small><b id="fc-mio">0</b></div><span>VS</span><div><small>' + L('Su defensa', 'Their defense') + '</small><b>' + formatoNumero(Math.round((a.defensa || 0) / 100) * 100) + '</b></div></div><p class="fc-aviso" id="fc-dif"></p>' + (((estado.burbujaHasta || 0) > Date.now() || (estado.escudoHasta || 0) > Date.now()) ? '<p class="fc-aviso">🫧 ' + L('Si atacas, pierdes tu protección y tu burbuja.', 'If you attack, you lose your protection and your bubble.') + '</p>' : '') +
       '<div class="fc-botones"><button class="comprar" id="fc-volver">◀ ' + L('Volver', 'Back') + '</button><button class="comprar rojo" id="fc-confirmar">⚔️ ' + L('Confirmar ataque', 'Confirm attack') + '</button></div>';

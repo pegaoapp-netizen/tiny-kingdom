@@ -1349,3 +1349,6 @@ body:has(#mision:not(.oculto)) #consejo { top: 136px !important; }
 .fc-car { margin-top: 4px; padding-top: 6px; border-top: 1px dashed rgba(138,90,26,.4); }
 .fc-car small { font-weight: 700; opacity: .75; }
 .fc-robo { margin: 6px 0 0; background: rgba(242,196,90,.35); border-radius: 8px; padding: 5px 7px; font-weight: 800; }
+
+.ico-carreta { width: 30px; height: 30px; vertical-align: middle; object-fit: contain; margin: -6px 2px -6px 0; }
+.ico-carreta { width: 40px; height: 40px; }
