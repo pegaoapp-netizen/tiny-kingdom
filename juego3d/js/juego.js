@@ -3890,7 +3890,7 @@
   function accionMenuEdif(a) {
     var i = menuEdif.slot, esCastillo = menuEdif.castillo;
     sonar('click');
-    if (a === 'detalles') { pestCuartel = 'detalles'; cerrarMenuEdif(); if (esCastillo) abrirPanelCastillo(); else abrirPanelEdificio(i); return; }
+    if (a === 'detalles') { pestCuartel = 'detalles'; tropaDetalle = null; cerrarMenuEdif(); if (esCastillo) abrirPanelCastillo(); else abrirPanelEdificio(i); return; }
     if (a === 'recolectar') { recolectarCampo(slots[i]); pintarMenuEdif(); return; }
     if (a === 'demoler') {
       var sd = slots[i], ed = sd.edificio || sd.obra, nv = sd.edificio ? sd.edificio.nivel : Math.max(1, sd.obra.nivel - 1);
@@ -3901,7 +3901,7 @@
     if (a === 'entrenar') {
       var te = slots[i] && slots[i].edificio && slots[i].edificio.tipo;
       if (te === 'establo') { vistaTropa.pest = 'establo'; vistaTropa.tipo = 'caballeria'; } else if (te === 'galeria') { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; } else if (te === 'cuartel' && vistaTropa.pest !== 'cuartel') { vistaTropa.pest = 'cuartel'; vistaTropa.tipo = 'espadachin'; }
-      vistaTropa.rango = null; cerrarMenuEdif(); if (te === 'cuartel' || te === 'establo' || te === 'galeria') { pestCuartel = 'entrenar'; panelActual = { tipo: 'edificio', slot: i }; abrirPanelEdificio(i); } else abrirPanelTropas(); return;
+      vistaTropa.rango = null; cerrarMenuEdif(); if (te === 'cuartel' || te === 'establo' || te === 'galeria') { pestCuartel = 'entrenar'; tropaDetalle = null; panelActual = { tipo: 'edificio', slot: i }; abrirPanelEdificio(i); } else abrirPanelTropas(); return;
     }
     if (a === 'comerciar') { cerrarMenuEdif(); abrirPanelMercado(); return; }
     if (a === 'vigilar') { cerrarMenuEdif(); abrirPanelVigia(); return; }
@@ -4063,6 +4063,8 @@
     });
     if (id === 'caballo' || id === 'gallina') animales.forEach(function (o) { if (o.a.tipo === id) M.ponerFiguraAnimal(o.a); });
     if (id === 'carreta' || id === 'caballo') fotoCarreta();
+    var FAM_FIG = { espadachin: ['espadachin', 'miliciano'], arquero: ['arquero', 'explorador'], guardian: ['guardian'], caballero: ['caballeria', 'jinete', 'caballeria_pesada'] };
+    if (FAM_FIG[id]) fotosTropas(FAM_FIG[id]);
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
   }
   function alLlegarModelo(id) {
@@ -4079,6 +4081,24 @@
       g.updateMatrixWorld(true); var bx = new THREE.Box3().setFromObject(g), cen = bx.getCenter(new THREE.Vector3()), tam = bx.getSize(new THREE.Vector3()).length();
       var c = new THREE.PerspectiveCamera(30, 1, 0.1, 100); c.position.set(cen.x + tam * 0.35, cen.y + tam * 0.55, cen.z + tam * 1.55); c.lookAt(cen);
       r.render(e, c); retratos.carreta = r.domElement.toDataURL(); r.dispose();
+    } catch (er) { }
+  }
+  // fotos de las tropas con las figuras de archivo (cuando ya cargaron)
+  function fotosTropas(tipos) {
+    try {
+      var r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(128, 128);
+      var e = new THREE.Scene(); e.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.75)); var l = new THREE.DirectionalLight(0xffffff, 0.65); l.position.set(3, 5, 4); e.add(l);
+      var c = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+      tipos.forEach(function (t) {
+        var u = M.unidad(t); u.grupo.rotation.y = 0.35; u.grupo.updateMatrixWorld(true);
+        u.grupo.traverse(function (o) { if (o.isMesh && o.geometry && o.geometry.type === 'RingGeometry') o.visible = false; });
+        var bx = new THREE.Box3(); u.grupo.traverse(function (o) { if (o.isMesh && o.visible && !(o.material && o.material.transparent)) bx.expandByObject(o); });
+        var cen = bx.getCenter(new THREE.Vector3()), tam = bx.getSize(new THREE.Vector3());
+        var h = Math.max(tam.y, tam.x * 0.8);
+        e.add(u.grupo); c.position.set(cen.x + h * 0.45, cen.y + h * 0.2, cen.z + h * 1.45); c.lookAt(cen.x, cen.y + h * 0.05, cen.z);
+        r.render(e, c); retratos[t] = r.domElement.toDataURL(); e.remove(u.grupo);
+      });
+      r.dispose();
     } catch (er) { }
   }
   function iconoCarreta() { return retratos.carreta ? '<img class="ico-carreta" src="' + retratos.carreta + '" alt="">' : '🛒'; }
@@ -4448,6 +4468,54 @@
       return '<button data-accion="cuartel-pest" data-p="' + q[0] + '" class="' + (pestCuartel === q[0] ? 'activo' : '') + '">' + q[1] + (n ? ' <span class="mail-n">' + formatoNumero(n) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
   }
+  // ---------- FICHA DE TROPA dentro del cuartel: datos, Entrenar y Relevar ----------
+  var tropaDetalle = null, pestDetalle = 'entrenar', cantDetalle = 1;
+  var CARGA_TROPA = { explorador: 40, miliciano: 30, espadachin: 20, guardian: 25, arquero: 20, jinete: 50, caballeria: 40, caballeria_pesada: 35, balista: 40, ariete: 0, catapulta: 10, torre_asedio: 0 };
+  var FAMILIA = { explorador: 'inf', miliciano: 'inf', espadachin: 'inf', guardian: 'inf', arquero: 'dist', balista: 'dist', jinete: 'cab', caballeria: 'cab', caballeria_pesada: 'cab', ariete: 'ase', catapulta: 'ase', torre_asedio: 'ase' };
+  function contraDe(t) {
+    var f = FAMILIA[t];
+    if (f === 'inf') return [L('arqueros', 'archers'), L('caballería', 'cavalry')];
+    if (f === 'dist') return [L('caballería', 'cavalry'), L('infantería', 'infantry')];
+    if (f === 'cab') return [L('infantería', 'infantry'), L('arqueros y asedio', 'archers and siege')];
+    return [L('caballería', 'cavalry'), L('murallas y ciudades', 'walls and cities')];
+  }
+  function estrellasDe(v, um) { var n = 1; um.forEach(function (u) { if (v >= u) n++; }); return '★'.repeat(n) + '<span class="apag">' + '★'.repeat(5 - n) + '</span>'; }
+  function htmlFichaTropa(t) {
+    var d = TROPAS[t], na = nivelArmadura(t), contra = contraDe(t), falta = faltaTropa(t), r = TROPA_REQ[t] || {};
+    var est = TROPA_RANGO_ESTRELLAS[t] || 1;
+    var h = '<div class="ficha-tropa"><div class="ft-cab"><button class="comprar mini" data-accion="det-volver">◀</button><div class="ft-tit"><b>' + N(t) + '</b><small>' + D(t) + '</small></div><span class="foto">' + fotoHTML(t, d.icono) + '<i class="estrellas">' + '★'.repeat(Math.min(5, est + na)) + '</i></span></div>' +
+      '<div class="ft-stats"><span>' + L('Ataque', 'Attack') + '</span><b class="estr">' + estrellasDe(d.dano, [12, 20, 35, 60]) + '</b><span>' + L('Mantenimiento', 'Upkeep') + '</span><b>🍞 ' + Math.round(3600 / COMIDA_TROPA.cada) + '/h</b>' +
+      '<span>' + L('Vida', 'Health') + '</span><b class="estr">' + estrellasDe(d.vida, [100, 180, 350, 700]) + '</b><span>' + L('Poder', 'Power') + '</span><b>' + Math.round(d.vida * 2 + d.dano * 25) + '</b>' +
+      '<span>' + L('Velocidad', 'Speed') + '</span><b>' + Math.round(d.vel * 100) + '</b><span>' + L('Débil contra', 'Weak vs') + '</span><b class="debil">' + contra[0] + '</b>' +
+      '<span>' + L('Carga', 'Load') + '</span><b>' + (CARGA_TROPA[t] || 0) + '</b><span>' + L('Fuerte contra', 'Strong vs') + '</span><b class="fuerte">' + contra[1] + '</b></div>' +
+      '<div class="subtabs ft-pest"><button data-accion="det-pest" data-p="entrenar" class="' + (pestDetalle === 'entrenar' ? 'activo' : '') + '">' + L('Entrenar', 'Train') + '</button><button data-accion="det-pest" data-p="relevar" class="' + (pestDetalle === 'relevar' ? 'activo' : '') + '">' + L('Relevar', 'Dismiss') + '</button></div>';
+    if (pestDetalle === 'relevar') {
+      var tengo = propiasDe(t).length;
+      if (!tengo) return h + '<p class="nota ft-vacio">' + L('No tienes tropas de este tipo para relevar.', 'You have no troops of this type to dismiss.') + '</p></div>';
+      cantDetalle = Math.max(1, Math.min(cantDetalle, tengo));
+      return h + '<p class="nota">' + L('Relevar despide a las tropas: dejan de comer y salen del ejército. No devuelve recursos.', 'Dismissing sends troops home: they stop eating and leave the army. No resources are returned.') + '</p>' +
+        '<div class="tropa-cantidad"><input type="range" id="det-n" min="1" max="' + tengo + '" value="' + cantDetalle + '"><span class="tropa-num" id="det-num">' + cantDetalle + '</span></div>' +
+        '<button class="comprar rojo boton-oleada-grande" data-accion="det-relevar" data-tipo="' + t + '">' + L('Relevar', 'Dismiss') + '</button></div>';
+    }
+    if (falta) {
+      var filas = [filaReq('jugador', r.jugador || 1), { nombre: '👥 ' + L('Espacio en el ejército', 'Army space'), pide: 1, tiene: Math.max(0, capacidad() - tropasOcupadas()), ok: capacidad() - tropasOcupadas() >= 1 }];
+      if (r.ed) filas.push(filaReq(r.ed, r.n || 1));
+      if (r.otro) filas.push(filaReq(r.otro[0], r.otro[1]));
+      return h + '<p class="ft-no">' + L('No cumples los requisitos', 'You do not meet the requirements') + '</p>' + tablaRequisitos(costoTropa(t), filas).replace(/<div class="banner-rojo">[\s\S]*?<\/div>/, '') + '</div>';
+    }
+    var max = Math.max(1, maxEntrenar(t)); cantDetalle = Math.max(1, Math.min(cantDetalle, max));
+    return h + '<div class="tropa-cantidad"><button class="redondo" data-accion="det-menos">−</button><input type="range" id="det-n" min="1" max="' + max + '" value="' + cantDetalle + '"' + (maxEntrenar(t) < 1 ? ' disabled' : '') + '><button class="redondo" data-accion="det-mas">+</button><span class="tropa-num" id="det-num">' + cantDetalle + '</span><button class="comprar mini naranja" data-accion="det-max">' + T('maximo') + '</button></div>' +
+      '<div class="tropa-total" id="det-total"></div>' + (maxEntrenar(t) < 1 ? '<p class="nota aviso-rojo">' + (tropasOcupadas() >= capacidad() ? T('sin_espacio') : T('sin_recursos_tropa')) + '</p>' : '') +
+      '<button class="comprar boton-oleada-grande" id="det-btn" data-accion="det-entrenar" data-tipo="' + t + '">⚔️ ' + T('entrenar') + '</button>' +
+      '<button class="comprar mini ft-3d" data-accion="cuartel-3d" data-tipo="' + t + '">🪖 ' + L('Rangos, armadura e investigación', 'Ranks, armor and research') + '</button></div>';
+  }
+  function refrescarFicha() {
+    var t = tropaDetalle; if (!t || !$('det-num')) return;
+    $('det-num').textContent = cantDetalle;
+    if ($('det-n')) $('det-n').value = cantDetalle;
+    if ($('det-total')) $('det-total').innerHTML = htmlCosto(costoTropas(t, cantDetalle)) + '<span class="costo-r">⏱ ' + fmtTiempo(segTropas(t, cantDetalle) / velReal()) + '</span>';
+    if ($('det-btn')) { $('det-btn').innerHTML = '⚔️ ' + T('entrenar') + ' ×' + cantDetalle; $('det-btn').disabled = maxEntrenar(t) < 1; }
+  }
   function htmlEntrenarLista() {
     return '<div class="tropas-lista">' + TROPAS_LISTA.map(function (t) {
       if (t === 'carreta') { var cr = carretas(); return '<button class="fila-tropa" data-accion="cuartel-carretas"><span class="foto">' + fotoHTML('carreta', '🛒') + '<i class="estrellas">★★</i></span><span class="ft-txt"><b>' + N('carreta') + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + cr.n + '</small><small>' + D('carreta') + '</small></span><span class="fc-flecha">›</span></button>'; }
@@ -4473,7 +4541,9 @@
     var esCuartel = (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') && s.edificio;
     if (!panelActual || panelActual.tipo !== 'edificio' || panelActual.slot !== i) { if (!esCuartel || pestCuartel === 'detalles') pestCuartel = esCuartel && panelActual && panelActual.tipo === 'cuartel-abrir' ? 'entrenar' : 'detalles'; }
     if (esCuartel && pestCuartel !== 'detalles') {
-      abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', htmlPestanasCuartel() + (pestCuartel === 'entrenar' ? htmlEntrenarLista() : htmlColaCuartel()), { tipo: 'edificio', slot: i });
+      var arribaP = panelActual && panelActual.tipo === 'edificio' && panelActual.slot === i && tropaDetalle ? $('panel').scrollTop : 0;
+      abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', htmlPestanasCuartel() + (pestCuartel === 'entrenar' ? (tropaDetalle ? htmlFichaTropa(tropaDetalle) : htmlEntrenarLista()) : htmlColaCuartel()), { tipo: 'edificio', slot: i });
+      if (tropaDetalle) { $('panel').scrollTop = arribaP; var sl = $('det-n'); if (sl) sl.addEventListener('input', function () { cantDetalle = +this.value; refrescarFicha(); }); refrescarFicha(); }
       return;
     }
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</div><div><h3>' + N(tipo) + ' — ' + T('nivel_de', { n: nivel, m: NIVEL_MAX }) + '</h3><p>' + D(tipo) + '</p></div></div>';
@@ -6004,10 +6074,17 @@
     else if (a === 'muralla-ya') murallaYa();
     else if (a === 'comprar-mejora') comprarMejora(b.getAttribute('data-que'));
     else if (a === 'acelerar-que') { sonar('click'); abrirAcelerar(b.getAttribute('data-que')); }
-    else if (a === 'cuartel-pest') { sonar('click'); pestCuartel = b.getAttribute('data-p'); abrirPanelEdificio(slotElegido); }
+    else if (a === 'cuartel-pest') { sonar('click'); pestCuartel = b.getAttribute('data-p'); tropaDetalle = null; abrirPanelEdificio(slotElegido); }
     else if (a === 'cuartel-carretas') { sonar('click'); if (edificiosDe('mercado').length) abrirPanelMercado(); else consejoTemporal(L('Construye un Mercado para entrenar carretas.', 'Build a Market to train carts.')); }
-    else if (a === 'cuartel-tropa' && faltaTropa(b.getAttribute('data-tipo'))) { sonar('error'); consejoTemporal('🔒 ' + faltaTropa(b.getAttribute('data-tipo'))); }
-    else if (a === 'cuartel-tropa') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
+    else if (a === 'cuartel-tropa') { sonar('click'); tropaDetalle = b.getAttribute('data-tipo'); pestDetalle = 'entrenar'; cantDetalle = 1; $('panel').scrollTop = 0; abrirPanelEdificio(slotElegido); }
+    else if (a === 'det-volver') { sonar('click'); tropaDetalle = null; abrirPanelEdificio(slotElegido); }
+    else if (a === 'det-pest') { sonar('click'); pestDetalle = b.getAttribute('data-p'); cantDetalle = 1; abrirPanelEdificio(slotElegido); }
+    else if (a === 'det-menos') { cantDetalle = Math.max(1, cantDetalle - 1); refrescarFicha(); }
+    else if (a === 'det-mas') { cantDetalle = Math.min(Math.max(1, maxEntrenar(tropaDetalle)), cantDetalle + 1); refrescarFicha(); }
+    else if (a === 'det-max') { cantDetalle = Math.max(1, maxEntrenar(tropaDetalle)); refrescarFicha(); }
+    else if (a === 'det-entrenar') { entrenar(b.getAttribute('data-tipo'), cantDetalle); cantDetalle = 1; abrirPanelEdificio(slotElegido); }
+    else if (a === 'det-relevar') { var tr = b.getAttribute('data-tipo'), nr = cantDetalle; confirmarJuego('🏳️ ' + L('¿Relevar ' + nr + ' ' + N(tr) + '?', 'Dismiss ' + nr + ' ' + N(tr) + '?'), L('Se van del ejército y no devuelven recursos.', 'They leave the army and return no resources.'), L('Sí, relevar', 'Yes, dismiss'), function () { propiasDe(tr).slice(0, nr).forEach(quitarUnidad); asignarPuestos(); guardar(true); actualizarHUD(); sonar('click'); consejoTemporal(L('Relevaste ' + nr + ' ' + N(tr) + '.', 'You dismissed ' + nr + ' ' + N(tr) + '.')); cantDetalle = 1; abrirPanelEdificio(slotElegido); }); }
+    else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'demoler-panel') { var di = +b.getAttribute('data-slot'), sd2 = slots[di]; if (!sd2 || !sd2.edificio) return; cerrarPanel(); confirmarJuego('🧨 ' + T('demoler_titulo', { n: N(sd2.edificio.tipo) }), T('demoler_txt', { v: sd2.edificio.nivel }), T('demoler_si'), function () { demoler(di); }); }
     else if (a === 'muralla') construirMuralla();
