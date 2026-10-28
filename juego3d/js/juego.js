@@ -1189,6 +1189,7 @@
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
     actualizarEfectosPortal();
     actualizarCarretasMundo();
+    actualizarMarchasMundo();
     M3.r.render(M3.e, M3.cam);
     requestAnimationFrame(dibujarMundo3D);
   }
@@ -2785,6 +2786,59 @@
     [[-0.25, 0.26], [0.25, 0.26], [-0.25, -0.26], [0.25, -0.26]].forEach(function (p) { var r = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.06, 12), new THREE.MeshLambertMaterial({ color: 0x5c3418 })); r.rotation.x = Math.PI / 2; r.position.set(p[0], 0.15, p[1]); g.add(r); });
     var bu = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.32, 0.2), new THREE.MeshLambertMaterial({ color: 0x7a5232 })); bu.position.set(0.62, 0.3, 0); g.add(bu);
     return g;
+  }
+  function procesarRegresos() {
+    var l = estado.regresos; if (!l || !l.length) return;
+    var ahora = Date.now(), quedan = [];
+    l.forEach(function (v) {
+      if (v.llega > ahora) { quedan.push(v); return; }
+      if (v.botin) { ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (v.botin[k]) sumarRecurso(k, v.botin[k]); }); consejoTemporal('🏇 ' + L('Tus tropas volvieron de ' + v.nombre + ' con el botín: ', 'Your troops came back from ' + v.nombre + ' with the loot: ') + textoBotin(v.botin)); sonar('moneda'); }
+      else consejoTemporal('🏇 ' + L('Tus tropas volvieron de ' + v.nombre + '.', 'Your troops came back from ' + v.nombre + '.'));
+    });
+    if (quedan.length !== l.length) { estado.regresos = quedan; guardar(true); actualizarHUD(); }
+  }
+  // ---------- COLUMNAS DE TROPAS EN EL MAPA: tu ataque (azul), el enemigo que viene (rojo) y la vuelta con el botín ----------
+  function modeloColumna(color, tipo) {
+    var g = new THREE.Group(), us = [];
+    [[0, 0.35], [-0.32, 0], [0.32, 0], [-0.16, -0.38], [0.16, -0.38]].forEach(function (q) { var u = M.unidad(tipo || 'espadachin', 0.3, 0); u.grupo.position.set(q[0], 0, q[1]); g.add(u.grupo); us.push(u); });
+    var asta = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.3, 5), new THREE.MeshLambertMaterial({ color: 0x5e3d24 })); asta.position.set(0.12, 0.65, 0.62); g.add(asta);
+    var tela = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.28, 0.03), new THREE.MeshLambertMaterial({ color: color })); tela.position.set(0.33, 1.15, 0.62); g.add(tela);
+    g.userData.us = us; g.userData.tela = tela;
+    return g;
+  }
+  var marchasVistas = {};
+  function actualizarMarchasMundo() {
+    if (!M3) return;
+    M3.columnas = M3.columnas || {};
+    var ahora = Date.now(), vivos = {}, lista = [], yo = miLugar();
+    marchas.forEach(function (m) { if (m.resuelto || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 12) }); });
+    entrantes.forEach(function (r) { if (r.resuelto || r.llega <= ahora || r.cancelado) return; var d = lugarDe(r.atacante) || (r.prueba ? { x: Math.min(98, yo.x + 18), y: Math.max(1, yo.y - 14) } : null); if (d) lista.push({ id: 'e' + r.id, de: d, a: yo, sale: r.fecha || (r.llega - 120000), llega: r.llega, color: 0xd0302a, txt: '🔥 ' + String(r.atacanteNombre || '').slice(0, 12), enemigo: true }); });
+    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x2a6ad0, txt: (v.botin ? '💰 ' : '🏇 ') + L('Vuelven', 'Returning'), botin: !!v.botin }); });
+    var t = performance.now() / 1000;
+    lista.forEach(function (v) {
+      var c0 = celdaDe(v.de.x, v.de.y), c1 = celdaDe(v.a.x, v.a.y), p0 = posCelda(c0.x, c0.y), p1 = posCelda(c1.x, c1.y);
+      var u = Math.max(0, Math.min(1, (ahora - v.sale) / Math.max(1, v.llega - v.sale)));
+      var g = M3.columnas[v.id];
+      if (!g) {
+        g = new THREE.Group(); var col = modeloColumna(v.color, v.enemigo ? 'miliciano' : 'espadachin'); g.add(col); g.userData.col = col;
+        if (v.botin) { var saco = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8c45a })); saco.position.set(0, 0.25, -0.75); col.add(saco); }
+        var lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p0.x, 0.14, p0.z), new THREE.Vector3(p1.x, 0.14, p1.z)]);
+        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color, dashSize: 0.45, gapSize: 0.3, transparent: true, opacity: 0.9 })); linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
+        M3.e.add(g); M3.columnas[v.id] = g;
+      }
+      g.position.set(p0.x + (p1.x - p0.x) * u, 0.06, p0.z + (p1.z - p0.z) * u);
+      g.userData.col.rotation.y = Math.atan2(p1.x - p0.x, p1.z - p0.z);
+      g.userData.col.userData.us.forEach(function (un, i) { M.animarUnidad(un, t + i * 0.37, true, 0); });
+      // etiqueta con lo que falta (se cambia una vez por segundo)
+      var txt = v.txt + ' · ' + fmtTiempo((v.llega - ahora) / 1000);
+      if (g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) {
+        if (g.userData.et) g.remove(g.userData.et);
+        var et = M.etiquetaEdificio(txt, 1); et.position.set(0, 1.9, 0); et.scale.multiplyScalar(0.5); g.add(et);
+        g.userData.et = et; g.userData.txt = txt; g.userData.tEt = ahora;
+      }
+      vivos[v.id] = true;
+    });
+    for (var k in M3.columnas) if (!vivos[k]) { M3.e.remove(M3.columnas[k].userData.linea); M3.e.remove(M3.columnas[k]); delete M3.columnas[k]; }
   }
   function actualizarCarretasMundo() {
     if (!M3) return;
@@ -5193,6 +5247,7 @@
     sonar('cuerno');
     Cuentas.atacar(doc).then(function (ref) {
       doc.id = ref.id; marchas.push(doc);
+      estado.destinos = estado.destinos || {}; estado.destinos[ref.id] = { x: a.x, y: a.y };
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 10 * 60 * 1000;
       guardar(true); publicarAldea(true); actualizarEscudo();
@@ -5219,12 +5274,16 @@
       marchas = marchas.filter(function (x) { return x.id !== m.id; });
       if (r.cancelado) { Cuentas.cobrarAtaque(r.id).catch(function () {}); consejoTemporal(T('mar_cancelada', { n: r.defensorNombre })); sonar('magia'); guardar(true); actualizarAlertas(); return; }
       var caidas = bajasEjercito(r.bajas || 0);
-      if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
+      var destM = (estado.destinos || {})[r.id] || lugarDe(r.defensor), viajeV = Math.max(30000, (r.llega || Date.now()) - (r.fecha || Date.now()));
+      estado.regresos = estado.regresos || [];
+      if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: Date.now(), llega: Date.now() + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
+      else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
+      if (estado.destinos) delete estado.destinos[r.id];
       nuevoCorreo('guerras', L('Ataque a ' + r.defensorNombre + ': ', 'Attack on ' + r.defensorNombre + ': ') + (r.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), Cuentas.nombrePublico(), htmlInforme([[L('Resultado', 'Result'), r.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(r.fuerza)], [L('Su defensa', 'Their defense'), formatoNumero(r.defensa || 0)], [L('Bajas', 'Losses'), caidas]], r.gano ? r.botin : null));
       Cuentas.cobrarAtaque(r.id).catch(function () {});
       guardar(true); actualizarHUD(); actualizarAlertas();
       escenaBatalla({ nombre: r.defensorNombre, nivel: 1 }, r.fuerza, r.defensa, r.gano, function (cb) {
-        cb('<h3 class="bp-gran ' + (r.gano ? 'si' : 'no') + '">' + (r.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (r.gano ? T('at_gano', { b: textoBotin(r.botin) }) : T('at_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>');
+        cb('<h3 class="bp-gran ' + (r.gano ? 'si' : 'no') + '">' + (r.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (r.gano ? T('at_gano', { b: textoBotin(r.botin) }) : T('at_perdio')) + '</p>' + (r.gano && destM ? '<p class="nota">🏇 ' + L('El botín llega cuando vuelvan tus tropas: ', 'The loot arrives when your troops return: ') + fmtTiempo(viajeV / 1000) + '</p>' : '') + '<p class="nota">' + T('at_bajas', { n: caidas }) + '</p>');
       });
     }).catch(function () { resolviendo[m.id] = false; });
   }
@@ -6390,6 +6449,8 @@
       estado.burbujaHasta = g.burbujaHasta || 0;
       estado.buzon = Array.isArray(g.buzon) ? g.buzon : [];
       estado.mision = g.mision || 0;
+      estado.regresos = g.regresos || [];
+      estado.destinos = g.destinos || {};
       estado.enemigos = g.enemigos || {};
       estado.xp = g.xp;
       estado.bestias = g.bestias || {};
@@ -6662,7 +6723,7 @@
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); procesarRegresos(); }
     render.render(escena, camara);
   }
 
