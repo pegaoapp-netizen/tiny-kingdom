@@ -1317,3 +1317,31 @@ body:has(#mision:not(.oculto)) #consejo { top: 136px !important; }
 .gemas-mas { margin-left: 3px; font-weight: 900; font-size: 14px; color: #fff; background: rgba(0,0,0,.25); border-radius: 50%; width: 16px; height: 16px; line-height: 15px; text-align: center; display: inline-block; }
 @media (max-width: 480px) { #mision { top: calc(env(safe-area-inset-top) + 133px) !important; } body:has(#mision:not(.oculto)) #consejo { top: 166px !important; } }
 @media (max-width: 480px) { .gemas-mas { display: none; } #xp-barra { width: 70px; } }
+
+/* ===== v6.2: ficha de ciudad (Espiar / Atacar) ===== */
+#ficha-ciudad { position: absolute; inset: 0; z-index: 6; display: grid; place-items: center; background: rgba(0,0,0,.18); }
+.fc-caja { position: relative; width: min(380px, 92vw); max-height: 80vh; overflow-y: auto; background: linear-gradient(#fff6dc, #f0d9a2); border: 3px solid #8a5a1a; border-radius: 16px; padding: 10px 12px 12px; box-shadow: 0 8px 26px rgba(0,0,0,.45); color: #3a2414; }
+.fc-x { position: absolute; top: 6px; right: 8px; border: 2px solid #8a1a12; background: linear-gradient(#ff6a5a, #c0281e); color: #fff; font-weight: 900; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; }
+.fc-cab { font-weight: 900; font-size: 16px; text-align: center; padding: 2px 30px 8px; border-bottom: 2px solid rgba(138,90,26,.35); margin-bottom: 8px; }
+.fc-cab small { font-weight: 800; color: #8a5a1a; }
+.fc-cuerpo { display: flex; gap: 10px; align-items: flex-start; }
+.fc-retrato { position: relative; flex: 0 0 74px; height: 84px; border-radius: 12px; background: linear-gradient(#5a7fd0, #2a4a8a); border: 3px solid #f2c45a; display: grid; place-items: center; font-size: 34px; font-weight: 900; color: #fff4d0; text-shadow: 0 2px 0 rgba(0,0,0,.4); }
+.fc-retrato span { position: absolute; top: -12px; font-size: 18px; }
+.fc-datos { flex: 1; min-width: 0; }
+.fc-nombre { font-size: 15px; margin-bottom: 4px; }
+.fc-nivel { color: #1f5fd0; font-weight: 900; }
+.fc-fila { display: flex; justify-content: space-between; gap: 6px; font-size: 13px; padding: 2px 0; border-bottom: 1px dashed rgba(138,90,26,.25); }
+.fc-fila span { opacity: .8; font-weight: 700; }
+.fc-aviso { margin: 8px 0 0; background: #c0281e; color: #fff; border-radius: 8px; padding: 5px 8px; font-weight: 800; font-size: 12.5px; text-align: center; }
+.fc-aviso.verde { background: #2f7a22; }
+.fc-aviso:empty { display: none; }
+.fc-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.fc-botones .comprar { font-size: 16px; padding: 10px; }
+.fc-tropas { display: flex; flex-direction: column; gap: 6px; }
+.fc-tr { display: grid; grid-template-columns: 1fr 1.2fr 34px; gap: 6px; align-items: center; font-weight: 800; font-size: 13px; }
+.fc-tr b { text-align: right; }
+.fc-vs { display: flex; align-items: center; justify-content: space-around; margin-top: 10px; background: rgba(255,255,255,.6); border-radius: 10px; padding: 6px; text-align: center; }
+.fc-vs small { display: block; font-weight: 700; opacity: .8; }
+.fc-vs b { font-size: 17px; }
+.fc-vs span { font-weight: 900; color: #c0281e; font-size: 18px; }
+#ficha-ciudad { align-items: end; padding-bottom: 96px; } @media (min-width: 700px) { #ficha-ciudad { align-items: center; justify-items: end; padding: 0 6vw 0 0; } }

@@ -137,7 +137,7 @@ var Cuentas = (function () {
       if (!usuario) return Promise.resolve();
       return db.collection('aldeas').doc(usuario.uid).set({
         nombre: d.nombre, nivel: d.nivel, poder: d.poder, x: d.x, y: d.y,
-        alianza: d.alianza || null, actualizado: Date.now(), escudo: Math.floor(d.escudo || 0), defensa: Math.floor(d.defensa || 0)
+        alianza: d.alianza || null, actualizado: Date.now(), escudo: Math.floor(d.escudo || 0), defensa: Math.floor(d.defensa || 0), espia: d.espia || {}
       });
     },
     aldeas: function () {

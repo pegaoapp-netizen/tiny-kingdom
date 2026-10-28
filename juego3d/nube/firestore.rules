@@ -28,7 +28,8 @@ service cloud.firestore {
     match /aldeas/{uid} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['nombre', 'nivel', 'poder', 'x', 'y', 'alianza', 'actualizado', 'escudo', 'defensa'])
+        && request.resource.data.keys().hasOnly(['nombre', 'nivel', 'poder', 'x', 'y', 'alianza', 'actualizado', 'escudo', 'defensa', 'espia'])
+        && (!('espia' in request.resource.data) || (request.resource.data.espia is map && request.resource.data.espia.size() <= 6))
         && (!('escudo' in request.resource.data) || request.resource.data.escudo is int)
         && (!('defensa' in request.resource.data) || (request.resource.data.defensa is int && request.resource.data.defensa >= 0 && request.resource.data.defensa <= 100000000))
         && request.resource.data.nombre is string
