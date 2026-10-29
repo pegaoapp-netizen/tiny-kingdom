@@ -1715,16 +1715,17 @@
     while (a.caja >= 100) { a.caja -= 100; regaloAlianza('caja', true); }
   }
   function reclamarRegalos(id) {
-    var a = alLoc(), lista = id ? a.regalos.filter(function (g) { return g.id === id; }) : a.regalos.slice(), n = 0;
+    var a = alLoc(), lista = id ? a.regalos.filter(function (g) { return g.id === id; }) : a.regalos.slice(), n = 0, total = { objetos: {} };
     lista.forEach(function (g) {
       if (a.reclamadosHoy >= LIMITE_REGALOS_DIA && !esDueno()) return;
       var p = g.p; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) sumarRecurso(r, p[r]); });
       if (p.gemas) sumarGemas(p.gemas);
       if (p.objeto) estado.mochila[p.objeto] = (estado.mochila[p.objeto] || 0) + 1;
+      ['oro', 'comida', 'madera', 'piedra', 'gemas'].forEach(function (r) { if (p[r]) total[r] = (total[r] || 0) + p[r]; }); if (p.objeto) total.objetos[p.objeto] = (total.objetos[p.objeto] || 0) + 1;
       a.regalos.splice(a.regalos.indexOf(g), 1); a.reclamadosHoy++; n++;
     });
     if (!n) { consejoTemporal(L('Llegaste al límite de regalos de hoy (' + LIMITE_REGALOS_DIA + ').', 'You reached today\'s gift limit (' + LIMITE_REGALOS_DIA + ').')); sonar('error'); return; }
-    sonar('moneda'); consejoTemporal(L('Reclamaste ' + n + ' regalo(s).', 'You claimed ' + n + ' gift(s).')); guardar(true); actualizarHUD(); pintarHubAlianza();
+    guardar(true); actualizarHUD(); pintarHubAlianza(); mostrarRecompensas(L('Regalos de alianza ×', 'Alliance gifts ×') + n, premioAItems(total));
   }
   function esDueno() { return !!estado.dueno; }
   function incentivoListo() { return alLoc().incentivo.dia !== hoyClave(); }
@@ -2611,8 +2612,47 @@
   function totalAceleradores() { return ACELERADORES.concat(['acelerador']).reduce(function (a, k) { return a + ((estado.mochila && estado.mochila[k]) || 0); }, 0); }
   function rapidezAcademia() { var ia = academiaLista(); return ia ? EDIFICIOS.academia.rapidez[ia.edificio.nivel - 1] : 1; }
   // segundos reales que faltan para terminar
+  // lo que hay con tiempo pendiente ahora mismo (para elegir qué acelerar)
+  function cosasConTiempo(soloInv) {
+    var l = [];
+    if (!soloInv) {
+      if (estado.obraCastillo) l.push({ que: 'castillo', ico: '🏰', nom: T('castillo') + ' (' + L('Nv ', 'Lv ') + estado.obraCastillo.nivel + ')' });
+      if (obraMuralla) l.push({ que: 'muralla', ico: '🧱', nom: L('Muralla', 'Wall') + ' (' + L('Nv ', 'Lv ') + obraMuralla.nivel + ')' });
+      slots.forEach(function (s) { if (s.obra) l.push({ que: 'obra:' + s.i, ico: EDIFICIOS[s.obra.tipo].icono, nom: N(s.obra.tipo) + ' (' + L('Nv ', 'Lv ') + s.obra.nivel + ')' }); });
+      if (colaEntreno.length) l.push({ que: 'entreno', ico: '⚔️', nom: L('Entrenamiento', 'Training') + ' (×' + colaEntreno.length + ')' });
+    }
+    if (estado.investigando) l.push({ que: 'invest', ico: '📚', nom: L('Investigación', 'Research') });
+    return l.filter(function (c) { return faltaDe(c.que) > 0; });
+  }
+  function abrirUsarAcelerador(k) {
+    var o = OBJETOS[k], lista = cosasConTiempo(o.soloInv);
+    if (!lista.length) { consejoTemporal(o.soloInv ? L('No hay ninguna investigación en curso: guarda el acelerador para después.', 'No research in progress: keep the speed-up for later.') : L('No hay nada en curso para acelerar: guarda el acelerador para después.', 'Nothing in progress to speed up: keep the speed-up for later.')); sonar('error'); return; }
+    var v = $('usar-acel'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'usar-acel';
+    function pintar(resultado) {
+      var n = estado.mochila[k] || 0, l2 = cosasConTiempo(o.soloInv);
+      d.innerHTML = '<div class="rc-caja"><div class="rc-cinta">' + o.icono + ' ' + N(k) + '</div><p class="nota"><b>' + L('Tienes: ', 'Owned: ') + n + '</b> · ' + L('Quita ', 'Takes off ') + fmtTiempo(o.segundos) + '</p>' +
+        (resultado ? '<p class="nota" style="color:#2f7a22"><b>' + resultado + '</b></p>' : '') + '<p class="nota">' + L('Elige qué acelerar:', 'Choose what to speed up:') + '</p>' +
+        (l2.length ? l2.map(function (c) { return '<div class="ua-fila"><span class="ua-ico">' + c.ico + '</span><span class="ua-txt"><b>' + escaparHTML(c.nom) + '</b><span>⏱ ' + L('Falta: ', 'Left: ') + fmtTiempo(faltaDe(c.que)) + '</span></span><button class="comprar mini naranja" data-ua="' + c.que + '"' + (n > 0 ? '' : ' disabled') + '>' + L('Usar', 'Use') + '</button></div>'; }).join('') : '<p class="nota"><b>' + L('¡Todo terminado!', 'All done!') + '</b></p>') +
+        '<button class="comprar boton-oleada-grande" id="ua-cerrar" style="margin-top:8px">' + L('Cerrar', 'Close') + '</button></div>';
+      $('ua-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); reabrirPanel(); });
+      d.querySelectorAll('[data-ua]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          if (!(estado.mochila[k] > 0)) return;
+          var q = b.getAttribute('data-ua'), antes = faltaDe(q);
+          aplicarAcelerador(q, o.segundos);
+          var despues = faltaDe(q);
+          estado.mochila[k]--; sonar('magia'); guardar(true); actualizarHUD(); reabrirPanel();
+          var nom = (cosasConTiempo(o.soloInv).concat(lista).filter(function (c) { return c.que === q; })[0] || {}).nom || '';
+          pintar('⏩ ' + nom + ': ' + fmtTiempo(antes) + ' → ' + (despues > 0 ? fmtTiempo(despues) : L('¡listo!', 'done!')));
+        });
+      });
+    }
+    document.body.appendChild(d); pintar('');
+  }
   function faltaDe(que) {
     if (que === 'castillo') { var oc = estado.obraCastillo; return oc ? (oc.total - oc.t) / velObras() : 0; }
+    if (que === 'muralla') return obraMuralla ? (obraMuralla.total - obraMuralla.t) / velObras() : 0;
     if (que === 'entreno') return faltaEntreno() * velReal();
     if (que === 'invest') return faltaInvestigacion() * velReal();
     var s = slots[+String(que).split(':')[1]];
@@ -2620,6 +2660,7 @@
   }
   function aplicarAcelerador(que, seg) {
     if (que === 'castillo' && estado.obraCastillo) { var oc = estado.obraCastillo; oc.t = Math.min(oc.total, oc.t + seg); return; }
+    if (que === 'muralla' && obraMuralla) { obraMuralla.t = Math.min(obraMuralla.total, obraMuralla.t + seg); return; }
     if (que === 'invest' && estado.investigando) { var ii = estado.investigando; ii.t = Math.min(ii.total, ii.t + seg * rapidezAcademia()); return; }
     if (que === 'entreno') {
       var r = seg * rapidezEntreno();
@@ -5614,6 +5655,39 @@
   function ayer() { var d = new Date(); d.setDate(d.getDate() - 1); return fechaLocal(d); }
   function diarioDisponible() { return estado.diario && estado.diario.ultimo !== hoy(); }
   function rachaDeHoy() { var di = estado.diario || {}; return di.ultimo === ayer() ? (di.racha || 0) + 1 : (di.ultimo === hoy() ? di.racha : 1); }
+  var GEMA_HTML = '<span class="ico gema"></span>';
+  // cambia cualquier 💎 que aparezca en pantalla por el dibujo de la gema verde
+  (function gemaVerdeEnTodo() {
+    function arreglar(nodo) {
+      if (nodo.nodeType === 3) { if (nodo.nodeValue.indexOf('💎') < 0 || !nodo.parentNode || nodo.parentNode.closest && nodo.parentNode.closest('textarea,input')) return; var partes = nodo.nodeValue.split('💎'), f = document.createDocumentFragment(); partes.forEach(function (t, i) { if (i) { var s = document.createElement('span'); s.className = 'ico gema'; f.appendChild(s); } if (t) f.appendChild(document.createTextNode(t)); }); nodo.parentNode.replaceChild(f, nodo); return; }
+      if (nodo.nodeType !== 1 || nodo.tagName === 'SCRIPT' || nodo.tagName === 'CANVAS') return;
+      if (nodo.textContent.indexOf('💎') < 0) return;
+      Array.prototype.slice.call(nodo.childNodes).forEach(arreglar);
+    }
+    new MutationObserver(function (lista) { lista.forEach(function (m) { if (m.type === 'characterData') arreglar(m.target); else Array.prototype.forEach.call(m.addedNodes, arreglar); }); }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    arreglar(document.body);
+  })();
+  // ---------- VENTANA DE RECOMPENSAS: al abrir cualquier cofre se ve todo lo que dio ----------
+  function premioAItems(p) {
+    var l = [];
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) l.push({ ico: ICONO_RECURSO[r], nom: NOMBRE_R[r][estado.idioma === 'en' ? 1 : 0], n: p[r] }); });
+    if (p.gemas) l.push({ ico: GEMA_HTML, nom: L('Gemas', 'Gems'), n: p.gemas });
+    if (p.objeto) l.push({ ico: OBJETOS[p.objeto].icono, nom: N(p.objeto), n: 1 });
+    if (p.objetos) Object.keys(p.objetos).forEach(function (k) { l.push({ ico: OBJETOS[k].icono, nom: N(k), n: p.objetos[k] }); });
+    if (p.tropas) Object.keys(p.tropas).forEach(function (t) { l.push({ ico: TROPAS[t] ? TROPAS[t].icono : '🛡️', nom: N(t), n: p.tropas[t] }); });
+    if (p.piezas) p.piezas.forEach(function (pz) { l.push({ ico: '🧰', nom: nombrePieza(pz), n: 1 }); });
+    return l;
+  }
+  function mostrarRecompensas(titulo, items) {
+    var v = $('recompensas'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'recompensas';
+    d.innerHTML = '<div class="rc-caja"><div class="rc-cinta">🎁 ' + escaparHTML(titulo) + '</div><p class="nota"><b>' + L('Recibiste:', 'You got:') + '</b></p><div class="rc-lista">' +
+      items.map(function (it, i) { return '<div class="rc-item" style="animation-delay:' + (i * 0.28) + 's"><span class="rc-ico">' + it.ico + '</span><b>+' + formatoNumero(it.n) + '</b><small>' + escaparHTML(it.nom) + '</small></div>'; }).join('') +
+      '</div><button class="comprar verde boton-oleada-grande" id="rc-ok">' + L('Recoger', 'Collect') + '</button></div>';
+    document.body.appendChild(d); sonar('gemas');
+    items.forEach(function (it, i) { setTimeout(function () { sonar('moneda'); }, 200 + i * 280); });
+    $('rc-ok').addEventListener('click', function () { sonar('click'); d.remove(); actualizarHUD(); });
+  }
   function textoPremio(p) {
     var partes = [];
     ['oro', 'comida', 'madera', 'piedra', 'gemas'].forEach(function (r) { if (p[r]) partes.push('+' + p[r] + ' ' + ICONO_RECURSO[r]); });
@@ -5633,11 +5707,11 @@
     var racha = rachaDeHoy(), p = COFRE_DIARIO[(racha - 1) % COFRE_DIARIO.length];
     estado.diario = { ultimo: hoy(), racha: racha };
     darPremio(p);
-    sonar('gemas'); sonar('listo');
+    sonar('listo');
     chispas(castilloPos.clone().setY(6), 0xffe14a, 30, 5);
-    consejoTemporal(T('recibiste', { t: textoPremio(p) }));
     guardar(true);
     reabrirPanel();
+    mostrarRecompensas(L('Cofre diario · día ', 'Daily chest · day ') + racha, premioAItems(p));
   }
   // ---------- MOCHILA ----------
   // ---------- INVENTARIO: 5 pestañas, cuadrícula, punto rojo solo en lo nuevo ----------
@@ -5761,7 +5835,7 @@
   function usarObjeto(k) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
-    if (o.segundos) { consejoTemporal(T('acel_desde_menu')); sonar('error'); return; }
+    if (o.segundos) { abrirUsarAcelerador(k); return; }
     if (o.portal === 'elegir') { consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
     if (o.portal === 'azar') { if (portalAlAzar()) { cerrarPanel(); abrirMundo(); } return; }
     if (o.exp || o.pergamino) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
@@ -5787,17 +5861,17 @@
       aplicarAcelerador('entreno', ACELERADOR_SEG);
       consejoTemporal(T('acelerador_usado'));
     } else if (o.da) { premio = o.da; }
-    else if (o.paquete) { estado.mochila[k]--; Object.keys(o.paquete).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.paquete[q]; }); sonar('magia'); consejoTemporal(T('recibiste', { t: Object.keys(o.paquete).map(function (q) { return o.paquete[q] + '× ' + N(q); }).join(', ') })); guardar(true); reabrirPanel(); return; }
-    else if (o.mejora) { estado.mochila[k]--; o.mejora.forEach(function (r, i) { setTimeout(function () { darPieza(null, r); }, i * 400); }); sonar('magia'); guardar(true); setTimeout(reabrirPanel, o.mejora.length * 400 + 100); return; }
+    else if (o.paquete) { estado.mochila[k]--; Object.keys(o.paquete).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.paquete[q]; }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ objetos: o.paquete })); return; }
+    else if (o.mejora) { estado.mochila[k]--; var pzs = o.mejora.map(function (r) { return darPieza(null, r); }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: pzs })); return; }
     else if (o.tropas) { var nt = 0; Object.keys(o.tropas).forEach(function (t) { for (var q = 0; q < o.tropas[t]; q++) { if (tropasOcupadas() >= capacidad()) break; crearTropa(t, puertaCuartel()); nt++; } }); if (!nt) { consejoTemporal(T('sin_espacio')); sonar('error'); return; } estado.mochila[k]--; sonar('cuerno'); consejoTemporal(L('¡Llegaron ' + nt + ' reclutas!', nt + ' recruits arrived!')); actualizarHUD(); guardar(true); reabrirPanel(); return; }
-    else if (o.equipo) { estado.mochila[k]--; darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); sonar('magia'); guardar(true); reabrirPanel(); return; }
+    else if (o.equipo) { estado.mochila[k]--; var pz1 = darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: [pz1] })); return; }
     else if (o.cofre) {
       premio = {};
       Object.keys(o.cofre).forEach(function (r) { var a = o.cofre[r]; premio[r] = a[0] + Math.floor(Math.random() * (a[1] - a[0] + 1)); });
       chispas(castilloPos.clone().setY(6), 0xffe14a, 24, 5);
     }
     estado.mochila[k]--;
-    if (premio) { darPremio(premio); consejoTemporal(T('recibiste', { t: textoPremio(premio) })); }
+    if (premio) { darPremio(premio); if (o.cofre) mostrarRecompensas(N(k), premioAItems(premio)); else consejoTemporal(T('recibiste', { t: textoPremio(premio) })); }
     sonar('gemas');
     guardar(true);
     reabrirPanel();
