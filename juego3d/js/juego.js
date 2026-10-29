@@ -1171,7 +1171,7 @@
   // ------------------------------------------------------------------
   //  MAPA DEL MUNDO EN CUADRÍCULA (3D): casillas de llanura, bosque, colina, lago y montaña
   // ------------------------------------------------------------------
-  var TAM_MUNDO = 40, CELDA_M = 2;
+  var TAM_MUNDO = 80, CELDA_M = 2;
   var TIPOS_CASILLA = {
     llanura: { r: 'comida', color: 0xa9b86c, icono: '🌾' },
     bosque: { r: 'madera', color: 0x748f4a, icono: '🌲' },
@@ -1189,11 +1189,24 @@
   function casillaMundo(x, y) {
     var n = ruidoM(x / 6, y / 6) * 0.65 + ruidoM(x / 2.5 + 50, y / 2.5 + 50) * 0.35;
     var tipo = n < 0.3 ? 'lago' : n < 0.5 ? 'llanura' : n < 0.66 ? 'bosque' : n < 0.8 ? 'colina' : 'montana';
-    var lejos = Math.hypot(x - 20, y - 20) / 28;
+    var lejos = Math.hypot(x - TAM_MUNDO / 2, y - TAM_MUNDO / 2) / (TAM_MUNDO * 0.7);
     var nivel = Math.max(1, Math.min(5, 1 + Math.floor(hashM(x + 7, y + 13) * 3 + lejos * 2.5)));
     return { id: x + '_' + y, x: x, y: y, tipo: tipo, nivel: nivel };
   }
   function celdaDe(px, py) { return { x: Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(px * TAM_MUNDO / 100))), y: Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(py * TAM_MUNDO / 100))) }; }
+
+  // v6.16: Mundo más grande con más aldeas bárbaras, de nivel 1 cerca del centro a 12 en los bordes
+  (function () {
+    var usadas = []; CAMPAMENTOS.forEach(function (cm) { usadas.push(celdaDe(cm.x, cm.y)); });
+    for (var i = 0, n = 0; i < 1200 && n < 60; i++) {
+      var x = 2 + Math.floor(hashM(i * 5.31 + 2, 3.7) * (TAM_MUNDO - 4)), y = 2 + Math.floor(hashM(9.1, i * 4.13 + 1) * (TAM_MUNDO - 4)), c = casillaMundo(x, y);
+      if (c.tipo === 'lago' || c.tipo === 'montana') continue;
+      if (usadas.some(function (q) { return Math.abs(q.x - x) + Math.abs(q.y - y) < 5; })) continue;
+      usadas.push({ x: x, y: y }); n++;
+      var d = Math.hypot(x - TAM_MUNDO / 2, y - TAM_MUNDO / 2) / (TAM_MUNDO * 0.7);
+      CAMPAMENTOS.push({ x: aCoord(x), y: aCoord(y), nivel: Math.max(1, Math.min(12, 1 + Math.floor(d * d * 10 + hashM(x, y) * 1.6))) });
+    }
+  })();
   var ALT_TIPO = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: 0 };
   function posCelda(x, y) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, x)), cy = Math.max(0, Math.min(TAM_MUNDO - 1, y)); return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, ALT_TIPO[casillaMundo(cx, cy).tipo] || 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
   function maxCasillas() { return estado.castillo || 1; }
@@ -1206,6 +1219,7 @@
   }
   function defensaCasilla(c) { return Math.round(600 * Math.pow(c.nivel, 1.8)); }
   function defensaCampamento(n) { return Math.round(900 * Math.pow(n, 1.5)); }
+  function gemasCampamento(n) { return Math.max(1, Math.floor(n / 2)); }
   var casillasNube = {}, M3 = null, ocupadasMundo = {};
   // batalla genérica: devuelve si ganó, qué parte del ejército cae y qué tan bien le fue
   function resolverBatalla(f, d) {
@@ -1354,6 +1368,7 @@
     var cc0 = casillaMundo(x, y); $('mundo-coord').textContent = '📍 ' + TIPOS_CASILLA[cc0.tipo].icono + ' ' + T('cas_' + cc0.tipo) + ' · X ' + x + ' · Y ' + y;
     var q = ocupadasMundo[x + '_' + y];
     if (q && q.bestia !== undefined) { mostrarBestia(q.bestia); return; }
+    if (q && q.libre) { mostrarLugarLibre(x, y); return; }
     M3.sel.material.color.setHex(0xffe14a);
     if (!M3.verde) { M3.verde = new THREE.Mesh(new THREE.PlaneGeometry(CELDA_M * 0.98, CELDA_M * 0.98), new THREE.MeshBasicMaterial({ color: 0x3fd45a, transparent: true, opacity: 0.55, depthWrite: false })); M3.verde.rotation.x = -Math.PI / 2; M3.verde.renderOrder = 3; M3.e.add(M3.verde); }
     M3.verde.visible = false;
@@ -1397,7 +1412,7 @@
     CAMPAMENTOS.forEach(function (cm, i) {
       var c = celdaDe(cm.x, cm.y), p = posCelda(c.x, c.y), g = new THREE.Group();
       var ab = aldeaBarbara(cm.nivel); ab.scale.setScalar(1.35); g.add(ab);
-      var et = M.etiquetaEdificio('🛖 ' + T('leyenda_trasgos'), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
+      var et = M.etiquetaEdificio('🛖 ⚔️' + corto(defensaCampamento(cm.nivel)), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
       g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[c.x + '_' + c.y] = { campamento: i };
     });
@@ -1420,6 +1435,15 @@
       var k = b.x + '_' + b.y; if (ocupadasMundo[k] || casillasNube[k] || (estado.casillas || {})[k]) return;
       var g = modeloBestia(b), p = posCelda(b.x, b.y); g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[k] = { bestia: i };
+    });
+    lugaresLibres().forEach(function (q) {
+      var pl = posCelda(q.x, q.y), gl = new THREE.Group();
+      gl.add(M.caja(1.3, 0.06, 1.3, 0xdcc89a, 0, 0.03, 0));
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { gl.add(M.cil(0.05, 0.05, 0.32, 5, 0x6a4424, s[0] * 0.6, 0.16, s[1] * 0.6)); });
+      gl.add(M.cil(0.025, 0.025, 0.9, 5, 0x6a4424, 0, 0.45, 0)); gl.add(M.caja(0.36, 0.22, 0.02, q.cerca ? 0x3fd45a : 0xf4f0e6, 0.18, 0.78, 0));
+      var etl = M.etiquetaEdificio(L('Libre', 'Free'), '🏳'); etl.position.set(0, 1.35, 0); etl.scale.multiplyScalar(0.42); gl.add(etl);
+      gl.position.copy(pl); M3.cosas.add(gl);
+      ocupadasMundo[q.x + '_' + q.y] = { libre: true };
     });
     // banderas en las casillas conquistadas (mías doradas, de mi hermandad azules, de otros rojas)
     var todas = {};
@@ -1497,11 +1521,11 @@
   function listaBestias() {
     if (bestiasCache) return bestiasCache;
     var l = [], usadas = {};
-    for (var i = 0; i < 120 && l.length < 42; i++) {
+    for (var i = 0; i < 520 && l.length < 170; i++) {
       var x = Math.floor(hashM(i * 3.17 + 1, 7.7) * TAM_MUNDO), y = Math.floor(hashM(11.3, i * 2.71 + 5) * TAM_MUNDO), c = casillaMundo(x, y), k = x + '_' + y;
       if (c.tipo === 'lago' || c.tipo === 'montana' || usadas[k]) continue;
       usadas[k] = 1;
-      var lejos = Math.hypot(x - 20, y - 20) / 28, nivel = Math.max(1, Math.min(10, 1 + Math.floor(hashM(x + 3, y + 9) * 4 + lejos * 6)));
+      var lejos = Math.hypot(x - TAM_MUNDO / 2, y - TAM_MUNDO / 2) / (TAM_MUNDO * 0.7), nivel = Math.max(1, Math.min(10, 1 + Math.floor(hashM(x + 3, y + 9) * 4 + lejos * 6)));
       l.push({ id: 'b' + k, x: x, y: y, nivel: nivel, tipo: c.tipo === 'llanura' ? 'jabali' : c.tipo === 'bosque' ? 'lobo' : 'oso' });
     }
     return (bestiasCache = l);
@@ -1563,6 +1587,52 @@
     if (mostrar) mostrar(listo);
     guardar(true); actualizarHUD(); pintarAldeas(aldeasCache); $('mundo-info').innerHTML = '';
   }
+
+  // ---------- LUGARES LIBRES: parcelas vacías cerca de mí y por todo el Mundo para jugadores nuevos ----------
+  function lugaresLibres() {
+    var yo = celdaDe(miLugar().x, miLugar().y), l = [], ya = {};
+    function ok(x, y) { if (x < 1 || y < 1 || x > TAM_MUNDO - 2 || y > TAM_MUNDO - 2) return false; var t = casillaMundo(x, y).tipo, k = x + '_' + y; if (t === 'lago' || t === 'montana') return false; return !ocupadasMundo[k] && !(estado.casillas || {})[k] && !casillasNube[k]; }
+    function vecino(x, y) { for (var k in ya) { var q = k.split('_'); if (Math.abs(q[0] - x) <= 1 && Math.abs(q[1] - y) <= 1) return true; } return false; }
+    var cerca = [];
+    for (var dy = -6; dy <= 6; dy++) for (var dx = -6; dx <= 6; dx++) { var dd = Math.max(Math.abs(dx), Math.abs(dy)); if (dd >= 2) cerca.push([yo.x + dx, yo.y + dy, dd + hashM(yo.x + dx, yo.y + dy) * 2]); }
+    cerca.sort(function (a, b) { return a[2] - b[2]; });
+    for (var i = 0; i < cerca.length && l.length < 8; i++) { var c = cerca[i]; if (ok(c[0], c[1]) && !vecino(c[0], c[1])) { l.push({ x: c[0], y: c[1], cerca: true }); ya[c[0] + '_' + c[1]] = 1; } }
+    for (var y = 1; y < TAM_MUNDO - 1; y++) for (var x = 1; x < TAM_MUNDO - 1; x++) if (!ya[x + '_' + y] && hashM(x * 1.73 + 3.1, y * 2.31 + 9.7) < 0.03 && ok(x, y) && !vecino(x, y)) { l.push({ x: x, y: y }); ya[x + '_' + y] = 1; }
+    return l;
+  }
+  function mostrarLugarLibre(x, y) {
+    var c = casillaMundo(x, y), pt = TIENDA.filter(function (q) { return q.id === 'portal_elegir'; })[0], np = estado.mochila.portal_elegir || 0, yo = celdaDe(miLugar().x, miLugar().y);
+    $('mundo-info').innerHTML = '<div class="carta"><h3>🏳️ ' + L('Lugar libre', 'Free spot') + '</h3><p>' + L('Aquí puede fundar su reino un jugador nuevo, o puedes mudar tu reino con un portal.', 'A new player can found a kingdom here, or you can move your kingdom here with a portal.') + '</p>' +
+      '<div class="stats"><span>📍 X ' + x + ' · Y ' + y + '</span><span>' + TIPOS_CASILLA[c.tipo].icono + ' ' + T('cas_' + c.tipo) + '</span><span>📏 ' + Math.round(Math.hypot(x - yo.x, y - yo.y)) + ' ' + L('casillas de tu reino', 'tiles from your kingdom') + '</span></div>' +
+      '<button class="comprar morado boton-oleada-grande" id="libre-mover">🌀 ' + T('tel_aqui') + ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + (pt ? pt.gemas : '')) + '</button></div>';
+    $('libre-mover').addEventListener('click', function () {
+      var no = puedeTeleportar(); if (no) { consejoTemporal(no); sonar('error'); return; }
+      confirmarJuego('✨ ' + T('tel_titulo'), T('tel_txt', { x: x, y: y }), T('tel_aqui'), function () {
+        if (!(estado.mochila.portal_elegir > 0)) { if (!pt || !pagar(0, pt.gemas)) return; estado.mochila.portal_elegir = (estado.mochila.portal_elegir || 0) + 1; }
+        teletransportar(x, y, 'portal_elegir');
+      });
+    });
+  }
+  // ---------- LUPA: buscar por coordenadas y ver los reinos cercanos ----------
+  function abrirLupa() {
+    if (!M3) return;
+    var yo = celdaDe(miLugar().x, miLugar().y), me = hayCuenta() ? Cuentas.usuario().uid : '__yo';
+    var otros = aldeasCache.filter(function (a) { return a.uid !== me; }).map(function (a) { var c = celdaDe(a.x, a.y); return { a: a, c: c, d: Math.hypot(c.x - yo.x, c.y - yo.y) }; }).sort(function (p, q) { return p.d - q.d; }).slice(0, 8);
+    $('mundo-info').innerHTML = '<div class="carta lupa"><h3>🔍 ' + L('Buscar por coordenadas', 'Search by coordinates') + '</h3>' +
+      '<div class="lupa-fila"><label>X <input type="number" inputmode="numeric" id="lupa-x" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + yo.x + '"></label><label>Y <input type="number" inputmode="numeric" id="lupa-y" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + yo.y + '"></label><button class="comprar naranja" id="lupa-ir">' + L('Ir', 'Go') + '</button></div>' +
+      '<p class="nota">' + L('El mapa va de 0 a ', 'The map goes from 0 to ') + (TAM_MUNDO - 1) + '. ' + L('Tu reino está en ', 'Your kingdom is at ') + 'X ' + yo.x + ' · Y ' + yo.y + '.</p>' +
+      (otros.length ? '<h4 class="lupa-sub">⚔️ ' + L('Reinos cercanos', 'Nearby kingdoms') + '</h4>' + otros.map(function (o) {
+        return '<button class="lupa-reino" data-x="' + o.c.x + '" data-y="' + o.c.y + '"><span class="lr-nom">🏰 ' + escaparHTML(String(o.a.nombre || '?').slice(0, 16)) + '</span><span class="lr-dato">' + L('Nv ', 'Lv ') + (o.a.nivel || 1) + ' · ⚔️ ' + corto(o.a.poder || 0) + '</span><span class="lr-xy">X ' + o.c.x + ' · Y ' + o.c.y + '</span></button>';
+      }).join('') : '<p class="nota">' + L('Todavía no hay otros reinos en el mapa.', 'There are no other kingdoms on the map yet.') + '</p>') + '</div>';
+    function ir(x, y) {
+      x = Math.max(0, Math.min(TAM_MUNDO - 1, Math.round(x) || 0)); y = Math.max(0, Math.min(TAM_MUNDO - 1, Math.round(y) || 0));
+      M3.obj.copy(posCelda(x, y)); M3.zoom = { de: M3.dist, a: 20, t0: performance.now() };
+      var p = posCelda(x, y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
+      elegirCelda(x, y);
+    }
+    $('lupa-ir').addEventListener('click', function () { sonar('click'); ir(+$('lupa-x').value, +$('lupa-y').value); });
+    Array.prototype.forEach.call(document.querySelectorAll('.lupa-reino'), function (b) { b.addEventListener('click', function () { sonar('click'); ir(+b.dataset.x, +b.dataset.y); }); });
+  }
   // ---------- BUSCAR objetivos por tipo y nivel ----------
   var busqueda = { tipo: 'bestia', nivel: 0 };
   function pintarBuscador() {
@@ -1620,7 +1690,7 @@
   function mostrarCampamento(i) {
     var cm = CAMPAMENTOS[i], c = celdaDe(cm.x, cm.y), espera = ((estado.cdCamp || {})[i] || 0) - Date.now();
     var html = '<div class="carta"><h3>🛖 ' + T('campamento') + ' <span class="me-nivel">' + cm.nivel + '</span></h3><p>' + T('campamento_txt') + '</p>' +
-      '<div class="stats"><span>📍 ' + c.x + ', ' + c.y + '</span><span>🛡️ ' + formatoNumero(defensaCampamento(cm.nivel)) + '</span><span>' + T('at_botin') + ': ' + textoBotin(botinMaximo(cm.nivel)) + '</span></div>' +
+      '<div class="stats"><span>📍 X ' + c.x + ' · Y ' + c.y + '</span><span>⚔️ ' + L('Poder recomendado: ', 'Recommended power: ') + formatoNumero(defensaCampamento(cm.nivel)) + '</span><span>💪 ' + L('Tu poder: ', 'Your power: ') + formatoNumero(Math.round(fuerzaEjercito())) + '</span><span>' + T('at_botin') + ': ' + textoBotin(botinMaximo(cm.nivel)) + ' · +' + gemasCampamento(cm.nivel) + ' 💎</span></div>' +
       (espera > 0 ? '<p class="nota aviso-rojo">' + T('camp_espera', { t: fmtTiempo(espera / 1000) }) + '</p>' : '<button class="comprar rojo boton-oleada-grande" id="camp-atacar">⚔️ ' + T('camp_atacar') + '</button>') + '</div>';
     $('mundo-info').innerHTML = html;
     var b = $('camp-atacar'); if (b) b.addEventListener('click', function () { this.disabled = true; atacarCampamento(i); });
@@ -1631,12 +1701,13 @@
     var f = fuerzaEjercito(), d = defensaCampamento(cm.nivel), res = resolverBatalla(f, d);
     var bm = botinMaximo(cm.nivel), botin = {};
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { botin[r] = Math.floor(bm[r] * res.margen); });
+    var premioCamp = { oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra, gemas: gemasCampamento(cm.nivel), objetos: { libro_gra: 1, acel_15m: 1 } };
     sonar('cuerno');
     var listo = null, mostrar = null;
-    escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento' }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas);
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
-    if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
+    if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
@@ -1644,12 +1715,12 @@
   }
   // ---------- PORTALES: mudar el reino a otro lugar del mapa ----------
   function miLugar() { return estado.lugar || (hayCuenta() ? Cuentas.lugar() : { x: 50, y: 50 }); }
-  function aCoord(c) { return Math.round(c * 100 / TAM_MUNDO + 1.25); } // el centro de la casilla, en coordenadas 0..99
+  function aCoord(c) { return Math.round((c + 0.5) * 100 / TAM_MUNDO); } // el centro de la casilla, en coordenadas 0..99
   function celdaLibre(x, y) {
     if (x < 1 || y < 1 || x > TAM_MUNDO - 2 || y > TAM_MUNDO - 2) return false;
     var c = casillaMundo(x, y), k = x + '_' + y;
     if (c.tipo === 'lago' || c.tipo === 'montana') return false;
-    if (ocupadasMundo[k]) return false;
+    if (ocupadasMundo[k] && !ocupadasMundo[k].libre) return false;
     if (CAMPAMENTOS.some(function (cm) { var q = celdaDe(cm.x, cm.y); return q.x === x && q.y === y; })) return false;
     if (aldeasCache.some(function (a) { var q = celdaDe(a.x, a.y); return q.x === x && q.y === y; })) return false;
     return true;
@@ -4377,10 +4448,12 @@
     $('panel').scrollTop = 0;
     document.body.classList.add('panel-abierto');
     panelActual = cual;
+    var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
+    $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     actualizarPanel();
   }
   function cerrarPanel() {
-    $('panel').classList.add('oculto');
+    $('panel').classList.add('oculto'); $('panel').classList.remove('oscuro');
     document.body.classList.remove('panel-abierto');
     panelActual = null;
     slotElegido = null;
@@ -4722,8 +4795,17 @@
 
   var pestCuartel = 'detalles';
   var TROPAS_LISTA = TROPAS_ORDEN;
+  // ---------- CUARTEL con diseño oscuro: cabecera, trabajo en curso, tarjetas y ficha ----------
+  var ROMANO5 = ['', 'I', 'II', 'III', 'IV', 'V'];
+  function rolTropa(t) { var f = FAMILIA[t]; return f === 'inf' ? L('Infantería', 'Infantry') : f === 'dist' ? L('Distancia', 'Ranged') : f === 'cab' ? L('Caballería', 'Cavalry') : L('Asedio', 'Siege'); }
   function htmlPestanasCuartel() {
-    return '<div class="subtabs cuartel-tabs">' + [['detalles', L('Detalles', 'Details')], ['entrenar', L('Entrenar tropas', 'Train troops')], ['cola', L('En entrenamiento', 'In training')]].map(function (q) {
+    var s = slots[slotElegido], tipo = s && s.edificio ? s.edificio.tipo : 'cuartel', nv = s && s.edificio ? s.edificio.nivel : 1;
+    var total = tropas.filter(function (u) { return !u.heroeId; }).length, hay = colaEntreno.length;
+    var h = '<div class="cq-cab"><div class="cq-escudo">🛡️</div><div class="cq-tit"><small>' + L('MILITAR · NV ', 'MILITARY · LV ') + nv + '</small><b>' + N(tipo) + '</b></div>' +
+      '<div class="cq-stats"><div class="cq-stat"><span>👥</span><div><small>' + L('TROPAS', 'TROOPS') + '</small><b>' + formatoNumero(total) + '</b></div></div>' +
+      '<div class="cq-stat' + (hay ? ' activo' : '') + '"><span>🔨</span><div><small>' + L('COLA', 'QUEUE') + '</small><b class="cq-cola-t">' + (hay ? fmtTiempo(faltaEntreno()) : L('Libre', 'Idle')) + '</b></div></div></div></div>';
+    if (hay) h += '<button class="cq-trabajo" data-accion="cuartel-pest" data-p="cola"><span class="cq-martillo">🔨</span><span class="cq-tt">' + L('Entrenando ', 'Training ') + '<b>' + formatoNumero(hay) + ' ' + L('tropas', 'troops') + '</b></span><b class="cq-cola-t">' + fmtTiempo(faltaEntreno()) + '</b></button>';
+    return h + '<div class="subtabs cuartel-tabs">' + [['detalles', L('Detalles', 'Details')], ['entrenar', L('Entrenar tropas', 'Train troops')], ['cola', L('En entrenamiento', 'In training')]].map(function (q) {
       var n = q[0] === 'cola' ? colaEntreno.length : 0;
       return '<button data-accion="cuartel-pest" data-p="' + q[0] + '" class="' + (pestCuartel === q[0] ? 'activo' : '') + '">' + q[1] + (n ? ' <span class="mail-n">' + formatoNumero(n) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
@@ -4740,14 +4822,18 @@
     return [L('caballería', 'cavalry'), L('murallas y ciudades', 'walls and cities')];
   }
   function estrellasDe(v, um) { var n = 1; um.forEach(function (u) { if (v >= u) n++; }); return '★'.repeat(n) + '<span class="apag">' + '★'.repeat(5 - n) + '</span>'; }
+  function barraStat(nom, v, max, txt) {
+    return '<div class="cq-sf"><div class="cq-sf-cab"><span>' + nom + '</span><b>' + (txt || formatoNumero(v)) + '</b></div><div class="cq-sf-barra"><i style="width:' + Math.min(100, v / max * 100) + '%"></i></div></div>';
+  }
   function htmlFichaTropa(t) {
     var d = TROPAS[t], na = nivelArmadura(t), contra = contraDe(t), falta = faltaTropa(t), r = TROPA_REQ[t] || {};
-    var est = TROPA_RANGO_ESTRELLAS[t] || 1;
-    var h = '<div class="ficha-tropa"><div class="ft-cab"><button class="comprar mini" data-accion="det-volver">◀</button><div class="ft-tit"><b>' + N(t) + '</b><small>' + D(t) + '</small></div><span class="foto">' + fotoHTML(t, d.icono) + '<i class="estrellas">' + '★'.repeat(Math.min(5, est + na)) + '</i></span></div>' +
-      '<div class="ft-stats"><span>' + L('Ataque', 'Attack') + '</span><b class="estr">' + estrellasDe(d.dano, [12, 20, 35, 60]) + '</b><span>' + L('Mantenimiento', 'Upkeep') + '</span><b>🍞 ' + Math.round(3600 / COMIDA_TROPA.cada) + '/h</b>' +
-      '<span>' + L('Vida', 'Health') + '</span><b class="estr">' + estrellasDe(d.vida, [100, 180, 350, 700]) + '</b><span>' + L('Poder', 'Power') + '</span><b>' + Math.round(d.vida * 2 + d.dano * 25) + '</b>' +
-      '<span>' + L('Velocidad', 'Speed') + '</span><b>' + Math.round(d.vel * 100) + '</b><span>' + L('Débil contra', 'Weak vs') + '</span><b class="debil">' + contra[0] + '</b>' +
-      '<span>' + L('Carga', 'Load') + '</span><b>' + (CARGA_TROPA[t] || 0) + '</b><span>' + L('Fuerte contra', 'Strong vs') + '</span><b class="fuerte">' + contra[1] + '</b></div>' +
+    var est = TROPA_RANGO_ESTRELLAS[t] || 1, tier = Math.min(5, est + na), poder = Math.round(d.vida * 2 + d.dano * 25);
+    var h = '<div class="ficha-tropa cq-ficha"><div class="cq-retrato"><div class="cq-brillo"></div>' + fotoHTML(t, '<span class="cq-emoji">' + d.icono + '</span>') +
+      '<button class="cq-volver" data-accion="det-volver" aria-label="Volver">◀</button><div class="cq-ret-arriba"><span class="cq-tier-g">' + ROMANO5[tier] + '</span><span class="cq-rol">' + rolTropa(t) + '</span></div>' +
+      '<div class="cq-ret-abajo"><div><small>' + L('PODER DE TROPA', 'UNIT POWER') + '</small><b>' + formatoNumero(poder) + '</b></div><div class="cq-ret-tropas"><small>' + L('TROPAS', 'TROOPS') + '</small><b>' + formatoNumero(cuentaTipo(t)) + '</b></div></div></div>' +
+      '<div class="cq-det"><div class="cq-rango">✨ ' + T('rango') + ' ' + ROMANO[na] + ' <span>/ IV</span></div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div>' +
+      '<div class="cq-stats-caja">' + barraStat(L('Ataque', 'Attack'), d.dano, 90) + barraStat(L('Vida', 'Health'), d.vida, 900) + barraStat(L('Velocidad', 'Speed'), Math.round(d.vel * 100), 450) + barraStat(L('Carga', 'Load'), CARGA_TROPA[t] || 0, 60) +
+      '<div class="cq-chips"><span class="debil">' + L('Débil contra ', 'Weak vs ') + contra[0] + '</span><span class="fuerte">' + L('Fuerte contra ', 'Strong vs ') + contra[1] + '</span><span>🍞 ' + Math.round(3600 / COMIDA_TROPA.cada) + '/h</span></div></div>' +
       '<div class="subtabs ft-pest"><button data-accion="det-pest" data-p="entrenar" class="' + (pestDetalle === 'entrenar' ? 'activo' : '') + '">' + L('Entrenar', 'Train') + '</button><button data-accion="det-pest" data-p="relevar" class="' + (pestDetalle === 'relevar' ? 'activo' : '') + '">' + L('Relevar', 'Dismiss') + '</button></div>';
     if (pestDetalle === 'relevar') {
       var tengo = propiasDe(t).length;
@@ -4761,13 +4847,14 @@
       var filas = [filaReq('jugador', r.jugador || 1), { nombre: '👥 ' + L('Espacio en el ejército', 'Army space'), pide: 1, tiene: Math.max(0, capacidad() - tropasOcupadas()), ok: capacidad() - tropasOcupadas() >= 1 }];
       if (r.ed) filas.push(filaReq(r.ed, r.n || 1));
       if (r.otro) filas.push(filaReq(r.otro[0], r.otro[1]));
-      return h + '<p class="ft-no">' + L('No cumples los requisitos', 'You do not meet the requirements') + '</p>' + tablaRequisitos(costoTropa(t), filas).replace(/<div class="banner-rojo">[\s\S]*?<\/div>/, '') + '</div>';
+      return h + '<p class="ft-no">' + L('No cumples los requisitos', 'You do not meet the requirements') + '</p>' + tablaRequisitos(costoTropa(t), filas).replace(/<div class="banner-rojo">[\s\S]*?<\/div>/, '') + '<button class="comprar boton-oleada-grande cq-oro" disabled>' + L('No cumples los requisitos', 'Requirements not met') + '</button></div>';
     }
     var max = Math.max(1, maxEntrenar(t)); cantDetalle = Math.max(1, Math.min(cantDetalle, max));
-    return h + '<div class="tropa-cantidad"><button class="redondo" data-accion="det-menos">−</button><input type="range" id="det-n" min="1" max="' + max + '" value="' + cantDetalle + '"' + (maxEntrenar(t) < 1 ? ' disabled' : '') + '><button class="redondo" data-accion="det-mas">+</button><span class="tropa-num" id="det-num">' + cantDetalle + '</span><button class="comprar mini naranja" data-accion="det-max">' + T('maximo') + '</button></div>' +
-      '<div class="tropa-total" id="det-total"></div>' + (maxEntrenar(t) < 1 ? '<p class="nota aviso-rojo">' + (tropasOcupadas() >= capacidad() ? T('sin_espacio') : T('sin_recursos_tropa')) + '</p>' : '') +
-      '<button class="comprar boton-oleada-grande" id="det-btn" data-accion="det-entrenar" data-tipo="' + t + '">⚔️ ' + T('entrenar') + '</button>' +
-      '<button class="comprar mini ft-3d" data-accion="cuartel-3d" data-tipo="' + t + '">🪖 ' + L('Rangos, armadura e investigación', 'Ranks, armor and research') + '</button></div>';
+    return h + '<div class="tropa-total cq-costo" id="det-total"></div>' +
+      '<div class="tropa-cantidad"><button class="redondo" data-accion="det-menos">−</button><input type="range" id="det-n" min="1" max="' + max + '" value="' + cantDetalle + '"' + (maxEntrenar(t) < 1 ? ' disabled' : '') + '><button class="redondo" data-accion="det-mas">+</button><span class="tropa-num" id="det-num">' + cantDetalle + '</span><button class="comprar mini naranja" data-accion="det-max">' + T('maximo') + '</button></div>' +
+      (maxEntrenar(t) < 1 ? '<p class="nota aviso-rojo">' + (tropasOcupadas() >= capacidad() ? T('sin_espacio') : T('sin_recursos_tropa')) + '</p>' : '') +
+      '<button class="comprar boton-oleada-grande cq-oro" id="det-btn" data-accion="det-entrenar" data-tipo="' + t + '">⚔️ ' + T('entrenar') + '</button>' +
+      '<button class="comprar mini ft-3d cq-vidrio" data-accion="cuartel-3d" data-tipo="' + t + '">🪖 ' + L('Rangos, armadura e investigación', 'Ranks, armor and research') + '</button></div>';
   }
   function refrescarFicha() {
     var t = tropaDetalle; if (!t || !$('det-num')) return;
@@ -4777,11 +4864,13 @@
     if ($('det-btn')) { $('det-btn').innerHTML = '⚔️ ' + T('entrenar') + ' ×' + cantDetalle; $('det-btn').disabled = maxEntrenar(t) < 1; }
   }
   function htmlEntrenarLista() {
-    return '<div class="tropas-lista">' + TROPAS_LISTA.map(function (t) {
-      if (t === 'carreta') { var cr = carretas(); return '<button class="fila-tropa" data-accion="cuartel-carretas"><span class="foto">' + fotoHTML('carreta', '🛒') + '<i class="estrellas">★★</i></span><span class="ft-txt"><b>' + N('carreta') + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + cr.n + '</small><small>' + D('carreta') + '</small></span><span class="fc-flecha">›</span></button>'; }
-      var na = nivelArmadura(t), ok = puedeEntrenarTipo(t), ent = colaEntreno.filter(function (c) { return c.tipo === t; }).length, est = TROPA_RANGO_ESTRELLAS[t] || 1;
-      return '<button class="fila-tropa' + (ok ? '' : ' bloq') + '" data-accion="cuartel-tropa" data-tipo="' + t + '"><span class="foto">' + fotoHTML(t, TROPAS[t].icono) + (ok ? '' : '<b class="candado">🔒</b>') + '<i class="estrellas">' + '★'.repeat(Math.min(5, est + na)) + '</i></span>' +
-        '<span class="ft-txt"><b>' + N(t) + ' <small class="rango-chapa r' + na + '">' + T('rango') + ' ' + ROMANO[na] + '</small></b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaTipo(t)) + (ent ? ' · ⏱ ' + formatoNumero(ent) : '') + '</small><small>' + D(t) + '</small>' + (ok ? '' : '<small class="aviso-rojo">' + avisoEdificioTropa(t) + '</small>') + '</span><span class="fc-flecha">›</span></button>';
+    return '<div class="cq-rejilla">' + TROPAS_LISTA.map(function (t) {
+      if (t === 'carreta') { var cr = carretas(); return '<button class="cq-carta" data-accion="cuartel-carretas"><div class="cq-foto">' + fotoHTML('carreta', '<span class="cq-emoji">🛒</span>') + '<span class="cq-tier">T ' + ROMANO5[2] + '</span></div><div class="cq-info"><b>' + N('carreta') + '</b><div class="cq-fila"><span>' + L('Carga', 'Cargo') + '</span><span>' + formatoNumero(cr.n) + '</span></div></div></button>'; }
+      var na = nivelArmadura(t), ok = puedeEntrenarTipo(t), ent = colaEntreno.filter(function (c) { return c.tipo === t; }).length, est = TROPA_RANGO_ESTRELLAS[t] || 1, tier = Math.min(5, est + na), seg = '';
+      for (var k = 0; k < 4; k++) seg += '<i class="' + (k <= na ? 'si' : '') + '"></i>';
+      return '<button class="cq-carta' + (ok ? '' : ' bloq') + '" data-accion="cuartel-tropa" data-tipo="' + t + '"><div class="cq-foto">' + fotoHTML(t, '<span class="cq-emoji">' + TROPAS[t].icono + '</span>') + '<span class="cq-tier">T ' + ROMANO5[tier] + '</span>' +
+        (ent ? '<span class="cq-marca azul">🔨 ' + formatoNumero(ent) + '</span>' : ok ? '<span class="cq-marca">↑</span>' : '<span class="cq-marca gris">🔒</span>') + '</div>' +
+        '<div class="cq-info"><b>' + N(t) + '</b><div class="cq-fila"><span>' + rolTropa(t) + '</span><span>' + formatoNumero(cuentaTipo(t)) + '</span></div><div class="cq-nivel" title="' + T('rango') + ' ' + ROMANO[na] + '">' + seg + '</div>' + (ok ? '' : '<small class="cq-falta">' + avisoEdificioTropa(t) + '</small>') + '</div></button>';
     }).join('') + '</div>';
   }
   function htmlColaCuartel() {
@@ -4791,7 +4880,7 @@
     return '<div class="carta">' + Object.keys(grupos).map(function (t) {
       return '<div class="fila-miembro"><span class="foto mini">' + fotoHTML(t, TROPAS[t].icono) + '</span><b>' + N(t) + '</b><span class="chip">×' + formatoNumero(grupos[t]) + '</span></div>';
     }).join('') + '<div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + L('Falta: ', 'Left: ') + fmtTiempo(faltaEntreno()) + '</span></div>' +
-      '<button class="comprar azul boton-oleada-grande" data-accion="acelerar-entreno">⏩ ' + T('mb_acelerar') + '</button></div>';
+      '<button class="comprar boton-oleada-grande cq-oro" data-accion="acelerar-entreno">⏩ ' + T('mb_acelerar') + '</button></div>';
   }
   function abrirPanelEdificio(i) {
     var s = slots[i];
@@ -5599,7 +5688,7 @@
     var mios = Object.keys(tipos).map(function (k) { return '<span>' + (TROPAS[k] ? TROPAS[k].icono : '⚔️') + ' ' + tipos[k] + '</span>'; }).join('');
     var tam = a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3;
     caja.innerHTML = '<div class="bp-caja"><div class="bp-titulo">⚔️ ' + T('at_batalla') + '</div><div class="bp-arena">' +
-      '<div class="bp-lado yo"><div class="bp-retratos">' + (retr || '🛡️') + '</div><b>' + escaparHTML(Cuentas.nombrePublico ? Cuentas.nombrePublico() : T('tu_reino')) + '</b>' +
+      '<div class="bp-lado yo"><div class="bp-retratos">' + (retr || '🛡️') + '</div><b>' + escaparHTML(hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino')) + '</b>' +
       '<div class="bp-tropas">' + mios + '</div><div class="bp-barra"><div id="bp-b1"></div></div><span class="bp-num" id="bp-n1">' + formatoNumero(Math.round(f)) + '</span></div>' +
       '<div class="bp-vs"><span>VS</span><div class="bp-choque" id="bp-choque">💥</div></div>' +
       '<div class="bp-lado el"><div class="bp-retratos">' + (a.emoji ? '<span class="bp-emoji">' + a.emoji + '</span>' : retratos[a.retrato || ('mapa_castillo' + tam)] ? '<img src="' + retratos[a.retrato || ('mapa_castillo' + tam)] + '" alt="">' : (a.retrato === null ? '🚩' : '🏰')) + '</div><b>' + escaparHTML(a.nombre) + '</b>' +
@@ -5627,7 +5716,7 @@
       caja.querySelector('.bp-pie').style.display = 'none';
       alTerminar(function (html) {
         $('bp-res').innerHTML = html + '<button class="comprar naranja boton-oleada-grande" id="bp-volver">' + T('bp_volver') + '</button>';
-        $('bp-volver').addEventListener('click', function () { sonar('click'); caja.remove(); });
+        $('bp-volver').addEventListener('click', function () { sonar('click'); caja.remove(); if (a.alVolver) a.alVolver(); });
       });
     }
     $('bp-x2').addEventListener('click', function () { vel = vel === 1 ? 2 : 1; this.textContent = vel === 2 ? 'x1' : 'x2'; this.classList.toggle('naranja', vel === 2); });
@@ -6660,6 +6749,18 @@
   $('btn-ajustes').addEventListener('click', function () { sonar('click'); abrirPanelAjustes(); });
   $('btn-mundo').addEventListener('click', function () { if (enMenu) return; sonar('click'); salirModoColocar(); cerrarPanel(); if (enMundo) entrarCiudad(); else irAlMundo(); });
   $('mundo-volver').addEventListener('click', function () { sonar('click'); entrarCiudad(); });
+  $('mundo-lupa').addEventListener('click', function () { sonar('click'); abrirLupa(); });
+  // la barra de arriba se acomoda sola: nada queda tapado ni encimado
+  function acomodarHUD() {
+    function abajo(id) { var e = $(id); if (!e) return 0; var cs = getComputedStyle(e); if (cs.display === 'none' || e.classList.contains('oculto')) return 0; var r = e.getBoundingClientRect(); return r.height ? r.bottom : 0; }
+    function poner(id, top) { var e = $(id); if (e) e.style.setProperty('top', Math.round(top) + 'px', 'important'); }
+    var y = abajo('perfil') + 4; poner('ciudad-nombre', y); y = (abajo('ciudad-nombre') || y) + 4;
+    poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6;
+    poner('mision', y); y = (abajo('mision') || y) + 6;
+    poner('consejo', y);
+    poner('lateral', abajo('recursos') + 6);
+  }
+  setInterval(acomodarHUD, 400); window.addEventListener('resize', acomodarHUD); setTimeout(acomodarHUD, 50);
   $('mision').addEventListener('click', function () { if (!enMenu) tocarMision(); });
   $('btn-misiones').addEventListener('click', function () { if (!enMenu) { sonar('click'); abrirPanelMisiones(); } });
   $('bo-acelerar').addEventListener('click', function () { var q = $('barra-obra').dataset.que; if (q && !enMenu) { sonar('click'); abrirAcelerar(q); } });
@@ -7206,7 +7307,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
