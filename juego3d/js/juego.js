@@ -268,7 +268,7 @@
 
   // Textura de pasto pintada en el momento (original, sin imágenes externas):
   // matas claras y oscuras, briznas, manchitas de tierra y florecitas.
-  function texturaPasto() {
+  function texturaPasto(claro) {
     var T = 512, c = document.createElement('canvas'); c.width = c.height = T;
     var x = c.getContext('2d'), r = (function (a) { return function () { a = (a * 16807) % 2147483647; return a / 2147483647; }; })(4242);
     x.fillStyle = '#7d8f52'; x.fillRect(0, 0, T, T);
@@ -302,6 +302,9 @@
     tx.wrapS = tx.wrapT = THREE.RepeatWrapping;
     tx.repeat.set(86, 86);
     tx.anisotropy = Math.min(8, render.capabilities.getMaxAnisotropy());
+    var kf = claro ? 'fotoClaro' : 'foto';
+    if (!texturaPasto[kf]) texturaPasto[kf] = new THREE.TextureLoader().loadAsync(claro ? 'texturas/pasto_claro.jpg' : 'texturas/pasto.jpg');
+    texturaPasto[kf].then(function (t) { tx.image = t.image; tx.needsUpdate = true; }).catch(function () {});
     return tx;
   }
   // ruido suave (para manchas grandes de pasto seco / húmedo)
@@ -408,6 +411,7 @@
     return { todas: todas, nCiudad: 16, nCampos: campos.length, orden: orden, esCampo: function (i) { return i >= 16 && i < 16 + campos.length; } };
   })();
 
+  function materialAgua(op, color) { return new THREE.MeshPhongMaterial({ color: color || 0x3a9ad8, specular: 0x2a4a5e, shininess: 110, transparent: true, opacity: op, side: THREE.DoubleSide }); }
   // ---------- RÍO con cascada que baja de las colinas (rodea el reino por detrás) ----------
   var RIO = (function () {
     var pts = [];
@@ -432,7 +436,15 @@
       var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: col, side: THREE.DoubleSide, transparent: op < 1, opacity: op })); m.receiveShadow = true; escena.add(m); return m;
     }
     cinta(orilla, idxO, 0x8a7a5a, 1);
-    cinta(verts, idx, 0x3f8fb0, 0.92);
+    var rioM = cinta(verts, idx, 0x3f8fb0, 0.92); rioM.material = materialAgua(0.9);
+    var bl = [], br = [];
+    for (var ib = 0; ib <= n; ib++) {
+      var ub = ib / n, pq = RIO.curva.getPointAt(ub), tq = RIO.curva.getTangentAt(ub), pp = new V3(tq.z, 0, -tq.x).normalize();
+      var wq = 2.4 + Math.sin(ib * 0.21) * 0.5 + (ub > 0.25 ? 0.6 : -0.6), yq = altura(pq.x, pq.z) + 0.18;
+      bl.push(pq.x + pp.x * wq, yq, pq.z + pp.z * wq, pq.x + pp.x * (wq - 0.75), yq, pq.z + pp.z * (wq - 0.75));
+      br.push(pq.x - pp.x * (wq - 0.75), yq, pq.z - pp.z * (wq - 0.75), pq.x - pp.x * wq, yq, pq.z - pp.z * wq);
+    }
+    cinta(bl, idx.slice(), 0xd2f0ff, 0.55); cinta(br, idx.slice(), 0xd2f0ff, 0.55);
     // cascada: rocas grandes a los lados donde el agua baja de la colina, y espuma blanca abajo
     var rocas = new THREE.Group();
     for (var k = 0; k < 40; k++) {
@@ -461,9 +473,11 @@
       vb.push(f.cx + c * (f.rx + 0.75), 0.045, f.cz + s * (f.rz + 0.75), f.cx + c * (f.rx + 2.85), 0.045, f.cz + s * (f.rz + 2.85));
       if (i < n) { var a = i * 2; id.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     }
-    [[vb, 0x7a7466, 1], [v, 0x3f8fb0, 0.92]].forEach(function (q) {
+    var bi = [], bo = [];
+    for (var ii = 0; ii <= n; ii++) { var tt = ii / n * Math.PI * 2, cc2 = Math.cos(tt), ss2 = Math.sin(tt); bi.push(f.cx + cc2 * (f.rx + 1.1), 0.075, f.cz + ss2 * (f.rz + 1.1), f.cx + cc2 * (f.rx + 1.5), 0.075, f.cz + ss2 * (f.rz + 1.5)); bo.push(f.cx + cc2 * (f.rx + 2.1), 0.075, f.cz + ss2 * (f.rz + 2.1), f.cx + cc2 * (f.rx + 2.5), 0.075, f.cz + ss2 * (f.rz + 2.5)); }
+    [[vb, 0x7a7466, 1], [v, 0x3f8fb0, 0.92, true], [bi, 0xd2f0ff, 0.5], [bo, 0xd2f0ff, 0.5]].forEach(function (q) {
       var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(q[0], 3)); g.setIndex(id.slice()); g.computeVertexNormals();
-      var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: q[1], side: THREE.DoubleSide, transparent: q[2] < 1, opacity: q[2] })); m.receiveShadow = true; escena.add(m);
+      var m = new THREE.Mesh(g, q[3] ? materialAgua(0.9) : new THREE.MeshLambertMaterial({ color: q[1], side: THREE.DoubleSide, transparent: q[2] < 1, opacity: q[2], depthWrite: q[2] >= 1 })); m.receiveShadow = true; escena.add(m);
     });
     var fm = formaMuralla(), tp = fm.puerta, cx = Math.cos(tp), cz = Math.sin(tp);
     var px = f.cx + cx * (f.rx + 1.8), pz = f.cz + cz * (f.rz + 1.8);
@@ -679,7 +693,121 @@
     { es: 'Sube el Castillo a nivel 3', en: 'Upgrade the Castle to level 3', ok: function () { return (estado.castillo || 1) >= 3; }, p: { oro: 1500, gemas: 10 } },
     { es: 'Únete a una alianza', en: 'Join an alliance', ok: function () { return !!estado.alianza; }, p: { gemas: 15 } }
   ];
+  // ---------- PANEL DE MISIONES: grupos, misión diaria, recomendada y recompensa a la vista ----------
+  var pestMis = 'misiones';
+  function sumaInvest() { var n = 0, iv = estado.invest || {}; for (var k in iv) n += iv[k] || 0; return n; }
+  function nEdificios() { return slots.filter(function (s) { return s.edificio; }).length; }
+  function oleadasGanadas() { return Math.max(0, (estado.oleada || 1) - 1); }
+  function nEd(t) { return function () { return edificiosDe(t).length; }; }
+  function nvEd(t) { return function () { return nivelMayor(t); }; }
+  function lg(k) { return function () { return logro(k); }; }
+  function tm(id, es, en, v, n, p) { return { id: id, es: es, en: en, v: v, n: n, p: p }; }
+  var GRUPOS_MIS = [
+    { id: 'ciudad', ico: '🏰', es: 'Mejora tu ciudad', en: 'Improve your city', t: [
+      tm('c_granja', 'Construye una Granja', 'Build a Farm', nEd('granja'), 1, { oro: 300, comida: 300 }),
+      tm('c_nombre', 'Elige el nombre de tu reino', 'Choose your kingdom’s name', function () { return hayCuenta() ? 1 : 0; }, 1, { gemas: 10 }),
+      tm('c_cast2', 'Sube el Castillo a nivel 2', 'Upgrade the Castle to level 2', function () { return estado.castillo || 1; }, 2, { oro: 800, madera: 500, gemas: 5 }),
+      tm('c_pobl', 'Haz crecer tu pueblo: 6 edificios', 'Grow your town: 6 buildings', nEdificios, 6, { comida: 1000, madera: 800 }),
+      tm('c_muralla', 'Construye la Muralla (nivel 1)', 'Build the Wall (level 1)', function () { return estado.muralla || 0; }, 1, { piedra: 1200, oro: 500 }),
+      tm('c_cast3', 'Sube el Castillo a nivel 3', 'Upgrade the Castle to level 3', function () { return estado.castillo || 1; }, 3, { oro: 2000, piedra: 1000, gemas: 10 }),
+      tm('c_pobl12', 'Haz crecer tu pueblo: 12 edificios', 'Grow your town: 12 buildings', nEdificios, 12, { comida: 3000, madera: 2500, objeto: 'acel_1h' }),
+      tm('c_cast5', 'Sube el Castillo a nivel 5', 'Upgrade the Castle to level 5', function () { return estado.castillo || 1; }, 5, { oro: 6000, comida: 4000, gemas: 25 })
+    ] },
+    { id: 'ejercito', ico: '⚔️', es: 'Haz más poderoso tu ejército', en: 'Make your army stronger', t: [
+      tm('e_cuartel', 'Construye un Cuartel', 'Build a Barracks', nEd('cuartel'), 1, { oro: 400, comida: 400 }),
+      tm('e_trop10', 'Entrena 10 tropas', 'Train 10 troops', lg('tropas'), 10, { comida: 600, objeto: 'acel_5m' }),
+      tm('e_ole1', 'Gana la oleada 1', 'Win wave 1', oleadasGanadas, 1, { oro: 500 }),
+      tm('e_trop50', 'Entrena 50 tropas', 'Train 50 troops', lg('tropas'), 50, { comida: 2000, oro: 1000 }),
+      tm('e_inv1', 'Investiga un nivel en la Academia', 'Research one level at the Academy', sumaInvest, 1, { oro: 800, piedra: 400 }),
+      tm('e_camp', 'Vence un campamento en el Mundo', 'Beat a camp in the World', lg('campamentos'), 1, { oro: 1000, objeto: 'acel_15m' }),
+      tm('e_ole5', 'Gana 5 oleadas', 'Win 5 waves', oleadasGanadas, 5, { oro: 2500, gemas: 10 }),
+      tm('e_inv5', 'Sigue investigando: 5 niveles', 'Keep researching: 5 levels', sumaInvest, 5, { oro: 3000, gemas: 15 })
+    ] },
+    { id: 'riqueza', ico: '💰', es: 'Haz crecer tus riquezas', en: 'Grow your riches', t: [
+      tm('r_aserr', 'Construye un Aserradero', 'Build a Sawmill', nEd('aserradero'), 1, { oro: 300, madera: 400 }),
+      tm('r_cant', 'Construye una Cantera', 'Build a Quarry', nEd('cantera'), 1, { oro: 300, piedra: 400 }),
+      tm('r_mina', 'Construye una Mina de oro', 'Build a Gold mine', nEd('mina'), 1, { oro: 600 }),
+      tm('r_rec5', 'Recolecta tus campos 5 veces', 'Collect your fields 5 times', lg('recolectas'), 5, { madera: 600, piedra: 600 }),
+      tm('r_granja2', 'Construye 2 Granjas', 'Build 2 Farms', nEd('granja'), 2, { comida: 900 }),
+      tm('r_prod', 'Aumenta la producción: Granja nivel 3', 'Boost production: Farm level 3', nvEd('granja'), 3, { comida: 1500, oro: 800 }),
+      tm('r_rec20', 'Recolecta tus campos 20 veces', 'Collect your fields 20 times', lg('recolectas'), 20, { madera: 2000, piedra: 2000, gemas: 10 }),
+      tm('r_mina3', 'Aumenta la producción: Mina de oro nivel 3', 'Boost production: Gold mine level 3', nvEd('mina'), 3, { oro: 3000, gemas: 10 })
+    ] }
+  ];
+  var LOGROS_DIA = ['recolectas', 'tropas', 'oleadas', 'acel'];
+  function valorLogro(k) { return k === 'oleadas' ? oleadasGanadas() : logro(k); }
+  function misDia() {
+    var d = estado.misDia;
+    if (!d || d.dia !== hoy()) { d = estado.misDia = { dia: hoy(), base: {}, hechas: {} }; LOGROS_DIA.forEach(function (k) { d.base[k] = valorLogro(k); }); }
+    return d;
+  }
+  function deHoy(k) { return function () { return Math.max(0, valorLogro(k) - (misDia().base[k] || 0)); }; }
+  var MIS_DIA = [
+    tm('d_rec', 'Recolecta tus campos 3 veces', 'Collect your fields 3 times', deHoy('recolectas'), 3, { madera: 600, piedra: 600 }),
+    tm('d_trop', 'Entrena 10 tropas', 'Train 10 troops', deHoy('tropas'), 10, { comida: 800 }),
+    tm('d_ole', 'Gana 1 oleada', 'Win 1 wave', deHoy('oleadas'), 1, { oro: 800 }),
+    tm('d_acel', 'Usa 1 acelerador', 'Use 1 speed-up', deHoy('acel'), 1, { gemas: 5 }),
+    tm('d_todo', 'Completa las 4 misiones del día', 'Finish the 4 daily quests', function () { var h = misDia().hechas; return ['d_rec', 'd_trop', 'd_ole', 'd_acel'].filter(function (id) { return h[id]; }).length; }, 4, { gemas: 15, objeto: 'acel_15m' })
+  ];
+  function misHecha(t, dia) { return dia ? !!misDia().hechas[t.id] : !!(estado.misHechas && estado.misHechas[t.id]); }
+  function misLista(t, dia) { return !misHecha(t, dia) && t.v() >= t.n; }
+  function misPorReclamar(soloDia) {
+    var n = 0;
+    if (!soloDia) { GRUPOS_MIS.forEach(function (g) { g.t.forEach(function (t) { if (misLista(t)) n++; }); }); var m = MISIONES[estado.mision || 0]; if (m && m.ok()) n++; }
+    if (soloDia !== false) MIS_DIA.forEach(function (t) { if (misLista(t, true)) n++; });
+    return n;
+  }
+  function misRecomendada() {
+    var m = MISIONES[estado.mision || 0];
+    if (m) return { id: '_guia', es: m.es, en: m.en, ok: m.ok(), p: m.p };
+    var lista = null, pend = null;
+    GRUPOS_MIS.forEach(function (g) { g.t.forEach(function (t) { if (misHecha(t)) return; if (t.v() >= t.n) { if (!lista) lista = t; } else if (!pend) pend = t; }); });
+    var t = lista || pend;
+    return t ? { id: t.id, es: t.es, en: t.en, ok: t.v() >= t.n, p: t.p, v: t.v(), n: t.n } : null;
+  }
+  function filaMision(t, dia) {
+    var v = Math.min(t.v(), t.n), ok = v >= t.n, hecha = misHecha(t, dia);
+    return '<div class="mis-fila' + (hecha ? ' hecha' : ok ? ' lista' : '') + '"><span class="mis-check">' + (hecha ? '✅' : ok ? '☑️' : '⬜') + '</span><div class="mis-txt"><b>' + escaparHTML(estado.idioma === 'en' ? t.en : t.es) + '</b>' +
+      (hecha ? '' : '<span class="mis-prog"><i style="width:' + Math.round(v / t.n * 100) + '%"></i></span>') + '<small>' + formatoNumero(v) + ' / ' + formatoNumero(t.n) + ' · ' + textoPremio(t.p) + '</small></div>' +
+      (hecha ? '<span class="mis-ok">' + L('Completada', 'Done') + '</span>' : ok ? '<button class="comprar verde mini mis-btn" data-accion="mis-reclamar" data-id="' + t.id + '">' + L('Aceptar', 'Accept') + '</button>' : '<span class="mis-curso">' + L('En curso', 'In progress') + '</span>') + '</div>';
+  }
+  function abrirPanelMisiones() {
+    misDia();
+    var nM = misPorReclamar(false), nD = misPorReclamar(true);
+    var h = '<div class="subtabs tienda-tabs">' +
+      '<button data-accion="mis-pest" data-p="misiones" class="' + (pestMis === 'misiones' ? 'activo' : '') + '">📜 ' + L('Misiones', 'Quests') + (nM ? ' <span class="mail-n">' + nM + '</span>' : '') + '</button>' +
+      '<button data-accion="mis-pest" data-p="diaria" class="' + (pestMis === 'diaria' ? 'activo' : '') + '">📅 ' + L('Misión diaria', 'Daily quest') + (nD ? ' <span class="mail-n">' + nD + '</span>' : '') + '</button></div>';
+    if (pestMis === 'misiones') {
+      var r = misRecomendada();
+      if (r) h += '<div class="mis-rec' + (r.ok ? ' lista' : '') + '"><div class="mis-rec-cinta">⭐ ' + L('Recomendada', 'Recommended') + '</div><b>' + escaparHTML(estado.idioma === 'en' ? r.en : r.es) + '</b>' +
+        (r.n ? '<small>' + formatoNumero(Math.min(r.v, r.n)) + ' / ' + formatoNumero(r.n) + '</small>' : '') + '<small>' + L('Premio: ', 'Reward: ') + textoPremio(r.p) + '</small>' +
+        (r.ok ? '<button class="comprar verde mis-btn" data-accion="mis-reclamar" data-id="' + r.id + '">' + L('Aceptar', 'Accept') + '</button>' : '<span class="mis-curso">' + L('En curso', 'In progress') + '</span>') + '</div>';
+      else h += '<div class="mis-rec"><b>🏆 ' + L('¡Completaste todas las misiones!', 'You finished every quest!') + '</b></div>';
+      GRUPOS_MIS.forEach(function (g) {
+        var hechas = g.t.filter(function (t) { return misHecha(t); }).length;
+        h += '<div class="mis-grupo"><h4>' + g.ico + ' ' + (estado.idioma === 'en' ? g.en : g.es) + ' <span>' + hechas + '/' + g.t.length + '</span></h4>' + g.t.map(function (t) { return filaMision(t); }).join('') + '</div>';
+      });
+    } else {
+      h += '<p class="nota">' + L('Se renuevan cada día. Nuevas en ', 'New ones every day. Next in ') + '<b>' + fmtTiempo(segHastaManana()) + '</b></p><div class="mis-grupo">' + MIS_DIA.map(function (t) { return filaMision(t, true); }).join('') + '</div>';
+    }
+    abrirPanel(L('Misiones', 'Quests'), h, { tipo: 'misiones' });
+  }
+  function reclamarMision(id) {
+    if (id === '_guia') { tocarMision(); return; }
+    var t = null, dia = false;
+    GRUPOS_MIS.forEach(function (g) { g.t.forEach(function (x) { if (x.id === id) t = x; }); });
+    if (!t) MIS_DIA.forEach(function (x) { if (x.id === id) { t = x; dia = true; } });
+    if (!t || !misLista(t, dia)) return;
+    if (dia) misDia().hechas[id] = 1; else { estado.misHechas = estado.misHechas || {}; estado.misHechas[id] = 1; }
+    darPremio(t.p); sumarXP(dia ? 10 : 20);
+    sonar('victoria'); guardar(true); actualizarMision();
+    if (panelActual && panelActual.tipo === 'misiones') abrirPanelMisiones();
+    mostrarRecompensas(L('Misión cumplida', 'Quest complete') + ': ' + (estado.idioma === 'en' ? t.en : t.es), premioAItems(t.p));
+  }
+  var badgeMisT = 0;
   function actualizarMision() {
+    var bm = $('badge-misiones'), ahora = performance.now();
+    if (bm && ahora - badgeMisT > 800) { badgeMisT = ahora; var nm = misPorReclamar(), tx = nm ? String(nm) : ''; if (bm.textContent !== tx) bm.textContent = tx; }
     var b = $('mision'); if (!b) return;
     var i = estado.mision || 0, m = MISIONES[i];
     if (!m || enMenu || enMundo) { b.classList.add('oculto'); return; }
@@ -688,12 +816,13 @@
     if (b.dataset.h !== txt) { b.innerHTML = txt; b.dataset.h = txt; }
   }
   function tocarMision() {
-    var m = MISIONES[estado.mision || 0]; if (!m) return;
-    if (!m.ok()) { consejoTemporal('📜 ' + (estado.idioma === 'en' ? m.en : m.es) + ' · ' + L('Premio: ', 'Reward: ') + textoPremioCorreo(m.p)); sonar('click'); return; }
-    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (m.p[r]) sumarRecurso(r, m.p[r]); });
-    if (m.p.gemas) sumarGemas(m.p.gemas);
+    var m = MISIONES[estado.mision || 0];
+    if (!m || !m.ok()) { sonar('click'); abrirPanelMisiones(); return; }
+    darPremio(m.p);
     estado.mision = (estado.mision || 0) + 1; sumarXP(30);
-    sonar('victoria'); consejoTemporal(L('Misión cumplida: ', 'Quest done: ') + textoPremioCorreo(m.p)); actualizarHUD(); guardar(true); actualizarMision();
+    sonar('victoria'); actualizarHUD(); guardar(true); actualizarMision();
+    if (panelActual && panelActual.tipo === 'misiones') abrirPanelMisiones();
+    mostrarRecompensas(L('Misión cumplida', 'Quest complete') + ': ' + (estado.idioma === 'en' ? m.en : m.es), premioAItems(m.p));
   }
   // ---------- BARRA DE OBRAS abajo: "Castillo (Nv 2) 19m48s" con Acelerar ----------
   function obraMasCercana() {
@@ -1098,13 +1227,16 @@
     cont.appendChild(r.domElement);
     var e = new THREE.Scene();
     e.fog = new THREE.Fog(0xbfd8e6, 60, 130);
-    e.add(new THREE.HemisphereLight(0xffffff, 0x6a7a5a, 0.75));
-    var sol = new THREE.DirectionalLight(0xffffff, 0.65); sol.position.set(20, 40, 25); e.add(sol);
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    e.add(new THREE.HemisphereLight(0xfff6e6, 0x5a6a48, 0.62));
+    var sol = new THREE.DirectionalLight(0xfff1d6, 0.95); sol.position.set(-20, 30, -14); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0008; sol.shadow.normalBias = 0.02;
+    sol.shadow.camera.near = 1; sol.shadow.camera.far = 120; e.add(sol); e.add(sol.target);
     var cam = new THREE.PerspectiveCamera(38, 1, 0.5, 300);
     // ---- suelo continuo: los terrenos se mezclan suave, con textura de pasto, colinas y lagos hundidos ----
-    var COL_T = { llanura: new THREE.Color(0x8db455), bosque: new THREE.Color(0x5a8638), colina: new THREE.Color(0xb3a066), montana: new THREE.Color(0x8f8a80), lago: new THREE.Color(0xc9b27a) };
+    var COL_T = { llanura: new THREE.Color(0xa8c264), bosque: new THREE.Color(0x5a8638), colina: new THREE.Color(0xb3a066), montana: new THREE.Color(0x8f8a80), lago: new THREE.Color(0xc9b27a) };
     var ALT_T = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: -0.3 };
     var lado = TAM_MUNDO * CELDA_M, seg = TAM_MUNDO * 4;
+    var SECO_M = new THREE.Color(0xc4c06a), HUMEDO_M = new THREE.Color(0x6a9a3e), TIERRA_M = new THREE.Color(0xa88a5c), ARENA_M = new THREE.Color(0xe6d29a), BAJO_M = new THREE.Color(0x8fdcd6), HONDO_M = new THREE.Color(0x1d5f9a);
     function tipoEn(fx, fy) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fx))), cy = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fy))); return casillaMundo(cx, cy).tipo; }
     var gs = new THREE.PlaneGeometry(lado + 6, lado + 6, seg + 12, seg + 12); gs.rotateX(-Math.PI / 2);
     var ps = gs.attributes.position, cols = [], cc = new THREE.Color();
@@ -1121,20 +1253,27 @@
       ps.setY(iv, h);
       cc.setRGB(0, 0, 0);
       [[t00, w00], [t10, w10], [t01, w01], [t11, w11]].forEach(function (q) { cc.r += COL_T[q[0]].r * q[1]; cc.g += COL_T[q[0]].g * q[1]; cc.b += COL_T[q[0]].b * q[1]; });
+      var nm = ruido(wx * 4, wz * 4), nd = ruido(wx * 11 + 40, wz * 11 - 17);
+      if (nm > 0.15) cc.lerp(SECO_M, Math.min(0.55, (nm - 0.15) * 1.1)); else if (nm < -0.2) cc.lerp(HUMEDO_M, Math.min(0.45, (-nm - 0.2) * 1.1));
+      if (nd > 0.62) cc.lerp(TIERRA_M, Math.min(0.6, (nd - 0.62) * 3));
+      var lw = (t00 === 'lago' ? w00 : 0) + (t10 === 'lago' ? w10 : 0) + (t01 === 'lago' ? w01 : 0) + (t11 === 'lago' ? w11 : 0);
+      if (lw > 0.03) { if (h > -0.135) cc.lerp(ARENA_M, Math.min(1, lw * 3.2)); else cc.copy(BAJO_M).lerp(HONDO_M, Math.min(1, (-0.135 - h) / 0.15)); }
       var nz = (hashM(Math.floor(wx * 1.3), Math.floor(wz * 1.3)) - 0.5) * 0.08 + Math.sin(wx * 0.35 + wz * 0.2) * 0.04;
       cols.push(Math.min(1, cc.r * (1 + nz)), Math.min(1, cc.g * (1 + nz)), Math.min(1, cc.b * (1 + nz)));
     }
     gs.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); gs.computeVertexNormals();
-    var texM = texturaPasto(); texM.repeat.set(26, 26);
+    var texM = texturaPasto(true); texM.repeat.set(26, 26);
     var suelo = new THREE.Mesh(gs, new THREE.MeshLambertMaterial({ map: texM, vertexColors: true }));
-    e.add(suelo);
+    suelo.material.color.setRGB(1.18, 1.12, 0.98); suelo.receiveShadow = true; e.add(suelo);
     // agua de los lagos y cuadrícula muy suave (para saber dónde está cada casilla)
     var tmp = new THREE.Object3D(), col = new THREE.Color(), lagos = [], arboles = [], redondos = [], arbustos = [], flores = [], rocas = [], picos = [];
     var lineas = [];
     for (var y = 0; y < TAM_MUNDO; y++) for (var x = 0; x < TAM_MUNDO; x++) {
       var c = casillaMundo(x, y), p = posCelda(x, y), hh = function (s) { return hashM(x * 7.1 + s, y * 3.3 - s); };
       if (c.tipo === 'lago') lagos.push([p.x, p.z]);
-      if (c.tipo === 'bosque') { var na = 6 + Math.floor(hh(1) * 3); for (var a = 0; a < na; a++) (hh(a + 9) < 0.6 ? arboles : redondos).push([p.x + (hh(a) - 0.5) * 1.75, p.z + (hh(a + 20) - 0.5) * 1.75, 0.7 + hh(a + 40) * 0.55]); }
+      if (c.tipo === 'bosque') { var na = 7 + Math.floor(hh(1) * 4), gx = [(hh(90) - 0.5) * 0.9, (hh(91) - 0.5) * 0.9], gz = [(hh(92) - 0.5) * 0.9, (hh(93) - 0.5) * 0.9]; for (var a = 0; a < na; a++) { var gi = a % 2, ra = Math.sqrt(hh(a + 100)) * 0.95, an = hh(a + 120) * 6.28; (hh(a + 9) < 0.8 ? arboles : redondos).push([p.x + gx[gi] + Math.cos(an) * ra, p.z + gz[gi] + Math.sin(an) * ra, 0.6 + hh(a + 40) * 0.7]); } }
+      if (c.tipo !== 'bosque' && c.tipo !== 'lago' && c.tipo !== 'montana') { [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dv, di) { var vc = x + dv[0] >= 0 && x + dv[0] < TAM_MUNDO && y + dv[1] >= 0 && y + dv[1] < TAM_MUNDO ? casillaMundo(x + dv[0], y + dv[1]) : null; if (!vc || vc.tipo !== 'bosque') return; var ns = hh(di + 130) < 0.45 ? 1 + Math.floor(hh(di + 131) * 2) : 0; for (var sa = 0; sa < ns; sa++) arboles.push([p.x + dv[0] * (0.5 + hh(sa + di * 7 + 140) * 0.45) + (hh(sa + 150) - 0.5) * 1.4 * Math.abs(dv[1]), p.z + dv[1] * (0.5 + hh(sa + di * 7 + 160) * 0.45) + (hh(sa + 170) - 0.5) * 1.4 * Math.abs(dv[0]), 0.55 + hh(sa + 180) * 0.6]); }); if (hh(190) < 0.08) arboles.push([p.x + (hh(191) - 0.5) * 1.6, p.z + (hh(192) - 0.5) * 1.6, 0.6 + hh(193) * 0.5]); }
+      if (c.tipo !== 'lago') [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dv, di) { var vc = x + dv[0] >= 0 && x + dv[0] < TAM_MUNDO && y + dv[1] >= 0 && y + dv[1] < TAM_MUNDO ? casillaMundo(x + dv[0], y + dv[1]) : null; if (!vc || vc.tipo !== 'lago') return; for (var ro2 = 0; ro2 < 2; ro2++) if (hh(di * 5 + ro2 + 200) < 0.6) rocas.push([p.x + dv[0] * 0.8 + (hh(ro2 + di + 210) - 0.5) * 1.4 * Math.abs(dv[1]), p.z + dv[1] * 0.8 + (hh(ro2 + di + 220) - 0.5) * 1.4 * Math.abs(dv[0]), 0.18 + hh(ro2 + 230) * 0.25]); });
       if (c.tipo === 'llanura') { if (hh(2) < 0.22) redondos.push([p.x + (hh(3) - 0.5) * 1.5, p.z + (hh(4) - 0.5) * 1.5, 0.6 + hh(5) * 0.4]); for (var b = 0; b < 2; b++) if (hh(b + 6) < 0.5) arbustos.push([p.x + (hh(b + 7) - 0.5) * 1.7, p.z + (hh(b + 8) - 0.5) * 1.7, 0.5 + hh(b) * 0.5]); for (var fl = 0; fl < 4; fl++) if (hh(fl + 30) < 0.45) flores.push([p.x + (hh(fl + 31) - 0.5) * 1.8, p.z + (hh(fl + 32) - 0.5) * 1.8, Math.floor(hh(fl + 33) * 4)]); }
       if (c.tipo === 'colina') { for (var r2 = 0; r2 < 3; r2++) rocas.push([p.x + (hh(r2 + 50) - 0.5) * 1.5, p.z + (hh(r2 + 51) - 0.5) * 1.5, 0.35 + hh(r2 + 52) * 0.4]); if (hh(60) < 0.6) arboles.push([p.x + (hh(61) - 0.5) * 1.4, p.z + (hh(62) - 0.5) * 1.4, 0.7]); arbustos.push([p.x + (hh(63) - 0.5) * 1.4, p.z + (hh(64) - 0.5) * 1.4, 0.6]); }
       if (c.tipo === 'montana') { var np = 2 + Math.floor(hh(70) * 2); for (var m2 = 0; m2 < np; m2++) picos.push([p.x + (hh(m2 + 71) - 0.5) * 1.0, p.z + (hh(m2 + 72) - 0.5) * 1.0, (m2 === 0 ? 1.0 : 0.6) + c.nivel * 0.05 + hh(m2 + 73) * 0.25]); }
@@ -1146,19 +1285,24 @@
       if (!lista.length) return;
       var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), lista.length);
       lista.forEach(function (q, i) { tmp.rotation.set(0, 0, 0); fn(q); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); col.setHex(typeof color === 'function' ? color(q) : color); if (varia) col.offsetHSL((hashM(q[0], q[1]) - 0.5) * 0.04, 0, (hashM(q[1], q[0]) - 0.5) * varia); im.setColorAt(i, col); });
+      im.castShadow = sombraInst; im.receiveShadow = true;
       e.add(im);
     }
+    var sombraInst = true;
     // una sola capa de agua debajo de todo: los lagos (más hundidos) quedan con orillas curvas
-    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), new THREE.MeshLambertMaterial({ color: 0x3f8fc0, transparent: true, opacity: 0.9 }));
+    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), materialAgua(0.6, 0x2f86c8));
     agua.rotation.x = -Math.PI / 2; agua.position.y = -0.11; e.add(agua);
     // pinos (dos conos), árboles redondos, arbustos, flores, rocas y montañas de varios picos con nieve
-    instancias(new THREE.ConeGeometry(0.34, 0.75, 7), 0x3f6f30, arboles, function (q) { tmp.position.set(q[0], 0.55 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.08);
-    instancias(new THREE.ConeGeometry(0.26, 0.55, 7), 0x4f8138, arboles, function (q) { tmp.position.set(q[0], 0.95 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.08);
+    instancias(new THREE.ConeGeometry(0.36, 0.7, 7), 0x3a7a34, arboles, function (q) { tmp.position.set(q[0], 0.5 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.28, 0.55, 7), 0x468a3a, arboles, function (q) { tmp.position.set(q[0], 0.84 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[1], q[0]) * 6, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.19, 0.42, 7), 0x52984a, arboles, function (q) { tmp.position.set(q[0], 1.12 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.1);
     instancias(new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5), 0x6a4426, arboles.concat(redondos), function (q) { tmp.position.set(q[0], 0.14 * q[2], q[1]); tmp.scale.setScalar(q[2]); });
     instancias(new THREE.IcosahedronGeometry(0.3, 0), 0x5a9a3c, redondos, function (q) { tmp.position.set(q[0], 0.48 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.9, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
     instancias(new THREE.IcosahedronGeometry(0.16, 0), 0x6aa846, arbustos, function (q) { tmp.position.set(q[0], 0.08 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); }, 0.12);
     var COLF = [0xf4efe2, 0xe8c85a, 0xe49aac, 0xb89ad8];
+    sombraInst = false;
     instancias(new THREE.SphereGeometry(0.05, 5, 3), function (q) { return COLF[q[2]]; }, flores, function (q) { tmp.position.set(q[0], 0.05, q[1]); tmp.scale.setScalar(1); });
+    sombraInst = true;
     instancias(new THREE.DodecahedronGeometry(0.3, 0), 0x9a958a, rocas, function (q) { tmp.position.set(q[0], 0.12 + 0.1 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 5, 0); }, 0.1);
     instancias(new THREE.ConeGeometry(0.75, 1.5, 7), 0x7f7a70, picos, function (q) { tmp.position.set(q[0], 0.7 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); }, 0.08);
     instancias(new THREE.ConeGeometry(0.3, 0.42, 7), 0xf6f6f2, picos.filter(function (q) { return q[2] > 0.9; }), function (q) { tmp.position.set(q[0], (1.28) * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); });
@@ -1169,7 +1313,7 @@
     var sel = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.98, 4), new THREE.MeshBasicMaterial({ color: 0xffe14a, transparent: true, opacity: 0.95, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.rotation.z = Math.PI / 4; sel.position.y = 0.05; sel.visible = false; sel.renderOrder = 5; e.add(sel);
     var cosas = new THREE.Group(); e.add(cosas);
-    M3 = { r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {} };
+    M3 = { sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {} };
     // mover con el dedo / ratón, acercar con rueda o pellizco, tocar para elegir
     var el = r.domElement, dedos = {}, inicio = null, pell = null;
     el.style.touchAction = 'none';
@@ -1224,6 +1368,7 @@
     if (M3.zoom) { var kz = Math.min(1, (performance.now() - M3.zoom.t0) / 750), ez = 1 - Math.pow(1 - kz, 3); M3.dist = M3.zoom.de + (M3.zoom.a - M3.zoom.de) * ez; if (kz >= 1) M3.zoom = null; }
     var d = M3.dist;
     M3.cam.position.set(M3.obj.x, d * 0.85, M3.obj.z + d * 0.62); M3.cam.lookAt(M3.obj);
+    if (M3.sol) { var so = M3.sol, tam = Math.max(22, d * 1.25); so.position.set(M3.obj.x - 20, 30, M3.obj.z - 14); so.target.position.copy(M3.obj); if (so.userData.tam !== tam) { so.userData.tam = tam; var sc = so.shadow.camera; sc.left = -tam; sc.right = tam; sc.top = tam; sc.bottom = -tam; sc.updateProjectionMatrix(); } }
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
     actualizarEfectosPortal();
     actualizarCarretasMundo();
@@ -2642,7 +2787,7 @@
           var q = b.getAttribute('data-ua'), antes = faltaDe(q);
           aplicarAcelerador(q, o.segundos);
           var despues = faltaDe(q);
-          estado.mochila[k]--; sonar('magia'); guardar(true); actualizarHUD(); reabrirPanel();
+          estado.mochila[k]--; sumarLogro('acel'); sonar('magia'); guardar(true); actualizarHUD(); reabrirPanel();
           var nom = (cosasConTiempo(o.soloInv).concat(lista).filter(function (c) { return c.que === q; })[0] || {}).nom || '';
           pintar('⏩ ' + nom + ': ' + fmtTiempo(antes) + ' → ' + (despues > 0 ? fmtTiempo(despues) : L('¡listo!', 'done!')));
         });
@@ -2673,35 +2818,102 @@
     var s = slots[+String(que).split(':')[1]];
     if (s && s.obra) s.obra.t = Math.min(s.obra.total, s.obra.t + seg);
   }
-  function abrirAcelerar(que) {
+  // nombre de lo que se está acelerando ("Granja (Nv 2)")
+  function nombreDeQue(que) {
+    if (que === 'castillo') return estado.obraCastillo ? T('castillo') + ' (' + L('Nv ', 'Lv ') + estado.obraCastillo.nivel + ')' : '';
+    if (que === 'muralla') return obraMuralla ? L('Muralla', 'Wall') + ' (' + L('Nv ', 'Lv ') + obraMuralla.nivel + ')' : '';
+    if (que === 'invest') return L('Investigación', 'Research');
+    if (que === 'entreno') return L('Entrenamiento', 'Training');
+    var s = slots[+String(que).split(':')[1]];
+    return s && s.obra ? N(s.obra.tipo) + ' (' + L('Nv ', 'Lv ') + s.obra.nivel + ')' : '';
+  }
+  // ---------- PANEL ACELERAR: cuenta atrás, gemas, Finalizar ahora y lista con Compra y usa ----------
+  var relojAcel = null, nombreAcel = '';
+  function abrirAcelerar(que, resultado) {
     var v = $('acelerar-elegir'); if (v) v.remove();
-    var falta = faltaDe(que);
+    if (relojAcel) { clearInterval(relojAcel); relojAcel = null; }
+    var falta = faltaDe(que), listo = falta <= 0.5, gem = estado.gemas || 0;
+    var nom = nombreDeQue(que); if (nom) nombreAcel = nom; else nom = nombreAcel;
     var d = document.createElement('div'); d.id = 'acelerar-elegir';
-    var filas = ACELERADORES.filter(function (k) { return !OBJETOS[k].soloInv || que === 'invest'; }).map(function (k) {
-      var n = (estado.mochila && estado.mochila[k]) || 0, it = TIENDA.filter(function (x) { return x.id === k; })[0];
-      return '<div class="ac-fila"><span class="ac-ico">' + OBJETOS[k].icono + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>×' + n + ' · ' + T('acel_recorta', { t: fmtTiempo(OBJETOS[k].segundos) }) + '</span></div>' +
-        (n > 0 ? '<button class="comprar mini naranja" data-ac="' + k + '">' + T('acel_usar') + '</button>' : (it ? '<button class="comprar mini morado" data-ac-comprar="' + k + '"><span class="ico gema"></span>' + it.gemas + '</button>' : '')) + '</div>';
+    var lista = ACELERADORES.filter(function (k) { return !OBJETOS[k].soloInv || que === 'invest'; }).sort(function (a, b) { return OBJETOS[a].segundos - OBJETOS[b].segundos; });
+    var filas = listo ? '' : lista.map(function (k) {
+      var n = (estado.mochila && estado.mochila[k]) || 0, it = TIENDA.filter(function (x) { return x.id === k; })[0], cubre = OBJETOS[k].segundos >= falta;
+      return '<div class="ac-fila' + (cubre ? ' ac-cubre' : '') + '"><span class="ac-ico">' + OBJETOS[k].icono + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>' + L('Tienes ', 'Owned ') + '×' + n + ' · −' + fmtTiempo(OBJETOS[k].segundos) + (cubre ? ' · <em>' + L('¡lo termina!', 'finishes it!') + '</em>' : '') + '</span></div><div class="ac-bts">' +
+        (n > 0 ? '<button class="comprar mini naranja" data-ac="' + k + '">' + L('Usar', 'Use') + '</button>' : '') +
+        (it ? '<button class="comprar mini verde ac-cyu" data-ac-cyu="' + k + '"' + (gem >= it.gemas ? '' : ' disabled') + '><small>' + L('Compra y usa', 'Buy & use') + '</small><span><span class="ico gema"></span>' + it.gemas + '</span></button>' : '') + '</div></div>';
     }).join('');
     var real = (estado.mochila && estado.mochila.acelerador) || 0;
-    if (real) filas += '<div class="ac-fila"><span class="ac-ico">⏩</span><div class="ac-txt"><b>' + N('acelerador') + '</b><span>' + T('acel_todo') + ' · ×' + real + '</span></div><button class="comprar mini naranja" data-ac="acelerador">' + T('acel_usar') + '</button></div>';
-    d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>⏩ ' + T('acel_titulo') + '</h3><button class="cerrar" id="ac-cerrar">✕</button></div><p class="ac-falta" id="ac-falta">' + (falta > 0 ? '⏱ ' + T('acel_falta', { t: fmtTiempo(falta) }) : T('acel_listo')) + '</p>' + filas + '</div>';
+    if (real && !listo) filas += '<div class="ac-fila"><span class="ac-ico">⏩</span><div class="ac-txt"><b>' + N('acelerador') + '</b><span>' + T('acel_todo') + ' · ×' + real + '</span></div><div class="ac-bts"><button class="comprar mini naranja" data-ac="acelerador">' + L('Usar', 'Use') + '</button></div></div>';
+    var gFin = listo ? 0 : gemasParaTerminar(falta);
+    d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>⏩ ' + L('Acelerar', 'Speed up') + '</h3><button class="cerrar" id="ac-cerrar">✕</button></div>' +
+      '<p class="ac-nom">' + escaparHTML(nom) + '</p>' +
+      (listo ? '<div class="ac-terminado">✅ ' + L('¡Terminado!', 'Finished!') + '</div>' : '<div class="ac-reloj" id="ac-reloj">⏱ ' + fmtTiempo(falta) + '</div>') +
+      (resultado ? '<p class="ac-res">' + resultado + '</p>' : '') +
+      '<div class="ac-gemas">' + L('Tus gemas: ', 'Your gems: ') + '<span class="ico gema"></span><b id="ac-saldo">' + formatoNumero(gem) + '</b></div>' +
+      (listo ? '<button class="comprar boton-oleada-grande" id="ac-ok">' + L('Aceptar', 'OK') + '</button>' :
+        (que !== 'entreno' ? '<button class="comprar verde boton-oleada-grande ac-fin" id="ac-fin"' + (gem >= gFin ? '' : ' disabled') + '>⚡ ' + L('Finalizar ahora', 'Finish now') + ' <span class="ico gema"></span><b id="ac-fin-g">' + gFin + '</b></button>' : '') +
+        '<p class="ac-sub">' + L('Aceleradores (de menor a mayor)', 'Speed-ups (shortest first)') + '</p><div class="ac-lista">' + filas + '</div>') + '</div>';
     document.body.appendChild(d);
-    $('ac-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); });
+    function cerrar() { if (relojAcel) { clearInterval(relojAcel); relojAcel = null; } d.remove(); if (menuAbierto()) pintarMenuEdif(); if (panelActual) reabrirPanel(); }
+    $('ac-cerrar').addEventListener('click', function () { sonar('click'); cerrar(); });
+    if ($('ac-ok')) $('ac-ok').addEventListener('click', function () { sonar('click'); cerrar(); });
+    if (!listo) relojAcel = setInterval(function () {
+      if (!document.body.contains(d)) { clearInterval(relojAcel); relojAcel = null; return; }
+      var f = faltaDe(que); if (f <= 0.5) { abrirAcelerar(que, resultado); return; }
+      var r = $('ac-reloj'); if (r) r.textContent = '⏱ ' + fmtTiempo(f);
+      var g = $('ac-fin-g'); if (g) g.textContent = gemasParaTerminar(f);
+    }, 500);
+    function despues(antes, txt) {
+      var f = faltaDe(que);
+      sumarLogro('acel'); actualizarHUD(); guardar(true);
+      if (f <= 0.5) sonar('listo');
+      abrirAcelerar(que, '⏩ ' + txt + ': ' + fmtTiempo(antes) + ' → ' + (f > 0.5 ? fmtTiempo(f) : L('¡terminado!', 'finished!')));
+    }
     d.addEventListener('click', function (ev) {
-      if (ev.target === d) { d.remove(); return; }
-      var b = ev.target.closest('[data-ac]'), bc = ev.target.closest('[data-ac-comprar]');
-      if (bc) { var it = TIENDA.filter(function (x) { return x.id === bc.getAttribute('data-ac-comprar'); })[0]; if (it && pagar(0, it.gemas)) { estado.mochila[it.id] = (estado.mochila[it.id] || 0) + 1; sonar('moneda'); guardar(true); abrirAcelerar(que); } return; }
+      if (ev.target === d) { cerrar(); return; }
+      var fin = ev.target.closest('#ac-fin'), b = ev.target.closest('[data-ac]'), cy = ev.target.closest('[data-ac-cyu]');
+      var antes = faltaDe(que);
+      if (fin) {
+        if (fin.disabled || antes <= 0) return;
+        var g0 = estado.gemas; terminarConGemas(que);
+        if (estado.gemas < g0) { sonar('listo'); actualizarHUD(); abrirAcelerar(que, '⚡ ' + L('Finalizado con ', 'Finished with ') + (g0 - estado.gemas) + ' ' + L('gemas', 'gems') + ': ' + fmtTiempo(antes) + ' → ' + L('¡terminado!', 'finished!')); }
+        return;
+      }
+      if (cy) {
+        if (cy.disabled || antes <= 0) return;
+        var k2 = cy.getAttribute('data-ac-cyu'), it = TIENDA.filter(function (x) { return x.id === k2; })[0];
+        if (!it || !pagar(0, it.gemas)) return;
+        sonar('moneda'); sonar('magia');
+        aplicarAcelerador(que, OBJETOS[k2].segundos);
+        despues(antes, N(k2) + ' (−' + it.gemas + ' ' + L('gemas', 'gems') + ')');
+        return;
+      }
       if (!b) return;
       var k = b.getAttribute('data-ac');
-      if (!(estado.mochila[k] > 0) || faltaDe(que) <= 0) return;
-      if (k === 'acelerador') { usarObjeto('acelerador'); d.remove(); return; }
-      var seg = OBJETOS[k].segundos;
+      if (!(estado.mochila[k] > 0) || antes <= 0) return;
+      if (k === 'acelerador') { usarObjeto('acelerador'); cerrar(); return; }
       estado.mochila[k]--;
-      aplicarAcelerador(que, seg);
-      sonar('magia'); consejoTemporal(T('acel_usado', { t: fmtTiempo(seg) }));
-      actualizarHUD(); guardar(true);
-      if (faltaDe(que) <= 0.5) { d.remove(); sonar('listo'); if (menuAbierto()) pintarMenuEdif(); if (panelActual) reabrirPanel(); return; }
-      abrirAcelerar(que);
+      aplicarAcelerador(que, OBJETOS[k].segundos);
+      sonar('magia'); despues(antes, N(k));
+    });
+  }
+  // ---------- CANCELAR UNA OBRA: devuelve la mitad de los materiales ----------
+  function cancelarObra(i) {
+    var s = slots[i]; if (!s || !s.obra) return;
+    var o = s.obra, c = costoEdif(o.tipo, o.nivel - 1), dev = {};
+    ['oro', 'madera', 'piedra'].forEach(function (r) { if (c[r]) dev[r] = Math.floor(c[r] / 2); });
+    var txt = Object.keys(dev).map(function (r) { return formatoNumero(dev[r]) + ' ' + NOMBRE_R[r][estado.idioma === 'en' ? 1 : 0].toLowerCase(); }).join(', ');
+    confirmarJuego('✖ ' + L('¿Cancelar la obra?', 'Cancel the build?'), escaparHTML(N(o.tipo)) + ' (' + L('Nv ', 'Lv ') + o.nivel + '). ' + L('Recuperas la mitad de los materiales: ', 'You get half the materials back: ') + txt + '.', L('Sí, cancelar', 'Yes, cancel'), function () {
+      if (s.obra !== o) return;
+      if (s.andamio) { s.grupo.remove(s.andamio); s.andamio = null; }
+      if (s.barra) { escena.remove(s.barra); s.barra = null; }
+      s.obra = null;
+      if (o.nivel > 1) ponerEdificio(s, o.tipo, o.nivel - 1); else vaciarParcela(s);
+      Object.keys(dev).forEach(function (r) { sumarRecurso(r, dev[r]); });
+      sonar('golpe'); consejoTemporal('✖ ' + L('Obra cancelada. Recuperaste: ', 'Build cancelled. You got back: ') + txt);
+      if (menuAbierto()) cerrarMenuEdif();
+      if (panelActual) cerrarPanel();
+      actualizarParcelas(); actualizarHUD(); guardar(true);
     });
   }
   // ---------- ALMACÉN, HERRERÍA, ESTABLO, GALERÍA Y MERCADO ----------
@@ -3926,6 +4138,7 @@
     if (tipo === 'vigia') h += botonMenu2('vigilar', '👁️', T('mb_vigilar'));
     if (tipo === 'herreria') h += botonMenu2('forjar', '⚒️', T('mb_forjar'));
     if (tipo === 'academia') h += botonMenu2('investigar', '📚', T('mb_investigar'));
+    if (s && s.obra) h += botonMenu2('cancelar', '✖', L('Cancelar', 'Cancel'));
     if (s) h += botonMenu2('demoler', '🧨', T('mb_demoler'), oleadaActiva);
     h += '</div>';
     if (menuEdif.html !== h) { menuEdif.el.innerHTML = h; menuEdif.html = h; }
@@ -3941,6 +4154,7 @@
       confirmarJuego('🧨 ' + T('demoler_titulo', { n: N(ed.tipo) }), T('demoler_txt', { v: nv }), T('demoler_si'), function () { demoler(i); });
       return;
     }
+    if (a === 'cancelar') { cerrarMenuEdif(); cancelarObra(i); return; }
     if (a === 'entrenar') {
       var te = slots[i] && slots[i].edificio && slots[i].edificio.tipo;
       if (te === 'establo') { vistaTropa.pest = 'establo'; vistaTropa.tipo = 'caballeria'; } else if (te === 'galeria') { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; } else if (te === 'cuartel' && vistaTropa.pest !== 'cuartel') { vistaTropa.pest = 'cuartel'; vistaTropa.tipo = 'espadachin'; }
@@ -4193,6 +4407,7 @@
     else if (p.tipo === 'mercado') abrirPanelMercado();
     else if (p.tipo === 'vigia') abrirPanelVigia();
     else if (p.tipo === 'herreria') abrirPanelHerreria();
+    else if (p.tipo === 'misiones') abrirPanelMisiones();
   }
 
   function htmlCosto(c) {
@@ -4593,7 +4808,7 @@
     }
     var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</div><div><h3>' + N(tipo) + ' — ' + T('nivel_de', { n: nivel, m: NIVEL_MAX }) + '</h3><p>' + D(tipo) + '</p></div></div>';
     if (s.obra) {
-      html += '<p class="nota"><b>' + (s.obra.nivel === 1 ? L('Construyendo', 'Building') : L('Mejorando a nivel ', 'Upgrading to level ') + s.obra.nivel) + '</b> <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo((s.obra.total - s.obra.t) / velObras()) + '</span></p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="obra:' + i + '">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((s.obra.total - s.obra.t) / velObras()), 'terminar-gemas', 'data-que="obra:' + i + '"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '</div>';
+      html += '<p class="nota"><b>' + (s.obra.nivel === 1 ? L('Construyendo', 'Building') : L('Mejorando a nivel ', 'Upgrading to level ') + s.obra.nivel) + '</b> <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo((s.obra.total - s.obra.t) / velObras()) + '</span></p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="obra:' + i + '">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((s.obra.total - s.obra.t) / velObras()), 'terminar-gemas', 'data-que="obra:' + i + '"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '<button class="comprar rojo" data-accion="cancelar-obra" data-slot="' + i + '">✖ ' + L('Cancelar', 'Cancel') + '</button></div>';
     } else {
       html += '<div class="stats">' + statsEdificio(tipo, nivel) + '</div>';
       if (tipo === 'enfermeria') html += '<p class="nota">' + T('en_enfermeria', { n: totalHeridos() }) + '</p>';
@@ -6164,6 +6379,9 @@
     else if (a === 'muralla-ya') murallaYa();
     else if (a === 'comprar-mejora') comprarMejora(b.getAttribute('data-que'));
     else if (a === 'acelerar-que') { sonar('click'); abrirAcelerar(b.getAttribute('data-que')); }
+    else if (a === 'cancelar-obra') { sonar('click'); cancelarObra(+b.getAttribute('data-slot')); }
+    else if (a === 'mis-pest') { sonar('click'); pestMis = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelMisiones(); }
+    else if (a === 'mis-reclamar') reclamarMision(b.getAttribute('data-id'));
     else if (a === 'cuartel-pest') { sonar('click'); pestCuartel = b.getAttribute('data-p'); tropaDetalle = null; abrirPanelEdificio(slotElegido); }
     else if (a === 'cuartel-carretas') { sonar('click'); if (edificiosDe('mercado').length) abrirPanelMercado(); else consejoTemporal(L('Construye un Mercado para entrenar carretas.', 'Build a Market to train carts.')); }
     else if (a === 'cuartel-tropa') { sonar('click'); tropaDetalle = b.getAttribute('data-tipo'); pestDetalle = 'entrenar'; cantDetalle = 1; $('panel').scrollTop = 0; abrirPanelEdificio(slotElegido); }
@@ -6443,6 +6661,7 @@
   $('btn-mundo').addEventListener('click', function () { if (enMenu) return; sonar('click'); salirModoColocar(); cerrarPanel(); if (enMundo) entrarCiudad(); else irAlMundo(); });
   $('mundo-volver').addEventListener('click', function () { sonar('click'); entrarCiudad(); });
   $('mision').addEventListener('click', function () { if (!enMenu) tocarMision(); });
+  $('btn-misiones').addEventListener('click', function () { if (!enMenu) { sonar('click'); abrirPanelMisiones(); } });
   $('bo-acelerar').addEventListener('click', function () { var q = $('barra-obra').dataset.que; if (q && !enMenu) { sonar('click'); abrirAcelerar(q); } });
   $('bo-txt').addEventListener('click', function () { var q = $('barra-obra').dataset.que || ''; if (enMenu) return; sonar('click'); if (q === 'castillo') { enfocar(castillo.position); abrirPanelCastillo(); } else if (q.indexOf('obra:') === 0) { var si = +q.split(':')[1]; enfocar(slots[si].pos); abrirPanelEdificio(si); } });
   $('btn-alianza').addEventListener('click', function () {
@@ -6693,6 +6912,8 @@
       estado.burbujaHasta = g.burbujaHasta || 0;
       estado.buzon = Array.isArray(g.buzon) ? g.buzon : [];
       estado.mision = g.mision || 0;
+      estado.misHechas = g.misHechas || {};
+      estado.misDia = g.misDia || null;
       estado.regresos = g.regresos || [];
       estado.destinos = g.destinos || {};
       estado.enemigos = g.enemigos || {};
