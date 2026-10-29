@@ -1539,3 +1539,40 @@ body:has(#mision:not(.oculto)) #consejo { top: 136px !important; }
 #btn-misiones { position: relative; }
 @media (max-width: 600px) { #mundo #mundo-buscar { top: calc(env(safe-area-inset-top) + 104px) !important; } #mundo-lupa { top: calc(env(safe-area-inset-top) + 118px); } }
 #consejo { z-index: 36 !important; }
+
+/* ===== v6.18: tres vistas, menú desplegado, barra de acciones y Mundo con vida ===== */
+#btn-vista { position: fixed; z-index: 45; left: 8px; bottom: calc(env(safe-area-inset-bottom) + 80px); width: 60px; height: 60px; border-radius: 50%; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; cursor: pointer; background: radial-gradient(circle at 50% 35%, #ffe9a0, #c98a1a 70%); border: 3px solid #6b3f0a; box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 0 0 2px rgba(255,233,160,.5); font-family: inherit; }
+#btn-vista .bv-ico { font-size: 26px; line-height: 1; } #btn-vista small { font-size: 10px; font-weight: 900; color: #3a2414; line-height: 1.1; }
+#btn-vista::after { content: '⇄'; position: absolute; right: -4px; top: -4px; width: 20px; height: 20px; border-radius: 50%; background: #2a1a0e; color: #ffe9a0; font-size: 12px; display: grid; place-items: center; border: 2px solid #c98a1a; }
+#vista-aviso { position: fixed; z-index: 46; left: 50%; top: 38%; transform: translate(-50%, -50%); pointer-events: none; opacity: 0; text-align: center; background: rgba(20,12,6,.72); color: #ffe9b0; padding: 10px 18px; border-radius: 14px; border: 2px solid #c98a1a; }
+#vista-aviso b { display: block; font-size: 20px; } #vista-aviso small { font-size: 13px; color: #f4e2b8; }
+#vista-aviso.ver { animation: vistaAviso 2.2s ease-out; }
+@keyframes vistaAviso { 0% { opacity: 0; transform: translate(-50%, -40%); } 12%, 70% { opacity: 1; transform: translate(-50%, -50%); } 100% { opacity: 0; transform: translate(-50%, -55%); } }
+#barra-obra { left: 76px !important; max-width: calc(100vw - 140px) !important; }
+#btn-menu-mas { position: fixed; z-index: 45; right: 8px; bottom: calc(env(safe-area-inset-bottom) + 80px); width: 44px; height: 36px; border-radius: 10px 10px 4px 4px; cursor: pointer; font-size: 16px; color: #ffe9a0; background: linear-gradient(#6b4528, #3a2414); border: 2px solid #c98a1a; box-shadow: 0 3px 0 rgba(0,0,0,.4); transition: transform .2s; }
+#btn-menu-mas.abierto { transform: rotate(180deg); }
+#menu-grande { position: fixed; z-index: 44; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 70px); height: 50vh; max-height: 420px; overflow-y: auto; background: linear-gradient(#3a2414, #24160c); border-top: 3px solid #c98a1a; border-radius: 18px 18px 0 0; box-shadow: 0 -8px 24px rgba(0,0,0,.5); padding: 0 12px 14px; animation: mgSube .22s ease-out; }
+#menu-grande.oculto { display: none; }
+@keyframes mgSube { from { transform: translateY(40px); opacity: 0; } }
+.mg-cab { position: sticky; top: 0; display: flex; align-items: center; justify-content: center; padding: 10px 0 8px; background: linear-gradient(#3a2414, rgba(58,36,20,.95)); z-index: 2; }
+.mg-cab b { color: #ffe9a0; font-size: 18px; letter-spacing: .08em; }
+#mg-cerrar { position: absolute; right: 0; top: 8px; width: 40px; height: 32px; border-radius: 8px; border: 2px solid #c98a1a; background: #6b4528; color: #ffe9a0; cursor: pointer; }
+.mg-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 10px; }
+.mg-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 14px; border: 1px solid rgba(255,233,160,.2); background: rgba(255,255,255,.05); color: #ffe9b0; font: inherit; font-weight: 800; font-size: 12px; cursor: pointer; }
+.mg-item:active { transform: scale(.96); }
+.mg-ico { width: 52px; height: 52px; display: grid; place-items: center; } .mg-ico svg { width: 52px; height: 52px; } .mg-emoji { font-size: 38px; }
+.mg-n { position: absolute; top: 2px; right: 8px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #d9302a; color: #fff; font-size: 11px; display: grid; place-items: center; border: 2px solid #fff; }
+#barra-acciones { position: fixed; z-index: 45; left: 76px; right: 58px; bottom: calc(env(safe-area-inset-bottom) + 82px); display: flex; gap: 4px; justify-content: center; }
+#barra-acciones.oculto { display: none; }
+#barra-acciones button { flex: 1; max-width: 92px; display: flex; flex-direction: column; align-items: center; padding: 3px 2px; border-radius: 10px; border: 2px solid #c98a1a; background: linear-gradient(#6b4528, #3a2414); color: #ffe9b0; font: inherit; font-size: 11px; font-weight: 800; cursor: pointer; box-shadow: 0 2px 0 rgba(0,0,0,.4); }
+#barra-acciones button span { font-size: 17px; line-height: 1.1; }
+#mundo-volver { display: none !important; }
+#mundo #mundo-coord { left: 76px !important; }
+body.panel-abierto #btn-vista, body.panel-abierto #btn-menu-mas, body.panel-abierto #barra-acciones { display: none !important; }
+#mundo #mundo-info { bottom: 132px !important; }
+.cq-frase { font-size: 10.5px; line-height: 1.25; color: #94a3b8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; padding-right: 14px; }
+.cq-flecha { position: absolute; right: 8px; bottom: 8px; font-size: 22px; font-weight: 900; color: #fbbf24; line-height: 1; }
+body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barra-acciones { display: none !important; }
+#mundo-info .carta .stats span { color: #3a2414 !important; }
+#panel { z-index: 42 !important; }
+.cq-flecha { top: 8px !important; bottom: auto !important; }
