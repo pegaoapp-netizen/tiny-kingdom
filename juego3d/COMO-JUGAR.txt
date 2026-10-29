@@ -1,0 +1,9 @@
+TINY KINGDOM - NIGHT FORTRESS EDITION
+=====================================
+1) Unzip the whole folder (do not run it from inside the zip).
+2) Double-click index.html (Chrome / Edge / Firefox). All 3D models are embedded,
+   so the game runs offline straight from disk.
+   Optional: Jugar-Windows.bat / Jugar-Mac-Linux.command start a local server
+   (needs Python) for the full experience (installable app + offline cache).
+Online accounts / cloud save need internet (Firebase). "Play without account" works offline.
+Night is forced on. In the browser console: __juego.hora(null) restores the day cycle.

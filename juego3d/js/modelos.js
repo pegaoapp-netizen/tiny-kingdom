@@ -33,9 +33,9 @@ var M = (function () {
   var matBrilloVentana = new THREE.SpriteMaterial({ map: texBrillo, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0 });
   // k: 0 = día, 1 = noche cerrada
   function luzNoche(k, t) {
-    matVentana.emissiveIntensity = k * 1.25;
-    matBrillo.opacity = k * (0.82 + Math.sin(t * 13) * 0.07 + Math.sin(t * 7.3) * 0.06);
-    matBrilloVentana.opacity = k * 0.5;
+    matVentana.emissiveIntensity = k * 2.4;
+    matBrillo.opacity = k * (0.9 + Math.sin(t * 13) * 0.07 + Math.sin(t * 7.3) * 0.06);
+    matBrilloVentana.opacity = k * (0.85 + Math.sin(t * 2.1) * 0.05);
     matLlama.color.setHSL(0.08 + Math.sin(t * 11) * 0.012, 1, 0.55 + k * 0.08);
   }
   var cacheGeo = {};
@@ -97,7 +97,8 @@ var M = (function () {
   }
 
   var C = {
-    piedra: 0xd8cbb0, piedraOsc: 0xa4937a, madera: 0x8f6038, maderaOsc: 0x5e3d24,
+    // granito oscuro de fortaleza (antes arenisca clara)
+    piedra: 0x7a7a80, piedraOsc: 0x55555c, madera: 0x8f6038, maderaOsc: 0x5e3d24,
     // techoAzul era azul eléctrico: ahora es teja terracota (el nombre se deja para no romper nada)
     techoAzul: 0xb85a36, techoRojo: 0x9c3b28, oro: 0xe0b040, paja: 0xd9b66a,
     techoNoble: 0x7e2f22, tejaOsc: 0x7a3420, telaRoja: 0xa8322a, telaMar: 0x2e7a76, cobre: 0x5f9a88,
@@ -199,7 +200,7 @@ var M = (function () {
   //  ESTILO PIEDRA: muros grises, vigas de madera y techo rojo de tejas
   //  (lo usan cuartel, granja, aserradero, mina, enfermería y academia)
   // =================================================================
-  var P = { gris: 0xa3a6ad, osc: 0x7c8089, claro: 0xbfc2c8, viga: 0x8a5a32, vigaOsc: 0x5e3d24 };
+  var P = { gris: 0x75777f, osc: 0x55575f, claro: 0x8e9098, viga: 0x6a4428, vigaOsc: 0x4a2e1c };
   function rojoNivel(n) { return n >= 2 ? 0xb8402e : 0xb85a36; }
   function adornoNivel(n) { return n >= 3 ? C.oro : P.vigaOsc; }
   // casa de piedra centrada en (cx, cz), ancho w, fondo d, alto de muro h. El frente mira a +z.
@@ -230,8 +231,8 @@ var M = (function () {
   // =================================================================
   var ROJOS = [0xb8402e, 0xb85a36, 0x9c3b28, 0x7e2f22], TEJAS = [0x7a2a1a, 0x7a3420];
   var COLORES_TRAMO = {
-    3: { gris: 0xc2b49a, osc: 0x968a74, claro: 0xdcd0b8, piedra: 0xe0d3b8, piedraOsc: 0xb3a385, techo: 0x3e5c8c, teja: 0x2b4066, viga: 0x6e4526, vigaOsc: 0x4a2e1a, metal: 0x6f7c8c },
-    4: { gris: 0xece6da, osc: 0xcfc6b5, claro: 0xfaf6ee, piedra: 0xf2ece0, piedraOsc: 0xd2c8b4, techo: 0x2a4fa8, teja: 0xe0b040, viga: 0xc9952e, vigaOsc: 0x8a6420, metal: 0xe0b040 }
+    3: { gris: 0x66666e, osc: 0x48484f, claro: 0x80808a, piedra: 0x6c6c74, piedraOsc: 0x4a4a52, techo: 0x3e5c8c, teja: 0x2b4066, viga: 0x5a3820, vigaOsc: 0x3a2416, metal: 0x6f7c8c },
+    4: { gris: 0x56565e, osc: 0x3c3c44, claro: 0x74747e, piedra: 0x5c5c66, piedraOsc: 0x3e3e46, techo: 0x2a4fa8, teja: 0xe0b040, viga: 0xc9952e, vigaOsc: 0x8a6420, metal: 0xe0b040 }
   };
   // color de techo propio de cada edificio: a simple vista se sabe cuál es
   var TECHO_TIPO = { cuartel: 0xb0302a, academia: 0x6a3fb0, enfermeria: 0x3f9a5a, herreria: 0x4a4c56, almacen: 0x8a5a2a, mercado: 0xd08a2a, establo: 0x8a4a22, galeria: 0x2f7a3a, granja: 0xc96a2a, aserradero: 0x7a5a2a, mina: 0x6a6670, cantera: 0x7a7468, torre: 0x2a4fa8, vigia: 0x9a5a2a };
@@ -692,65 +693,107 @@ var M = (function () {
     nivelVis = nivelVis || 1;
     var colTecho = nivelVis >= 3 ? C.techoNoble : nivelVis === 2 ? C.techoRojo : C.techoAzul;
     var g = new THREE.Group();
-    g.add(cil(6.4, 6.9, 0.7, 8, C.piedraOsc, 0, 0.35, 0));
-    // murallas
-    var L = 8.4, h = 2.4, t = 0.9;
+    // zócalo de roca: la fortaleza se asienta sobre un talud
+    g.add(cil(6.6, 7.4, 0.7, 10, C.piedraOsc, 0, 0.35, 0));
+    g.add(cil(7.4, 7.7, 0.25, 10, 0x3e3e44, 0, 0.12, 0));
+    // murallas altas y gruesas, con contrafuertes y adarve almenado
+    var L = 8.4, h = 3.2, t = 1.2;
     var muros = [[0, -L / 2, L, t], [0, L / 2, L, t], [-L / 2, 0, t, L], [L / 2, 0, t, L]];
     muros.forEach(function (m) {
+      var horiz = m[2] > m[3];
       g.add(caja(m[2], h, m[3], C.piedra, m[0], 0.7 + h / 2, m[1]));
-      // almenas
-      var largo = Math.max(m[2], m[3]), n = 6;
+      // talud inclinado en la base del muro
+      g.add(caja(m[2] + (horiz ? 0 : 0.5), 0.8, m[3] + (horiz ? 0.5 : 0), C.piedraOsc, m[0], 1.1, m[1]));
+      var largo = Math.max(m[2], m[3]), n = 8;
       for (var i = 0; i < n; i++) {
         var p = -largo / 2 + 0.6 + i * (largo - 1.2) / (n - 1);
-        var x = m[2] > m[3] ? m[0] + p : m[0], z = m[2] > m[3] ? m[1] : m[1] + p;
-        g.add(caja(0.55, 0.5, 0.55, C.piedra, x, 0.7 + h + 0.25, z));
+        var x = horiz ? m[0] + p : m[0], z = horiz ? m[1] : m[1] + p;
+        g.add(caja(horiz ? 0.55 : t + 0.1, 0.6, horiz ? t + 0.1 : 0.55, C.piedra, x, 0.7 + h + 0.3, z));
       }
+      // contrafuertes por fuera
+      var fuera = horiz ? Math.sign(m[1]) : Math.sign(m[0]);
+      [-1.6, 1.6].forEach(function (p) {
+        var x = horiz ? m[0] + p : m[0] + fuera * (t / 2 + 0.25), z = horiz ? m[1] + fuera * (t / 2 + 0.25) : m[1] + p;
+        g.add(caja(horiz ? 0.6 : 0.5, h * 0.8, horiz ? 0.5 : 0.6, C.piedraOsc, x, 0.7 + h * 0.4, z));
+      });
+      // antorcha en el adarve, a la mitad de cada muro (menos el de la puerta)
+      if (m[0] >= 0 || horiz) antorcha(g, m[0] - (horiz ? 0 : fuera * 0.2), 0.7 + h + 0.55, m[1] - (horiz ? fuera * 0.2 : 0));
     });
-    // torres de las esquinas
+    // torres de las esquinas: altas, con matacanes, almenas y saeteras encendidas
     [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) {
-      var x = s[0] * L / 2, z = s[1] * L / 2;
-      g.add(cil(1.15, 1.3, 4.2, 8, C.piedra, x, 0.7 + 2.1, z));
-      g.add(cil(1.4, 1.2, 0.5, 8, C.piedraOsc, x, 0.7 + 4.3, z));
-      g.add(cono(1.55, 2.2, 8, colTecho, x, 0.7 + 5.6, z));
-      g.add(caja(0.25, 0.5, 0.08, C.negro, x - s[0] * 0.1, 3.6, z + s[1] * 1.17));
+      var x = s[0] * L / 2, z = s[1] * L / 2, ux = s[0] * 0.7071, uz = s[1] * 0.7071;
+      g.add(cil(1.35, 1.6, 6.0, 10, C.piedra, x, 0.7 + 3.0, z));
+      g.add(cil(1.75, 1.75, 0.9, 10, C.piedraOsc, x, 1.15, z));
+      g.add(cil(1.7, 1.4, 0.6, 10, C.piedraOsc, x, 0.7 + 6.3, z));
+      for (var am = 0; am < 8; am++) { var aa = am / 8 * Math.PI * 2; g.add(caja(0.42, 0.5, 0.42, C.piedra, x + Math.cos(aa) * 1.5, 0.7 + 6.85, z + Math.sin(aa) * 1.5)); }
+      g.add(cono(1.6, 3.0, 10, colTecho, x, 0.7 + 8.3, z));
+      [3.0, 5.0].forEach(function (yv) {
+        g.add(ventana(0.24, 0.6, 0.24, x + ux * 1.47, yv, z + uz * 1.47));
+        brillo(g, x + ux * 1.6, yv, z + uz * 1.6, 1.3, true);
+      });
+      g.add(ventana(0.24, 0.5, 0.24, x - s[0] * 1.45, 5.6, z));
     });
-    // torre central (torre del homenaje)
-    g.add(caja(4.4, 5, 4.4, C.piedra, 0.6, 0.7 + 2.5, 0));
-    g.add(caja(4.8, 0.4, 4.8, C.piedraOsc, 0.6, 0.7 + 5.1, 0));
-    var techo = cono(3.6, 3.4, 4, colTecho, 0.6, 0.7 + 7, 0);
+    // torre del homenaje: dos cuerpos, torrecillas en las esquinas y chapitel altísimo
+    var KX = 0.6, KA = 6.2;
+    g.add(caja(4.8, KA, 4.8, C.piedra, KX, 0.7 + KA / 2, 0));
+    g.add(caja(5.3, 0.45, 5.3, C.piedraOsc, KX, 0.7 + KA + 0.2, 0));
+    for (var ka = -2; ka <= 2; ka++) {
+      [[ka * 1.05, -2.5], [ka * 1.05, 2.5], [-2.5, ka * 1.05], [2.5, ka * 1.05]].forEach(function (q) { g.add(caja(0.45, 0.5, 0.45, C.piedra, KX + q[0], 0.7 + KA + 0.65, q[1])); });
+    }
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) {
+      g.add(cil(0.5, 0.55, 1.9, 8, C.piedra, KX + s[0] * 2.45, 0.7 + KA + 0.95, s[1] * 2.45));
+      g.add(cono(0.65, 1.3, 8, colTecho, KX + s[0] * 2.45, 0.7 + KA + 2.55, s[1] * 2.45));
+    });
+    g.add(caja(3.2, 2.6, 3.2, C.piedra, KX, 0.7 + KA + 1.7, 0));
+    g.add(caja(3.6, 0.35, 3.6, C.piedraOsc, KX, 0.7 + KA + 3.15, 0));
+    var techo = cono(2.75, 3.8, 4, colTecho, KX, 0.7 + KA + 5.2, 0);
     techo.rotation.y = Math.PI / 4;
     g.add(techo);
-    var b = bandera(C.telaRoja, 2.2); b.position.set(0.6, 8.4, 0); g.add(b);
+    var cima = 0.7 + KA + 7.1;
+    var b = bandera(C.telaRoja, 2.2); b.position.set(KX, cima - 0.9, 0); g.add(b);
     g.userData.banderas = [b.userData.tela];
     b.userData.noFusionar = true;
     // piedras de esquina en la torre del homenaje y franja de piedra en la muralla
-    esquinas(g, 0.6, 0, 4.4, 4.4, 0.7, 5.6, 0xe8e2d8);
-    [[0, -L / 2, L, t], [0, L / 2, L, t], [-L / 2, 0, t, L], [L / 2, 0, t, L]].forEach(function (mq) {
-      var fr = caja(mq[2] + 0.06, 0.16, mq[3] + 0.06, C.piedraOsc, mq[0], 0.7 + h * 0.55, mq[1]); fr.castShadow = false; g.add(fr);
+    esquinas(g, KX, 0, 4.8, 4.8, 0.7, 0.7 + KA, 0x8b8e98);
+    muros.forEach(function (mq) {
+      var fr = caja(mq[2] + 0.06, 0.18, mq[3] + 0.06, C.piedraOsc, mq[0], 0.7 + h * 0.62, mq[1]); fr.castShadow = false; g.add(fr);
     });
     // banderitas en dos torres
-    [[-1, -1], [1, 1]].forEach(function (s) { var bt = bandera(C.telaMar, 1.4); bt.userData.noFusionar = true; bt.position.set(s[0] * L / 2, 7.5, s[1] * L / 2); bt.scale.setScalar(0.7); g.add(bt); g.userData.banderas.push(bt.userData.tela); });
-    // ventanas (se encienden de noche)
-    for (var i = -1; i <= 1; i += 2) {
-      g.add(ventana(0.08, 0.8, 0.5, 0.6 - 2.21, 4.2, i * 1.1));
-      g.add(ventana(0.5, 0.8, 0.08, 0.6 + i * 1.1, 4.2, 2.21));
-      brillo(g, 0.6 - 2.4, 4.2, i * 1.1, 1.6, true);
-      brillo(g, 0.6 + i * 1.1, 4.2, 2.4, 1.6, true);
-    }
+    [[-1, -1], [1, 1]].forEach(function (s) { var bt = bandera(C.telaMar, 1.4); bt.userData.noFusionar = true; bt.position.set(s[0] * L / 2, 0.7 + 9.6, s[1] * L / 2); bt.scale.setScalar(0.7); g.add(bt); g.userData.banderas.push(bt.userData.tela); });
+    // ventanas encendidas en las cuatro caras: dos pisos del cuerpo bajo y el cuerpo alto
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(function (f) {
+      [-1.2, 0, 1.2].forEach(function (u) {
+        [4.0, 5.8].forEach(function (yv) {
+          var x = KX + f[0] * 2.42 + (f[0] ? 0 : u), z = f[1] * 2.42 + (f[1] ? 0 : u);
+          g.add(f[0] ? ventana(0.08, 0.75, 0.42, x, yv, z) : ventana(0.42, 0.75, 0.08, x, yv, z));
+          if (u !== 0 || yv > 5) brillo(g, x + f[0] * 0.2, yv, z + f[1] * 0.2, 1.5, true);
+        });
+      });
+      [-0.7, 0.7].forEach(function (u) {
+        var x = KX + f[0] * 1.62 + (f[0] ? 0 : u), z = f[1] * 1.62 + (f[1] ? 0 : u), yv = 0.7 + KA + 1.8;
+        g.add(f[0] ? ventana(0.08, 0.8, 0.4, x, yv, z) : ventana(0.4, 0.8, 0.08, x, yv, z));
+        brillo(g, x + f[0] * 0.2, yv, z + f[1] * 0.2, 1.4, true);
+      });
+    });
+    // braseros encendidos en lo alto de la torre del homenaje
+    antorcha(g, KX - 1.6, 0.7 + KA + 0.75, -1.6); antorcha(g, KX + 1.6, 0.7 + KA + 0.75, 1.6);
+    // matacán sobre la puerta
+    g.add(caja(0.9, 0.6, 3.4, C.piedraOsc, -L / 2 - 0.55, 0.7 + h - 0.1, 0));
+    for (var mc = -1; mc <= 1; mc++) g.add(caja(0.5, 0.45, 0.5, C.piedra, -L / 2 - 0.85, 0.7 + h + 0.4, mc * 1.2));
     // remates dorados en los techos (lo único dorado del castillo)
-    g.add(esfera(0.22, C.oro, 0.6, 0.7 + 8.75, 0, 8, 6));
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { g.add(esfera(0.14, C.oro, s[0] * L / 2, 0.7 + 6.75, s[1] * L / 2, 6, 4)); });
+    g.add(esfera(0.24, C.oro, KX, cima + 0.05, 0, 8, 6));
+    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { g.add(esfera(0.15, C.oro, s[0] * L / 2, 0.7 + 9.9, s[1] * L / 2, 6, 4)); });
     // puerta (mira hacia el camino: lado -x)
     g.add(caja(0.3, 2.0, 2.2, C.maderaOsc, -L / 2 - 0.35, 1.7, 0));
     g.add(cil(1.1, 1.1, 0.3, 10, C.maderaOsc, -L / 2 - 0.35, 2.7, 0).rotateZ(Math.PI / 2));
     g.add(caja(0.35, 0.15, 2.4, C.metalOsc, -L / 2 - 0.4, 1.2, 0));
     g.add(caja(0.35, 0.15, 2.4, C.metalOsc, -L / 2 - 0.4, 2.2, 0));
     // arco de piedra sobre la puerta y escalón
-    var arco = malla(geo('arcoPuerta', function () { return new THREE.TorusGeometry(1.25, 0.2, 6, 12, Math.PI); }), mat(0xe8e2d8), -L / 2 - 0.45, 2.7, 0);
+    var arco = malla(geo('arcoPuerta', function () { return new THREE.TorusGeometry(1.25, 0.2, 6, 12, Math.PI); }), mat(0x8b8e98), -L / 2 - 0.45, 2.7, 0);
     arco.rotation.y = Math.PI / 2; g.add(arco);
     g.add(caja(0.8, 0.12, 2.8, C.piedraOsc, -L / 2 - 0.7, 0.75, 0));
     // ventanas con marco en la torre del homenaje (segundo piso)
-    [-1.1, 0, 1.1].forEach(function (z) { g.add(ventana(0.08, 0.55, 0.4, 0.6 - 2.21, 2.6, z)); g.add(caja(0.1, 0.08, 0.55, 0xf2ece0, 0.6 - 2.23, 2.9, z)); });
+    [-1.2, 0, 1.2].forEach(function (z) { g.add(ventana(0.08, 0.55, 0.4, 0.6 - 2.42, 2.6, z)); g.add(caja(0.1, 0.08, 0.55, 0x8b8e98, 0.6 - 2.44, 2.9, z)); });
     // estandartes al lado de la puerta
     [-1.7, 1.7].forEach(function (z) {
       g.add(caja(0.1, 1.6, 0.9, C.telaRoja, -L / 2 - 0.5, 2.1, z));
@@ -1339,7 +1382,7 @@ var M = (function () {
   function muralla(nivel, forma) {
     var g = new THREE.Group();
     var f = forma;
-    var alto = nivel === 0 ? 1.05 : nivel === 1 ? 1.6 : nivel === 2 ? 2.2 : 2.8;
+    var alto = nivel === 0 ? 1.05 : nivel === 1 ? 1.9 : nivel === 2 ? 2.6 : 3.3;
     var color = C.piedra;
     var per = 2 * Math.PI * Math.sqrt((f.rx * f.rx + f.rz * f.rz) / 2);
     var N = Math.round(per / 2.6);
@@ -1351,11 +1394,11 @@ var M = (function () {
       if (enPuerta(tm)) continue;
       var a = punto(t0), b = punto(t1);
       var dx = b.x - a.x, dz = b.z - a.z, largo = Math.hypot(dx, dz) * 1.08;
-      var seg = caja(largo, alto, 0.85, color, (a.x + b.x) / 2, alto / 2, (a.z + b.z) / 2);
+      var seg = caja(largo, alto, nivel >= 1 ? 1.1 : 0.85, color, (a.x + b.x) / 2, alto / 2, (a.z + b.z) / 2);
       seg.rotation.y = -Math.atan2(dz, dx);
       g.add(seg);
-      if (nivel >= 1) { // franja de piedra oscura abajo: el muro "pisa" el suelo
-        var zc = caja(largo, 0.35, 1.0, C.piedraOsc, (a.x + b.x) / 2, 0.17, (a.z + b.z) / 2);
+      if (nivel >= 1) { // talud de piedra oscura abajo: el muro "pisa" el suelo
+        var zc = caja(largo, 0.6, 1.45, C.piedraOsc, (a.x + b.x) / 2, 0.3, (a.z + b.z) / 2);
         zc.rotation.y = seg.rotation.y; zc.castShadow = false; g.add(zc);
       }
       if (false) {
@@ -1367,7 +1410,7 @@ var M = (function () {
           al.rotation.y = seg.rotation.y; g.add(al);
         });
       }
-      if (i % 7 === 0 && !enPuerta(t0 - 0.2) && !enPuerta(t0 + 0.2)) torres.push({ p: a, puerta: false });
+      if (i % 5 === 0 && !enPuerta(t0 - 0.2) && !enPuerta(t0 + 0.2)) torres.push({ p: a, puerta: false });
     }
     // torres grandes a los dos lados de la puerta
     torres.push({ p: punto(f.puerta - f.hueco - 0.03), puerta: true }, { p: punto(f.puerta + f.hueco + 0.03), puerta: true });
@@ -1380,6 +1423,13 @@ var M = (function () {
         g.add(cil(r + 0.15, r + 0.15, 0.35, 8, C.piedraOsc, x, h + 0.17, z));
         for (var am = 0; am < 6; am++) { var aa = am / 6 * Math.PI * 2; g.add(caja(0.35, 0.4, 0.35, C.piedra, x + Math.cos(aa) * (r + 0.05), h + 0.55, z + Math.sin(aa) * (r + 0.05))); }
         if (tq.puerta) { antorcha(g, x + (f.cx - x) * 0.02, h - 0.4, z + r + 0.15); antorcha(g, x, h - 0.4, z - r - 0.15); }
+        else if (nivel >= 1) {
+          // saetera encendida mirando hacia fuera y antorcha arriba
+          var ox = x - f.cx, oz = z - f.cz, ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
+          g.add(ventana(0.2, 0.5, 0.2, x + ox * (r + 0.06), h * 0.6, z + oz * (r + 0.06)));
+          brillo(g, x + ox * (r + 0.2), h * 0.6, z + oz * (r + 0.2), 1.1, true);
+          antorcha(g, x, h + 0.55, z);
+        }
         if (nivel >= 3) {
           g.add(cono(r + 0.3, 1.4, 8, C.techoAzul, x, h + 1.05, z));
           if (tq.puerta) { var bd = bandera(C.telaRoja, 1.8); bd.userData.noFusionar = true; bd.position.set(x, h + 1.6, z); g.add(bd); (g.userData.banderas = g.userData.banderas || []).push(bd.userData.tela); }
@@ -2125,11 +2175,16 @@ var M = (function () {
       dst.esperaAnim = false; var cb = pendRet[id]; delete pendRet[id]; if (cb) cb(id);
     });
   }
+  // The offline export embeds every .glb as a data URI so index.html can be opened straight from disk (file://)
+  function rutaGLB(ruta, v) {
+    var emb = window.GLB_EMBEBIDOS && window.GLB_EMBEBIDOS[ruta];
+    return emb || ruta + v;
+  }
   function cargarFiguras(alListo) {
     if (figPedidas || !THREE.GLTFLoader) return; figPedidas = true;
     var cargador = new THREE.GLTFLoader(), v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
     Object.keys(FIGURAS).forEach(function (id) {
-      cargador.load('modelos/' + (FIGURAS[id].archivo || id) + '.glb' + v, function (gl) {
+      cargador.load(rutaGLB('modelos/' + (FIGURAS[id].archivo || id) + '.glb', v), function (gl) {
         var esc = gl.scene, anim = gl.animations && gl.animations.length && THREE.SkeletonUtils;
         esc.traverse(function (o) {
           if (!o.isMesh) return;
@@ -2245,7 +2300,7 @@ var M = (function () {
     ids.forEach(function (id) {
       if (!GLB_HEROES[id] || glbPedidos[id]) return;
       glbPedidos[id] = true;
-      cargador.load(GLB_HEROES[id] + v, function (gl) {
+      cargador.load(rutaGLB(GLB_HEROES[id], v), function (gl) {
         var esc = gl.scene;
         esc.traverse(function (o) {
           if (!o.isMesh) return;
@@ -2321,8 +2376,15 @@ var M = (function () {
   function animarUnidad(u, t, caminando, ataque) {
     if (u.p && u.p.glb) { animarGLB(u, t, caminando, ataque); return; }
     if (u.p && u.p.mixer) animarFiguraTropa(u, t, caminando, ataque);
-    var p = u.p, v = caminando ? 1 : 0;
+    var p = u.p;
+    // blend between idle and walk so the figure never snaps between poses
+    u._andar = (u._andar || 0) + ((caminando ? 1 : 0) - (u._andar || 0)) * 0.14;
+    var v = u._andar < 0.01 ? 0 : u._andar;
     var s = Math.sin(t * 11);
+    if (!p.patas) {
+      u.cuerpo.rotation.z = Math.sin(t * 5.5) * 0.035 * v;
+      u.cuerpo.rotation.x = 0.06 * v;
+    }
     if (p.patas) {
       var g2 = Math.sin(t * 14);
       p.patas[0].rotation.x = g2 * 0.8 * v; p.patas[3].rotation.x = g2 * 0.8 * v;
@@ -2333,7 +2395,7 @@ var M = (function () {
     } else {
       p.piernaI.rotation.x = s * 0.7 * v;
       p.piernaD.rotation.x = -s * 0.7 * v;
-      u.cuerpo.position.y = Math.abs(s) * 0.07 * v + (caminando ? 0 : Math.sin(t * 2.5) * 0.015);
+      u.cuerpo.position.y = Math.abs(s) * 0.06 * v + (1 - v) * Math.sin(t * 2.5) * 0.015;
     }
     p.izq.rotation.x = -s * 0.4 * v;
     if (p.respira) {
@@ -2728,10 +2790,11 @@ var M = (function () {
     a.cuerpo.add(f); a.fig = f; return true;
   }
   function animarAnimal(a, t, camina) {
-    var v = camina ? 1 : 0, s = Math.sin(t * (a.tipo === 'gallina' ? 18 : 10));
+    a._andar = (a._andar || 0) + ((camina ? 1 : 0) - (a._andar || 0)) * 0.12;
+    var v = a._andar < 0.01 ? 0 : a._andar, s = Math.sin(t * (a.tipo === 'gallina' ? 18 : 10));
     a.patas.forEach(function (pt, i) { pt.rotation.x = s * 0.7 * v * (i % 2 ? 1 : -1) * (i > 1 ? -1 : 1); });
     a.cuerpo.position.y = Math.abs(s) * 0.03 * v;
-    // picotear / pastar cuando está quieta
+    // picotear / pastar cuando est�� quieta
     a.cuerpo.rotation.x = camina ? 0 : Math.max(0, Math.sin(t * 1.3)) * (a.tipo === 'gallina' ? 0.35 : 0.12);
     if (a.def) {
       // caballo: patas al caminar, cabeza abajo al pastar (sube de vez en cuando a mirar)

@@ -1,0 +1,218 @@
+/* =====================================================================
+   Tiny Kingdom · Tema oscuro premium (estilo Barracks / Rise of Kingdoms)
+   Capa que va DESPUÉS de estilo.css: solo cambia colores, vidrio y luces.
+   No toca tamaños ni lógica. Para quitar el tema, borra el <link> a este archivo.
+   ===================================================================== */
+:root {
+  --tk-fondo: #070b16;
+  --tk-vidrio: rgba(15, 23, 42, .80);          /* slate-900/80 */
+  --tk-vidrio-2: rgba(30, 41, 59, .72);        /* slate-800 */
+  --tk-vidrio-3: rgba(51, 65, 85, .55);        /* slate-700 */
+  --tk-borde: rgba(255, 255, 255, .10);
+  --tk-borde-2: rgba(255, 255, 255, .16);
+  --tk-oro-1: #fbbf24;                          /* amber-400 */
+  --tk-oro-2: #f97316;                          /* orange-500 */
+  --tk-oro-txt: #fcd34d;
+  --tk-txt: #e2e8f0;
+  --tk-txt-2: #94a3b8;
+  --tk-sombra: 0 18px 50px -12px rgba(0, 0, 0, .75), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+
+html, body { background: var(--tk-fondo) !important; color: var(--tk-txt); }
+
+/* ---------- Pantalla de inicio: ciudad de noche ---------- */
+#pantalla {
+  background:
+    radial-gradient(ellipse at 50% 110%, rgba(249, 115, 22, .22), transparent 55%),
+    linear-gradient(180deg, rgba(7, 11, 22, .35) 0%, rgba(7, 11, 22, .92) 100%),
+    url('../iconos/fondo-noche.png') center / cover no-repeat,
+    var(--tk-fondo) !important;
+  color: var(--tk-txt) !important;
+}
+#pantalla h1, #pantalla .titulo, #pantalla h2 {
+  color: var(--tk-oro-txt) !important;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .6), 0 0 28px rgba(251, 191, 36, .35) !important;
+  -webkit-text-stroke: 0 !important;
+}
+#pantalla p, #pantalla small, #pantalla label { color: var(--tk-txt-2) !important; }
+#pantalla-form, #pantalla-botones {
+  background: var(--tk-vidrio) !important;
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid var(--tk-borde) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--tk-sombra) !important;
+}
+
+/* ---------- Vidrio: paneles, cartas, menús ---------- */
+#panel, .panel-cab, #menu-edif, #ficha-ciudad, #mundo-info .carta, #consejo, #mision,
+#opciones-ataque, #acelerar-elegir, #eq-elegir, #chat-opciones, #bus-info, #barra-obra,
+#barra-colocar, #aviso-pausa, .flotante-construir, #etiqueta-hover, .fc-caja, .bp-caja,
+.nn-caja, .rc-caja, .cj-caja, .cq-carta, .car-carta, .hv-carta, .heroe-ficha, .ficha-tropa,
+.cq-ficha, .mail-cuerpo, .casilla-info {
+  background: var(--tk-vidrio) !important;
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border: 1px solid var(--tk-borde) !important;
+  color: var(--tk-txt) !important;
+  box-shadow: var(--tk-sombra) !important;
+}
+#panel, #menu-edif, #ficha-ciudad, .fc-caja, .bp-caja, .nn-caja, .rc-caja, .cj-caja { border-radius: 24px !important; }
+
+.panel-cab { background: linear-gradient(180deg, rgba(30, 41, 59, .9), rgba(15, 23, 42, .6)) !important; border-width: 0 0 1px !important; box-shadow: none !important; border-radius: 24px 24px 0 0 !important; }
+#panel h2, #panel h3, .panel-cab h2, .fc-cab, .ft-tit, .hf-tit, .cq-tit, .bp-titulo, .me-titulo, .ob-cab, .mail-cab, .al-cab, .hv-cab {
+  color: var(--tk-oro-txt) !important; text-shadow: 0 1px 0 rgba(0, 0, 0, .6) !important; -webkit-text-stroke: 0 !important;
+}
+
+/* Tarjetas internas (más claras que el panel, siguen oscuras) */
+.carta, .tarjeta, .fila-tropa, .fila-construir, .fila-tienda, .fila-miembro, .fila-ref, .ua-fila,
+.mis-fila, .tr-fila, .ac-fila, .eq-fila, .ob-fila, .nn-fila, .lupa-fila, .mer-fila, .fc-fila, .hf-fila,
+.cq-fila, .mat-fila, .mail, .diario, .pedido, .hcard, .inv-celda, .eq-hueco, .rc-item, .cola, .trabajos,
+.reclutados, .stats, .ft-stats, .hf-stats, .cq-stats-caja, .hf-bloque, .mis-grupo, .al-sec-cab, .al-datos,
+.chat-m, .chat-lista, .mail-lista, .casilla-tabla, .lista, .nota, .sig-nivel, .t-obra {
+  background: var(--tk-vidrio-2) !important;
+  border: 1px solid var(--tk-borde) !important;
+  color: var(--tk-txt) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04) !important;
+}
+.carta *, .tarjeta *, #panel p, #panel li, #panel td, #panel th, .fc-txt, .ft-txt, .mail-txt, .ob-txt, .mb-txt, .ac-txt,
+.hf-datos, .cq-info, .fc-datos, .al-datos, .chat-t, .tropa-desc, .ft-info, .casilla-info { color: inherit; }
+#panel small, .fc-aviso, .ac-sub, .chat-hora, .chat-quien, .lupa-sub, .inv-sub, .tropa-desc, .chat-vacio, .ft-vacio, .ft-no { color: var(--tk-txt-2) !important; }
+
+/* Pestañas */
+.pestana, .subtabs > *, .inv-tabs > *, .hf-tabs > *, .correo-tabs > *, .tienda-tabs > *, .pest-tropa, .ft-pest, .inv-filtro {
+  background: var(--tk-vidrio-3) !important;
+  color: var(--tk-txt-2) !important;
+  border: 1px solid var(--tk-borde) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+.pestana.activa, .pestana.on, .pestana.sel, .subtabs > .activa, .subtabs > .on, .inv-tabs > .on, .inv-tabs > .activa,
+.hf-tabs > .on, .hf-tabs > .activa, .correo-tabs > .on, .correo-tabs > .activa, .tienda-tabs > .on, .tienda-tabs > .activa,
+.pest-tropa.on, .pest-tropa.activa, .ft-pest.on, .ft-pest.activa, .inv-filtro.on {
+  background: linear-gradient(180deg, rgba(251, 191, 36, .22), rgba(249, 115, 22, .12)) !important;
+  color: var(--tk-oro-txt) !important;
+  border-color: rgba(251, 191, 36, .55) !important;
+}
+
+/* ---------- Botones dorados (amber-400 -> orange-500) ---------- */
+.comprar, .accion, .al-boton, .boton-oleada-grande, #btn-oleada, .subir-rango, #mundo-volver, .gemas-mas,
+.fc-botones button, .obra-botones button, .ped-botones button, .me-botones button, .car-botones button,
+.cj-botones button, .mail-botones button, .casilla-botones button, .eq-bts button, .botones-tropa button,
+#pantalla-botones button, #pantalla-form button {
+  background: linear-gradient(180deg, var(--tk-oro-1) 0%, var(--tk-oro-2) 100%) !important;
+  color: #1c1206 !important;
+  border: 1px solid rgba(255, 255, 255, .22) !important;
+  border-radius: 14px !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .25) !important;
+  box-shadow: 0 8px 22px -6px rgba(249, 115, 22, .55), inset 0 1px 0 rgba(255, 255, 255, .45), inset 0 -2px 0 rgba(0, 0, 0, .18) !important;
+  -webkit-text-stroke: 0 !important;
+}
+.comprar:hover, .accion:hover, #btn-oleada:hover, #mundo-volver:hover { filter: brightness(1.08); }
+.comprar:disabled, .accion:disabled, .comprar.no, .accion.no, button[disabled] {
+  background: rgba(51, 65, 85, .7) !important; color: #64748b !important; box-shadow: none !important; text-shadow: none !important;
+}
+
+/* Botones de vidrio (redondos, cerrar, laterales) */
+.redondo, .cerrar, .fc-x, .volver-mini, .volver-lista, .cq-volver, #btn-velocidad, #btn-pausa, #btn-idioma,
+#btn-chat, #btn-buzon, #btn-defensa, #lateral button, .lupa-reino, .multi {
+  background: var(--tk-vidrio) !important;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border: 1px solid var(--tk-borde-2) !important;
+  color: var(--tk-txt) !important;
+  box-shadow: 0 8px 20px -8px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .08) !important;
+  text-shadow: none !important;
+}
+.cerrar, .fc-x { color: var(--tk-txt-2) !important; }
+
+/* Campos de texto y selectores */
+input, select, textarea, .campo, .chat-escribir input {
+  background: rgba(2, 6, 23, .6) !important;
+  color: var(--tk-txt) !important;
+  border: 1px solid var(--tk-borde-2) !important;
+  border-radius: 12px !important;
+}
+input::placeholder, textarea::placeholder { color: #64748b !important; }
+input:focus, select:focus, textarea:focus { outline: 2px solid rgba(251, 191, 36, .55) !important; outline-offset: 1px; }
+
+/* ---------- Barra de recursos arriba ---------- */
+#arriba { background: linear-gradient(180deg, rgba(2, 6, 23, .92), rgba(2, 6, 23, 0)) !important; }
+#recursos .pill, .pill, #pill-gemas, #pill-escudo, #pill-entreno, #pill-tropas {
+  background: rgba(15, 23, 42, .82) !important;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+  border: 1px solid var(--tk-borde) !important;
+  color: #f8fafc !important;
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(255, 255, 255, .06) !important;
+  text-shadow: none !important;
+}
+#pill-gemas { border-color: rgba(167, 139, 250, .35) !important; }
+#pill-escudo { border-color: rgba(56, 189, 248, .35) !important; }
+#perfil, .avatar, .nivel-rey {
+  border-color: rgba(251, 191, 36, .75) !important;
+  box-shadow: 0 0 0 2px rgba(2, 6, 23, .8), 0 0 18px rgba(251, 191, 36, .35) !important;
+}
+#ciudad-nombre, .poder {
+  background: rgba(15, 23, 42, .82) !important; color: var(--tk-oro-txt) !important;
+  border: 1px solid var(--tk-borde) !important; text-shadow: none !important;
+}
+
+/* ---------- Barra de abajo ---------- */
+#abajo {
+  background: rgba(15, 23, 42, .86) !important;
+  -webkit-backdrop-filter: blur(24px); backdrop-filter: blur(24px);
+  border-top: 1px solid var(--tk-borde) !important;
+  box-shadow: 0 -12px 40px -10px rgba(0, 0, 0, .8) !important;
+}
+#abajo button {
+  background: transparent !important; color: var(--tk-txt-2) !important;
+  border: 1px solid transparent !important; box-shadow: none !important; text-shadow: none !important;
+}
+#abajo button:hover, #abajo button.on, #abajo button.activa, #abajo button[aria-pressed="true"] {
+  color: var(--tk-oro-txt) !important;
+  background: linear-gradient(180deg, rgba(251, 191, 36, .16), rgba(249, 115, 22, .06)) !important;
+  border-color: rgba(251, 191, 36, .35) !important;
+}
+
+/* Barras de progreso */
+.hf-barra, .fila-ref-barra, .ped-barra, .bp-barra, .cq-sf-barra, .mis-prog, #vida-castillo, .vida-grande, .oleada-puntos {
+  background-color: rgba(2, 6, 23, .7) !important; border-color: var(--tk-borde) !important;
+}
+
+/* Insignias */
+.badge, .punto-rojo { box-shadow: 0 0 0 2px #0f172a !important; }
+.rango-chapa, .me-nivel, .hf-nv, .eq-nv, .fc-nivel, .cq-nivel {
+  background: linear-gradient(180deg, var(--tk-oro-1), var(--tk-oro-2)) !important; color: #1c1206 !important; border-color: rgba(0, 0, 0, .4) !important;
+}
+
+/* Avisos */
+#alerta-ataque, .banner-rojo, .aviso-rojo, #aviso-oleada, #aviso-hambre {
+  background: linear-gradient(180deg, rgba(127, 29, 29, .88), rgba(69, 10, 10, .88)) !important;
+  border: 1px solid rgba(248, 113, 113, .4) !important; color: #fee2e2 !important;
+  -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+}
+
+/* ---------- Mapa del mundo 80x80 de noche ---------- */
+#mundo { background: var(--tk-fondo) !important; }
+#mundo-mapa { background: var(--tk-fondo) !important; }
+#mundo-mapa::after {
+  /* niebla de guerra en los bordes */
+  content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 50%, transparent 45%, rgba(7, 11, 22, .55) 75%, rgba(7, 11, 22, .92) 100%);
+}
+#mundo .mundo-cab h2, #mundo-estado, #mundo-buscar, #mundo-coord, #mundo-leyenda {
+  background: rgba(15, 23, 42, .82) !important;
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border: 1px solid var(--tk-borde) !important;
+  color: var(--tk-txt) !important;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, .8) !important;
+}
+#mundo .mundo-cab h2 { color: var(--tk-oro-txt) !important; }
+#mundo-coord { color: var(--tk-oro-txt) !important; }
+#mundo-buscar select { background: rgba(2, 6, 23, .7) !important; color: var(--tk-txt) !important; border-color: var(--tk-borde-2) !important; }
+#mundo-volver { border-radius: 999px !important; }
+#mundo-transicion { background: radial-gradient(circle, rgba(7, 11, 22, 0) 30%, rgba(7, 11, 22, .96) 100%) !important; }
+
+/* Desplazamiento oscuro */
+* { scrollbar-color: rgba(148, 163, 184, .35) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .3); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }

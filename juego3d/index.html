@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tiny Kingdom">
-<meta name="theme-color" content="#3a2414">
+<meta name="theme-color" content="#0b1120">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="iconos/icono-192.png">
@@ -25,6 +25,7 @@ window.addEventListener("error", function (e) {
 </script>
 <title>Tiny Kingdom</title>
 <link rel="stylesheet" href="css/estilo.css">
+<link rel="stylesheet" href="css/oscuro.css">
 </head>
 <body>
 <div id="juego"></div>
@@ -110,8 +111,8 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M24 7 L37 12 V23 C37 32 31 38 24 41 C17 38 11 32 11 23 V12 Z" fill="url(#ic-rojo)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 10.5 L34 14.3 V23 C34 30 29.5 34.8 24 37.4 C18.5 34.8 14 30 14 23 V14.3 Z" fill="none" stroke="#f2c45a" stroke-width="1.4"/>
-<g stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M10 39 L33 11 L36 9 L35 13 L13 41 Z" fill="url(#ic-acero2)"/><path d="M38 39 L15 11 L12 9 L13 13 L35 41 Z" fill="url(#ic-acero2)"/>
+</defs><path d="M24 7 L37 12 V23 C37 32 31 38 24 41 C17 38 11 32 11 23 V12 Z" fill="url(#ic-rojo)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 10.5 L34 14.3 V23 C34 30 29.5 34.8 24 37.4 C18.5 34.8 14 30 14 23 V14.3 Z" fill="none" stroke="#f2c45a" stroke-width="1.4"/>
+<g stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M10 39 L33 11 L36 9 L35 13 L13 41 Z" fill="url(#ic-acero2)"/><path d="M38 39 L15 11 L12 9 L13 13 L35 41 Z" fill="url(#ic-acero2)"/>
 <rect x="8.5" y="35.5" width="9" height="3" rx="1.2" transform="rotate(-50 13 37)" fill="url(#ic-oro)"/><rect x="30.5" y="35.5" width="9" height="3" rx="1.2" transform="rotate(50 35 37)" fill="url(#ic-oro)"/>
 <circle cx="8.5" cy="42" r="2" fill="url(#ic-oro)"/><circle cx="39.5" cy="42" r="2" fill="url(#ic-oro)"/></g></svg></span><span class="txt" data-t="b_conquista">FRONTERA</span><span class="badge" id="badge-conquista"></span></button>
   <button class="pestana" id="btn-heroes"><span class="icono"><svg viewBox="0 0 48 48" class="ic"><defs>
@@ -125,10 +126,10 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M24 4 C30 4 33 8 31 12 C29 9 26 9 24 11 C22 8 18 8 17 11 C15 7 18 4 24 4 Z" fill="url(#ic-azul)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M12 26 C12 16 17 11 24 11 C31 11 36 16 36 26 V36 C36 39 33 41 30 41 H18 C15 41 12 39 12 36 Z" fill="url(#ic-acero)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M14 25 H34 V29 H14 Z" fill="#2a2f38" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 11 V25" stroke="#f2c45a" stroke-width="2.6" stroke-linecap="round"/>
-<path d="M12.6 33 H35.4" stroke="#f2c45a" stroke-width="2.2"/><g fill="#3a2414"><circle cx="18" cy="35.6" r="1"/><circle cx="22" cy="35.6" r="1"/><circle cx="26" cy="35.6" r="1"/><circle cx="30" cy="35.6" r="1"/></g>
+</defs><path d="M24 4 C30 4 33 8 31 12 C29 9 26 9 24 11 C22 8 18 8 17 11 C15 7 18 4 24 4 Z" fill="url(#ic-azul)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M12 26 C12 16 17 11 24 11 C31 11 36 16 36 26 V36 C36 39 33 41 30 41 H18 C15 41 12 39 12 36 Z" fill="url(#ic-acero)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M14 25 H34 V29 H14 Z" fill="#2a2f38" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 11 V25" stroke="#f2c45a" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M12.6 33 H35.4" stroke="#f2c45a" stroke-width="2.2"/><g fill="#0b1120"><circle cx="18" cy="35.6" r="1"/><circle cx="22" cy="35.6" r="1"/><circle cx="26" cy="35.6" r="1"/><circle cx="30" cy="35.6" r="1"/></g>
 <path d="M16 17 C18 14 21 13 23 13" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8" fill="none"/></svg></span><span class="txt" data-t="b_heroes">GUARDIA</span><span class="badge" id="badge-heroes"></span></button>
   <button class="pestana" id="btn-mochila"><span class="icono"><svg viewBox="0 0 48 48" class="ic"><defs>
 <linearGradient id="ic-acero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#b9c3cf"/><stop offset="1" stop-color="#5d6875"/></linearGradient>
@@ -141,9 +142,9 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M8 22 C8 13 14 9 24 9 C34 9 40 13 40 22 Z" fill="url(#ic-madera)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 22 H40 V38 C40 40 38.5 41 37 41 H11 C9.5 41 8 40 8 38 Z" fill="url(#ic-madera)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<g fill="url(#ic-oro)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 10.5 V41 H17.5 V9.6 Z"/><path d="M30.5 9.6 V41 H35 V10.5 Z"/><rect x="7.2" y="20.6" width="33.6" height="4" rx="1.5"/></g>
-<rect x="20" y="20" width="8" height="10" rx="2" fill="url(#ic-oro)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="24" cy="24.6" r="1.4" fill="#3a2414"/><path d="M24 25.5 V27.5" stroke="#3a2414" stroke-width="1.6" stroke-linecap="round"/>
+</defs><path d="M8 22 C8 13 14 9 24 9 C34 9 40 13 40 22 Z" fill="url(#ic-madera)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M8 22 H40 V38 C40 40 38.5 41 37 41 H11 C9.5 41 8 40 8 38 Z" fill="url(#ic-madera)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<g fill="url(#ic-oro)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M13 10.5 V41 H17.5 V9.6 Z"/><path d="M30.5 9.6 V41 H35 V10.5 Z"/><rect x="7.2" y="20.6" width="33.6" height="4" rx="1.5"/></g>
+<rect x="20" y="20" width="8" height="10" rx="2" fill="url(#ic-oro)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="24" cy="24.6" r="1.4" fill="#0b1120"/><path d="M24 25.5 V27.5" stroke="#0b1120" stroke-width="1.6" stroke-linecap="round"/>
 <path d="M11 14 C14 12 18 11 21 11" stroke="#ffd9a8" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".8"/></svg></span><span class="txt" data-t="b_mochila">BAÚL</span><span class="badge" id="badge-mochila"></span></button>
   <button id="btn-construir" class="centro-construir"><span class="icono"><svg viewBox="0 0 48 48" class="ic"><defs>
 <linearGradient id="ic-acero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#b9c3cf"/><stop offset="1" stop-color="#5d6875"/></linearGradient>
@@ -156,10 +157,10 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M16 22 L32 38 C33.5 39.5 36 39.5 37.5 38 C39 36.5 39 34 37.5 32.5 L21.5 16.5 Z" fill="url(#ic-madera)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M7 17 L18 6 C20 4 23 4 25 6 L29 10 L22 17 L25 20 L20 25 L17 22 L14 25 C12 27 9 27 7 25 L6 24 C4 22 5 19 7 17 Z" fill="url(#ic-acero)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M10 17 L19 8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/><rect x="18.2" y="18.8" width="6" height="4.2" rx="1" transform="rotate(45 21.2 20.9)" fill="url(#ic-oro)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="35" cy="35.4" r="1.6" fill="#f2c45a" stroke="#3a2414" stroke-width="1"/></svg></span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
+</defs><path d="M16 22 L32 38 C33.5 39.5 36 39.5 37.5 38 C39 36.5 39 34 37.5 32.5 L21.5 16.5 Z" fill="url(#ic-madera)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M7 17 L18 6 C20 4 23 4 25 6 L29 10 L22 17 L25 20 L20 25 L17 22 L14 25 C12 27 9 27 7 25 L6 24 C4 22 5 19 7 17 Z" fill="url(#ic-acero)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M10 17 L19 8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" opacity=".85"/><rect x="18.2" y="18.8" width="6" height="4.2" rx="1" transform="rotate(45 21.2 20.9)" fill="url(#ic-oro)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="35" cy="35.4" r="1.6" fill="#f2c45a" stroke="#0b1120" stroke-width="1"/></svg></span><span class="txt" data-t="b_construir">CONSTRUIR</span></button>
   <button class="pestana" id="btn-tienda"><span class="icono"><svg viewBox="0 0 48 48" class="ic"><defs>
 <linearGradient id="ic-acero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#b9c3cf"/><stop offset="1" stop-color="#5d6875"/></linearGradient>
 <linearGradient id="ic-acero2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d8896"/><stop offset=".5" stop-color="#f4f7fb"/><stop offset="1" stop-color="#7d8896"/></linearGradient>
@@ -171,11 +172,11 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M10 20 V40 H38 V20" fill="url(#ic-crema)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><rect x="9" y="30" width="30" height="5" rx="1.5" fill="url(#ic-madera)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M6 13 L10 7 H38 L42 13 Z" fill="url(#ic-rojo)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M6 13 H42 V17 C42 19.5 39.8 21 38 21 C36 21 34.5 19.5 34.5 17 C34.5 19.5 32.5 21 30.5 21 C28.5 21 27 19.5 27 17 C27 19.5 25.2 21 24 21 C22.2 21 21 19.5 21 17 C21 19.5 19.5 21 17.5 21 C15.5 21 13.5 19.5 13.5 17 C13.5 19.5 12 21 10 21 C8 21 6 19.5 6 17 Z" fill="#fff3dc" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+</defs><path d="M10 20 V40 H38 V20" fill="url(#ic-crema)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><rect x="9" y="30" width="30" height="5" rx="1.5" fill="url(#ic-madera)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M6 13 L10 7 H38 L42 13 Z" fill="url(#ic-rojo)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M6 13 H42 V17 C42 19.5 39.8 21 38 21 C36 21 34.5 19.5 34.5 17 C34.5 19.5 32.5 21 30.5 21 C28.5 21 27 19.5 27 17 C27 19.5 25.2 21 24 21 C22.2 21 21 19.5 21 17 C21 19.5 19.5 21 17.5 21 C15.5 21 13.5 19.5 13.5 17 C13.5 19.5 12 21 10 21 C8 21 6 19.5 6 17 Z" fill="#fff3dc" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
 <g fill="url(#ic-rojo)"><path d="M13.5 13 H21 V17 C21 19.5 19.5 21 17.5 21 C15.5 21 13.5 19.5 13.5 17 Z"/><path d="M27 13 H34.5 V17 C34.5 19.5 32.5 21 30.5 21 C28.5 21 27 19.5 27 17 Z"/></g>
-<path d="M6 13 H42" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><g stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" fill="url(#ic-oro)"><ellipse cx="18" cy="29" rx="4.5" ry="2"/><ellipse cx="18" cy="26.6" rx="4.5" ry="2"/><ellipse cx="29" cy="29" rx="4.5" ry="2"/><ellipse cx="29" cy="26.6" rx="4.5" ry="2"/><ellipse cx="29" cy="24.2" rx="4.5" ry="2"/></g></svg></span><span class="txt" data-t="b_tienda">COLMADO</span><span class="badge" id="badge-tienda"></span></button>
+<path d="M6 13 H42" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><g stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" fill="url(#ic-oro)"><ellipse cx="18" cy="29" rx="4.5" ry="2"/><ellipse cx="18" cy="26.6" rx="4.5" ry="2"/><ellipse cx="29" cy="29" rx="4.5" ry="2"/><ellipse cx="29" cy="26.6" rx="4.5" ry="2"/><ellipse cx="29" cy="24.2" rx="4.5" ry="2"/></g></svg></span><span class="txt" data-t="b_tienda">COLMADO</span><span class="badge" id="badge-tienda"></span></button>
   <button class="pestana" id="btn-alianza"><span class="icono"><svg viewBox="0 0 48 48" class="ic"><defs>
 <linearGradient id="ic-acero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#b9c3cf"/><stop offset="1" stop-color="#5d6875"/></linearGradient>
 <linearGradient id="ic-acero2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#7d8896"/><stop offset=".5" stop-color="#f4f7fb"/><stop offset="1" stop-color="#7d8896"/></linearGradient>
@@ -187,9 +188,9 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M17 8 L28 12 V22 C28 30 23 35 17 38 C11 35 6 30 6 22 V12 Z" fill="url(#ic-azul)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M31 10 L42 14 V24 C42 32 37 37 31 40 C25 37 20 32 20 24 V14 Z" fill="url(#ic-rojo)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M24 16 L26.6 21.3 L32.4 22.1 L28.2 26.2 L29.2 32 L24 29.3 L18.8 32 L19.8 26.2 L15.6 22.1 L21.4 21.3 Z" fill="url(#ic-oro)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+</defs><path d="M17 8 L28 12 V22 C28 30 23 35 17 38 C11 35 6 30 6 22 V12 Z" fill="url(#ic-azul)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M31 10 L42 14 V24 C42 32 37 37 31 40 C25 37 20 32 20 24 V14 Z" fill="url(#ic-rojo)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M24 16 L26.6 21.3 L32.4 22.1 L28.2 26.2 L29.2 32 L24 29.3 L18.8 32 L19.8 26.2 L15.6 22.1 L21.4 21.3 Z" fill="url(#ic-oro)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
 <path d="M9 14 C11 12.5 13 11.6 15 11" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".7" fill="none"/></svg></span><span class="txt" data-t="b_alianza">HERMANDAD</span><span class="badge" id="badge-alianza"></span></button>
   <button class="pestana" id="btn-mundo"><span class="icono"><svg viewBox="0 0 48 48" class="ic"><defs>
 <linearGradient id="ic-acero" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#b9c3cf"/><stop offset="1" stop-color="#5d6875"/></linearGradient>
@@ -202,10 +203,10 @@ window.addEventListener("error", function (e) {
 <linearGradient id="ic-verde" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a6e07a"/><stop offset="1" stop-color="#3f8f32"/></linearGradient>
 <radialGradient id="ic-mar" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#bff0ff"/><stop offset=".55" stop-color="#3fa9e0"/><stop offset="1" stop-color="#1d5f9c"/></radialGradient>
 <linearGradient id="ic-crema" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e6cf9c"/></linearGradient>
-</defs><path d="M17 41 H31 L29 37 H19 Z" fill="url(#ic-madera)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 37 V33" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<circle cx="24" cy="20" r="14" fill="url(#ic-mar)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
-<g fill="url(#ic-verde)" stroke="#3a2414" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M15 13 C18 10 22 11 23 14 C24 17 20 18 19 21 C18 24 14 23 13 20 C12 17 13 15 15 13 Z"/><path d="M27 20 C30 18 34 19 35 22 C35.5 25 33 28 30 28.5 C27 29 25 26 26 23.5 Z"/><path d="M25 9.5 C27 8.5 30 9 31 11 C30 12.5 27.5 12.5 26 11.5 Z"/></g>
-<path d="M8.5 25 A16 16 0 0 0 39.5 25" fill="none" stroke="url(#ic-oro)" stroke-width="3"/><path d="M8.5 25 A16 16 0 0 0 39.5 25" fill="none" stroke="#3a2414" stroke-width="0.8"/>
+</defs><path d="M17 41 H31 L29 37 H19 Z" fill="url(#ic-madera)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/><path d="M24 37 V33" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<circle cx="24" cy="20" r="14" fill="url(#ic-mar)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+<g fill="url(#ic-verde)" stroke="#0b1120" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"><path d="M15 13 C18 10 22 11 23 14 C24 17 20 18 19 21 C18 24 14 23 13 20 C12 17 13 15 15 13 Z"/><path d="M27 20 C30 18 34 19 35 22 C35.5 25 33 28 30 28.5 C27 29 25 26 26 23.5 Z"/><path d="M25 9.5 C27 8.5 30 9 31 11 C30 12.5 27.5 12.5 26 11.5 Z"/></g>
+<path d="M8.5 25 A16 16 0 0 0 39.5 25" fill="none" stroke="url(#ic-oro)" stroke-width="3"/><path d="M8.5 25 A16 16 0 0 0 39.5 25" fill="none" stroke="#0b1120" stroke-width="0.8"/>
 <path d="M15 10 C17 8 20 7 22 7" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".8" fill="none"/></svg></span><span class="txt" data-t="b_mundo">ISLAS</span><span class="badge" id="badge-mundo"></span></button>
 </div>
 
@@ -250,7 +251,9 @@ window.addEventListener("error", function (e) {
 <script src="js/GLTFLoader.js"></script>
 <script src="js/SkeletonUtils.js"></script>
 <script src="js/datos.js"></script>
+<script src="js/glb-embebidos.js"></script>
 <script src="js/modelos.js"></script>
+<script src="js/noche.js"></script>
 <script src="js/firebase-app-compat.js"></script>
 <script src="js/firebase-auth-compat.js"></script>
 <script src="js/firebase-firestore-compat.js"></script>

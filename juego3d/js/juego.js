@@ -107,7 +107,8 @@
   // cielo: un domo con degradado (azul arriba, claro en el horizonte)
   (function cielo() {
     var g = new THREE.SphereGeometry(390, 24, 12);
-    var mt = new THREE.ShaderMaterial({
+    // cielo nocturno con luna, estrellas y vía láctea (js/noche.js); de día se ve el degradado de siempre
+    var mt = window.NOCHE ? NOCHE.materialCielo(0x6aa6d8, 0xf1e4c8) : new THREE.ShaderMaterial({
       side: THREE.BackSide, depthWrite: false, fog: false,
       uniforms: { arriba: { value: new THREE.Color(0x6aa6d8) }, horizonte: { value: new THREE.Color(0xf1e4c8) } },
       vertexShader: 'varying vec3 vP; void main(){ vP = (modelMatrix * vec4(position,1.0)).xyz; gl_Position = projectionMatrix * viewMatrix * vec4(vP,1.0); }',
@@ -190,7 +191,7 @@
   //  CICLO DE DÍA Y NOCHE (solo visual: no cambia nada del juego)
   // ------------------------------------------------------------------
   var DURACION_DIA = 480;          // segundos reales por día completo (8 min)
-  var horaForzada = null;           // para pruebas: window.__juego.hora(0.8)
+  var horaForzada = 0.82;           // tema oscuro: ciudad siempre de noche. window.__juego.hora(null) vuelve al ciclo día/noche
   function faseDia() { return horaForzada !== null ? horaForzada : ((performance.now() / 1000) / DURACION_DIA + 0.12) % 1; }
   function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
   // 0..0.62 día · 0.62..0.72 atardecer · 0.72..0.92 noche · 0.92..1 amanecer
@@ -211,6 +212,10 @@
     escena.add(l);
     return l;
   });
+  // dos luces más de noche: el patio del castillo y la torre del homenaje
+  [[0, 9, 0, 22], [-9, 3, -6, 12]].forEach(function (q) { var l = new THREE.PointLight(0xff9a3c, 0, q[3], 1.6); l.position.set(q[0], q[1], q[2]); escena.add(l); lucesNoche.push(l); });
+  var dirLuna = new V3();
+  var brumaCiudad = window.NOCHE ? NOCHE.bruma(escena, 170, 22, 0.8) : null;
   var cTmp = new THREE.Color();
   function mezcla(lista, k, d) { return cTmp.copy(lista[0]).lerp(lista[1], k).lerp(lista[2], d * (1 - k * 0.5)); }
   var nocheActual = 0;
@@ -222,11 +227,17 @@
     domo.horizonte.value.copy(mezcla(CIELO.horizonte, k, d));
     escena.fog.color.copy(domo.horizonte.value);
     escena.background.copy(domo.horizonte.value);
+    if (domo.noche) {
+      domo.noche.value = k; domo.tiempo.value = t;
+      // la luna siempre queda delante de la cámara, arriba en el cielo
+      camara.getWorldDirection(dirLuna); dirLuna.y = 0; dirLuna.normalize(); dirLuna.y = 0.32; domo.lunaDir.value.copy(dirLuna.normalize());
+    }
+    if (brumaCiudad) brumaCiudad.visible = k > 0.05;
     sol.color.copy(mezcla(CIELO.sol, k, d));
-    sol.intensity = 1.12 - k * 0.8 - d * 0.14;
+    sol.intensity = 1.12 - k * 0.6 - d * 0.14;
     hemi.color.copy(mezcla(CIELO.hemiCielo, k, d));
     hemi.groundColor.copy(mezcla(CIELO.hemiSuelo, k, d));
-    hemi.intensity = 0.56 - k * 0.18;
+    hemi.intensity = 0.56 - k * 0.04;
     M.matNube.color.copy(mezcla(CIELO.nube, k, d));
     escena.userData.estrellas.material.opacity = Math.max(0, k * 1.1 - 0.1);
     M.luzNoche(k, t);
@@ -1236,21 +1247,23 @@
     var cont = $('mundo-mapa');
     var r = new THREE.WebGLRenderer({ antialias: true });
     r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    r.setClearColor(0xbfd8e6);
+    r.setClearColor(0x070b16);
     r.domElement.id = 'mundo-3d';
     cont.appendChild(r.domElement);
     var e = new THREE.Scene();
-    e.fog = new THREE.Fog(0xbfd8e6, 60, 130);
+    // tema oscuro: noche con niebla azul que se come el horizonte
+    e.fog = new THREE.Fog(0x0a1222, 34, 96);
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
-    e.add(new THREE.HemisphereLight(0xfff6e6, 0x5a6a48, 0.62));
-    var sol = new THREE.DirectionalLight(0xfff1d6, 0.95); sol.position.set(-20, 30, -14); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0008; sol.shadow.normalBias = 0.02;
+    e.add(new THREE.HemisphereLight(0x8fa3d8, 0x111826, 0.78));
+    var sol = new THREE.DirectionalLight(0xc8d4ff, 0.82); sol.position.set(-20, 30, -14); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0008; sol.shadow.normalBias = 0.02;
     sol.shadow.camera.near = 1; sol.shadow.camera.far = 120; e.add(sol); e.add(sol.target);
     var cam = new THREE.PerspectiveCamera(38, 1, 0.5, 300);
     // ---- suelo continuo: los terrenos se mezclan suave, con textura de pasto, colinas y lagos hundidos ----
-    var COL_T = { llanura: new THREE.Color(0xa8c264), bosque: new THREE.Color(0x5a8638), colina: new THREE.Color(0xb3a066), montana: new THREE.Color(0x8f8a80), lago: new THREE.Color(0xc9b27a) };
+    // noche: pasto azulado, tierra fría y lagos profundos
+    var COL_T = { llanura: new THREE.Color(0x4a6a44), bosque: new THREE.Color(0x2a4a32), colina: new THREE.Color(0x5e5848), montana: new THREE.Color(0x3c4250), lago: new THREE.Color(0x4a5060) };
     var ALT_T = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: -0.3 };
     var lado = TAM_MUNDO * CELDA_M, seg = TAM_MUNDO * 4;
-    var SECO_M = new THREE.Color(0xc4c06a), HUMEDO_M = new THREE.Color(0x6a9a3e), TIERRA_M = new THREE.Color(0xa88a5c), ARENA_M = new THREE.Color(0xe6d29a), BAJO_M = new THREE.Color(0x8fdcd6), HONDO_M = new THREE.Color(0x1d5f9a);
+    var SECO_M = new THREE.Color(0x5e6a40), HUMEDO_M = new THREE.Color(0x2a4a30), TIERRA_M = new THREE.Color(0x54483a), ARENA_M = new THREE.Color(0x7a7460), BAJO_M = new THREE.Color(0x2a6a7e), HONDO_M = new THREE.Color(0x0b2444);
     function tipoEn(fx, fy) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fx))), cy = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fy))); return casillaMundo(cx, cy).tipo; }
     var gs = new THREE.PlaneGeometry(lado + 6, lado + 6, seg + 12, seg + 12); gs.rotateX(-Math.PI / 2);
     var ps = gs.attributes.position, cols = [], cc = new THREE.Color();
@@ -1278,7 +1291,7 @@
     gs.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); gs.computeVertexNormals();
     var texM = texturaPasto(true); texM.repeat.set(26, 26);
     var suelo = new THREE.Mesh(gs, new THREE.MeshLambertMaterial({ map: texM, vertexColors: true }));
-    suelo.material.color.setRGB(1.18, 1.12, 0.98); suelo.receiveShadow = true; e.add(suelo);
+    suelo.material.color.setRGB(0.62, 0.68, 0.84); suelo.receiveShadow = true; e.add(suelo);
     // agua de los lagos y cuadrícula muy suave (para saber dónde está cada casilla)
     var tmp = new THREE.Object3D(), col = new THREE.Color(), lagos = [], arboles = [], redondos = [], arbustos = [], flores = [], rocas = [], picos = [];
     var lineas = [];
@@ -1294,40 +1307,62 @@
     }
     for (var gl = 0; gl <= TAM_MUNDO; gl++) { var v0 = (gl - TAM_MUNDO / 2) * CELDA_M; lineas.push(v0, 0.06, -lado / 2, v0, 0.06, lado / 2, -lado / 2, 0.06, v0, lado / 2, 0.06, v0); }
     var gLin = new THREE.BufferGeometry(); gLin.setAttribute('position', new THREE.Float32BufferAttribute(lineas, 3));
-    e.add(new THREE.LineSegments(gLin, new THREE.LineBasicMaterial({ color: 0x2a3a1a, transparent: true, opacity: 0.13, depthWrite: false })));
-    function instancias(geo, color, lista, fn, varia) {
+    e.add(new THREE.LineSegments(gLin, new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.09, depthWrite: false })));
+    function instancias(geo, color, lista, fn, varia, colorVertices) {
       if (!lista.length) return;
-      var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff }), lista.length);
+      var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: !!colorVertices }), lista.length);
       lista.forEach(function (q, i) { tmp.rotation.set(0, 0, 0); fn(q); tmp.updateMatrix(); im.setMatrixAt(i, tmp.matrix); col.setHex(typeof color === 'function' ? color(q) : color); if (varia) col.offsetHSL((hashM(q[0], q[1]) - 0.5) * 0.04, 0, (hashM(q[1], q[0]) - 0.5) * varia); im.setColorAt(i, col); });
       im.castShadow = sombraInst; im.receiveShadow = true;
       e.add(im);
     }
     var sombraInst = true;
     // una sola capa de agua debajo de todo: los lagos (más hundidos) quedan con orillas curvas
-    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), materialAgua(0.6, 0x2f86c8));
+    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), materialAgua(0.6, 0x14365e));
     agua.rotation.x = -Math.PI / 2; agua.position.y = -0.11; e.add(agua);
     // pinos (dos conos), árboles redondos, arbustos, flores, rocas y montañas de varios picos con nieve
-    instancias(new THREE.ConeGeometry(0.36, 0.7, 7), 0x3a7a34, arboles, function (q) { tmp.position.set(q[0], 0.5 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
-    instancias(new THREE.ConeGeometry(0.28, 0.55, 7), 0x468a3a, arboles, function (q) { tmp.position.set(q[0], 0.84 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[1], q[0]) * 6, 0); }, 0.1);
-    instancias(new THREE.ConeGeometry(0.19, 0.42, 7), 0x52984a, arboles, function (q) { tmp.position.set(q[0], 1.12 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.1);
-    instancias(new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5), 0x6a4426, arboles.concat(redondos), function (q) { tmp.position.set(q[0], 0.14 * q[2], q[1]); tmp.scale.setScalar(q[2]); });
-    instancias(new THREE.IcosahedronGeometry(0.3, 0), 0x5a9a3c, redondos, function (q) { tmp.position.set(q[0], 0.48 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.9, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
-    instancias(new THREE.IcosahedronGeometry(0.16, 0), 0x6aa846, arbustos, function (q) { tmp.position.set(q[0], 0.08 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); }, 0.12);
-    var COLF = [0xf4efe2, 0xe8c85a, 0xe49aac, 0xb89ad8];
+    instancias(new THREE.ConeGeometry(0.36, 0.7, 7), 0x1e4a30, arboles, function (q) { tmp.position.set(q[0], 0.5 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.28, 0.55, 7), 0x245636, arboles, function (q) { tmp.position.set(q[0], 0.84 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[1], q[0]) * 6, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.19, 0.42, 7), 0x2c623e, arboles, function (q) { tmp.position.set(q[0], 1.12 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.1);
+    instancias(new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5), 0x3a2a1e, arboles.concat(redondos), function (q) { tmp.position.set(q[0], 0.14 * q[2], q[1]); tmp.scale.setScalar(q[2]); });
+    instancias(new THREE.IcosahedronGeometry(0.3, 0), 0x2a5a36, redondos, function (q) { tmp.position.set(q[0], 0.48 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.9, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
+    instancias(new THREE.IcosahedronGeometry(0.16, 0), 0x35663e, arbustos, function (q) { tmp.position.set(q[0], 0.08 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); }, 0.12);
+    var COLF = [0x8a90a8, 0x9a8a44, 0x8a5a6a, 0x6a5a92];
     sombraInst = false;
     instancias(new THREE.SphereGeometry(0.05, 5, 3), function (q) { return COLF[q[2]]; }, flores, function (q) { tmp.position.set(q[0], 0.05, q[1]); tmp.scale.setScalar(1); });
     sombraInst = true;
-    instancias(new THREE.DodecahedronGeometry(0.3, 0), 0x9a958a, rocas, function (q) { tmp.position.set(q[0], 0.12 + 0.1 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 5, 0); }, 0.1);
-    instancias(new THREE.ConeGeometry(0.75, 1.5, 7), 0x7f7a70, picos, function (q) { tmp.position.set(q[0], 0.7 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); }, 0.08);
-    instancias(new THREE.ConeGeometry(0.3, 0.42, 7), 0xf6f6f2, picos.filter(function (q) { return q[2] > 0.9; }), function (q) { tmp.position.set(q[0], (1.28) * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); });
+    instancias(new THREE.DodecahedronGeometry(0.3, 0), 0x5a5e6a, rocas, function (q) { tmp.position.set(q[0], 0.12 + 0.1 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 5, 0); }, 0.1);
+    if (window.NOCHE) {
+      // cordillera: picos quebrados de roca oscura con nieve que brilla con la luna (3 formas distintas)
+      [0, 1, 2].forEach(function (vr) {
+        instancias(NOCHE.geoPico(vr), 0xffffff, picos.filter(function (q, i) { return i % 3 === vr; }), function (q) { var s = q[2] * 1.18; tmp.position.set(q[0], 0.875 * s - 0.08, q[1]); tmp.scale.set(s * (1 + hashM(q[1], q[0]) * 0.25), s, s); tmp.rotation.set(0, hashM(q[0], q[1]) * 6.28, 0); }, 0.05, true);
+      });
+    } else {
+      instancias(new THREE.ConeGeometry(0.75, 1.5, 7), 0x7f7a70, picos, function (q) { tmp.position.set(q[0], 0.7 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); }, 0.08);
+      instancias(new THREE.ConeGeometry(0.3, 0.42, 7), 0xf6f6f2, picos.filter(function (q) { return q[2] > 0.9; }), function (q) { tmp.position.set(q[0], (1.28) * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); });
+    }
+    // luces de la noche: fogatas y casitas en las llanuras, luciérnagas en los bosques, bruma baja
+    var fogatas = [], luciernagas = [];
+    for (var ly = 0; ly < TAM_MUNDO; ly++) for (var lx = 0; lx < TAM_MUNDO; lx++) {
+      var lc = casillaMundo(lx, ly), lp = posCelda(lx, ly), lh = hashM(lx * 5.3 + 300, ly * 2.7 - 300);
+      if (lc.tipo === 'llanura' && lh < 0.07) { var nl = 2 + Math.floor(hashM(lx, ly + 9) * 3); for (var li = 0; li < nl; li++) fogatas.push([lp.x + (hashM(lx + li, ly) - 0.5) * 1.4, 0.22, lp.z + (hashM(lx, ly + li) - 0.5) * 1.4]); }
+      else if (lc.tipo === 'colina' && lh < 0.05) fogatas.push([lp.x, 0.45, lp.z]);
+      else if (lc.tipo === 'bosque' && lh < 0.18) luciernagas.push([lp.x + (hashM(lx + 3, ly) - 0.5) * 1.6, 0.35 + hashM(lx, ly + 3) * 0.6, lp.z + (hashM(lx, ly + 7) - 0.5) * 1.6]);
+    }
+    if (window.NOCHE) {
+      var ptF = NOCHE.puntosLuz(fogatas, 'fuego', 1.1, 0.95); e.add(ptF);
+      var ptL = NOCHE.puntosLuz(luciernagas, 0xd6ff8a, 0.32, 0.8); e.add(ptL);
+      var brumaM = NOCHE.bruma(e, lado, 70, 0.45);
+      var domoM = new THREE.Mesh(new THREE.SphereGeometry(250, 32, 16), NOCHE.materialCielo(0x040914, 0x15223e));
+      domoM.renderOrder = -10; domoM.frustumCulled = false; e.add(domoM);
+    }
     // marco de madera alrededor del mundo
-    var marco = new THREE.Mesh(new THREE.BoxGeometry(TAM_MUNDO * CELDA_M + 1.2, 0.5, TAM_MUNDO * CELDA_M + 1.2), new THREE.MeshLambertMaterial({ color: 0x5e3d24 }));
+    var marco = new THREE.Mesh(new THREE.BoxGeometry(TAM_MUNDO * CELDA_M + 1.2, 0.5, TAM_MUNDO * CELDA_M + 1.2), new THREE.MeshLambertMaterial({ color: 0x1e293b }));
     marco.position.y = -0.45; e.add(marco);
     // marcador de la casilla elegida
     var sel = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.98, 4), new THREE.MeshBasicMaterial({ color: 0xffe14a, transparent: true, opacity: 0.95, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.rotation.z = Math.PI / 4; sel.position.y = 0.05; sel.visible = false; sel.renderOrder = 5; e.add(sel);
     var cosas = new THREE.Group(); e.add(cosas);
-    M3 = { sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {} };
+    M3 = { sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {}, bruma: brumaM || null, domo: domoM || null, luces: ptF || null, tPrev: performance.now() };
     // mover con el dedo / ratón, acercar con rueda o pellizco, tocar para elegir
     var el = r.domElement, dedos = {}, inicio = null, pell = null;
     el.style.touchAction = 'none';
@@ -1385,6 +1420,10 @@
     M3.cam.position.set(M3.obj.x, d * 0.85, M3.obj.z + d * 0.62); M3.cam.lookAt(M3.obj);
     if (M3.sol) { var so = M3.sol, tam = Math.max(22, d * 1.25); so.position.set(M3.obj.x - 20, 30, M3.obj.z - 14); so.target.position.copy(M3.obj); if (so.userData.tam !== tam) { so.userData.tam = tam; var sc = so.shadow.camera; sc.left = -tam; sc.right = tam; sc.top = tam; sc.bottom = -tam; sc.updateProjectionMatrix(); } }
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
+    var ahoraM = performance.now(), dtM = Math.min(0.05, (ahoraM - M3.tPrev) / 1000); M3.tPrev = ahoraM;
+    if (window.NOCHE) NOCHE.moverBruma(M3.bruma, dtM);
+    if (M3.domo) { M3.domo.position.copy(M3.cam.position); var uD = M3.domo.material.uniforms; uD.tiempo.value = ahoraM / 1000; M3.cam.getWorldDirection(uD.lunaDir.value); uD.lunaDir.value.y = 0; uD.lunaDir.value.normalize(); uD.lunaDir.value.y = 0.3; uD.lunaDir.value.normalize(); }
+    if (M3.luces) M3.luces.material.opacity = 0.85 + Math.sin(ahoraM / 130) * 0.06 + Math.sin(ahoraM / 57) * 0.04;
     actualizarEfectosPortal();
     actualizarCarretasMundo();
     actualizarMarchasMundo();
@@ -2380,29 +2419,72 @@
     var tipoAl = ['aldeano', 'aldeana', 'nino', 'anciano'][al % 4], ma = M.unidad(tipoAl), pa = ESQUINAS.length ? ESQUINAS[Math.floor(Math.random() * ESQUINAS.length)].clone() : puntoPueblo();
     ma.grupo.position.copy(pa);
     escena.add(ma.grupo);
-    aldeanos.push({ tipo: tipoAl, m: ma, ruta: ESQUINAS.length ? rutaAldeano(pa) : [], meta: pa.clone(), espera: Math.random() * 3, vel: tipoAl === 'anciano' ? 0.75 + Math.random() * 0.2 : tipoAl === 'nino' ? 1.5 + Math.random() * 0.5 : 1.2 + Math.random() * 0.6 });
+    aldeanos.push(nuevoCaminante(tipoAl, ma, pa, tipoAl === 'anciano' ? 0.75 + Math.random() * 0.2 : tipoAl === 'nino' ? 1.5 + Math.random() * 0.5 : 1.15 + Math.random() * 0.45));
   }
+  // night watch: guards with torches walking the stone streets
+  for (var gu = 0; gu < 4 && ESQUINAS.length; gu++) {
+    var mg = M.unidad('guardian'), pg = ESQUINAS[Math.floor(Math.random() * ESQUINAS.length)].clone();
+    M.antorcha(mg.grupo, 0.42, 1.15, 0.12);
+    mg.grupo.position.copy(pg); escena.add(mg.grupo);
+    var cg = nuevoCaminante('guardia', mg, pg, 0.85 + Math.random() * 0.15); cg.esGuardia = true;
+    aldeanos.push(cg);
+  }
+  function nuevoCaminante(tipo, m, p, vel) {
+    m.grupo.rotation.y = Math.random() * Math.PI * 2;
+    return { tipo: tipo, m: m, ruta: ESQUINAS.length ? rutaAldeano(p) : [], meta: p.clone(), espera: Math.random() * 3, vel: vel, v: 0, fase: Math.random() * 10, mejorD: 1e9, atasco: 0, mirar: null };
+  }
+  function difAngulo(a, b) { return ((b - a) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI; }
+  function siguienteMeta(a, g) {
+    if (a.ruta && a.ruta.length) { a.meta = a.ruta.shift(); if (!a.ruta.length) { a.espera = (a.esGuardia ? 2.5 : 1) + Math.random() * 4; a.mirar = g.rotation.y + (Math.random() - 0.5) * 2.4; } }
+    else if (ESQUINAS.length) { a.ruta = rutaAldeano(g.position); a.meta = a.ruta.shift(); }
+    else { a.meta = puntoPueblo(); a.espera = 1 + Math.random() * 4; }
+    a.mejorD = 1e9; a.atasco = 0;
+  }
+  var R_CASTILLO = 6.2;
   function moverAldeanos(dt, t) {
+    dt = Math.min(dt, 0.1);
     aldeanos.forEach(function (a, i) {
-      var g = a.m.grupo, camina = false;
-      if (a.espera > 0) a.espera -= dt;
-      else {
+      var g = a.m.grupo, objetivoV = 0;
+      if (a.espera > 0) {
+        a.espera -= dt;
+        // idle: turn slowly to glance around
+        if (a.mirar !== null) g.rotation.y += difAngulo(g.rotation.y, a.mirar) * Math.min(1, dt * 2);
+      } else {
         var dx = a.meta.x - g.position.x, dz = a.meta.z - g.position.z, d = Math.hypot(dx, dz);
-        if (d < 0.2) {
-          if (a.ruta && a.ruta.length) { a.meta = a.ruta.shift(); if (!a.ruta.length) a.espera = 1 + Math.random() * 4; }
-          else if (ESQUINAS.length) { a.ruta = rutaAldeano(g.position); a.meta = a.ruta.shift(); }
-          else { a.meta = puntoPueblo(); a.espera = 1 + Math.random() * 4; }
-        }
+        if (d < 0.45) siguienteMeta(a, g);
         else {
-          var paso = Math.min(d, a.vel * dt);
-          g.position.x += dx / d * paso; g.position.z += dz / d * paso;
-          g.rotation.y = Math.atan2(dx, dz);
-          camina = true;
+          // steering: goal + keep distance from others + flow around the castle
+          var sx = dx / d, sz = dz / d;
+          for (var j = 0; j < aldeanos.length; j++) {
+            if (j === i) continue;
+            var o = aldeanos[j].m.grupo.position, ox = g.position.x - o.x, oz = g.position.z - o.z, od = Math.hypot(ox, oz);
+            if (od > 0.001 && od < 1.1) { var f = (1.1 - od) / 1.1 * 1.6; sx += ox / od * f; sz += oz / od * f; }
+          }
           var rc = Math.hypot(g.position.x, g.position.z);
-          if (rc < 5.2) { g.position.x *= 5.2 / rc; g.position.z *= 5.2 / rc; }
+          if (rc < R_CASTILLO + 1.5 && rc > 0.001) {
+            var nx = g.position.x / rc, nz = g.position.z / rc, k = (R_CASTILLO + 1.5 - rc) / 1.5;
+            var lado = (nx * dz - nz * dx) > 0 ? 1 : -1;
+            sx += nx * k * 1.2 + -nz * lado * k; sz += nz * k * 1.2 + nx * lado * k;
+          }
+          var rumbo = Math.atan2(sx, sz), giro = difAngulo(g.rotation.y, rumbo);
+          g.rotation.y += Math.max(-dt * 5, Math.min(dt * 5, giro * Math.min(1, dt * 8)));
+          // slow for sharp turns and on arrival, so they ease in instead of sliding
+          objetivoV = a.vel * Math.min(1, d / 1.2 + 0.35) * (Math.abs(giro) > 1.2 ? 0.35 : 1);
+          // stuck detection: if no real progress for a while, skip to a new route
+          if (d < a.mejorD - 0.25) { a.mejorD = d; a.atasco = 0; } else a.atasco += dt;
+          if (a.atasco > 3) { a.ruta = []; siguienteMeta(a, g); }
         }
       }
-      M.animarUnidad(a.m, t + i * 3, camina, 0);
+      a.v += (objetivoV - a.v) * Math.min(1, dt * 4);
+      if (a.v > 0.02) {
+        g.position.x += Math.sin(g.rotation.y) * a.v * dt; g.position.z += Math.cos(g.rotation.y) * a.v * dt;
+        var r2 = Math.hypot(g.position.x, g.position.z);
+        if (r2 < R_CASTILLO - 0.6 && r2 > 0.001) { g.position.x *= (R_CASTILLO - 0.6) / r2; g.position.z *= (R_CASTILLO - 0.6) / r2; }
+      }
+      var camina = a.v > 0.15;
+      // stride follows actual speed so feet don't slide
+      a.fase += dt * (camina ? Math.max(0.5, a.v / 1.2) : 1);
+      M.animarUnidad(a.m, a.fase, camina, 0);
     });
     moverAnimales(dt, t);
   }
@@ -7268,6 +7350,7 @@
     if (!enMenu) cam.az += (AZ_CAM - cam.az) * Math.min(1, dtReal * 3);
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
+    if (window.NOCHE) NOCHE.moverBruma(brumaCiudad, dtReal);
     // nubes
     nubes.forEach(function (n) { n.position.x += n.userData.v * dtReal; if (n.position.x > 120) n.position.x = -120; });
     // brillo de terrenos libres
