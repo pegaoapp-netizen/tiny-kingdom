@@ -1576,3 +1576,11 @@ body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barr
 #mundo-info .carta .stats span { color: #3a2414 !important; }
 #panel { z-index: 42 !important; }
 .cq-flecha { top: 8px !important; bottom: auto !important; }
+/* ===== v6.19: solo con internet ===== */
+#sin-red { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 16px; background: rgba(5,10,26,.88); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+#sin-red.oculto { display: none; }
+#sin-red .sr-caja { width: min(360px, 100%); text-align: center; padding: 22px 18px; border-radius: 20px; background: linear-gradient(#1e293b, #0f172a); border: 2px solid #c98a1a; color: #e2e8f0; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+#sin-red .sr-ico { font-size: 54px; } #sin-red h2 { margin: 6px 0; color: #ffe9a0; } #sin-red p { margin: 0 0 14px; color: #cbd5e1; line-height: 1.4; }
+#sr-reintentar { font: inherit; font-weight: 900; font-size: 16px; padding: 10px 26px; border-radius: 14px; border: 1px solid rgba(253,230,138,.4); background: linear-gradient(90deg, #fbbf24, #f97316); color: #0f172a; cursor: pointer; }
+#sin-red .temblor { animation: srTiembla .4s; }
+@keyframes srTiembla { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }

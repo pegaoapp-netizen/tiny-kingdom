@@ -1,33 +1,17 @@
-// Guarda los archivos del juego en el teléfono para que funcione sin internet.
+// Tiny Kingdom se juega solo con internet: no se guarda nada para jugar sin conexión.
 // Cambia VERSION cada vez que publiques una versión nueva del juego.
-var VERSION = 'tinykingdom-v6.18';
-var ARCHIVOS = [
-  './', 'index.html', 'manifest.webmanifest', 'css/estilo.css', 'css/oscuro.css', 'iconos/fondo-noche.png',
-  'js/three.min.js', 'js/GLTFLoader.js', 'js/SkeletonUtils.js', 'js/datos.js', 'js/cuentas.js',
-  'js/firebase-app-compat.js', 'js/firebase-auth-compat.js', 'js/firebase-firestore-compat.js', 'js/modelos.js', 'js/juego.js',
-  'iconos/icono-192.png', 'iconos/icono-512.png', 'iconos/apple-touch-icon.png', 'privacidad.html'
-];
+var VERSION = 'tinykingdom-v6.19';
 
-self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(ARCHIVOS); }));
-  self.skipWaiting();
-});
+self.addEventListener('install', function () { self.skipWaiting(); });
 
+// borra lo que versiones viejas guardaron en el teléfono para jugar sin internet
 self.addEventListener('activate', function (e) {
-  e.waitUntil(caches.keys().then(function (claves) {
-    return Promise.all(claves.filter(function (k) { return k !== VERSION; }).map(function (k) { return caches.delete(k); }));
-  }));
+  e.waitUntil(caches.keys().then(function (claves) { return Promise.all(claves.map(function (k) { return caches.delete(k); })); }));
   self.clients.claim();
 });
 
-// Primero intenta internet (para recibir cambios); si no hay, usa lo guardado.
+// todo se pide a internet; si no hay conexión, el juego muestra el aviso de Sin conexión
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    fetch(e.request, new URL(e.request.url).origin === location.origin ? { cache: 'no-cache' } : undefined).then(function (r) {
-      var copia = r.clone();
-      caches.open(VERSION).then(function (c) { c.put(e.request, copia); });
-      return r;
-    }).catch(function () { return caches.match(e.request); })
-  );
+  e.respondWith(fetch(e.request, new URL(e.request.url).origin === location.origin ? { cache: 'no-cache' } : undefined));
 });

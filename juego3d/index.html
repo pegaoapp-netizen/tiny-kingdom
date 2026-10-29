@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<script>/* Tiny Kingdom se juega solo con internet: si se abre desde el disco, va a la página del juego */ if (location.protocol === "file:") location.replace("https://tinykingdom-pegao.web.app/");</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -256,7 +257,6 @@ window.addEventListener("error", function (e) {
 <script src="js/GLTFLoader.js"></script>
 <script src="js/SkeletonUtils.js"></script>
 <script src="js/datos.js"></script>
-<script src="js/glb-embebidos.js"></script>
 <script src="js/modelos.js"></script>
 <script src="js/noche.js"></script>
 <script src="js/firebase-app-compat.js"></script>
@@ -264,5 +264,21 @@ window.addEventListener("error", function (e) {
 <script src="js/firebase-firestore-compat.js"></script>
 <script src="js/cuentas.js"></script>
 <script src="js/juego.js"></script>
+<div id="sin-red" class="oculto" role="alertdialog" aria-live="assertive"><div class="sr-caja"><div class="sr-ico">📡</div><h2 id="sr-tit">Sin conexión</h2><p id="sr-txt">Tiny Kingdom se juega con internet. Revisa tu wifi o tus datos y vuelve a intentarlo.</p><button id="sr-reintentar">Reintentar</button></div></div>
+<script>
+// Sin internet no se puede jugar: el aviso tapa el juego hasta que vuelva la conexión
+(function () {
+  var d = document.getElementById("sin-red"), b = document.getElementById("sr-reintentar");
+  function en() { try { return (JSON.parse(localStorage.getItem("tinykingdom_pref") || "{}").idioma || "es") === "en"; } catch (e) { return false; } }
+  function revisar() {
+    var sin = navigator.onLine === false;
+    if (sin && en()) { document.getElementById("sr-tit").textContent = "No connection"; document.getElementById("sr-txt").textContent = "Tiny Kingdom needs the internet. Check your wifi or data and try again."; b.textContent = "Try again"; }
+    d.classList.toggle("oculto", !sin);
+  }
+  window.addEventListener("offline", revisar); window.addEventListener("online", revisar);
+  b.addEventListener("click", function () { if (navigator.onLine === false) { d.querySelector(".sr-caja").classList.remove("temblor"); void d.offsetWidth; d.querySelector(".sr-caja").classList.add("temblor"); } else revisar(); });
+  revisar();
+})();
+</script>
 </body>
 </html>
