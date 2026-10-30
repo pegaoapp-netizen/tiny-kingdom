@@ -15,12 +15,14 @@ var Cuentas = (function () {
     firebase.initializeApp(FIREBASE_CONFIG);
     auth = firebase.auth();
     db = firebase.firestore();
+    // algunas redes y el navegador de WhatsApp cortan la conexión normal: se detecta y se usa otra que sí pasa
+    try { db.settings({ experimentalAutoDetectLongPolling: true, merge: true }); } catch (e) {}
     // Solo para pruebas en la computadora: usa el emulador local de Firebase
     if (/^(localhost|127.0.0.1)$/.test(location.hostname) && /emulador/.test(location.search)) {
       auth.useEmulator('http://127.0.0.1:9099');
       db.useEmulator('127.0.0.1', 8080);
     }
-    db.enablePersistence({ synchronizeTabs: true }).catch(function () {});
+    // el juego es solo con internet: no se guarda copia de la base de datos en el teléfono
     disponible = true;
   } catch (e) { disponible = false; }
 
@@ -57,6 +59,8 @@ var Cuentas = (function () {
       listo = true;
       avisar(u);
     });
+    // si la cuenta no contesta en 9 segundos, se sigue igual (sale la pantalla de entrar); si contesta después, entra sola
+    setTimeout(function () { if (!listo) { listo = true; avisar(null); } }, 9000);
   } else listo = true;
 
   return {

@@ -1625,3 +1625,4 @@ body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barr
 #mundo .pergamino .casilla-tabla span { color: #7a5a30 !important; } #mundo .pergamino .casilla-tabla b { color: #3a2414 !important; }
 #mundo .pergamino .stats span { background: rgba(255,250,235,.7) !important; }
 #consejo { z-index: 48 !important; }
+#error-cuenta:empty { display: none !important; }

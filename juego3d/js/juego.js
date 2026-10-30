@@ -7235,6 +7235,15 @@
     if (enMenu) pantallaInicio();
     var invitado = null;
     try { invitado = JSON.parse(localStorage.getItem(CLAVE_GUARDADO)); } catch (e) {}
+    var nubeHecha = false;
+    // si tu reino tarda mucho en llegar de la nube, se avisa con botones en vez de quedarse en Cargando
+    var relojNube = setTimeout(function () {
+      if (nubeHecha || !enMenu) return;
+      mostrarPantalla('⏳', NOMBRE_JUEGO, L('Tu reino está tardando en llegar desde la nube. Revisa tu internet y vuelve a intentarlo.', 'Your kingdom is taking a while to arrive from the cloud. Check your internet and try again.'), [
+        { texto: L('Reintentar', 'Try again'), accion: function () { alCambiarCuenta(Cuentas.usuario()); } },
+        { texto: L('Cerrar sesión', 'Sign out'), clase: 'morado', accion: function () { Cuentas.salir(); } }
+      ]);
+    }, 12000);
     Cuentas.cargarPartida().then(function (p) {
       partidaNube = p ? p.estado : null;
       if (partidaNube) partidaNube.actualizado = p.actualizado;
@@ -7244,6 +7253,7 @@
         Cuentas.guardarPartida(invitado, true);
       }
     }).catch(function () { /* sin internet: se usa la copia local */ }).then(function () {
+      nubeHecha = true; clearTimeout(relojNube);
       cargandoNube = false;
       if (enMenu) pantallaInicio();
     });
