@@ -6723,6 +6723,12 @@
     if (!callado) { chispas(new V3(0, 6, 0), 0xff4a1a, 30, 5); sonar('victoria'); }
     consejoTemporal(T('todo_max_ok', { n: formatoNumero(total) }));
   }
+  // la cuenta del dueño se revisa sola: si le falta algo (por ejemplo entró con una versión vieja), se sube al máximo una vez por sesión
+  var maxHechoSesion = false;
+  setInterval(function () {
+    if (maxHechoSesion || enMenu || oleadaActiva || !estado.dueno || !esCuentaDueno()) return;
+    maxHechoSesion = true; todoAlMaximo(true);
+  }, 4000);
   function salirModoDueno() {
     estado.dueno = false; estado.oroInfinito = false; estado.gemasInfinitas = false; estado.correo = '';
     cambiarVelocidad(1);
@@ -7573,7 +7579,6 @@
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
     setTimeout(function () { if (!enMenu) publicarAldea(true); }, 800);
     setTimeout(function () { revisarAtaques(true); }, 2500);
-    if (duenoPorCuenta && estado.dueno) setTimeout(function () { if (!enMenu) todoAlMaximo(true); }, 1500);
   }
 
   // ------------------------------------------------------------------
