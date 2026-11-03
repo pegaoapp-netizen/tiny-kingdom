@@ -364,7 +364,27 @@ var M = (function () {
     }
     return g;
   }
+  // el castillo tiene su propia paleta: piedra cálida y techos de teja que combinan con la ciudad, más noble en cada tramo
+  var PALETA_CASTILLO = {
+    1: { piedra: 0xb39a74, osc: 0x8a7556, techo: 0xb5523b, teja: 0x7a3420 },
+    2: { piedra: 0xc2a982, osc: 0x957f5e, techo: 0xa8432f, teja: 0x7a3420 },
+    3: { piedra: 0xd0b98f, osc: 0xa08a66, techo: 0x8e2f2a, teja: 0xc9952e },
+    4: { piedra: 0xe2d2ae, osc: 0xb49e78, techo: 0x7a1f2a, teja: 0xe0b040 }
+  };
+  function pintarCastillo(g, tramo) {
+    var k = PALETA_CASTILLO[Math.min(4, Math.max(1, tramo))], mapa = {};
+    [C.piedra, P.gris, P.claro, 0x8b8e98].forEach(function (c) { mapa[c] = k.piedra; });
+    [C.piedraOsc, P.osc, 0x3e3e44].forEach(function (c) { mapa[c] = k.osc; });
+    ROJOS.concat([C.techoAzul, C.techoRojo, C.techoNoble]).forEach(function (c) { mapa[c] = k.techo; });
+    TEJAS.forEach(function (c) { mapa[c] = k.teja; });
+    g.traverse(function (o) {
+      if (!o.isMesh || !o.material || !o.material.color || o.material.transparent || o.material.isMeshBasicMaterial) return;
+      var nuevo = mapa[o.material.color.getHex()];
+      if (nuevo !== undefined) o.material = mat(nuevo, o.material.side === THREE.DoubleSide ? { side: THREE.DoubleSide } : undefined);
+    });
+  }
   function recolorearTramo(g, tramo, tipo) {
+    if (tipo === 'castillo') { pintarCastillo(g, tramo); return; }
     if (tipo && recolorearTipo(g, tramo, tipo)) return;
     var k = COLORES_TRAMO[tramo];
     if (!k) return;
@@ -686,8 +706,16 @@ var M = (function () {
       var cY = alto + 1.1, corona = new THREE.Group();
       corona.add(cil(0.5, 0.42, 0.28, 12, C.oro, 0, 0, 0));
       for (var p = 0; p < 5; p++) { var a = p / 5 * Math.PI * 2; corona.add(cono(0.11, 0.34, 4, C.oro, Math.cos(a) * 0.44, 0.28, Math.sin(a) * 0.44)); corona.add(esfera(0.07, 0xc0303a, Math.cos(a) * 0.44, 0.48, Math.sin(a) * 0.44, 6, 4)); }
-      corona.position.y = cY; g.add(corona);
+      corona.position.y = cY; if (nivel >= 17) corona.scale.setScalar(1.5); g.add(corona);
     }
+    // niveles 13 a 17: cada uno suma algo que se ve desde lejos
+    if (nivel >= 13) {
+      var aro2 = new THREE.Mesh(new THREE.RingGeometry(Math.max(hx, hz) + 0.85, Math.max(hx, hz) + 1.1, 44), new THREE.MeshBasicMaterial({ color: 0xfff1b0, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
+      aro2.rotation.x = -Math.PI / 2; aro2.position.y = 0.22; g.add(aro2);
+    }
+    if (nivel >= 14) { [[0, hz + 0.35], [0, -hz - 0.35], [hx + 0.35, 0], [-hx - 0.35, 0]].forEach(function (p) { var bb = bandera(0x6a3fa0, 2.6); bb.position.set(p[0], 0.16, p[1]); g.add(bb); }); }
+    if (nivel >= 15) { esq.forEach(function (p) { var ox = p[0] * 1.18, oz = p[1] * 1.18; g.add(cil(0.16, 0.26, 2.6, 6, 0xf2ece0, ox, 1.3, oz)); g.add(cono(0.2, 0.5, 6, C.oro, ox, 2.85, oz)); }); }
+    if (nivel >= 16) { esq.forEach(function (p) { g.add(esfera(0.24, 0x9fe6ff, p[0] * 0.9, alto * 0.75 + 0.6, p[1] * 0.9, 10, 8)); }); }
     return g;
   }
   function bandera(color, alto) {

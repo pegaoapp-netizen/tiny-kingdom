@@ -675,14 +675,20 @@
   castillo.scale.setScalar(0.8);
   escena.add(castillo);
   var insigniaCastillo = null, andamiosCastillo = [], barraCastillo = null;
+  var adornosCastillo = null;
   function ponerCastillo() {
     escena.remove(castillo);
     var trc = tramoNivel(estado.castillo || 1);
     castillo = M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[trc]), trc, 'castillo');
     castillo.userData.castillo = true;
-    castillo.scale.setScalar(0.8);
+    // el castillo crece en cada nivel: del 1 al 17 se hace más grande y más alto, y se adorna
+    var nvC = estado.castillo || 1;
+    castillo.scale.setScalar(0.74 + 0.028 * (nvC - 1));
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
+    if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
+    if (nvC >= 3) { adornosCastillo = M.adornosNivel(nvC, new THREE.Box3().setFromObject(castillo)); escena.add(adornosCastillo); }
+    if (nvC >= 12) altoC += 2;
     if (insigniaCastillo) escena.remove(insigniaCastillo);
     insigniaCastillo = M.insigniaNivel(estado.castillo || 1);
     insigniaCastillo.position.set(0, altoC + 1.4, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
@@ -2415,7 +2421,7 @@
   function requisitosObra(que, L2) {
     var l = [];
     if (que === 'castillo') { if (L2 >= 2) l.push(filaReq('jugador', L2)); if (L2 >= 3) l.push(filaReq('muralla', L2 - 2)); return l; }
-    if (que === 'muralla') { l.push(filaReq('castillo', L2)); l.push(filaReq('cantera', L2 + 1)); l.push(filaReq('jugador', L2 + 2)); return l; }
+    if (que === 'muralla') { l.push(filaReq('castillo', L2)); l.push(filaReq('cantera', Math.min(NIVEL_MAX, L2 + 1))); l.push(filaReq('jugador', L2 + 2)); return l; }
     if (L2 >= 2) l.push(filaReq('castillo', L2));
     if (que === 'cuartel' && L2 >= 2) l.push(filaReq('jugador', L2));
     if (que === 'academia' && L2 >= 2) l.push(filaReq('jugador', L2 + 1));
@@ -3181,7 +3187,7 @@
     var tr = tramoNivel(nivel);
     s.modelo = crearModelo(tipo, tr);
     // dentro de cada tramo el edificio también crece un poco por nivel: cada mejora se nota
-    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (1 + 0.05 * ((nivel - 1) % 3)));
+    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (nivel > 12 ? 1.1 + 0.04 * (nivel - 12) : 1 + 0.05 * ((nivel - 1) % 3)));
     encajarEnParcela(s.modelo, tr);
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     if (tipo !== 'torre') { s.adornos = M.adornosNivel(nivel, new THREE.Box3().setFromObject(s.modelo)); s.grupo.add(s.adornos); }
@@ -4586,24 +4592,32 @@
     var nombre = s ? N(tipo) : T('castillo');
     var pr = progresoMenu(), acel = totalAceleradores();
     var rec = s && s.edificio && esCampo(s.edificio.tipo) ? Math.floor(s.guardado || 0) : -1;
-    var h = '<div class="me-titulo"><span class="me-nivel">' + nivel + '</span>' + nombre + '</div><div class="me-botones">' +
+    var enObra = s ? !!s.obra : !!estado.obraCastillo, alMax = nivel >= NIVEL_MAX;
+    var bMej = alMax ? botonMenu2('mejorar', '⭐', L('Nivel máximo', 'Max level'), true) : botonMenu2('mejorar', '⬆️', L('Mejorar', 'Upgrade'), enObra, '<span class="mb-gema mb-niv">' + nivel + '→' + (nivel + 1) + '</span>');
+    var h = '<div class="me-titulo"><span class="me-nivel">' + nivel + '</span>' + nombre + '</div><div class="me-botones">' + bMej +
       (rec >= 0 ? botonMenu2('recolectar', ICONO_RECURSO[EDIFICIOS[s.edificio.tipo].recurso], T('mb_recolectar'), rec < 1, '<span class="mb-gema">+' + corto(rec) + '</span>') : '') +
       botonMenu2('detalles', '📜', T('mb_detalles')) +
-      botonMenu2('terminar', '⚡', T('mb_terminar'), !pr || pr.sinGemas, pr && !pr.sinGemas ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '') +
-      botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>');
+      botonMenu2('acelerar', '⏩', T('mb_acelerar'), !pr, '<span class="mb-gema">×' + acel + '</span>') +
+      botonMenu2('terminar', '⚡', T('mb_terminar'), !pr || pr.sinGemas, pr && !pr.sinGemas ? '<span class="mb-gema"><span class="ico gema"></span>' + pr.gemas + '</span>' : '');
     if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') h += botonMenu2('entrenar', '⚔️', T('entrenar'));
     if (tipo === 'mercado') h += botonMenu2('comerciar', '⚖️', T('mb_comerciar'));
     if (tipo === 'vigia') h += botonMenu2('vigilar', '👁️', T('mb_vigilar'));
     if (tipo === 'herreria') h += botonMenu2('forjar', '⚒️', T('mb_forjar'));
     if (tipo === 'academia') h += botonMenu2('investigar', '📚', T('mb_investigar'));
     if (s && s.obra) h += botonMenu2('cancelar', '✖', L('Cancelar', 'Cancel'));
-    if (s) h += botonMenu2('demoler', '🧨', T('mb_demoler'), oleadaActiva);
+    if (s) h += '<span class="mb-sep"></span>' + botonMenu2('demoler', '🧨', T('mb_demoler'), oleadaActiva);
     h += '</div>';
     if (menuEdif.html !== h) { menuEdif.el.innerHTML = h; menuEdif.html = h; }
   }
   function accionMenuEdif(a) {
     var i = menuEdif.slot, esCastillo = menuEdif.castillo;
     sonar('click');
+    if (a === 'mejorar') {
+      cerrarMenuEdif();
+      if (esCastillo) abrirPanelCastillo(); else { pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(i); }
+      setTimeout(function () { var sn = document.querySelector('#panel .sig-nivel'); if (sn) sn.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 90);
+      return;
+    }
     if (a === 'detalles') { pestCuartel = 'detalles'; tropaDetalle = null; cerrarMenuEdif(); if (esCastillo) abrirPanelCastillo(); else abrirPanelEdificio(i); return; }
     if (a === 'recolectar') { recolectarCampo(slots[i]); pintarMenuEdif(); return; }
     if (a === 'demoler') {
@@ -5294,7 +5308,7 @@
       if (nivel < NIVEL_MAX) {
         var pendP = trabajosPendientes('edificio', nivel + 1);
         var segE = EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'));
-        html += '<div class="sig-nivel"><b>' + L('Siguiente nivel ', 'Next level ') + (nivel + 1) + '</b><div class="stats">' + statsEdificio(tipo, nivel + 1) + '</div></div>' +
+        html += '<div class="sig-nivel"><b>⬆️ ' + L('Mejorar: nivel ', 'Upgrade: level ') + nivel + ' → ' + (nivel + 1) + '</b><div class="stats">' + statsEdificio(tipo, nivel + 1) + '</div></div>' +
           tablaRequisitos(costoEdif(tipo, nivel), requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)), segE) +
           botonesObra(costoEdif(tipo, nivel), segE, 'mejorar', 'mejorar-ya', 'data-slot="' + i + '"', '⬆️ ' + T('mejorar'), faltaObra(tipo, nivel + 1) ? botonFalta(faltaObra(tipo, nivel + 1)) : pendP.length ? botonBloqueadoTrabajos(pendP) : '', 'mejorar:' + i);
       } else html += '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
@@ -6633,7 +6647,7 @@
   function abrirPanelCastillo() {
     var nc = estado.castillo || 1, oc = estado.obraCastillo, mej = '';
     if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velObras()) + '</p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="castillo">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((oc.total - oc.t) / velObras()), 'terminar-gemas', 'data-que="castillo"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '</div>';
-    else if (nc < NIVEL_MAX) mej = '<div class="sig-nivel"><b>' + L('Siguiente nivel ', 'Next level ') + (nc + 1) + '</b><p class="nota">' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + ' · ' + L('abre ' + PARCELAS_POR_NIVEL + ' parcelas más', 'opens ' + PARCELAS_POR_NIVEL + ' more plots') + '</p></div>' +
+    else if (nc < NIVEL_MAX) mej = '<div class="sig-nivel"><b>⬆️ ' + L('Mejorar: nivel ', 'Upgrade: level ') + nc + ' → ' + (nc + 1) + '</b><p class="nota">' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + ' · ' + L('abre ' + PARCELAS_POR_NIVEL + ' parcelas más', 'opens ' + PARCELAS_POR_NIVEL + ' more plots') + '</p></div>' +
       tablaRequisitos(costoCastillo(nc + 1), requisitosObra('castillo', nc + 1).concat(filasTrabajos('castillo', nc + 1)), tiempoCastillo(nc + 1)) +
       botonesObra(costoCastillo(nc + 1), tiempoCastillo(nc + 1), 'mejorar-castillo', 'castillo-ya', '', '⬆️ ' + T('mejorar'), faltaObra('castillo', nc + 1) ? botonFalta(faltaObra('castillo', nc + 1)) : trabajosPendientes('castillo', nc + 1).length ? botonBloqueadoTrabajos(trabajosPendientes('castillo', nc + 1)) : '', 'castillo');
     else mej = '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';

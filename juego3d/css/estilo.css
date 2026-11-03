@@ -1626,3 +1626,20 @@ body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barr
 #mundo .pergamino .stats span { background: rgba(255,250,235,.7) !important; }
 #consejo { z-index: 48 !important; }
 #error-cuenta:empty { display: none !important; }
+
+/* ===== v6.25: menú del edificio con Mejorar primero, botones grandes y Demoler aparte ===== */
+#menu-edif .me-botones { flex-wrap: wrap; justify-content: center; max-width: min(94vw, 600px); row-gap: 8px; }
+#menu-edif .mb { width: 72px; }
+#menu-edif .mb-ico { width: 58px !important; height: 58px !important; font-size: 27px !important; }
+#menu-edif .mb-txt { font-size: 13px !important; }
+#menu-edif .mb[data-mb="mejorar"] .mb-ico { background: radial-gradient(circle at 50% 35%, #b8f08a, #3f9a2a 75%) !important; border-color: #f2c45a !important; box-shadow: 0 0 0 3px rgba(242,196,90,.55), 0 4px 0 #1f5a14 !important; }
+#menu-edif .mb[data-mb="mejorar"][disabled] .mb-ico { background: radial-gradient(circle at 50% 35%, #ffe9a0, #c98a1a 75%) !important; filter: none; opacity: 1; }
+#menu-edif .mb-niv { font-size: 11px; }
+#menu-edif .mb-sep { width: 2px; align-self: stretch; margin: 6px 6px 22px; border-radius: 2px; background: rgba(255,255,255,.4); }
+#menu-edif .mb[data-mb="demoler"] .mb-ico { background: radial-gradient(circle at 50% 35%, #ff9a7a, #a8221a 75%) !important; }
+/* nombres del menú de abajo: siempre visibles y legibles, en teléfono y escritorio */
+#abajo .txt { display: block !important; font-size: 12px !important; font-weight: 900 !important; color: #f6ead0 !important; text-shadow: 0 1px 2px #000, 0 0 3px #000; letter-spacing: .2px; line-height: 1.1; white-space: nowrap; }
+#abajo .pestana.activo .txt { color: #ffd76a !important; }
+@media (max-width: 380px) { #abajo .txt { font-size: 10.5px !important; } }
+#panel .carta .stats span { color: #3a2414 !important; font-weight: 800; }
+#panel .demoler-panel { background: linear-gradient(#ff7a5c, #a8221a) !important; color: #fff !important; border-color: #6b0f0b !important; margin-top: 16px !important; }
