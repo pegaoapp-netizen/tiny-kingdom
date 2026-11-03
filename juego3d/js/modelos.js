@@ -643,6 +643,53 @@ var M = (function () {
   // =================================================================
   //  BANDERA
   // =================================================================
+  // Adornos que se suman en CADA nivel alrededor del edificio (además del cambio de modelo por tramo):
+  //  2 losa de piedra · 3 dos estandartes · 4 faroles · 5 macetas de flores · 6 cuatro estandartes
+  //  7 estandartes reales · 8 pilares con esfera de oro · 9 borde de oro en la losa · 10 losa de mármol
+  //  11 aro de luz dorada · 12 corona de oro flotando arriba
+  function adornosNivel(nivel, caja3) {
+    var g = new THREE.Group(), tam = caja3.getSize(new THREE.Vector3());
+    var hx = Math.max(1.4, tam.x / 2 + 0.45), hz = Math.max(1.4, tam.z / 2 + 0.45), alto = tam.y;
+    var colBand = nivel >= 10 ? 0x6a3fa0 : nivel >= 7 ? 0x2f5fb8 : 0xc0503a;
+    var esq = [[-hx, hz], [hx, hz], [-hx, -hz], [hx, -hz]];
+    if (nivel >= 2) {
+      var piedraL = nivel >= 10 ? 0xf2ece0 : 0x9a948a;
+      g.add(caja(hx * 2 + 0.3, 0.16, hz * 2 + 0.3, piedraL, 0, 0.08, 0));
+      if (nivel >= 9) {
+        [[0, hz + 0.15, hx * 2 + 0.4, 0.1], [0, -hz - 0.15, hx * 2 + 0.4, 0.1]].forEach(function (b) { g.add(caja(b[2], 0.2, b[3], C.oro, b[0], 0.1, b[1])); });
+        [[hx + 0.15, 0], [-hx - 0.15, 0]].forEach(function (b) { g.add(caja(0.1, 0.2, hz * 2 + 0.4, C.oro, b[0], 0.1, b[1])); });
+      }
+    }
+    var nBand = nivel >= 6 ? 4 : nivel >= 3 ? 2 : 0;
+    for (var i = 0; i < nBand; i++) {
+      var b = bandera(colBand, 2.2 + Math.min(nivel, 12) * 0.08); b.position.set(esq[i][0], 0.16, esq[i][1]); g.add(b);
+      if (nivel >= 7) g.add(esfera(0.1, C.oro, esq[i][0], 0.16 + 2.2 + Math.min(nivel, 12) * 0.08, esq[i][1], 8, 6));
+    }
+    if (nivel >= 4) { antorcha(g, -hx * 0.45, 1.2, hz + 0.05, true); antorcha(g, hx * 0.45, 1.2, hz + 0.05, true); }
+    if (nivel >= 5) {
+      [-1, 1].forEach(function (s) {
+        g.add(cil(0.22, 0.17, 0.3, 8, 0x9a5a3a, s * hx * 0.8, 0.3, hz + 0.1));
+        g.add(esfera(0.24, s < 0 ? 0xe7a4b4 : 0xe8cf5a, s * hx * 0.8, 0.52, hz + 0.1, 8, 6));
+      });
+    }
+    if (nivel >= 8) {
+      [[-hx, 0], [hx, 0]].forEach(function (p) {
+        g.add(cil(0.2, 0.24, 1.1, 8, nivel >= 10 ? 0xf2ece0 : 0xbfb8a8, p[0], 0.7, p[1]));
+        g.add(esfera(0.2, C.oro, p[0], 1.42, p[1], 10, 8));
+      });
+    }
+    if (nivel >= 11) {
+      var aro = new THREE.Mesh(new THREE.RingGeometry(Math.max(hx, hz) + 0.3, Math.max(hx, hz) + 0.65, 40), new THREE.MeshBasicMaterial({ color: 0xffd76a, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+      aro.rotation.x = -Math.PI / 2; aro.position.y = 0.2; g.add(aro);
+    }
+    if (nivel >= 12) {
+      var cY = alto + 1.1, corona = new THREE.Group();
+      corona.add(cil(0.5, 0.42, 0.28, 12, C.oro, 0, 0, 0));
+      for (var p = 0; p < 5; p++) { var a = p / 5 * Math.PI * 2; corona.add(cono(0.11, 0.34, 4, C.oro, Math.cos(a) * 0.44, 0.28, Math.sin(a) * 0.44)); corona.add(esfera(0.07, 0xc0303a, Math.cos(a) * 0.44, 0.48, Math.sin(a) * 0.44, 6, 4)); }
+      corona.position.y = cY; g.add(corona);
+    }
+    return g;
+  }
   function bandera(color, alto) {
     var g = new THREE.Group();
     g.add(cil(0.05, 0.05, alto, 6, C.maderaOsc, 0, alto / 2, 0));
@@ -2794,7 +2841,7 @@ var M = (function () {
     var v = a._andar < 0.01 ? 0 : a._andar, s = Math.sin(t * (a.tipo === 'gallina' ? 18 : 10));
     a.patas.forEach(function (pt, i) { pt.rotation.x = s * 0.7 * v * (i % 2 ? 1 : -1) * (i > 1 ? -1 : 1); });
     a.cuerpo.position.y = Math.abs(s) * 0.03 * v;
-    // picotear / pastar cuando est�� quieta
+    // picotear / pastar cuando está quieta
     a.cuerpo.rotation.x = camina ? 0 : Math.max(0, Math.sin(t * 1.3)) * (a.tipo === 'gallina' ? 0.35 : 0.12);
     if (a.def) {
       // caballo: patas al caminar, cabeza abajo al pastar (sube de vez en cuando a mirar)
@@ -2823,7 +2870,7 @@ var M = (function () {
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
-    ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar,
+    ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar, adornosNivel: adornosNivel,
     heroe: function (h, nivel) { return glbListos[h.id] ? heroeGLB(h, nivel) : heroeModelo2(h.look, undefined, nivel, h.rareza); },
     cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, crecerEdificio: crecerEdificio, ponerFiguraAnimal: ponerFiguraAnimal, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };

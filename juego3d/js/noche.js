@@ -73,12 +73,14 @@ window.NOCHE = (function () {
   // ---------- montaña: varios picos, roca oscura, nieve con luz de luna ----------
   var geoPicoCache = {};
   function ruido3(x, y, z) { var s = Math.sin(x * 12.9898 + y * 78.233 + z * 37.719) * 43758.5453; return s - Math.floor(s); }
-  function geoPico(variante) {
+  function geoPico(variante, dia) {
     variante = variante || 0;
-    if (geoPicoCache[variante]) return geoPicoCache[variante];
+    var clave = variante + (dia ? 'd' : 'n');
+    if (geoPicoCache[clave]) return geoPicoCache[clave];
     var g = new THREE.ConeGeometry(0.85, 1.75, 11, 7, false);
     var p = g.attributes.position, cols = [], c = new THREE.Color();
-    var roca = new THREE.Color(0x232a36), rocaAlta = new THREE.Color(0x3b4456), nieve = new THREE.Color(0xdfe8ff), sombraNieve = new THREE.Color(0x8394c0);
+    // de día: base con musgo verde, roca gris clara y cumbres apenas nevadas (como los mapas de estrategia móviles)
+    var roca = new THREE.Color(dia ? 0x4e6a34 : 0x232a36), rocaAlta = new THREE.Color(dia ? 0x9a9c8c : 0x3b4456), nieve = new THREE.Color(dia ? 0xeef0ea : 0xdfe8ff), sombraNieve = new THREE.Color(dia ? 0xa9b0a6 : 0x8394c0);
     for (var i = 0; i < p.count; i++) {
       var x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = (y + 0.875) / 1.75;
       if (k < 0.995) {
@@ -91,14 +93,14 @@ window.NOCHE = (function () {
         p.setX(i, x + (variante - 1) * 0.04);
       }
       var lado = (x * -0.6 + z * 0.8) / 0.85;
-      var limiteNieve = 0.6 + Math.sin(Math.atan2(z, x) * 5 + variante) * 0.07 + (ruido3(x * 7, z * 7, variante) - 0.5) * 0.1;
+      var limiteNieve = (dia ? 0.8 : 0.6) + Math.sin(Math.atan2(z, x) * 5 + variante) * 0.07 + (ruido3(x * 7, z * 7, variante) - 0.5) * 0.1;
       if (k > limiteNieve) { c.copy(sombraNieve).lerp(nieve, Math.max(0, Math.min(1, 0.45 + lado * 0.55))); }
       else { c.copy(roca).lerp(rocaAlta, k * 0.9 + Math.max(0, lado) * 0.25); }
       cols.push(c.r, c.g, c.b);
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
     g.computeVertexNormals();
-    geoPicoCache[variante] = g;
+    geoPicoCache[clave] = g;
     return g;
   }
 

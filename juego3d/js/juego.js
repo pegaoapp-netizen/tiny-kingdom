@@ -132,8 +132,8 @@
     escena.userData.estrellas = estrellas;
   })();
 
-  // en teléfono vertical la cámara abre más el ángulo para que quepa el reino a lo ancho
-  function fovPantalla() { return window.innerWidth < window.innerHeight ? 52 : 38; }
+  // ángulo estrecho: las fachadas no se estiran y el reino se ve como en la foto
+  function fovPantalla() { return window.innerWidth < window.innerHeight ? 34 : 30; }
   var camara = new THREE.PerspectiveCamera(fovPantalla(), window.innerWidth / window.innerHeight, 0.5, 900);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   // de lejos: se ve el reino entero con el castillo en el centro
@@ -148,7 +148,7 @@
     var alto = RADIO_REINO * 0.78 / Math.tan(fv / 2) / util;
     return Math.max(70, Math.min(260, Math.max(ancho, alto)));
   }
-  function distInicial() { return distEncuadre() * 0.8; }
+  function distInicial() { return 68; }
   function distMaxima() { return distEncuadre() * 1.3; }
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = 3.55;
@@ -191,7 +191,8 @@
   //  CICLO DE DÍA Y NOCHE (solo visual: no cambia nada del juego)
   // ------------------------------------------------------------------
   var DURACION_DIA = 480;          // segundos reales por día completo (8 min)
-  var horaForzada = 0.82;           // tema oscuro: ciudad siempre de noche. window.__juego.hora(null) vuelve al ciclo día/noche
+  // ciudad de día; con ?noche en la dirección vuelve el tema oscuro. window.__juego.hora(null) vuelve al ciclo día/noche
+  var horaForzada = /[?&]noche\b/.test(location.search) ? 0.82 : 0.32;
   function faseDia() { return horaForzada !== null ? horaForzada : ((performance.now() / 1000) / DURACION_DIA + 0.12) % 1; }
   function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
   // 0..0.62 día · 0.62..0.72 atardecer · 0.72..0.92 noche · 0.92..1 amanecer
@@ -327,14 +328,18 @@
     var g = new THREE.PlaneGeometry(760, 760, 190, 190);
     g.rotateX(-Math.PI / 2);
     var pos = g.attributes.position, colores = [];
-    var seco = new THREE.Color(1.12, 1.06, 0.84), humedo = new THREE.Color(0.82, 0.92, 0.8), tierra = new THREE.Color(1.15, 0.98, 0.78);
+    // verdes pintados: pradera amarillo-verdosa, manchas más oscuras y acantilados de roca gris
+    var seco = new THREE.Color(1.22, 1.24, 0.62), humedo = new THREE.Color(0.86, 1.1, 0.56), tierra = new THREE.Color(1.3, 1.12, 0.74);
+    var base = new THREE.Color(1.06, 1.2, 0.66), roca = new THREE.Color(1.05, 1.0, 0.98), rocaOsc = new THREE.Color(0.72, 0.7, 0.7);
     for (var i = 0; i < pos.count; i++) {
       var x = pos.getX(i), z = pos.getZ(i);
       var y = altura(x, z) + (rnd() - 0.5) * 0.1;
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 0.5) y -= 0.6;
       pos.setY(i, y);
       var n = ruido(x, z);
-      var c = new THREE.Color(1, 1, 1);
+      var c = base.clone();
+      // laderas de los cerros: roca gris con vetas
+      if (y > 1.2) { var kr = Math.min(1, (y - 1.2) / 3.5); c.lerp(ruido(x * 2.3, z * 2.1) > 0 ? roca : rocaOsc, kr * 0.85); }
       if (n > 0) c.lerp(seco, Math.min(1, n * 1.3)); else c.lerp(humedo, Math.min(1, -n * 1.3));
       var dc = distCamino(x, z);
       if (dc < 4.2) c.lerp(tierra, (1 - dc / 4.2) * 0.55);
@@ -362,7 +367,7 @@
     g.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
     g.setIndex(idx);
     g.computeVertexNormals();
-    var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xb3a891, side: THREE.DoubleSide }));
+    var m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: 0xe0cf9e, side: THREE.DoubleSide }));
     m.receiveShadow = true;
     escena.add(m);
     // borde más oscuro, un poco más ancho, debajo del camino
@@ -374,7 +379,7 @@
       if (j < n) { var a2 = j * 2; ib.push(a2, a2 + 1, a2 + 2, a2 + 1, a2 + 3, a2 + 2); }
     }
     var gb = new THREE.BufferGeometry(); gb.setAttribute('position', new THREE.Float32BufferAttribute(vb, 3)); gb.setIndex(ib); gb.computeVertexNormals();
-    var mb = new THREE.Mesh(gb, new THREE.MeshLambertMaterial({ color: 0x7f776a, side: THREE.DoubleSide })); mb.receiveShadow = true; escena.add(mb);
+    var mb = new THREE.Mesh(gb, new THREE.MeshLambertMaterial({ color: 0xb8a272, side: THREE.DoubleSide })); mb.receiveShadow = true; escena.add(mb);
     // piedritas a los lados del camino
     var deco = new THREE.Group();
     for (var k = 0; k < 90; k++) {
@@ -1041,7 +1046,7 @@
   }
   // ---- DEMOLER ----
   function vaciarParcela(s) {
-    if (s.modelo) { s.grupo.remove(s.modelo); s.modelo = null; }
+    if (s.modelo) { s.grupo.remove(s.modelo); s.modelo = null; } if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     if (s.andamio) { s.grupo.remove(s.andamio); s.andamio = null; }
     if (s.insignia) { s.grupo.remove(s.insignia); s.insignia = null; }
     if (s.barra) { escena.remove(s.barra); s.barra = null; }
@@ -1222,7 +1227,7 @@
     enMundo = true; vistaActual = 'mundo'; pintarVista(); cerrarMenuGrande();
     $('mundo-info').innerHTML = '<div class="carta"><p class="nota">' + T('mundo_toca') + '</p></div>';
     if (!M3) crearMundo3D();
-    var yoC = celdaDe(miLugar().x, miLugar().y); M3.obj.copy(posCelda(yoC.x, yoC.y)); M3.zoom = { de: 74, a: 30, t0: performance.now() };
+    var yoC = celdaDe(miLugar().x, miLugar().y); M3.obj.copy(posCelda(yoC.x, yoC.y)); M3.zoom = { de: 74, a: M3.camelot ? 30 : 40, t0: performance.now() };
     $('mundo-coord').textContent = '📍 ' + L('Tu reino', 'Your kingdom') + ' · X ' + yoC.x + ' · Y ' + yoC.y;
     $('mundo-volver').querySelector('span').textContent = L('Mi ciudad', 'My city');
     pintarBuscador();
@@ -1289,7 +1294,8 @@
     }
   })();
   var ALT_TIPO = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: 0 };
-  function posCelda(x, y) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, x)), cy = Math.max(0, Math.min(TAM_MUNDO - 1, y)); return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, ALT_TIPO[casillaMundo(cx, cy).tipo] || 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
+  var MUNDO_PLANO = false;
+  function posCelda(x, y) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, x)), cy = Math.max(0, Math.min(TAM_MUNDO - 1, y)); return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, MUNDO_PLANO ? 0 : ALT_TIPO[casillaMundo(cx, cy).tipo] || 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
   function maxCasillas() { return estado.castillo || 1; }
   function misCasillas() { return Object.keys(estado.casillas || {}); }
   // bonus de producción de las casillas conquistadas (2% por nivel de cada casilla de ese recurso)
@@ -1317,23 +1323,30 @@
     var cont = $('mundo-mapa');
     var r = new THREE.WebGLRenderer({ antialias: true });
     r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
-    r.setClearColor(0x070b16);
+    // mapa de día (por defecto); con ?noche en la dirección vuelve el mapa nocturno
+    var DIA_M = !/[?&]noche\b/.test(location.search);
+    r.setClearColor(DIA_M ? 0x9cc46a : 0x070b16);
     r.domElement.id = 'mundo-3d';
     cont.appendChild(r.domElement);
     var e = new THREE.Scene();
-    // tema oscuro: noche con niebla azul que se come el horizonte
-    e.fog = new THREE.Fog(0x0a1222, 34, 96);
+    e.fog = DIA_M ? new THREE.Fog(0xa8cc78, 48, 120) : new THREE.Fog(0x0a1222, 34, 96);
     r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
-    e.add(new THREE.HemisphereLight(0x8fa3d8, 0x111826, 0.78));
-    var sol = new THREE.DirectionalLight(0xc8d4ff, 0.82); sol.position.set(-20, 30, -14); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0008; sol.shadow.normalBias = 0.02;
+    e.add(DIA_M ? new THREE.HemisphereLight(0xfff8e8, 0x4a6a2a, 1.05) : new THREE.HemisphereLight(0x8fa3d8, 0x111826, 0.78));
+    var sol = DIA_M ? new THREE.DirectionalLight(0xfff0d0, 1.15) : new THREE.DirectionalLight(0xc8d4ff, 0.82); sol.position.set(-20, 30, -14); sol.castShadow = true; sol.shadow.mapSize.set(2048, 2048); sol.shadow.bias = -0.0008; sol.shadow.normalBias = 0.02;
     sol.shadow.camera.near = 1; sol.shadow.camera.far = 120; e.add(sol); e.add(sol.target);
     var cam = new THREE.PerspectiveCamera(38, 1, 0.5, 300);
+    // de día: mapa pintado con dibujos (js/mapa-camelot.js)
+    var CAM_M = DIA_M && !!window.CAMELOT; MUNDO_PLANO = CAM_M;
+    if (CAM_M) { cam.fov = 32; r.setClearColor(0x6f8a3c); e.fog = new THREE.Fog(0x6f8a3c, 80, 160); }
+    if (!CAM_M) {
     // ---- suelo continuo: los terrenos se mezclan suave, con textura de pasto, colinas y lagos hundidos ----
     // noche: pasto azulado, tierra fría y lagos profundos
-    var COL_T = { llanura: new THREE.Color(0x4a6a44), bosque: new THREE.Color(0x2a4a32), colina: new THREE.Color(0x5e5848), montana: new THREE.Color(0x3c4250), lago: new THREE.Color(0x4a5060) };
+    var COL_T = DIA_M
+      ? { llanura: new THREE.Color(0x8fbf3a), bosque: new THREE.Color(0x4f7f24), colina: new THREE.Color(0x8ea84a), montana: new THREE.Color(0x6f8a48), lago: new THREE.Color(0x7aa83a) }
+      : { llanura: new THREE.Color(0x4a6a44), bosque: new THREE.Color(0x2a4a32), colina: new THREE.Color(0x5e5848), montana: new THREE.Color(0x3c4250), lago: new THREE.Color(0x4a5060) };
     var ALT_T = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: -0.3 };
     var lado = TAM_MUNDO * CELDA_M, seg = TAM_MUNDO * 4;
-    var SECO_M = new THREE.Color(0x5e6a40), HUMEDO_M = new THREE.Color(0x2a4a30), TIERRA_M = new THREE.Color(0x54483a), ARENA_M = new THREE.Color(0x7a7460), BAJO_M = new THREE.Color(0x2a6a7e), HONDO_M = new THREE.Color(0x0b2444);
+    var SECO_M = new THREE.Color(DIA_M ? 0x8ea83e : 0x5e6a40), HUMEDO_M = new THREE.Color(DIA_M ? 0x46691e : 0x2a4a30), TIERRA_M = new THREE.Color(DIA_M ? 0x86804a : 0x54483a), ARENA_M = new THREE.Color(DIA_M ? 0xb8b07e : 0x7a7460), BAJO_M = new THREE.Color(DIA_M ? 0x3a90b0 : 0x2a6a7e), HONDO_M = new THREE.Color(DIA_M ? 0x1f78b0 : 0x0b2444);
     function tipoEn(fx, fy) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fx))), cy = Math.max(0, Math.min(TAM_MUNDO - 1, Math.floor(fy))); return casillaMundo(cx, cy).tipo; }
     var gs = new THREE.PlaneGeometry(lado + 6, lado + 6, seg + 12, seg + 12); gs.rotateX(-Math.PI / 2);
     var ps = gs.attributes.position, cols = [], cc = new THREE.Color();
@@ -1361,14 +1374,17 @@
     gs.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3)); gs.computeVertexNormals();
     var texM = texturaPasto(true); texM.repeat.set(26, 26);
     var suelo = new THREE.Mesh(gs, new THREE.MeshLambertMaterial({ map: texM, vertexColors: true }));
-    suelo.material.color.setRGB(0.62, 0.68, 0.84); suelo.receiveShadow = true; e.add(suelo);
+    if (DIA_M) suelo.material.color.setRGB(1.08, 1.06, 0.94); else suelo.material.color.setRGB(0.62, 0.68, 0.84);
+    suelo.receiveShadow = true; e.add(suelo);
     // agua de los lagos y cuadrícula muy suave (para saber dónde está cada casilla)
-    var tmp = new THREE.Object3D(), col = new THREE.Color(), lagos = [], arboles = [], redondos = [], arbustos = [], flores = [], rocas = [], picos = [];
+    var tmp = new THREE.Object3D(), col = new THREE.Color(), lagos = [], arboles = [], redondos = [], arbustos = [], flores = [], rocas = [], picos = [], rosas = [];
     var lineas = [];
     for (var y = 0; y < TAM_MUNDO; y++) for (var x = 0; x < TAM_MUNDO; x++) {
       var c = casillaMundo(x, y), p = posCelda(x, y), hh = function (s) { return hashM(x * 7.1 + s, y * 3.3 - s); };
       if (c.tipo === 'lago') lagos.push([p.x, p.z]);
-      if (c.tipo === 'bosque') { var na = 7 + Math.floor(hh(1) * 4), gx = [(hh(90) - 0.5) * 0.9, (hh(91) - 0.5) * 0.9], gz = [(hh(92) - 0.5) * 0.9, (hh(93) - 0.5) * 0.9]; for (var a = 0; a < na; a++) { var gi = a % 2, ra = Math.sqrt(hh(a + 100)) * 0.95, an = hh(a + 120) * 6.28; (hh(a + 9) < 0.8 ? arboles : redondos).push([p.x + gx[gi] + Math.cos(an) * ra, p.z + gz[gi] + Math.sin(an) * ra, 0.6 + hh(a + 40) * 0.7]); } }
+      // arbustos con flores rosadas en grupitos (llanuras, colinas y bordes de bosque)
+      if (DIA_M && c.tipo !== 'lago' && c.tipo !== 'montana' && hh(400) < (c.tipo === 'bosque' ? 0.35 : 0.6)) { var gr = 1 + Math.floor(hh(401) * 2); for (var gq = 0; gq < gr; gq++) { var gcx = p.x + (hh(402 + gq) - 0.5) * 1.5, gcz = p.z + (hh(405 + gq) - 0.5) * 1.5, nr = 3 + Math.floor(hh(408 + gq) * 4); for (var rq = 0; rq < nr; rq++) rosas.push([gcx + (hh(410 + rq + gq * 9) - 0.5) * 0.45, gcz + (hh(430 + rq + gq * 9) - 0.5) * 0.45, 0.55 + hh(450 + rq) * 0.6, rq % 3]); } }
+      if (c.tipo === 'bosque') { var na = (DIA_M ? 11 : 7) + Math.floor(hh(1) * 4), gx = [(hh(90) - 0.5) * 0.9, (hh(91) - 0.5) * 0.9], gz = [(hh(92) - 0.5) * 0.9, (hh(93) - 0.5) * 0.9]; for (var a = 0; a < na; a++) { var gi = a % 2, ra = Math.sqrt(hh(a + 100)) * 0.95, an = hh(a + 120) * 6.28; (hh(a + 9) < 0.8 ? arboles : redondos).push([p.x + gx[gi] + Math.cos(an) * ra, p.z + gz[gi] + Math.sin(an) * ra, 0.6 + hh(a + 40) * 0.7]); } }
       if (c.tipo !== 'bosque' && c.tipo !== 'lago' && c.tipo !== 'montana') { [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dv, di) { var vc = x + dv[0] >= 0 && x + dv[0] < TAM_MUNDO && y + dv[1] >= 0 && y + dv[1] < TAM_MUNDO ? casillaMundo(x + dv[0], y + dv[1]) : null; if (!vc || vc.tipo !== 'bosque') return; var ns = hh(di + 130) < 0.45 ? 1 + Math.floor(hh(di + 131) * 2) : 0; for (var sa = 0; sa < ns; sa++) arboles.push([p.x + dv[0] * (0.5 + hh(sa + di * 7 + 140) * 0.45) + (hh(sa + 150) - 0.5) * 1.4 * Math.abs(dv[1]), p.z + dv[1] * (0.5 + hh(sa + di * 7 + 160) * 0.45) + (hh(sa + 170) - 0.5) * 1.4 * Math.abs(dv[0]), 0.55 + hh(sa + 180) * 0.6]); }); if (hh(190) < 0.08) arboles.push([p.x + (hh(191) - 0.5) * 1.6, p.z + (hh(192) - 0.5) * 1.6, 0.6 + hh(193) * 0.5]); }
       if (c.tipo !== 'lago') [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (dv, di) { var vc = x + dv[0] >= 0 && x + dv[0] < TAM_MUNDO && y + dv[1] >= 0 && y + dv[1] < TAM_MUNDO ? casillaMundo(x + dv[0], y + dv[1]) : null; if (!vc || vc.tipo !== 'lago') return; for (var ro2 = 0; ro2 < 2; ro2++) if (hh(di * 5 + ro2 + 200) < 0.6) rocas.push([p.x + dv[0] * 0.8 + (hh(ro2 + di + 210) - 0.5) * 1.4 * Math.abs(dv[1]), p.z + dv[1] * 0.8 + (hh(ro2 + di + 220) - 0.5) * 1.4 * Math.abs(dv[0]), 0.18 + hh(ro2 + 230) * 0.25]); });
       if (c.tipo === 'llanura') { if (hh(2) < 0.22) redondos.push([p.x + (hh(3) - 0.5) * 1.5, p.z + (hh(4) - 0.5) * 1.5, 0.6 + hh(5) * 0.4]); for (var b = 0; b < 2; b++) if (hh(b + 6) < 0.5) arbustos.push([p.x + (hh(b + 7) - 0.5) * 1.7, p.z + (hh(b + 8) - 0.5) * 1.7, 0.5 + hh(b) * 0.5]); for (var fl = 0; fl < 4; fl++) if (hh(fl + 30) < 0.45) flores.push([p.x + (hh(fl + 31) - 0.5) * 1.8, p.z + (hh(fl + 32) - 0.5) * 1.8, Math.floor(hh(fl + 33) * 4)]); }
@@ -1377,7 +1393,8 @@
     }
     for (var gl = 0; gl <= TAM_MUNDO; gl++) { var v0 = (gl - TAM_MUNDO / 2) * CELDA_M; lineas.push(v0, 0.06, -lado / 2, v0, 0.06, lado / 2, -lado / 2, 0.06, v0, lado / 2, 0.06, v0); }
     var gLin = new THREE.BufferGeometry(); gLin.setAttribute('position', new THREE.Float32BufferAttribute(lineas, 3));
-    e.add(new THREE.LineSegments(gLin, new THREE.LineBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.09, depthWrite: false })));
+    var lineasM = new THREE.LineSegments(gLin, new THREE.LineBasicMaterial({ color: DIA_M ? 0xf4f8e8 : 0xfbbf24, transparent: true, opacity: DIA_M ? 0.6 : 0.09, depthWrite: false }));
+    lineasM.renderOrder = 2; e.add(lineasM);
     function instancias(geo, color, lista, fn, varia, colorVertices) {
       if (!lista.length) return;
       var im = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: !!colorVertices }), lista.length);
@@ -1387,24 +1404,30 @@
     }
     var sombraInst = true;
     // una sola capa de agua debajo de todo: los lagos (más hundidos) quedan con orillas curvas
-    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), materialAgua(0.6, 0x14365e)); agua.material.specular.setHex(0x0b1a26); agua.material.shininess = 30;
+    var agua = new THREE.Mesh(new THREE.PlaneGeometry(lado + 40, lado + 40), (DIA_M ? materialAgua(0.85, 0x2a7ca4) : materialAgua(0.6, 0x14365e))); agua.material.specular.setHex(0x0b1a26); agua.material.shininess = 30;
     agua.rotation.x = -Math.PI / 2; agua.position.y = -0.11; e.add(agua);
     // pinos (dos conos), árboles redondos, arbustos, flores, rocas y montañas de varios picos con nieve
-    instancias(new THREE.ConeGeometry(0.36, 0.7, 7), 0x1e4a30, arboles, function (q) { tmp.position.set(q[0], 0.5 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
-    instancias(new THREE.ConeGeometry(0.28, 0.55, 7), 0x245636, arboles, function (q) { tmp.position.set(q[0], 0.84 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[1], q[0]) * 6, 0); }, 0.1);
-    instancias(new THREE.ConeGeometry(0.19, 0.42, 7), 0x2c623e, arboles, function (q) { tmp.position.set(q[0], 1.12 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.1);
-    instancias(new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5), 0x3a2a1e, arboles.concat(redondos), function (q) { tmp.position.set(q[0], 0.14 * q[2], q[1]); tmp.scale.setScalar(q[2]); });
-    instancias(new THREE.IcosahedronGeometry(0.3, 0), 0x2a5a36, redondos, function (q) { tmp.position.set(q[0], 0.48 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.9, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
-    instancias(new THREE.IcosahedronGeometry(0.16, 0), 0x35663e, arbustos, function (q) { tmp.position.set(q[0], 0.08 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); }, 0.12);
-    var COLF = [0x8a90a8, 0x9a8a44, 0x8a5a6a, 0x6a5a92];
+    instancias(new THREE.ConeGeometry(0.36, 0.7, 7), DIA_M ? 0x2f5a1e : 0x1e4a30, arboles, function (q) { tmp.position.set(q[0], 0.5 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.28, 0.55, 7), DIA_M ? 0x3a6a24 : 0x245636, arboles, function (q) { tmp.position.set(q[0], 0.84 * q[2], q[1]); tmp.scale.setScalar(q[2]); tmp.rotation.set(0, hashM(q[1], q[0]) * 6, 0); }, 0.1);
+    instancias(new THREE.ConeGeometry(0.19, 0.42, 7), DIA_M ? 0x4a7a2c : 0x2c623e, arboles, function (q) { tmp.position.set(q[0], 1.12 * q[2], q[1]); tmp.scale.setScalar(q[2]); }, 0.1);
+    instancias(new THREE.CylinderGeometry(0.05, 0.07, 0.3, 5), DIA_M ? 0x5a3e24 : 0x3a2a1e, arboles.concat(redondos), function (q) { tmp.position.set(q[0], 0.14 * q[2], q[1]); tmp.scale.setScalar(q[2]); });
+    instancias(new THREE.IcosahedronGeometry(0.3, 0), DIA_M ? 0x4a7f26 : 0x2a5a36, redondos, function (q) { tmp.position.set(q[0], 0.48 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.9, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 6, 0); }, 0.1);
+    instancias(new THREE.IcosahedronGeometry(0.16, 0), DIA_M ? 0x5e8e2e : 0x35663e, arbustos, function (q) { tmp.position.set(q[0], 0.08 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); }, 0.12);
+    if (DIA_M) {
+      // arbusto verde con copa rosada encima
+      var COLR = [0xe77fb3, 0xf2a2c8, 0xd96aa4];
+      instancias(new THREE.IcosahedronGeometry(0.11, 0), 0x4f7f26, rosas, function (q) { tmp.position.set(q[0], 0.06 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.75, q[2]); }, 0.1);
+      instancias(new THREE.IcosahedronGeometry(0.085, 0), function (q) { return COLR[q[3]]; }, rosas, function (q) { tmp.position.set(q[0], 0.13 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.6, q[2]); tmp.rotation.set(0, hashM(q[1], q[0]) * 6, 0); }, 0.08);
+    }
+    var COLF = DIA_M ? [0xf5f2e8, 0xf2d24a, 0xe88ab8, 0xb88ae0] : [0x8a90a8, 0x9a8a44, 0x8a5a6a, 0x6a5a92];
     sombraInst = false;
     instancias(new THREE.SphereGeometry(0.05, 5, 3), function (q) { return COLF[q[2]]; }, flores, function (q) { tmp.position.set(q[0], 0.05, q[1]); tmp.scale.setScalar(1); });
     sombraInst = true;
-    instancias(new THREE.DodecahedronGeometry(0.3, 0), 0x5a5e6a, rocas, function (q) { tmp.position.set(q[0], 0.12 + 0.1 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 5, 0); }, 0.1);
+    instancias(new THREE.DodecahedronGeometry(0.3, 0), DIA_M ? 0x9a9a8c : 0x5a5e6a, rocas, function (q) { tmp.position.set(q[0], 0.12 + 0.1 * q[2], q[1]); tmp.scale.set(q[2], q[2] * 0.7, q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 5, 0); }, 0.1);
     if (window.NOCHE) {
       // cordillera: picos quebrados de roca oscura con nieve que brilla con la luna (3 formas distintas)
       [0, 1, 2].forEach(function (vr) {
-        instancias(NOCHE.geoPico(vr), 0xffffff, picos.filter(function (q, i) { return i % 3 === vr; }), function (q) { var s = q[2] * 1.18; tmp.position.set(q[0], 0.875 * s - 0.08, q[1]); tmp.scale.set(s * (1 + hashM(q[1], q[0]) * 0.25), s, s); tmp.rotation.set(0, hashM(q[0], q[1]) * 6.28, 0); }, 0.05, true);
+        instancias(NOCHE.geoPico(vr, DIA_M), 0xffffff, picos.filter(function (q, i) { return i % 3 === vr; }), function (q) { var s = q[2] * 1.18; tmp.position.set(q[0], 0.875 * s - 0.08, q[1]); tmp.scale.set(s * (1 + hashM(q[1], q[0]) * 0.25), s, s); tmp.rotation.set(0, hashM(q[0], q[1]) * 6.28, 0); }, 0.05, true);
       });
     } else {
       instancias(new THREE.ConeGeometry(0.75, 1.5, 7), 0x7f7a70, picos, function (q) { tmp.position.set(q[0], 0.7 * q[2], q[1]); tmp.scale.set(q[2], q[2], q[2]); tmp.rotation.set(0, hashM(q[0], q[1]) * 3, 0); }, 0.08);
@@ -1418,7 +1441,7 @@
       else if (lc.tipo === 'colina' && lh < 0.05) fogatas.push([lp.x, 0.45, lp.z]);
       else if (lc.tipo === 'bosque' && lh < 0.18) luciernagas.push([lp.x + (hashM(lx + 3, ly) - 0.5) * 1.6, 0.35 + hashM(lx, ly + 3) * 0.6, lp.z + (hashM(lx, ly + 7) - 0.5) * 1.6]);
     }
-    if (window.NOCHE) {
+    if (window.NOCHE && !DIA_M) {
       var ptF = NOCHE.puntosLuz(fogatas, 'fuego', 1.1, 0.95); e.add(ptF);
       var ptL = NOCHE.puntosLuz(luciernagas, 0xd6ff8a, 0.32, 0.8); e.add(ptL);
       var brumaM = NOCHE.bruma(e, lado, 70, 0.45);
@@ -1426,13 +1449,15 @@
       domoM.renderOrder = -10; domoM.frustumCulled = false; e.add(domoM);
     }
     // marco de madera alrededor del mundo
-    var marco = new THREE.Mesh(new THREE.BoxGeometry(TAM_MUNDO * CELDA_M + 1.2, 0.5, TAM_MUNDO * CELDA_M + 1.2), new THREE.MeshLambertMaterial({ color: 0x1e293b }));
+    var marco = new THREE.Mesh(new THREE.BoxGeometry(TAM_MUNDO * CELDA_M + 1.2, 0.5, TAM_MUNDO * CELDA_M + 1.2), new THREE.MeshLambertMaterial({ color: DIA_M ? 0x5a4a2e : 0x1e293b }));
     marco.position.y = -0.45; e.add(marco);
+    }
+    var camelotM = CAM_M ? CAMELOT.crear(e, { celda: CELDA_M, tam: TAM_MUNDO, casilla: casillaMundo, hash: hashM, ocupada: function (x, y) { return !!ocupadasMundo[x + '_' + y]; } }) : null;
     // marcador de la casilla elegida
     var sel = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.98, 4), new THREE.MeshBasicMaterial({ color: 0xffe14a, transparent: true, opacity: 0.95, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.rotation.z = Math.PI / 4; sel.position.y = 0.05; sel.visible = false; sel.renderOrder = 5; e.add(sel);
     var cosas = new THREE.Group(); e.add(cosas);
-    M3 = { sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {}, bruma: brumaM || null, domo: domoM || null, luces: ptF || null, tPrev: performance.now() };
+    M3 = { sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {}, bruma: brumaM || null, domo: domoM || null, luces: ptF || null, camelot: camelotM, tPrev: performance.now() };
     // mover con el dedo / ratón, acercar con rueda o pellizco, tocar para elegir
     var el = r.domElement, dedos = {}, inicio = null, pell = null;
     el.style.touchAction = 'none';
@@ -1489,7 +1514,9 @@
     if (M3.w !== w || M3.h !== h) { M3.r.setSize(w, h); M3.cam.aspect = w / h; M3.cam.updateProjectionMatrix(); M3.w = w; M3.h = h; }
     if (M3.zoom) { var kz = Math.min(1, (performance.now() - M3.zoom.t0) / 750), ez = 1 - Math.pow(1 - kz, 3); M3.dist = M3.zoom.de + (M3.zoom.a - M3.zoom.de) * ez; if (kz >= 1) M3.zoom = null; }
     var d = M3.dist;
-    M3.cam.position.set(M3.obj.x + d * 0.438, d * 0.85, M3.obj.z + d * 0.438); M3.cam.lookAt(M3.obj);
+    if (M3.camelot) { var dcm = CAMELOT.dirCamara; d = Math.min(d, 60); M3.cam.position.set(M3.obj.x + dcm.x * d, dcm.y * d, M3.obj.z + dcm.z * d); M3.camelot.actualizar(M3.obj); }
+    else M3.cam.position.set(M3.obj.x + d * 0.438, d * 0.85, M3.obj.z + d * 0.438);
+    M3.cam.lookAt(M3.obj);
     var cxv = Math.floor(M3.obj.x / CELDA_M + TAM_MUNDO / 2), cyv = Math.floor(M3.obj.z / CELDA_M + TAM_MUNDO / 2), txy = '(' + cxv + ', ' + cyv + ')', exy = $('mundo-xy-t');
     if (exy && exy.textContent !== txy) exy.textContent = txy;
     if (M3.sol) { var so = M3.sol, tam = Math.max(22, d * 1.25); so.position.set(M3.obj.x - 20, 30, M3.obj.z - 14); so.target.position.copy(M3.obj); if (so.userData.tam !== tam) { so.userData.tam = tam; var sc = so.shadow.camera; sc.left = -tam; sc.right = tam; sc.top = tam; sc.bottom = -tam; sc.updateProjectionMatrix(); } }
@@ -1527,7 +1554,8 @@
     ocupadasMundo = {};
     CAMPAMENTOS.forEach(function (cm, i) {
       var c = celdaDe(cm.x, cm.y), p = posCelda(c.x, c.y), g = new THREE.Group();
-      var ab = aldeaBarbara(cm.nivel); ab.scale.setScalar(1.35); g.add(ab);
+      if (M3.camelot) g.add(CAMELOT.sprite('campamento', 0.9 + Math.min(12, cm.nivel) * 0.02));
+      else { var ab = aldeaBarbara(cm.nivel); ab.scale.setScalar(1.35); g.add(ab); }
       var et = M.etiquetaEdificio('🛖 ⚔️' + corto(defensaCampamento(cm.nivel)), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
       g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[c.x + '_' + c.y] = { campamento: i };
@@ -1535,7 +1563,8 @@
     lista.forEach(function (a, i) {
       var c = celdaDe(a.x, a.y), p = posCelda(c.x, c.y), g = new THREE.Group();
       var tam = a.uid === yo ? nivelVisual(estado.castillo || 1) : (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3);
-      var cs = M.castillo(tam); cs.scale.setScalar(0.12); g.add(cs);
+      if (M3.camelot) g.add(CAMELOT.sprite(a.uid === yo ? 'castillo-yo' : 'castillo', 0.85 + tam * 0.08));
+      else { var cs = M.castillo(tam); cs.scale.setScalar(0.12); g.add(cs); }
       var esYo = a.uid === yo, aliada = estado.alianza && a.alianza === estado.alianza;
       if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
       var prot = (a.escudo || 0) > Date.now();
@@ -1554,7 +1583,7 @@
     });
     // ---------- vida en el Mundo: minas y canteras con silueta propia, caminos, carretas y humo ----------
     var deco = new THREE.Group();
-    for (var yy = 0; yy < TAM_MUNDO; yy++) for (var xx = 0; xx < TAM_MUNDO; xx++) {
+    for (var yy = 0; !M3.camelot && yy < TAM_MUNDO; yy++) for (var xx = 0; xx < TAM_MUNDO; xx++) {
       var kk = xx + '_' + yy; if (ocupadasMundo[kk]) continue;
       var cc = casillaMundo(xx, yy), hm = hashM(xx * 3.7 + 1, yy * 1.9 + 4);
       if ((cc.tipo === 'montana' && hm < 0.2) || (cc.tipo === 'colina' && hm < 0.1)) { var mm = cc.tipo === 'montana' ? M.minaOro(1) : M.cantera(1); mm.scale.setScalar(0.21); mm.rotation.y = hm * 30; mm.position.copy(posCelda(xx, yy)); deco.add(mm); }
@@ -1578,13 +1607,13 @@
       if (pts.filter(function (p) { var t = tipoPos(p); return t === 'lago' || t === 'montana'; }).length > 2) return;
       var base = vr.length / 3;
       pts.forEach(function (p, i) {
-        var t = cu.getTangent(i / 28), px = -t.z, pz = t.x, y = (ALT_TIPO[tipoPos(p)] || 0) + 0.06;
+        var t = cu.getTangent(i / 28), px = -t.z, pz = t.x, y = (MUNDO_PLANO ? 0 : (ALT_TIPO[tipoPos(p)] || 0)) + 0.06;
         vr.push(p.x + px * 0.17, y, p.z + pz * 0.17, p.x - px * 0.17, y, p.z - pz * 0.17);
         if (i < 28) { var q = base + i * 2; ir2.push(q, q + 1, q + 2, q + 1, q + 3, q + 2); }
       });
       caminos.push(cu);
     });
-    if (vr.length) { var gc = new THREE.BufferGeometry(); gc.setAttribute('position', new THREE.Float32BufferAttribute(vr, 3)); gc.setIndex(ir2); gc.computeVertexNormals(); var mc = new THREE.Mesh(gc, new THREE.MeshLambertMaterial({ color: 0xb39b6e, side: THREE.DoubleSide })); mc.receiveShadow = true; M3.cosas.add(mc); }
+    if (vr.length) { var gc = new THREE.BufferGeometry(); gc.setAttribute('position', new THREE.Float32BufferAttribute(vr, 3)); gc.setIndex(ir2); gc.computeVertexNormals(); var mc = new THREE.Mesh(gc, M3.camelot ? new THREE.MeshBasicMaterial({ color: 0x8a6a3e, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false }) : new THREE.MeshLambertMaterial({ color: 0xb39b6e, side: THREE.DoubleSide })); mc.receiveShadow = true; M3.cosas.add(mc); }
     M3.npc = [];
     caminos.filter(function (c, i) { return i % 3 === 0; }).slice(0, 12).forEach(function (cu, i) {
       var gq = new THREE.Group(), mq = modeloCarreta(); mq.scale.multiplyScalar(0.55); gq.add(mq); M3.cosas.add(gq);
@@ -1601,6 +1630,14 @@
     });
     lugaresLibres().forEach(function (q) {
       var pl = posCelda(q.x, q.y), gl = new THREE.Group();
+      if (M3.camelot) {
+        gl.add(CAMELOT.sprite('libre', 1));
+        if (q.cerca) { var aroL = new THREE.Mesh(new THREE.RingGeometry(0.8, 0.95, 4), new THREE.MeshBasicMaterial({ color: 0x3fd45a, depthWrite: false, transparent: true, opacity: 0.8 })); aroL.rotation.x = -Math.PI / 2; aroL.position.y = 0.04; gl.add(aroL); }
+        var etc2 = M.etiquetaEdificio(L('Libre', 'Free'), '🏳'); etc2.position.set(0, 1.35, 0); etc2.scale.multiplyScalar(0.42); gl.add(etc2);
+        gl.position.copy(pl); M3.cosas.add(gl);
+        ocupadasMundo[q.x + '_' + q.y] = { libre: true };
+        return;
+      }
       gl.add(M.caja(1.3, 0.06, 1.3, 0xdcc89a, 0, 0.03, 0));
       [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { gl.add(M.cil(0.05, 0.05, 0.32, 5, 0x6a4424, s[0] * 0.6, 0.16, s[1] * 0.6)); });
       gl.add(M.cil(0.025, 0.025, 0.9, 5, 0x6a4424, 0, 0.45, 0)); gl.add(M.caja(0.36, 0.22, 0.02, q.cerca ? 0x3fd45a : 0xf4f0e6, 0.18, 0.78, 0));
@@ -1705,6 +1742,12 @@
     return p;
   }
   function modeloBestia(b) {
+    if (M3 && M3.camelot) {
+    var tc = TIPOS_BESTIA[b.tipo], gc = new THREE.Group();
+    gc.add(CAMELOT.sprite(b.tipo, 0.85 + b.nivel * 0.03));
+    var etc = M.etiquetaEdificio(tc.icono + ' ' + L('Nv', 'Lv') + ' ' + b.nivel, b.nivel); etc.position.set(0, 1.6, 0); etc.scale.multiplyScalar(0.48); gc.add(etc);
+    return gc;
+    }
     var t = TIPOS_BESTIA[b.tipo], g = new THREE.Group(), s = 0.55 + b.nivel * 0.05, oso = b.tipo === 'oso';
     var cuerpo = M.caja(0.7 * s, (oso ? 0.48 : 0.36) * s, 0.38 * s, t.color, 0, (oso ? 0.42 : 0.36) * s, 0); g.add(cuerpo);
     g.add(M.caja(0.3 * s, 0.28 * s, 0.3 * s, t.color, 0.46 * s, (oso ? 0.55 : 0.46) * s, 0));
@@ -3070,7 +3113,7 @@
   function empezarObra(s, tipo, nivel) {
     var d = EDIFICIOS[tipo];
     s.obra = { tipo: tipo, nivel: nivel, t: 0, total: d.tiempo[nivel - 1] * (1 - bono('obras')) };
-    if (s.modelo) { s.grupo.remove(s.modelo); s.modelo = null; }
+    if (s.modelo) { s.grupo.remove(s.modelo); s.modelo = null; } if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     if (s.insignia) { s.grupo.remove(s.insignia); s.insignia = null; }
     s.edificio = null;
     s.andamio = M.andamio();
@@ -3110,8 +3153,11 @@
     s.edificio = { tipo: tipo, nivel: nivel };
     var tr = tramoNivel(nivel);
     s.modelo = crearModelo(tipo, tr);
-    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr]);
+    // dentro de cada tramo el edificio también crece un poco por nivel: cada mejora se nota
+    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (1 + 0.05 * ((nivel - 1) % 3)));
     encajarEnParcela(s.modelo, tr);
+    if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
+    if (tipo !== 'torre') { s.adornos = M.adornosNivel(nivel, new THREE.Box3().setFromObject(s.modelo)); s.grupo.add(s.adornos); }
     if (s.insignia) s.grupo.remove(s.insignia);
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' ? 9.5 : 5.2) * ESCALA_TRAMO[tr] + (tr >= 4 ? 0.9 : 0), 0);
@@ -4278,14 +4324,14 @@
     cam.meta.x = Math.max(CENTRO_REINO.x - LIMITE_CAM, Math.min(CENTRO_REINO.x + LIMITE_CAM, cam.meta.x));
     cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
     cam.objetivo.lerp(cam.meta, kp);
-    // de cerca la cámara baja (más cinematográfica); de lejos sube para ver el reino entero
-    var u = Math.max(0, Math.min(1, (cam.dist - 16) / Math.max(40, distEncuadre() - 16)));
-    cam.polar = 1.17 - u * 0.37;
+    // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
+    cam.polar = 1.05;
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
-    escena.fog.near = cam.dist * 1.15; escena.fog.far = cam.dist * 2.6 + 80;
+    escena.fog.near = cam.dist * 1.8; escena.fog.far = cam.dist * 4 + 140;
     var o = cam.objetivo, s = Math.sin(cam.polar);
     camara.position.set(o.x + cam.dist * s * Math.cos(cam.az), o.y + cam.dist * Math.cos(cam.polar), o.z + cam.dist * s * Math.sin(cam.az));
-    camara.lookAt(o.x, o.y + (1 - u) * 1.2, o.z);
+    var cerca = 6;
+    camara.lookAt(o.x + Math.cos(cam.az) * cerca, o.y + 2, o.z + Math.sin(cam.az) * cerca);
     // la caja de sombras sigue a la cámara y crece con el zoom
     var ts = Math.max(28, Math.min(88, cam.dist * 0.8));
     if (Math.abs(ts - tamSombra) > 2) { tamSombra = ts; sc.left = -ts; sc.right = ts; sc.top = ts; sc.bottom = -ts; sc.updateProjectionMatrix(); }
@@ -7290,7 +7336,7 @@
     hambre = false; $('aviso-hambre').classList.add('oculto');
     if (obraMuralla) { escena.remove(murallaBarra); murallaAndamios.forEach(function (a) { escena.remove(a); }); murallaAndamios = []; murallaBarra = null; obraMuralla = null; }
     slots.forEach(function (s) {
-      if (s.modelo) s.grupo.remove(s.modelo);
+      if (s.modelo) s.grupo.remove(s.modelo); if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
       if (s.andamio) s.grupo.remove(s.andamio);
       if (s.insignia) { s.grupo.remove(s.insignia); s.insignia = null; }
       if (s.barra) escena.remove(s.barra);
