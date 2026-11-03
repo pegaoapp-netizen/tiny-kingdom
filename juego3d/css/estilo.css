@@ -855,6 +855,7 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .r1 { background: linear-gradient(#f2f5f8, #aab4bf); color: #2a3440 !important; }
 .r2 { background: linear-gradient(#a9c3e6, #5677a6); }
 .r3 { background: linear-gradient(#ffe27a, #d29a12); color: #4a2a00 !important; }
+.r4 { background: linear-gradient(#e0402a, #6a0e0e); color: #ffe9a8 !important; box-shadow: 0 0 8px rgba(255,90,30,.6); }
 .tropa-elegir { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; gap: 6px; }
 .tropa-elegir button { width: 54px; height: 54px; border-radius: 12px; border: 3px solid #c99a4a; background: #fffaf0; padding: 2px; }
 .tropa-elegir button.activo { border-color: #e09a10; box-shadow: 0 0 0 3px #ffe27a; }

@@ -3916,7 +3916,7 @@
     guardar();
     reabrirPanel();
   }
-  var COLOR_ARM_EFECTO = [0xffffff, 0xd6dde5, 0x6f8fb5, 0xf5c542];
+  var COLOR_ARM_EFECTO = [0xffffff, 0xd6dde5, 0x6f8fb5, 0xf5c542, 0xff4a1a];
   function invocarTres() {
     if (!pagar(0, INVOCAR.tres)) return;
     var tipos = ['espadachin', 'arquero', 'guardian', 'caballeria'], salieron = [];
@@ -5020,7 +5020,7 @@
   // ------------------------------------------------------------------
   var PESTANAS_TROPA = { cuartel: ['explorador', 'miliciano', 'espadachin', 'guardian', 'balista', 'ariete', 'catapulta', 'torre_asedio'], establo: ['jinete', 'caballeria', 'caballeria_pesada'], tiro: ['arquero'] };
   var ICONO_PESTANA = { cuartel: '🏰', establo: '🐎', tiro: '🏹' };
-  var ROMANO = ['I', 'II', 'III', 'IV'];
+  var ROMANO = ['I', 'II', 'III', 'IV', 'V'];
   var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1 };
   var visor = null;
   // Escuadrón: el líder adelante y 7 soldados en formación detrás (todos del rango elegido)
@@ -6675,6 +6675,54 @@
     sonar('magia');
     guardarPreferencias();
   }
+  // El dueño lo tiene todo: edificios, castillo y muralla al nivel máximo, investigación, armaduras,
+  // armas, todos los héroes al tope y muchas tropas de cada tipo. Solo sube cosas: nunca quita nada.
+  var TROPAS_DUENO = 25;
+  function todoAlMaximo(callado) {
+    if (!estado.dueno) return;
+    if (oleadaActiva) { if (!callado) { consejoTemporal(T('todo_max_oleada')); sonar('error'); } return; }
+    // al entrar solo se hace si falta algo (rehacer cientos de tropas tarda unos segundos)
+    if (callado && (estado.castillo || 1) >= NIVEL_MAX && (estado.muralla || 0) >= NIVEL_MAX && !slots.some(function (s) { return s.obra || (s.edificio && s.edificio.nivel < NIVEL_MAX); }) &&
+      Object.keys(TROPAS).every(function (t) { return t === 'heroe' || (nivelArmadura(t) >= ARMADURA.max && tropas.filter(function (u) { return u.tipo === t && !u.heroeId && !u.invocada && !u.refuerzo && u.armadura >= ARMADURA.max; }).length >= TROPAS_DUENO); })) return;
+    slots.forEach(function (s) { if (s.obra) terminarObra(s, true); });
+    slots.forEach(function (s) { if (s.edificio && s.edificio.nivel < NIVEL_MAX) ponerEdificio(s, s.edificio.tipo, NIVEL_MAX); });
+    if (estado.obraCastillo) { estado.obraCastillo.nivel = NIVEL_MAX; terminarCastillo(); }
+    else if ((estado.castillo || 1) < NIVEL_MAX) { estado.castillo = NIVEL_MAX; ponerCastillo(); actualizarParcelas(); }
+    if (obraMuralla) terminarMuralla();
+    if ((estado.muralla || 0) < NIVEL_MAX) { estado.muralla = NIVEL_MAX; ponerMuralla(NIVEL_MAX); }
+    estado.vidaCastillo = vidaMaxCastillo();
+    estado.invest = estado.invest || {};
+    for (var rama in INVESTIGACION) INVESTIGACION[rama].forEach(function (tc) { estado.invest[tc.id] = Math.max(estado.invest[tc.id] || 0, tc.max); });
+    estado.armadura = estado.armadura || {}; estado.armas = estado.armas || {};
+    var tipos = Object.keys(TROPAS).filter(function (t) { return t !== 'heroe'; });
+    tipos.forEach(function (t) { estado.armadura[t] = ARMADURA.max; estado.armas[t] = ARMAS.max; });
+    // todos los héroes al tope
+    var nuevos = false;
+    HEROES.forEach(function (h) {
+      if (!estado.heroes[h.id]) { estado.heroes[h.id] = { nivel: 1, estrellas: 1, frag: 0 }; nuevos = true; }
+      var e = estado.heroes[h.id]; e.estrellas = 5; e.nivel = HEROE_NIVEL_MAX; e.hab = Math.max(e.hab || 1, topeHab(h.id)); e.tal = Math.max(e.tal || 0, topeTal(h.id));
+    });
+    if (!estado.equipo || !estado.equipo.length) estado.equipo = HEROES.slice(0, 3).map(function (h) { return h.id; });
+    estado.xp = Math.max(estado.xp || 0, xpParaNivel(60));
+    // tropas: se rehacen con la Armadura de Dragón y se llenan hasta TROPAS_DUENO de cada tipo
+    var cuenta = {};
+    tropas.slice().forEach(function (u) {
+      if (u.tipo === 'heroe' || u.heroeId || u.invocada || u.refuerzo) return;
+      cuenta[u.tipo] = (cuenta[u.tipo] || 0) + 1;
+      tropas.splice(tropas.indexOf(u), 1); escena.remove(u.m.grupo); escena.remove(u.barra);
+    });
+    var total = 0;
+    tipos.forEach(function (t) {
+      var n = Math.max(cuenta[t] || 0, TROPAS_DUENO); total += n;
+      for (var k = 0; k < n; k++) { var u = crearTropa(t, reunion.clone().add(new V3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4))); guardarDentro(u); }
+    });
+    estado.heridos = {};
+    if (nuevos) cargarModelosHeroes();
+    ponerEquipo();
+    actualizarParcelas(); actualizarHUD(); guardar(true);
+    if (!callado) { chispas(new V3(0, 6, 0), 0xff4a1a, 30, 5); sonar('victoria'); }
+    consejoTemporal(T('todo_max_ok', { n: formatoNumero(total) }));
+  }
   function salirModoDueno() {
     estado.dueno = false; estado.oroInfinito = false; estado.gemasInfinitas = false; estado.correo = '';
     cambiarVelocidad(1);
@@ -6842,6 +6890,7 @@
         '<button class="comprar morado" data-accion="dueno-gemas-inf">' + T('gemas_inf') + ': ' + (estado.gemasInfinitas ? T('encendido') : T('apagado')) + '</button>' +
         '<button class="comprar naranja" data-accion="dueno-vel">⏩ ' + T('vel10') + (velocidad === 10 ? ' ✓' : '') + '</button>' +
         '<button class="comprar" data-accion="dueno-oleada">⚔️ ' + T('saltar_oleada') + '</button>' +
+        '<button class="comprar morado" data-accion="dueno-max">' + T('todo_max') + '</button>' +
         '<button class="comprar naranja" data-accion="dueno-obras">🔨 ' + (estado.idioma === 'en' ? 'Finish all builds' : 'Terminar todas las obras') + '</button>' +
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
@@ -6993,6 +7042,7 @@
     else if (a === 'dueno-vel') { cambiarVelocidad(velocidad === 10 ? 1 : 10); sonar('click'); reabrirPanel(); }
     else if (a === 'dueno-oleada') { cerrarPanel(); if (!oleadaActiva) empezarOleada(); }
     else if (a === 'dueno-obras') { slots.forEach(function (s) { if (s.obra) s.obra.t = s.obra.total; }); if (obraMuralla) obraMuralla.t = obraMuralla.total; if (estado.obraCastillo) estado.obraCastillo.t = estado.obraCastillo.total; cerrarPanel(); }
+    else if (a === 'dueno-max') { cerrarPanel(); todoAlMaximo(); }
     else if (a === 'dueno-salir') { salirModoDueno(); reabrirPanel(); }
     else if (a === 'borrar') { if (window.confirm(T('borrar_ok'))) { cerrarPanel(); empezarPartida(null); guardar(true); } }
   });
@@ -7523,6 +7573,7 @@
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
     setTimeout(function () { if (!enMenu) publicarAldea(true); }, 800);
     setTimeout(function () { revisarAtaques(true); }, 2500);
+    if (duenoPorCuenta && estado.dueno) setTimeout(function () { if (!enMenu) todoAlMaximo(true); }, 1500);
   }
 
   // ------------------------------------------------------------------

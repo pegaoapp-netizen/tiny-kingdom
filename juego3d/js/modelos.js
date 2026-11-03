@@ -1528,7 +1528,7 @@ var M = (function () {
   var TAM_UNIDAD = 1.6;
   var MAT_BLOB = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false });
   // Colores de la armadura por nivel: 1 metal, 2 acero azul, 3 oro
-  var COLOR_ARMADURA = [0, 0xd6dde5, 0x6f8fb5, 0xf5c542];
+  var COLOR_ARMADURA = [0, 0xd6dde5, 0x6f8fb5, 0xf5c542, 0x8a1f1f];
   // ---- Forma de las tropas por rango (I = 0 ... IV = 3): cada rango cambia armadura, casco, arma y escudo ----
   var TROPA_RANGO = { espadachin: 1, guardian: 1, caballeria: 1, arquero: 1 };
   function detallesRango(tipo, r, cuerpo, cabeza, arma, izq, radioEscudo) {
@@ -1585,6 +1585,31 @@ var M = (function () {
       var anillo = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.66, 28), new THREE.MeshBasicMaterial({ color: 0xffd34a, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
       anillo.rotation.x = -Math.PI / 2; anillo.position.y = 0.04; anillo.userData.noFusionar = true; cuerpo.parent ? cuerpo.parent.add(anillo) : cuerpo.add(anillo);
     }
+    // RANGO V: Armadura de Dragón — roja oscura con dorado, cuernos, capa roja, joya de fuego y aro de llamas
+    if (r >= 4) {
+      var ROJO = 0x8a1f1f, ROJO2 = 0x4a0e0e, FUEGO = 0xff6a1a, NEGRO = 0x2a1a14;
+      [-1, 1].forEach(function (s) {
+        var cu = cono(0.07, 0.38, 6, NEGRO, s * 0.3, 0.32, 0); cu.rotation.z = -s * 0.75; cabeza.add(cu);
+        cabeza.add(cono(0.035, 0.12, 5, ORO, s * 0.47, 0.5, 0).rotateZ(-s * 0.75));
+        var hb2 = esfera(0.21, ROJO, s * 0.36, 0.82, 0, 10, 8); hb2.scale.set(1.2, 0.7, 1.2); cuerpo.add(hb2);
+        for (var q = 0; q < 3; q++) cuerpo.add(cono(0.04, 0.2, 4, NEGRO, s * (0.3 + q * 0.07), 0.98, -0.05 + q * 0.05).rotateZ(-s * 0.4));
+      });
+      cuerpo.add(caja(0.3, 0.3, 0.035, ROJO2, 0, 0.62, 0.335));
+      cuerpo.add(esfera(0.075, FUEGO, 0, 0.64, 0.37, 8, 6));
+      for (var sc = 0; sc < 8; sc++) { var as = sc / 8 * Math.PI * 2; cuerpo.add(caja(0.15, 0.2, 0.035, ROJO, Math.cos(as) * 0.345, 0.27, Math.sin(as) * 0.345).rotateY(-as + Math.PI / 2)); }
+      var capaD = caja(0.7, 0.86, 0.045, ROJO, 0, 0.5, -0.41); capaD.rotation.x = 0.17; cuerpo.add(capaD);
+      cuerpo.add(caja(0.72, 0.06, 0.06, ORO, 0, 0.1, -0.48).rotateX(0.17));
+      if (caballero && radioEscudo) {
+        var esD = cil(radioEscudo * 1.4, radioEscudo * 1.4, 0.07, 6, ROJO2, -0.06, -0.15, 0.25); esD.rotation.z = Math.PI / 2; esD.rotation.y = Math.PI / 2; izq.add(esD);
+        izq.add(esfera(radioEscudo * 0.34, FUEGO, -0.06, -0.15, 0.31, 8, 6));
+      }
+      var llama = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.84, 32), new THREE.MeshBasicMaterial({ color: 0xff4a1a, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
+      llama.rotation.x = -Math.PI / 2; llama.position.y = 0.05; llama.userData.noFusionar = true; cuerpo.parent ? cuerpo.parent.add(llama) : cuerpo.add(llama);
+      if (tipo === 'espadachin') { arma.add(caja(0.1, 0.62, 0.035, FUEGO, 0, 0.72, 0)); arma.add(caja(0.46, 0.08, 0.09, ROJO, 0, 0.1, 0)); }
+      if (tipo === 'guardian') { arma.add(caja(0.4, 0.28, 0.26, ROJO, 0, 0.6, 0)); arma.add(cono(0.06, 0.26, 4, FUEGO, 0, 0.88, 0)); }
+      if (tipo === 'caballeria') { arma.add(cono(0.11, 0.42, 6, FUEGO, 0, 1.66, 0)); arma.add(caja(0.36, 0.28, 0.02, ROJO, 0.18, 1.05, 0)); }
+      if (tipo === 'arquero') { var arD = new THREE.Mesh(new THREE.TorusGeometry(0.54, 0.04, 4, 12, Math.PI), mat(ROJO)); arD.position.set(0, 0.05, 0.08); arD.rotation.set(0, Math.PI / 2, Math.PI / 2); arma.add(arD); }
+    }
     // ARMAS por rango
     if (tipo === 'espadachin') {
       if (r >= 1) arma.add(caja(0.07, 0.16, 0.025, ACERO, 0, 0.86, 0));
@@ -1613,7 +1638,7 @@ var M = (function () {
   function unidad(tipo, tam, armadura, look) {
     if (tipo === 'heroe' && look) return heroeModelo(look, tam);
     if (FAMILIA_TROPA[tipo]) {
-      var fam = FAMILIA_TROPA[tipo], u0 = unidad(fam[0], tam, tipo === 'caballeria_pesada' ? 3 : 0);
+      var fam = FAMILIA_TROPA[tipo], u0 = unidad(fam[0], tam, (armadura || 0) >= 4 ? 4 : (tipo === 'caballeria_pesada' ? 3 : 0));
       u0.grupo.scale.multiplyScalar(fam[1]); u0.escala *= fam[1];
       var aroF = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.6, 24), new THREE.MeshBasicMaterial({ color: fam[2], transparent: true, opacity: 0.65, side: THREE.DoubleSide, depthWrite: false }));
       aroF.rotation.x = -Math.PI / 2; aroF.position.y = 0.035; u0.grupo.add(aroF);
@@ -1803,6 +1828,7 @@ var M = (function () {
       if (armadura >= 2) caballo.add(caja(0.66, 0.3, 0.32, colArm, 0, 1.25, 0.7));
       if (armadura === 1) caballo.add(caja(0.7, 0.04, 0.64, C.oro, 0, 1.0, -0.05));
       if (armadura >= 2) [-1, 1].forEach(function (s) { caballo.add(caja(0.05, 0.38, 1.0, colArm, s * 0.34, 0.82, -0.05)); });
+      if (armadura >= 4) { caballo.add(caja(0.7, 0.34, 0.36, 0x8a1f1f, 0, 1.26, 0.72)); [-1, 1].forEach(function (s) { caballo.add(cono(0.05, 0.26, 5, 0x2a1a14, s * 0.12, 1.66, 0.86).rotateZ(-s * 0.5)); caballo.add(caja(0.06, 0.4, 1.04, 0x8a1f1f, s * 0.36, 0.82, -0.05)); }); }
       if (armadura >= 3) { caballo.add(caja(0.34, 0.32, 0.4, C.oro, 0, 1.42, 0.82)); caballo.add(cono(0.08, 0.4, 5, 0x2f5fae, 0, 1.72, 0.7)); [-1, 1].forEach(function (s) { caballo.add(caja(0.06, 0.06, 1.02, C.oro, s * 0.36, 1.0, -0.05)); }); }
       // silla, estribos y riendas
       caballo.add(caja(0.5, 0.12, 0.5, 0x5a3418, 0, 1.1, 0.0));
@@ -2289,11 +2315,18 @@ var M = (function () {
   }
   function figura(id) { var f = figListas[id]; return f ? (f.clips ? THREE.SkeletonUtils.clone(f.obj) : f.obj.clone()) : null; }
   // pone la figura de archivo en lugar del cuerpo hecho con código (se queda el aro del rango)
+  var MAT_DRAGON = {};
   function ponerFiguraTropa(tipo, g, cuerpo, p, armadura) {
     var f = figura(FIGURA_TROPA[tipo]); if (!f) return false;
     g.traverse(function (o) { if (o.isMesh && !(o.userData && o.userData.noFusionar)) o.visible = false; });
     (p.caballo || cuerpo).add(f);
     if (p.caballo) f.position.y = 0; else f.position.y = 0;
+    // Armadura de Dragón: la figura se tiñe de rojo oscuro con un brillo de fuego (materiales compartidos, uno por original)
+    if (armadura >= 4) f.traverse(function (o) {
+      if (!o.isMesh || !o.material) return;
+      var tinte = function (m) { var k = m.uuid; if (!MAT_DRAGON[k]) { var c2 = m.clone(); if (c2.color) c2.color.lerp(new THREE.Color(0x9a1c12), 0.55); if (c2.emissive) { c2.emissive.setHex(0x3a0800); } MAT_DRAGON[k] = c2; } return MAT_DRAGON[k]; };
+      o.material = Array.isArray(o.material) ? o.material.map(tinte) : tinte(o.material);
+    });
     // aro de color por rango (el IV ya tiene el dorado)
     if (armadura === 1 || armadura === 2) {
       var aro = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.64, 28), new THREE.MeshBasicMaterial({ color: armadura === 1 ? 0xd6dde5 : 0x4a8aff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
