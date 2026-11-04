@@ -4851,10 +4851,11 @@
     panelActual = cual;
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
+    $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
     actualizarPanel();
   }
   function cerrarPanel() {
-    $('panel').classList.add('oculto'); $('panel').classList.remove('oscuro');
+    $('panel').classList.add('oculto'); $('panel').classList.remove('oscuro'); $('panel').classList.remove('tropas-oscuro');
     document.body.classList.remove('panel-abierto');
     panelActual = null;
     slotElegido = null;
@@ -5045,7 +5046,7 @@
         var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(3, 6, 5); e.add(l);
         var l2 = new THREE.DirectionalLight(0xffe0b0, 0.35); l2.position.set(-4, 2, -3); e.add(l2);
         var base = new THREE.Group();
-        var piedra = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.08, 0.16, 32), new THREE.MeshLambertMaterial({ color: 0xa8957a }));
+        var piedra = new THREE.Mesh(new THREE.CylinderGeometry(1, 1.08, 0.16, 32), new THREE.MeshLambertMaterial({ color: document.body.classList.contains('tema-oscuro') ? 0x4e4036 : 0xa8957a }));
         piedra.position.y = -0.08; base.add(piedra);
         var borde = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.035, 8, 40), new THREE.MeshLambertMaterial({ color: 0xd9b04a }));
         borde.rotation.x = Math.PI / 2; borde.position.y = 0.005; base.add(borde);

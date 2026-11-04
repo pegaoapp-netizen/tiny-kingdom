@@ -191,3 +191,89 @@ body.tema-oscuro #consejo, body.tema-oscuro #mision {
   box-shadow: 0 0 0 2px var(--to-hierro2), 0 4px 10px rgba(0,0,0,.55) !important; color: #f6ead0 !important;
 }
 body.tema-oscuro #consejo { font-family: var(--to-num); }
+
+/* ============================================================
+   VENTANA DE TROPAS / CUARTEL — madera oscura, hierro y oro
+   ============================================================ */
+body.tema-oscuro #panel.tropas-oscuro {
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.16) 0 2px, transparent 2px 26px, rgba(255,220,160,.035) 26px 28px, transparent 28px 52px),
+    linear-gradient(180deg, #33231a, #21160e 60%, #170f09) !important;
+  border: 3px solid var(--to-hierro) !important; outline: 2px solid var(--to-oro2); outline-offset: -8px;
+  box-shadow: 0 0 0 2px var(--to-hierro2), 0 -6px 22px rgba(0,0,0,.6), inset 0 0 26px rgba(0,0,0,.65) !important;
+  color: #f0e2c0 !important;
+}
+body.tema-oscuro #panel.tropas-oscuro #panel-titulo { font-family: var(--to-letra) !important; font-size: 28px !important; color: var(--to-oro) !important; text-shadow: 0 2px 3px #000 !important; }
+body.tema-oscuro #panel.tropas-oscuro #panel-cerrar { background: linear-gradient(#3b2717, #1c120b) !important; border: 2px solid var(--to-oro2) !important; color: var(--to-oro-claro) !important; }
+/* pestañas */
+body.tema-oscuro #panel.tropas-oscuro .subtabs button {
+  background: linear-gradient(#3b2717, #1f140c) !important; border: 2px solid #6a4a22 !important; color: #d9c49a !important;
+  font-family: var(--to-num); font-weight: 900 !important; box-shadow: inset 0 1px 0 rgba(255,220,160,.12), 0 2px 0 #000 !important; border-radius: 10px !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .subtabs button.activo {
+  background: linear-gradient(#f2d27a, #c08a2a 70%, #8a5a14) !important; border-color: #ffe9a8 !important; color: #2a1800 !important; text-shadow: 0 1px 0 rgba(255,240,200,.6);
+}
+/* escenario con las tropas: piedra oscura con luz dorada y marco de oro */
+body.tema-oscuro #panel.tropas-oscuro .tropa-escena {
+  background:
+    radial-gradient(ellipse at 50% 74%, rgba(255,200,110,.38) 0%, rgba(160,100,40,.18) 32%, transparent 60%),
+    radial-gradient(ellipse at 50% 40%, #3a2d24 0%, #1e1611 60%, #0e0a07 100%) !important;
+  border: 3px solid var(--to-oro2) !important; box-shadow: 0 0 0 2px var(--to-hierro2), inset 0 0 30px rgba(0,0,0,.85) !important; border-radius: 14px !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .tropa-nombre h3 { font-family: var(--to-letra) !important; font-size: 24px !important; color: var(--to-oro) !important; text-shadow: 0 2px 3px #000 !important; }
+body.tema-oscuro #panel.tropas-oscuro .tropa-cuenta span { background: rgba(20,12,7,.85) !important; border: 1px solid var(--to-oro2) !important; color: #f0e2c0 !important; }
+body.tema-oscuro #panel.tropas-oscuro .tropa-elegir button {
+  background: radial-gradient(circle at 50% 40%, #3b2a1c, #150e08) !important; border: 2px solid #6a4a22 !important; box-shadow: 0 2px 4px rgba(0,0,0,.6) !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .tropa-elegir button.activo { border-color: var(--to-oro) !important; box-shadow: 0 0 0 2px #3a2000, 0 0 10px rgba(255,200,90,.8) !important; }
+/* rangos I-V: medallas de metal con borde de hierro */
+body.tema-oscuro #panel.tropas-oscuro .rangos { gap: 7px !important; }
+body.tema-oscuro #panel.tropas-oscuro .rangos button {
+  min-width: 52px !important; height: 46px !important; border-radius: 12px !important; border: 3px solid #2a2a2c !important;
+  box-shadow: 0 0 0 2px var(--to-oro2), 0 4px 8px rgba(0,0,0,.6), inset 0 2px 0 rgba(255,255,255,.25), inset 0 -3px 0 rgba(0,0,0,.35) !important;
+  font-family: var(--to-num) !important; text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
+body.tema-oscuro #panel.tropas-oscuro .rangos button b { font-size: 17px; }
+body.tema-oscuro #panel.tropas-oscuro .r0 { background: linear-gradient(#a8724a, #5e3a1e) !important; color: #ffe9cf !important; }
+body.tema-oscuro #panel.tropas-oscuro .r1 { background: linear-gradient(#c9d0d8, #6b747e) !important; color: #1c2228 !important; text-shadow: 0 1px 0 rgba(255,255,255,.5) !important; }
+body.tema-oscuro #panel.tropas-oscuro .r2 { background: linear-gradient(#6f8fc0, #2a4370) !important; color: #e8f0ff !important; }
+body.tema-oscuro #panel.tropas-oscuro .r3 { background: linear-gradient(#ffe27a, #b07a14) !important; color: #3a2000 !important; text-shadow: 0 1px 0 rgba(255,240,200,.6) !important; }
+body.tema-oscuro #panel.tropas-oscuro .r4 { background: linear-gradient(#e0402a, #5a0a0a) !important; color: #ffe9a8 !important; }
+body.tema-oscuro #panel.tropas-oscuro .rangos button.activo { transform: translateY(-5px) !important; box-shadow: 0 0 0 2px var(--to-oro-claro), 0 0 14px rgba(255,200,90,.9), 0 6px 10px rgba(0,0,0,.6) !important; }
+body.tema-oscuro #panel.tropas-oscuro .rangos button.bloq { filter: grayscale(.85) brightness(.6) !important; opacity: .85 !important; }
+body.tema-oscuro #panel.tropas-oscuro .rango-chapa { font-family: var(--to-num); border: 2px solid #2a2a2c !important; box-shadow: 0 0 0 1px var(--to-oro2) !important; }
+/* textos, estadísticas y tarjetas */
+body.tema-oscuro #panel.tropas-oscuro .nota, body.tema-oscuro #panel.tropas-oscuro p { color: #e0cfa8 !important; }
+body.tema-oscuro #panel.tropas-oscuro .aviso-rojo { color: #ff9a7a !important; }
+body.tema-oscuro #panel.tropas-oscuro .stats span {
+  background: linear-gradient(#2a1c12, #1a110a) !important; border: 1px solid #6a4a22 !important; color: #f0e2c0 !important; border-radius: 8px !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .stats span.nivel-arm { border-color: var(--to-oro) !important; color: var(--to-oro-claro) !important; }
+body.tema-oscuro #panel.tropas-oscuro .carta {
+  background: linear-gradient(180deg, rgba(59,39,23,.95), rgba(28,18,11,.95)) !important; border: 2px solid var(--to-oro2) !important; box-shadow: 0 0 0 1px #000, inset 0 0 14px rgba(0,0,0,.5) !important; color: #f0e2c0 !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .carta h3 { color: var(--to-oro) !important; font-family: var(--to-num); }
+/* cantidad, barra y botones */
+body.tema-oscuro #panel.tropas-oscuro .tropa-cantidad { background: rgba(15,10,6,.6); border: 1px solid #6a4a22; border-radius: 12px; padding: 6px 8px; }
+body.tema-oscuro #panel.tropas-oscuro .tropa-cantidad .redondo { background: linear-gradient(#3b2717, #1c120b) !important; border: 2px solid var(--to-oro2) !important; color: var(--to-oro-claro) !important; }
+body.tema-oscuro #panel.tropas-oscuro .tropa-num { color: var(--to-oro) !important; font-family: var(--to-num); font-weight: 900; }
+body.tema-oscuro #panel.tropas-oscuro input[type=range] { accent-color: #d8a840; }
+body.tema-oscuro #panel.tropas-oscuro .tropa-total, body.tema-oscuro #panel.tropas-oscuro .tropa-total * { color: #f0e2c0 !important; }
+body.tema-oscuro #panel.tropas-oscuro button.comprar:not(.morado):not(.rojo):not(.armadura) {
+  background: linear-gradient(#f2d27a, #c08a2a 65%, #8a5a14) !important; color: #2a1800 !important; border: 2px solid #ffe9a8 !important;
+  box-shadow: 0 0 0 2px #3a2000, 0 4px 0 #2a1800 !important; text-shadow: 0 1px 0 rgba(255,240,200,.5) !important; font-family: var(--to-num); font-weight: 900 !important;
+}
+body.tema-oscuro #panel.tropas-oscuro button.comprar.armadura { background: linear-gradient(#e0402a, #6a0e0e) !important; color: #ffe9a8 !important; border: 2px solid var(--to-oro) !important; }
+body.tema-oscuro #panel.tropas-oscuro .cola, body.tema-oscuro #panel.tropas-oscuro .cola * { color: #f0e2c0; }
+/* cabecera del panel y espacio para la barra de abajo nueva */
+body.tema-oscuro #panel.tropas-oscuro .panel-cab { background: linear-gradient(180deg, #3b2717, #24170e) !important; border-bottom: 2px solid var(--to-oro2) !important; box-shadow: 0 2px 6px rgba(0,0,0,.5) !important; }
+body.tema-oscuro #panel { bottom: calc(90px + env(safe-area-inset-bottom)) !important; max-height: calc(100vh - 190px - env(safe-area-inset-bottom)) !important; }
+@media (max-width: 600px) { body.tema-oscuro #panel { bottom: calc(86px + env(safe-area-inset-bottom)) !important; max-height: calc(100vh - 176px - env(safe-area-inset-bottom)) !important; } }
+body.tema-oscuro #panel.tropas-oscuro .nota, body.tema-oscuro #panel.tropas-oscuro .cola, body.tema-oscuro #panel.tropas-oscuro .tropa-desc, body.tema-oscuro #panel.tropas-oscuro .stats {
+  background: rgba(15,10,6,.55) !important; border-color: #5a3e1e !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .inv-tropa-btn {
+  background: linear-gradient(#3b2717, #1c120b) !important; color: var(--to-oro-claro) !important; border: 2px solid var(--to-oro2) !important;
+  box-shadow: 0 0 0 2px #000, 0 3px 0 #000 !important; font-family: var(--to-num); font-weight: 900 !important; text-shadow: 0 1px 2px #000 !important;
+}
+body.tema-oscuro #panel.tropas-oscuro .tropa-cantidad .comprar.mini { background: linear-gradient(#f2d27a, #c08a2a 65%, #8a5a14) !important; color: #2a1800 !important; border: 2px solid #ffe9a8 !important; }
