@@ -1,0 +1,193 @@
+/* ============================================================
+   TEMA OSCURO v6.29 — madera vieja, hierro forjado y oro
+   Barra de arriba con escudos, panel del rey a la izquierda y
+   barra de abajo con 7 botones redondos. Todo centrado.
+   ============================================================ */
+:root {
+  --to-madera: #2a1c12;
+  --to-madera2: #3b2717;
+  --to-hierro: #4a4a4c;
+  --to-hierro2: #1f1f21;
+  --to-oro: #e8c46a;
+  --to-oro2: #a8782a;
+  --to-oro-claro: #ffe9a8;
+  --to-letra: 'UnifrakturCook', 'Cinzel', Georgia, serif;
+  --to-num: 'Cinzel', Georgia, serif;
+}
+
+/* madera oscura con vetas + borde de hierro con remaches */
+body.tema-oscuro .to-madera {
+  background:
+    radial-gradient(circle at 10px 10px, #8a8a8e 0 2.6px, #2a2a2c 3.2px, transparent 3.8px) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at calc(100% - 10px) 10px, #8a8a8e 0 2.6px, #2a2a2c 3.2px, transparent 3.8px) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at 10px calc(100% - 10px), #8a8a8e 0 2.6px, #2a2a2c 3.2px, transparent 3.8px) 0 0 / 100% 100% no-repeat,
+    radial-gradient(circle at calc(100% - 10px) calc(100% - 10px), #8a8a8e 0 2.6px, #2a2a2c 3.2px, transparent 3.8px) 0 0 / 100% 100% no-repeat,
+    repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 2px, transparent 2px 23px, rgba(255,220,160,.04) 23px 25px, transparent 25px 47px),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.10) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, var(--to-madera2), var(--to-madera) 55%, #1c120b) !important;
+  border: 3px solid var(--to-hierro) !important;
+  outline: 2px solid var(--to-oro2);
+  outline-offset: -7px;
+  box-shadow: 0 0 0 2px var(--to-hierro2), 0 6px 16px rgba(0,0,0,.6), inset 0 0 18px rgba(0,0,0,.7) !important;
+  border-radius: 10px !important;
+}
+
+/* ---------------- BARRA DE ARRIBA ---------------- */
+body.tema-oscuro #arriba {
+  left: 50% !important; right: auto !important; transform: translateX(-50%);
+  width: min(760px, calc(100vw - 16px)) !important;
+  top: calc(6px + env(safe-area-inset-top)) !important;
+  padding: 0 !important; display: block !important; background: none !important; box-shadow: none !important;
+}
+body.tema-oscuro #arriba > .espacio { display: none !important; }
+body.tema-oscuro #recursos {
+  display: flex !important; flex-wrap: nowrap !important; justify-content: space-around !important; align-items: flex-start;
+  gap: 2px !important; max-width: none !important; width: 100% !important; padding: 7px 10px 6px !important; box-sizing: border-box;
+}
+body.tema-oscuro #recursos .pill.r:not(.boton-top) {
+  flex: 1 1 0; min-width: 0; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: flex-start;
+  background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; height: auto !important; border-radius: 0 !important;
+  cursor: pointer; position: relative;
+}
+body.tema-oscuro #recursos .pill.r .ico, body.tema-oscuro #recursos .pill.r .emo { display: none !important; }
+body.tema-oscuro .esc-img { width: 44px; height: 49px; display: block; filter: drop-shadow(0 2px 3px rgba(0,0,0,.7)); pointer-events: none; }
+body.tema-oscuro .esc-et { display: block; font-family: var(--to-letra); font-weight: 700; font-size: 13px; line-height: 1; color: var(--to-oro-claro); text-shadow: 0 1px 2px #000; margin-top: 1px; white-space: nowrap; }
+body.tema-oscuro #recursos .pill.r b {
+  display: block; font-family: var(--to-num) !important; font-weight: 900 !important; font-size: 15px !important; line-height: 1.1;
+  color: var(--to-oro) !important; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0,0,0,.8) !important; white-space: nowrap; min-width: 0 !important; background: none !important;
+}
+body.tema-oscuro #pill-gemas b { color: #c99aff !important; }
+body.tema-oscuro #pill-gemas .gemas-mas {
+  position: absolute; top: 0; right: calc(50% - 30px); width: 17px; height: 17px; border-radius: 50%; line-height: 15px; font-size: 14px; font-weight: 900;
+  background: radial-gradient(#ffe27a, #b07a14); color: #3a2000; border: 1px solid #4a2a00; text-align: center; padding: 0 !important; margin: 0 !important;
+}
+/* orden como en el diseño: poder, comida, madera, piedra, oro, gemas */
+body.tema-oscuro #pill-poder { order: 0; }
+body.tema-oscuro #pill-comida { order: 1; }
+body.tema-oscuro #pill-madera { order: 2; }
+body.tema-oscuro #pill-piedra { order: 3; }
+body.tema-oscuro #pill-monedas { order: 4; }
+body.tema-oscuro #pill-gemas { order: 5; }
+/* idioma y salir viven en el panel del rey */
+body.tema-oscuro #recursos .boton-top { display: none !important; }
+
+/* ---------------- PANEL DEL REY (izquierda) ---------------- */
+body.tema-oscuro #panel-rey {
+  position: fixed; left: 8px; z-index: 30; width: 150px; box-sizing: border-box;
+  padding: 0 10px 10px; display: flex; flex-direction: column; align-items: stretch; gap: 5px; text-align: center;
+}
+body.tema-oscuro #panel-rey .pr-banner {
+  width: 56px; height: 62px; margin: -3px auto 0; position: relative; cursor: pointer;
+  background: linear-gradient(180deg, #f2d27a, #c08a2a 70%, #8a5a14);
+  clip-path: polygon(0 0, 100% 0, 100% 78%, 50% 100%, 0 78%);
+  box-shadow: inset 0 0 0 3px #7a4f10; display: flex; align-items: center; justify-content: center;
+}
+body.tema-oscuro #panel-rey .pr-banner::before { content: ''; position: absolute; left: -6px; right: -6px; top: 0; height: 5px; background: linear-gradient(#9a9aa0, #3a3a3e); }
+body.tema-oscuro #panel-rey .pr-banner span { font-size: 26px; margin-top: -6px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.5)); }
+body.tema-oscuro #panel-rey .pr-banner b {
+  position: absolute; bottom: 9px; left: 0; right: 0; font-family: var(--to-num); font-weight: 900; font-size: 13px; color: #3a2000; text-shadow: 0 1px 0 #ffe9a8;
+}
+/* el perfil de siempre, dentro del panel */
+body.tema-oscuro #panel-rey #perfil {
+  position: static !important; display: block !important; max-width: none !important; width: auto !important; background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; transform: none !important;
+}
+body.tema-oscuro #panel-rey #perfil .avatar { display: none !important; }
+body.tema-oscuro #panel-rey #perfil .poder { display: block !important; background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: auto !important; min-width: 0 !important; }
+body.tema-oscuro #panel-rey #perfil-nombre { display: block; font-family: var(--to-num); font-weight: 700; font-size: 12px !important; color: #f6ead0 !important; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.tema-oscuro #panel-rey #perfil .poder span { display: block; font-family: var(--to-letra); font-size: 15px !important; color: var(--to-oro-claro) !important; text-shadow: 0 1px 2px #000; margin-top: 4px; border-top: 1px solid rgba(232,196,106,.35); padding-top: 4px; }
+body.tema-oscuro #panel-rey #poder { display: block; font-family: var(--to-num) !important; font-weight: 900 !important; font-size: 19px !important; color: var(--to-oro) !important; text-shadow: 0 1px 2px #000 !important; }
+body.tema-oscuro #panel-rey #xp-barra { margin: 4px 0 0 !important; height: 6px !important; width: auto !important; border-radius: 4px; background: #120b06 !important; border: 1px solid var(--to-oro2) !important; }
+body.tema-oscuro #panel-rey #xp-relleno { background: linear-gradient(90deg, #6ab0ff, #2a6ad0) !important; }
+/* vida del castillo */
+body.tema-oscuro #panel-rey #vida-castillo {
+  position: static !important; width: auto !important; left: auto !important; top: auto !important; transform: none !important; margin: 0 !important; padding: 5px 0 0 !important;
+  border-top: 1px solid rgba(232,196,106,.35); background: none !important; box-shadow: none !important; text-align: center !important;
+}
+body.tema-oscuro #panel-rey #vida-castillo .etq { font-family: var(--to-num); font-weight: 700; font-size: 11px !important; color: #f6ead0 !important; text-shadow: 0 1px 2px #000; white-space: normal; line-height: 1.2; background: none !important; padding: 0 !important; }
+body.tema-oscuro #panel-rey #vida-castillo .barra { height: 11px !important; margin-top: 3px !important; border-radius: 7px !important; background: #120b06 !important; border: 2px solid var(--to-oro) !important; box-shadow: 0 0 0 1px #3a2000, inset 0 1px 3px #000 !important; overflow: hidden; }
+body.tema-oscuro #panel-rey #vida-castillo-fill { background: linear-gradient(180deg, #7fe07a, #2f9a3a 60%, #1f6a28) !important; border-radius: 4px; }
+/* nombre del reino */
+body.tema-oscuro #panel-rey #ciudad-nombre { position: static !important; top: auto !important; left: auto !important; transform: none !important; margin: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; padding: 2px 0 0 !important; display: flex !important; justify-content: center; gap: 4px; cursor: pointer; max-width: none !important; }
+body.tema-oscuro #panel-rey #ciudad-nombre .cn-ico { display: none; }
+body.tema-oscuro #panel-rey #ciudad-nombre b, body.tema-oscuro #panel-rey #ciudad-nombre small { font-family: var(--to-num); color: #e8d8b0 !important; font-size: 11px !important; text-shadow: 0 1px 2px #000; }
+/* idioma y salir */
+body.tema-oscuro #panel-rey .pr-botones { display: flex; justify-content: center; gap: 8px; margin-top: 2px; }
+body.tema-oscuro #panel-rey .pr-botones button {
+  position: static !important; width: 34px !important; height: 30px !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; display: block !important;
+  border-radius: 8px !important; border: 2px solid var(--to-oro2) !important; background: linear-gradient(#3a2a1a, #1c120b) !important; color: var(--to-oro-claro) !important;
+  font-family: var(--to-num); font-weight: 900; font-size: 12px !important; box-shadow: 0 2px 0 #000 !important;
+}
+
+/* ---------------- BARRA DE ABAJO ---------------- */
+body.tema-oscuro #abajo {
+  left: 50% !important; right: auto !important; transform: translateX(-50%);
+  width: min(760px, calc(100vw - 12px)) !important;
+  bottom: calc(4px + env(safe-area-inset-bottom)) !important;
+  height: auto !important; padding: 6px 8px 5px !important; box-sizing: border-box;
+  display: flex !important; justify-content: space-around !important; align-items: flex-end !important; gap: 2px !important; grid-template-columns: none !important;
+}
+body.tema-oscuro #abajo > button {
+  flex: 1 1 0; min-width: 0; width: auto !important; height: auto !important; margin: 0 !important; padding: 0 !important;
+  background: none !important; border: 0 !important; box-shadow: none !important; transform: none !important; border-radius: 0 !important;
+  display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: flex-end; position: relative; top: auto !important;
+}
+body.tema-oscuro #abajo > button::before, body.tema-oscuro #abajo > button::after { display: none !important; }
+body.tema-oscuro #abajo > button .icono { display: none !important; }
+body.tema-oscuro .bot-img { width: 58px; height: 58px; display: block; border-radius: 50%; filter: drop-shadow(0 3px 4px rgba(0,0,0,.75)); transition: transform .12s, filter .12s; pointer-events: none; }
+body.tema-oscuro #abajo > button:active .bot-img { transform: scale(.92); }
+body.tema-oscuro #abajo > button.activo .bot-img { filter: drop-shadow(0 0 8px rgba(255,200,90,.95)) drop-shadow(0 3px 4px rgba(0,0,0,.75)); transform: translateY(-3px); }
+body.tema-oscuro #abajo #btn-construir .bot-img { width: 66px; height: 66px; }
+body.tema-oscuro #abajo .txt {
+  font-family: var(--to-letra) !important; font-weight: 700 !important; font-size: 15px !important; color: var(--to-oro) !important; letter-spacing: 0 !important;
+  text-shadow: 0 1px 2px #000, 0 0 4px rgba(0,0,0,.9) !important; margin-top: 2px; text-transform: none !important;
+}
+body.tema-oscuro #abajo > button.activo .txt { color: var(--to-oro-claro) !important; }
+body.tema-oscuro #abajo .badge { position: absolute !important; top: -2px !important; right: calc(50% - 32px) !important; left: auto !important; z-index: 2; }
+/* el botón ▲ del menú y la vista quedan encima de la barra nueva */
+body.tema-oscuro #btn-menu-mas { bottom: calc(100px + env(safe-area-inset-bottom)) !important; }
+
+/* ---------------- TELÉFONO ---------------- */
+@media (max-width: 600px) {
+  body.tema-oscuro #recursos { padding: 6px 6px 5px !important; }
+  body.tema-oscuro .esc-img { width: 34px; height: 38px; }
+  body.tema-oscuro .esc-et { font-size: 10.5px; }
+  body.tema-oscuro #recursos .pill.r b { font-size: 12px !important; }
+  body.tema-oscuro #pill-gemas .gemas-mas { right: calc(50% - 25px); width: 15px; height: 15px; line-height: 13px; font-size: 12px; }
+  body.tema-oscuro #panel-rey { width: 118px; padding: 0 7px 8px; gap: 3px; }
+  body.tema-oscuro #panel-rey .pr-banner { width: 44px; height: 50px; }
+  body.tema-oscuro #panel-rey .pr-banner span { font-size: 20px; }
+  body.tema-oscuro #panel-rey .pr-banner b { font-size: 11px; bottom: 7px; }
+  body.tema-oscuro #panel-rey #poder { font-size: 15px !important; }
+  body.tema-oscuro #panel-rey #perfil .poder span { font-size: 13px !important; }
+  body.tema-oscuro #panel-rey #perfil-nombre { font-size: 10.5px !important; }
+  body.tema-oscuro #panel-rey #vida-castillo .etq { font-size: 10px !important; }
+  body.tema-oscuro #abajo { padding: 5px 4px 4px !important; }
+  body.tema-oscuro .bot-img { width: 44px; height: 44px; }
+  body.tema-oscuro #abajo #btn-construir .bot-img { width: 50px; height: 50px; }
+  body.tema-oscuro #abajo .txt { font-size: 11.5px !important; }
+  body.tema-oscuro #abajo .badge { right: calc(50% - 25px) !important; }
+  body.tema-oscuro #btn-menu-mas { bottom: calc(82px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 380px) {
+  body.tema-oscuro .esc-et { font-size: 9.5px; }
+  body.tema-oscuro #recursos .pill.r b { font-size: 11px !important; }
+  body.tema-oscuro #abajo .txt { font-size: 10px !important; }
+}
+
+/* la barra de arriba tapa las etiquetas del mapa (pero queda debajo del mundo y de los paneles) */
+body.tema-oscuro #arriba { z-index: 30 !important; }
+/* botón de vista (Ciudad / Campos / Mundo) y botón ▲ en madera y oro */
+body.tema-oscuro #btn-vista {
+  background: radial-gradient(circle at 50% 40%, #4a3220, #1c120b 75%) !important;
+  border: 3px solid var(--to-oro2) !important; box-shadow: 0 0 0 2px var(--to-hierro2), 0 4px 10px rgba(0,0,0,.6), inset 0 0 10px rgba(0,0,0,.7) !important;
+}
+body.tema-oscuro #btn-vista, body.tema-oscuro #btn-vista * { color: var(--to-oro-claro) !important; font-family: var(--to-letra) !important; text-shadow: 0 1px 2px #000 !important; }
+body.tema-oscuro #btn-menu-mas {
+  background: linear-gradient(#3b2717, #1c120b) !important; border: 2px solid var(--to-oro2) !important; color: var(--to-oro-claro) !important; box-shadow: 0 0 0 2px var(--to-hierro2), 0 3px 8px rgba(0,0,0,.6) !important;
+}
+/* avisos y misión con el mismo estilo */
+body.tema-oscuro #consejo, body.tema-oscuro #mision {
+  background: linear-gradient(180deg, rgba(59,39,23,.96), rgba(28,18,11,.96)) !important; border: 2px solid var(--to-oro2) !important;
+  box-shadow: 0 0 0 2px var(--to-hierro2), 0 4px 10px rgba(0,0,0,.55) !important; color: #f6ead0 !important;
+}
+body.tema-oscuro #consejo { font-family: var(--to-num); }

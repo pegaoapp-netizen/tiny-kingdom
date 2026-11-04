@@ -7229,8 +7229,10 @@
   function acomodarHUD() {
     function abajo(id) { var e = $(id); if (!e) return 0; var cs = getComputedStyle(e); if (cs.display === 'none' || e.classList.contains('oculto')) return 0; var r = e.getBoundingClientRect(); return r.height ? r.bottom : 0; }
     function poner(id, top) { var e = $(id); if (e) e.style.setProperty('top', Math.round(top) + 'px', 'important'); }
-    var y = abajo('perfil') + 4; poner('ciudad-nombre', y); y = (abajo('ciudad-nombre') || y) + 4;
-    poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6;
+    var y;
+    if (document.getElementById('panel-rey')) y = abajo('panel-rey') + 6; // tema oscuro: perfil, reino y vida van dentro del panel del rey
+    else { y = abajo('perfil') + 4; poner('ciudad-nombre', y); y = (abajo('ciudad-nombre') || y) + 4;
+    poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6; }
     poner('mision', y); y = (abajo('mision') || y) + 6;
     poner('consejo', y);
     poner('lateral', abajo('recursos') + 6);
