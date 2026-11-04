@@ -164,7 +164,7 @@
   function fueraCampos(x, z) { var l = aLocal(x, z); return Math.hypot(Math.max(0, Math.abs(l.a - CAMPOS_RECT.a) - CAMPOS_RECT.ha), Math.max(0, Math.abs(l.b - CAMPOS_RECT.b) - CAMPOS_RECT.hb)); }
   function enCampos(x, z, m) { var l = aLocal(x, z); return Math.abs(l.a - CAMPOS_RECT.a) < CAMPOS_RECT.ha + (m || 0) && Math.abs(l.b - CAMPOS_RECT.b) < CAMPOS_RECT.hb + (m || 0); }
   // las oleadas entran derecho por la puerta de delante hasta el castillo
-  CAMINO = [74, 60, 46, 32, 18, 4.9].map(function (a) { return aMundo(a, 0); });
+  CAMINO = [74, 60, 46, 32, 18, 7.4].map(function (a) { return aMundo(a, 0); });
   (function () { var p = aMundo(18, 0); PUNTO_REUNION[0] = p[0]; PUNTO_REUNION[1] = p[1]; })();
   // distancia a los 4 brazos de la cruz de piedra (delante y atrás hasta los campos; a los lados hasta las puertas)
   function distCruz(x, z) {
@@ -760,17 +760,15 @@
   var adornosCastillo = null;
   function ponerCastillo() {
     escena.remove(castillo);
-    var trc = tramoNivel(estado.castillo || 1);
-    castillo = M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[trc]), trc, 'castillo');
-    castillo.userData.castillo = true;
-    // el castillo crece en cada nivel: del 1 al 17 se hace más grande y más alto, y se adorna
+    // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
     var nvC = estado.castillo || 1;
-    castillo.scale.setScalar(0.74 + 0.028 * (nvC - 1));
+    castillo = M.castilloEtapa(nvC);
+    castillo.userData.castillo = true;
+    castillo.rotation.y = Math.atan2(EJE_U.x, EJE_U.z);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
-    if (nvC >= 3) { adornosCastillo = M.adornosNivel(nvC, new THREE.Box3().setFromObject(castillo)); escena.add(adornosCastillo); }
-    if (nvC >= 12) altoC += 2;
+    altoC += 0.5;
     if (insigniaCastillo) escena.remove(insigniaCastillo);
     insigniaCastillo = M.insigniaNivel(estado.castillo || 1);
     insigniaCastillo.position.set(0, altoC + 1.4, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
@@ -811,7 +809,7 @@
   function avisoTrabajos(pend) { consejoTemporal(T('tr_falta', { t: T('tr_' + pend[0].k, { n: pend[0].need }) })); sonar('error'); }
   function mejorarCastillo() {
     var n = estado.castillo || 1;
-    if (estado.obraCastillo || n >= NIVEL_MAX) return;
+    if (estado.obraCastillo || n >= CASTILLO_MAX) return;
     var fc = faltaObra('castillo', n + 1); if (fc) { consejoTemporal('🔒 ' + fc); sonar('error'); return; }
     var pendC = trabajosPendientes('castillo', n + 1); if (pendC.length) { avisoTrabajos(pendC); return; }
     if (!pagar(costoCastillo(n + 1))) return;
@@ -829,7 +827,7 @@
     andamiosDelCastillo(false);
     ponerCastillo();
     actualizarParcelas();
-    setTimeout(function () { consejoTemporal(T('parcelas_nuevas', { n: PARCELAS_POR_NIVEL })); }, 2500);
+    if (o.nivel <= NIVEL_MAX) setTimeout(function () { consejoTemporal(T('parcelas_nuevas', { n: PARCELAS_POR_NIVEL })); }, 2500);
     chispas(new V3(0, 6, 0), 0xffe14a, 30, 5);
     sonar('listo'); sonar('victoria');
     consejoTemporal(T('castillo_listo', { n: o.nivel })); sumarXP(40 * o.nivel);
@@ -841,6 +839,8 @@
   function mostrarNivelNuevo(n) {
     var v = $('nivel-nuevo'); if (v) v.remove();
     var lista = [['🧱', L('+' + PARCELAS_POR_NIVEL + ' parcelas en la ciudad', '+' + PARCELAS_POR_NIVEL + ' plots in the city')], ['🏗️', L('Tus edificios pueden subir hasta el nivel ' + n, 'Your buildings can reach level ' + n)], ['🏰', L('La muralla puede subir hasta el nivel ' + n, 'The wall can reach level ' + n)], ['🚩', L('Puedes tener ' + n + ' casillas en el mundo', 'You can hold ' + n + ' world tiles')]];
+    if (n > NIVEL_MAX) lista = [['❤', L('+' + MEJORA_CASTILLO.vida + ' de vida y +' + MEJORA_CASTILLO.dano + ' de daño del castillo', '+' + MEJORA_CASTILLO.vida + ' castle health and +' + MEJORA_CASTILLO.dano + ' damage')], ['🚩', L('Puedes tener ' + n + ' casillas en el mundo', 'You can hold ' + n + ' world tiles')]];
+    if ([5, 10, 15, 30].indexOf(n) >= 0) lista.unshift(['🏰', L(n === 30 ? '¡Castillo ULTRA: cúpula de oro, magia azul y 14 torres!' : '¡Tu castillo cambió de forma y es más grande!', n === 30 ? 'ULTRA castle: golden dome, blue magic and 14 towers!' : 'Your castle changed shape and is bigger!')]);
     if (n === 5) lista.push(['🫧', L('Termina la burbuja de protección', 'The protection bubble ends')]);
     var d = document.createElement('div'); d.id = 'nivel-nuevo';
     d.innerHTML = '<div class="nn-caja"><div class="nn-cinta">' + L('¡Felicidades!', 'Congratulations!') + '</div><h3>🏰 ' + L('Castillo nivel ', 'Castle level ') + n + '</h3><p class="nota"><b>' + L('Desbloqueado', 'Unlocked') + '</b></p>' +
@@ -2505,7 +2505,15 @@
   }
   function requisitosObra(que, L2) {
     var l = [];
-    if (que === 'castillo') { if (L2 >= 2) l.push(filaReq('jugador', L2)); if (L2 >= 3) l.push(filaReq('muralla', L2 - 2)); return l; }
+    if (que === 'castillo') {
+      // v6.32: cada nivel del castillo pide tu nivel, la muralla y subir los demás edificios (del 18 al 30, todos al 17)
+      if (L2 >= 2) l.push(filaReq('jugador', Math.min(60, L2 <= NIVEL_MAX ? L2 : NIVEL_MAX + Math.round((L2 - NIVEL_MAX) * 3.31))));
+      if (L2 >= 3) l.push(filaReq('muralla', Math.min(NIVEL_MAX, L2 - 2)));
+      [['cuartel', 3, 1], ['granja', 4, 1], ['academia', 5, 2], ['aserradero', 6, 2], ['mina', 7, 2], ['herreria', 8, 3], ['cantera', 9, 3], ['establo', 11, 4],
+        ['galeria', 12, 4], ['enfermeria', 13, 4], ['torre', 14, 5], ['almacen', 16, 5], ['mercado', 18, 6], ['vigia', 20, 6]]
+        .forEach(function (q) { if (L2 >= q[1]) l.push(filaReq(q[0], Math.min(NIVEL_MAX, L2 - q[2]))); });
+      return l;
+    }
     if (que === 'muralla') { l.push(filaReq('castillo', L2)); l.push(filaReq('cantera', Math.min(NIVEL_MAX, L2 + 1))); l.push(filaReq('jugador', L2 + 2)); return l; }
     if (L2 >= 2) l.push(filaReq('castillo', L2));
     if (que === 'cuartel' && L2 >= 2) l.push(filaReq('jugador', L2));
@@ -6733,12 +6741,12 @@
   function abrirPanelCastillo() {
     var nc = estado.castillo || 1, oc = estado.obraCastillo, mej = '';
     if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velObras()) + '</p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="castillo">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((oc.total - oc.t) / velObras()), 'terminar-gemas', 'data-que="castillo"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '</div>';
-    else if (nc < NIVEL_MAX) mej = '<div class="sig-nivel"><b>⬆️ ' + L('Mejorar: nivel ', 'Upgrade: level ') + nc + ' → ' + (nc + 1) + '</b><p class="nota">' + T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + ' · ' + L('abre ' + PARCELAS_POR_NIVEL + ' parcelas más', 'opens ' + PARCELAS_POR_NIVEL + ' more plots') + '</p></div>' +
+    else if (nc < CASTILLO_MAX) mej = '<div class="sig-nivel"><b>⬆️ ' + L('Mejorar: nivel ', 'Upgrade: level ') + nc + ' → ' + (nc + 1) + '</b><p class="nota">' + (nc + 1 <= NIVEL_MAX ? T('castillo_sube', { n: nc + 1, v: MEJORA_CASTILLO.vida, d: MEJORA_CASTILLO.dano }) + ' · ' + L('abre ' + PARCELAS_POR_NIVEL + ' parcelas más', 'opens ' + PARCELAS_POR_NIVEL + ' more plots') : L('Al subir al nivel ' + (nc + 1) + ': +' + MEJORA_CASTILLO.vida + ' de vida y +' + MEJORA_CASTILLO.dano + ' de daño.', 'At level ' + (nc + 1) + ': +' + MEJORA_CASTILLO.vida + ' health and +' + MEJORA_CASTILLO.dano + ' damage.')) + ([5, 10, 15, 30].indexOf(nc + 1) >= 0 ? ' 🏰 ' + L('¡El castillo cambia de forma!', 'The castle changes shape!') : '') + '</p></div>' +
       tablaRequisitos(costoCastillo(nc + 1), requisitosObra('castillo', nc + 1).concat(filasTrabajos('castillo', nc + 1)), tiempoCastillo(nc + 1)) +
       botonesObra(costoCastillo(nc + 1), tiempoCastillo(nc + 1), 'mejorar-castillo', 'castillo-ya', '', '⬆️ ' + T('mejorar'), faltaObra('castillo', nc + 1) ? botonFalta(faltaObra('castillo', nc + 1)) : trabajosPendientes('castillo', nc + 1).length ? botonBloqueadoTrabajos(trabajosPendientes('castillo', nc + 1)) : '', 'castillo');
     else mej = '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
-    var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo_nivel', { n: nc, m: NIVEL_MAX }) + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
-      '<p class="nota">🏗️ ' + T('castillo_tope', { n: nc }) + '</p>' + mej +
+    var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML('castillo', '🏰') + '</div><div><h3>' + T('castillo_nivel', { n: nc, m: CASTILLO_MAX }) + '</h3><p>' + T('castillo_info') + '</p></div></div>' +
+      '<p class="nota">🏗️ ' + T('castillo_tope', { n: Math.min(NIVEL_MAX, nc) }) + '</p>' + mej +
       '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>⚔ ' + T('dano') + ' ' + danoCastillo() + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div></div>' +
       '<p class="nota">🪙 ' + T('impuesto', { n: IMPUESTO.oro, s: IMPUESTO.cada }) + '</p>' +
       '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>' +
@@ -6768,12 +6776,12 @@
     if (!estado.dueno) return;
     if (oleadaActiva) { if (!callado) { consejoTemporal(T('todo_max_oleada')); sonar('error'); } return; }
     // al entrar solo se hace si falta algo (rehacer cientos de tropas tarda unos segundos)
-    if (callado && (estado.castillo || 1) >= NIVEL_MAX && (estado.muralla || 0) >= NIVEL_MAX && !slots.some(function (s) { return s.obra || (s.edificio && s.edificio.nivel < NIVEL_MAX) || (!s.edificio && !cerrada(s)); }) &&
+    if (callado && (estado.castillo || 1) >= CASTILLO_MAX && (estado.muralla || 0) >= NIVEL_MAX && !slots.some(function (s) { return s.obra || (s.edificio && s.edificio.nivel < NIVEL_MAX) || (!s.edificio && !cerrada(s)); }) &&
       Object.keys(TROPAS).every(function (t) { return t === 'heroe' || (nivelArmadura(t) >= ARMADURA.max && tropas.filter(function (u) { return u.tipo === t && !u.heroeId && !u.invocada && !u.refuerzo && u.armadura >= ARMADURA.max; }).length >= TROPAS_DUENO); })) return;
     slots.forEach(function (s) { if (s.obra) terminarObra(s, true); });
     slots.forEach(function (s) { if (s.edificio && s.edificio.nivel < NIVEL_MAX) ponerEdificio(s, s.edificio.tipo, NIVEL_MAX); });
-    if (estado.obraCastillo) { estado.obraCastillo.nivel = NIVEL_MAX; terminarCastillo(); }
-    else if ((estado.castillo || 1) < NIVEL_MAX) { estado.castillo = NIVEL_MAX; ponerCastillo(); actualizarParcelas(); }
+    if (estado.obraCastillo) { estado.obraCastillo.nivel = CASTILLO_MAX; terminarCastillo(); }
+    else if ((estado.castillo || 1) < CASTILLO_MAX) { estado.castillo = CASTILLO_MAX; ponerCastillo(); actualizarParcelas(); }
     if (obraMuralla) terminarMuralla();
     if ((estado.muralla || 0) < NIVEL_MAX) { estado.muralla = NIVEL_MAX; ponerMuralla(NIVEL_MAX); }
     // parcelas vacías: la ciudad y los campos se llenan con edificios nivel 17, repartidos (se pone el tipo que menos hay)

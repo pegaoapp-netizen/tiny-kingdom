@@ -764,6 +764,137 @@ var M = (function () {
   // =================================================================
   //  CASTILLO
   // =================================================================
+  // =================================================================
+  //  CASTILLO POR ETAPAS (v6.32): madera (1-4) · piedra con 3 torres (5-9) · 5 torres con banderas (10-14)
+  //  · grande con 8 torres y estandartes (15-29) · ULTRA del nivel 30 con cúpula de oro, magia azul y 14 torres
+  // =================================================================
+  var MAGIA = [];
+  setInterval(function () {
+    if (!MAGIA.length) return;
+    var t = performance.now() / 1000;
+    MAGIA = MAGIA.filter(function (m) { var p = m; while (p.parent) p = p.parent; return p.type === 'Scene'; });
+    MAGIA.forEach(function (m, i) {
+      if (m.userData.gira) m.rotation.y = t * m.userData.gira;
+      if (m.material) m.material.opacity = m.userData.op * (0.75 + 0.25 * Math.sin(t * 2.4 + i));
+      if (m.userData.flota) m.position.y = m.userData.y0 + Math.sin(t * 1.6 + i) * m.userData.flota;
+    });
+  }, 40);
+  function etapaCastillo(n) { return n >= 30 ? 5 : n >= 15 ? 4 : n >= 10 ? 3 : n >= 5 ? 2 : 1; }
+  function castilloEtapa(n) {
+    var e = etapaCastillo(n), g = new THREE.Group(), banderas = [];
+    var GR = 0x9b9da3, GR2 = 0x77797f, GR3 = 0x5d5f66, AZUL = 0x2f5fae, AZUL2 = 0x1e3f7a, ORO = 0xe8b84a, MAD = 0x8f5c32, MAD2 = 0x6a4224;
+    function flag(x, y, z, alto) { var b = bandera(AZUL, alto || 1.6); b.position.set(x, y, z); b.userData.noFusionar = true; g.add(b); banderas.push(b.userData.tela); }
+    function almenas(cx, cz, w, d, y, col) {
+      var n1 = Math.max(2, Math.round(w / 0.9)), n2 = Math.max(2, Math.round(d / 0.9));
+      for (var i = 0; i < n1; i += 2) { var x = cx - w / 2 + (i + 0.5) * w / n1; g.add(caja(0.45, 0.45, 0.45, col, x, y, cz - d / 2)); g.add(caja(0.45, 0.45, 0.45, col, x, y, cz + d / 2)); }
+      for (var k = 0; k < n2; k += 2) { var z = cz - d / 2 + (k + 0.5) * d / n2; g.add(caja(0.45, 0.45, 0.45, col, cx - w / 2, y, z)); g.add(caja(0.45, 0.45, 0.45, col, cx + w / 2, y, z)); }
+    }
+    // muralla cuadrada con la puerta delante (+z)
+    function muro4(s, h, gr, col) {
+      g.add(caja(s, h, gr, col, 0, h / 2, -s / 2));
+      g.add(caja(gr, h, s, col, -s / 2, h / 2, 0)); g.add(caja(gr, h, s, col, s / 2, h / 2, 0));
+      var lado = (s - 1.9) / 2; g.add(caja(lado, h, gr, col, -(s / 2 - lado / 2), h / 2, s / 2)); g.add(caja(lado, h, gr, col, s / 2 - lado / 2, h / 2, s / 2));
+      g.add(caja(2.0, h * 0.34, gr, col, 0, h * 0.83, s / 2));
+      g.add(caja(1.35, h * 0.64, 0.2, 0x2a1c12, 0, h * 0.32, s / 2 - 0.3));
+      almenas(0, 0, s, s, h + 0.22, col);
+    }
+    function torre(x, z, r, h, techo, colT, anillo) {
+      g.add(cil(r, r * 1.08, h, 10, GR, x, h / 2, z));
+      g.add(cil(r * 1.16, r * 1.16, 0.36, 10, anillo || GR2, x, h + 0.18, z));
+      g.add(ventana(0.22, 0.42, 0.2, x, h * 0.62, z + r * 0.98));
+      if (techo) { g.add(cono(r * 1.28, r * 2.5, 10, colT || GR2, x, h + 0.36 + r * 1.25, z)); return h + 0.36 + r * 2.5; }
+      for (var a = 0; a < 6; a++) { var t = a / 6 * Math.PI * 2; g.add(caja(0.36, 0.42, 0.36, GR, x + Math.cos(t) * r * 1.05, h + 0.57, z + Math.sin(t) * r * 1.05)); }
+      return h + 0.8;
+    }
+    function estandarte(x, y, z, alto, ry) { var e1 = caja(0.85, alto, 0.08, AZUL, x, y, z); e1.rotation.y = ry || 0; g.add(e1); var e2 = caja(0.3, 0.3, 0.1, ORO, x, y + alto * 0.12, z); e2.rotation.y = ry || 0; g.add(e2); var e3 = caja(0.95, 0.12, 0.1, ORO, x, y + alto / 2 + 0.04, z); e3.rotation.y = ry || 0; g.add(e3); }
+    if (e === 1) {
+      // fuerte de madera: empalizada de troncos, casa con techo a dos aguas y 2 torrecitas
+      var s1 = 6.2;
+      for (var i = 0; i < 30; i++) {
+        var u = i / 30, ld = Math.floor(u * 4), f = (u * 4) % 1, px, pz;
+        if (ld === 0) { px = -s1 / 2 + f * s1; pz = -s1 / 2; } else if (ld === 1) { px = s1 / 2; pz = -s1 / 2 + f * s1; } else if (ld === 2) { px = s1 / 2 - f * s1; pz = s1 / 2; } else { px = -s1 / 2; pz = s1 / 2 - f * s1; }
+        if (ld === 2 && Math.abs(px) < 1) continue;
+        g.add(cil(0.24, 0.27, 1.5, 6, i % 2 ? MAD : MAD2, px, 0.75, pz)); g.add(cono(0.25, 0.32, 6, MAD2, px, 1.66, pz));
+      }
+      g.add(caja(3.1, 2.1, 2.5, MAD, 0, 1.05, -0.7));
+      var t1 = caja(3.5, 0.2, 1.75, MAD2, 0, 2.7, -0.1); t1.rotation.x = 0.72; g.add(t1);
+      var t2 = caja(3.5, 0.2, 1.75, MAD2, 0, 2.7, -1.3); t2.rotation.x = -0.72; g.add(t2);
+      g.add(caja(0.9, 1.35, 0.15, 0x3a2414, 0, 0.68, 0.57));
+      [-1.9, 1.9].forEach(function (x) { g.add(caja(1.2, 3.3, 1.2, MAD, x, 1.65, -1.7)); g.add(caja(1.4, 0.2, 1.4, MAD2, x, 3.35, -1.7)); var tc = cono(1.05, 1.5, 4, MAD2, x, 4.2, -1.7); tc.rotation.y = Math.PI / 4; g.add(tc); });
+      flag(0, 3.1, -0.7, 1.3);
+    } else if (e === 2) {
+      // castillo de piedra chiquito con 3 torres y torre del homenaje
+      muro4(6.4, 2.2, 0.7, GR);
+      g.add(caja(2.6, 3.6, 2.6, GR, 0, 1.8, -0.7)); g.add(cono(2.0, 2.4, 4, GR2, 0, 4.8, -0.7).rotateY(Math.PI / 4));
+      torre(-3.2, -3.2, 1.0, 3.6, true); torre(3.2, -3.2, 1.0, 3.6, true); torre(-3.2, 3.2, 1.0, 3.4, true);
+    } else if (e === 3) {
+      // castillo mediano: 5 torres con banderas azules
+      muro4(8.6, 2.5, 0.8, GR);
+      [[-4.3, -4.3], [4.3, -4.3], [-4.3, 4.3], [4.3, 4.3]].forEach(function (q) { var h = torre(q[0], q[1], 1.15, 4.6, false); flag(q[0], h, q[1], 1.5); });
+      g.add(caja(4.0, 5.2, 4.0, GR, 0, 2.6, -0.8)); almenas(0, -0.8, 4.0, 4.0, 5.42, GR);
+      g.add(ventana(0.4, 0.7, 0.2, 0, 3.4, 1.22)); g.add(ventana(0.3, 0.5, 0.2, -1.2, 3.8, 1.22)); g.add(ventana(0.3, 0.5, 0.2, 1.2, 3.8, 1.22));
+      var h5 = torre(1.1, -1.9, 0.85, 7.4, false); flag(1.1, h5, -1.9, 1.6);
+    } else if (e === 4) {
+      // castillo grande: 8 torres con techos y estandartes azules
+      muro4(9.6, 2.9, 0.9, GR);
+      [[-4.8, -4.8], [4.8, -4.8], [-4.8, 4.8], [4.8, 4.8]].forEach(function (q) { var h = torre(q[0], q[1], 1.25, 5.6, true); flag(q[0], h, q[1], 1.4); estandarte(q[0], 3.2, q[1] + 1.3, 2.2); });
+      [-1.6, 1.6].forEach(function (x) { var h = torre(x, 4.8, 0.95, 4.4, true); flag(x, h, 4.8, 1.2); });
+      g.add(caja(5.0, 6.4, 5.0, GR, 0, 3.2, -0.9)); almenas(0, -0.9, 5.0, 5.0, 6.62, GR);
+      [-1.4, 0, 1.4].forEach(function (x) { g.add(ventana(0.35, 0.65, 0.2, x, 4.2, 1.62)); });
+      estandarte(-1.6, 3.6, 1.66, 2.6); estandarte(1.6, 3.6, 1.66, 2.6);
+      [[-1.7, -2.6], [1.7, -2.6]].forEach(function (q) { var h = torre(q[0], q[1], 0.9, 8.6, true); flag(q[0], h, q[1], 1.6); });
+      estandarte(-3.2, 1.6, 4.86, 1.8); estandarte(3.2, 1.6, 4.86, 1.8);
+    } else {
+      // ULTRA PRO MAX (nivel 30): foso de agua, oro, cúpula dorada, magia azul, dragones de piedra y 14 torres
+      var agua = new THREE.Mesh(new THREE.BoxGeometry(13.4, 0.2, 13.4), new THREE.MeshPhongMaterial({ color: 0x2f8fd8, specular: 0x9fd8ff, shininess: 90, transparent: true, opacity: 0.85 }));
+      agua.position.y = 0.05; agua.userData.noFusionar = true; g.add(agua);
+      g.add(caja(11.6, 0.55, 11.6, GR2, 0, 0.27, 0));
+      [0, 1, 2].forEach(function (k) { g.add(caja(2.2, 0.28, 0.6, GR2, 0, 0.14 + k * 0.17, 6.3 - k * 0.45)); });
+      muro4(10.6, 3.3, 1.0, GR);
+      g.add(caja(10.8, 0.25, 10.8, ORO, 0, 3.3, 0)); // filo de oro arriba de la muralla
+      [[-5.3, -5.3], [5.3, -5.3], [-5.3, 5.3], [5.3, 5.3]].forEach(function (q) { var h = torre(q[0], q[1], 1.4, 7.2, true, AZUL, ORO); flag(q[0], h, q[1], 1.5); estandarte(q[0], 3.6, q[1] + (q[1] > 0 ? 1.45 : -1.45), 2.6); });
+      [[-5.3, 0], [5.3, 0], [0, -5.3]].forEach(function (q) { var h = torre(q[0], q[1], 1.05, 6.0, true, AZUL, ORO); flag(q[0], h, q[1], 1.3); });
+      [-1.9, 1.9].forEach(function (x) { var h = torre(x, 5.3, 1.05, 5.4, true, AZUL, ORO); flag(x, h, 5.3, 1.3); });
+      g.add(caja(5.8, 8.2, 5.8, GR, 0, 4.1, -0.6)); almenas(0, -0.6, 5.8, 5.8, 8.42, GR);
+      g.add(caja(6.0, 0.25, 6.0, ORO, 0, 8.2, -0.6));
+      [[-2.9, -3.5], [2.9, -3.5], [-2.9, 2.3], [2.9, 2.3]].forEach(function (q) { var h = torre(q[0], q[1], 0.95, 11.2, true, AZUL, ORO); flag(q[0], h, q[1], 1.6); });
+      g.add(cil(1.6, 1.9, 1.4, 16, GR, 0, 9.1, -0.6));
+      var cup = esfera(2.0, ORO, 0, 10.0, -0.6, 20, 14); cup.scale.y = 0.95; g.add(cup);
+      g.add(cono(0.35, 2.4, 8, ORO, 0, 12.9, -0.6)); flag(0, 13.8, -0.6, 1.8);
+      [-1.8, 0, 1.8].forEach(function (x) { g.add(ventana(0.45, 0.8, 0.2, x, 5.4, 2.32)); estandarte(x, 3.2, 2.36, 2.2); });
+      [-3.6, 3.6].forEach(function (x) { estandarte(x, 1.9, 5.36, 1.9); });
+      // dragones de piedra a los lados de la puerta
+      [-1.8, 1.8].forEach(function (x) {
+        var d = new THREE.Group(); d.position.set(x, 0, 6.9);
+        d.add(caja(1.1, 1.0, 1.3, GR2, 0, 0.5, 0));
+        d.add(caja(0.7, 0.7, 1.1, GR3, 0, 1.35, -0.1));
+        var cu = cil(0.18, 0.25, 0.9, 6, GR3, 0, 1.95, 0.3); cu.rotation.x = 0.5; d.add(cu);
+        d.add(caja(0.42, 0.38, 0.55, GR3, 0, 2.4, 0.55)); d.add(cono(0.16, 0.4, 5, GR3, 0, 2.35, 0.95).rotateX(Math.PI / 2));
+        [-1, 1].forEach(function (s) { var al = caja(0.08, 0.7, 0.9, GR3, s * 0.5, 1.75, -0.3); al.rotation.z = s * 0.6; d.add(al); d.add(cono(0.06, 0.3, 4, GR3, s * 0.13, 2.7, 0.45)); });
+        g.add(d);
+      });
+      // magia azul: anillos que giran, llamas azules y chispas
+      function magia(m, op, gira, flota) { m.userData.noFusionar = true; m.userData.op = op; m.userData.gira = gira; m.userData.flota = flota; m.userData.y0 = m.position.y; g.add(m); MAGIA.push(m); }
+      [[6.6, 0.6, 0.5], [7.3, 1.4, -0.35], [6.2, 2.4, 0.25]].forEach(function (q) {
+        var an = new THREE.Mesh(new THREE.TorusGeometry(q[0], 0.09, 6, 64), new THREE.MeshBasicMaterial({ color: 0x6ac4ff, transparent: true, opacity: 0.6, depthWrite: false }));
+        an.rotation.x = Math.PI / 2; an.position.y = q[1]; var gr2 = new THREE.Group(); gr2.add(an); gr2.position.y = 0; magia(gr2, 1, q[2], 0); an.userData.op = 0.6; MAGIA.push(an);
+      });
+      [[-6.2, -6.2], [6.2, -6.2], [-6.2, 6.2], [6.2, 6.2], [-3.2, 7.2], [3.2, 7.2]].forEach(function (q) {
+        var ll = new THREE.Mesh(new THREE.ConeGeometry(0.45, 1.6, 8), new THREE.MeshBasicMaterial({ color: 0x4aa8ff, transparent: true, opacity: 0.7, depthWrite: false }));
+        ll.position.set(q[0], 0.9, q[1]); magia(ll, 0.7, 0, 0.15);
+      });
+      for (var c = 0; c < 18; c++) {
+        var ang = c / 18 * Math.PI * 2, ch = new THREE.Mesh(new THREE.OctahedronGeometry(0.16), new THREE.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.9, depthWrite: false }));
+        ch.position.set(Math.cos(ang) * (5 + (c % 3)), 3 + (c % 5) * 1.6, Math.sin(ang) * (5 + (c % 3))); magia(ch, 0.9, 0, 0.5);
+      }
+    }
+    // dentro de cada etapa crece un poco con el nivel
+    var ini = [0, 1, 5, 10, 15, 30][e], paso = e === 4 ? 0.012 : 0.03;
+    g.scale.setScalar(1 + paso * Math.max(0, n - ini));
+    g.userData.banderas = banderas;
+    var r = fusionar(g) || g; r.userData.banderas = banderas; r.userData.etapa = e;
+    return r;
+  }
   function castillo(nivelVis) {
     nivelVis = nivelVis || 1;
     var colTecho = nivelVis >= 3 ? C.techoNoble : nivelVis === 2 ? C.techoRojo : C.techoAzul;
@@ -2932,7 +3063,7 @@ var M = (function () {
 
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
-    castillo: castillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
+    castillo: castillo, castilloEtapa: castilloEtapa, etapaCastillo: etapaCastillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
     vigia: vigia, almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
