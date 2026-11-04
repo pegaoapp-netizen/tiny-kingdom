@@ -6682,7 +6682,7 @@
     if (!estado.dueno) return;
     if (oleadaActiva) { if (!callado) { consejoTemporal(T('todo_max_oleada')); sonar('error'); } return; }
     // al entrar solo se hace si falta algo (rehacer cientos de tropas tarda unos segundos)
-    if (callado && (estado.castillo || 1) >= NIVEL_MAX && (estado.muralla || 0) >= NIVEL_MAX && !slots.some(function (s) { return s.obra || (s.edificio && s.edificio.nivel < NIVEL_MAX); }) &&
+    if (callado && (estado.castillo || 1) >= NIVEL_MAX && (estado.muralla || 0) >= NIVEL_MAX && !slots.some(function (s) { return s.obra || (s.edificio && s.edificio.nivel < NIVEL_MAX) || (!s.edificio && !cerrada(s)); }) &&
       Object.keys(TROPAS).every(function (t) { return t === 'heroe' || (nivelArmadura(t) >= ARMADURA.max && tropas.filter(function (u) { return u.tipo === t && !u.heroeId && !u.invocada && !u.refuerzo && u.armadura >= ARMADURA.max; }).length >= TROPAS_DUENO); })) return;
     slots.forEach(function (s) { if (s.obra) terminarObra(s, true); });
     slots.forEach(function (s) { if (s.edificio && s.edificio.nivel < NIVEL_MAX) ponerEdificio(s, s.edificio.tipo, NIVEL_MAX); });
@@ -6690,6 +6690,14 @@
     else if ((estado.castillo || 1) < NIVEL_MAX) { estado.castillo = NIVEL_MAX; ponerCastillo(); actualizarParcelas(); }
     if (obraMuralla) terminarMuralla();
     if ((estado.muralla || 0) < NIVEL_MAX) { estado.muralla = NIVEL_MAX; ponerMuralla(NIVEL_MAX); }
+    // parcelas vacías: la ciudad y los campos se llenan con edificios nivel 17, repartidos (se pone el tipo que menos hay)
+    var tiposCiudad = Object.keys(EDIFICIOS).filter(function (t) { return !esCampo(t); });
+    slots.forEach(function (s) {
+      if (s.edificio || s.obra || cerrada(s)) return;
+      var lista = s.campo ? TIPOS_CAMPO : tiposCiudad;
+      var tipo = lista.slice().sort(function (a, b) { return contarEdificios(a) - contarEdificios(b); })[0];
+      ponerEdificio(s, tipo, NIVEL_MAX);
+    });
     estado.vidaCastillo = vidaMaxCastillo();
     estado.invest = estado.invest || {};
     for (var rama in INVESTIGACION) INVESTIGACION[rama].forEach(function (tc) { estado.invest[tc.id] = Math.max(estado.invest[tc.id] || 0, tc.max); });
