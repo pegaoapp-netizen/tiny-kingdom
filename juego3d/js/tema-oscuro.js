@@ -34,6 +34,7 @@
   panel.innerHTML = '<div class="pr-banner" title="Perfil"><span>👑</span><b id="pr-nivel">1</b></div>';
   document.body.appendChild(panel);
   panel.appendChild($('perfil'));
+  var pob = document.createElement('div'); pob.className = 'pr-pob'; pob.title = 'Población'; pob.innerHTML = '👥 <span id="pob-txt">—</span>'; panel.appendChild(pob);
   panel.appendChild($('vida-castillo'));
   panel.appendChild($('ciudad-nombre'));
   var bot = document.createElement('div'); bot.className = 'pr-botones';

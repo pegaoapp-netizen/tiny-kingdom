@@ -33,6 +33,7 @@
       estado.obras = slots.map(function (s) { return s.obra ? { tipo: s.obra.tipo, nivel: s.obra.nivel, t: s.obra.t, total: s.obra.total } : null; });
       estado.guardados = slots.map(function (s) { return Math.floor(s.guardado || 0); });
       estado.mapa2 = true;
+      estado.mapaCuadricula = true;
       estado.obraMuralla = obraMuralla ? { nivel: obraMuralla.nivel, t: obraMuralla.t, total: obraMuralla.total } : null;
       var t = {};
       var inv = {};
@@ -414,30 +415,31 @@
   })();
 
   // ------------------------------------------------------------------
-  //  PARCELAS EN CUADRÍCULA: la ciudad (dentro de la muralla) y los campos (fuera)
+  //  PARCELAS: cuadrícula con calles dentro de la muralla, campos marrones fuera.
+  //  Cada edificio ocupa 1 cuadro y deja 2 cuadros de pasto entre el siguiente.
   // ------------------------------------------------------------------
   var PARCELAS = (function () {
-    var ciudad = [], campos = [], C1 = 10, lim = R_CIUDAD - 2.5;
-    for (var i = -6; i <= 6; i++) for (var j = -6; j <= 6; j++) {
-      if (!i || !j) continue; // ahí van los dos caminos de piedra en cruz
-      var a = i * C1, b = j * C1;
-      if (Math.hypot(Math.abs(a) + 4.25, Math.abs(b) + 4.25) > lim) continue;
-      var w = aMundo(a, b);
-      if (Math.hypot(w[0] - PUNTO_REUNION[0], w[1] - PUNTO_REUNION[1]) < 7.5) continue;
-      ciudad.push(w);
-    }
+    // 30 parcelas exactas. +a mira a la puerta (abajo). +b es la izquierda de la pantalla.
+    // El castillo va en el centro y no ocupa parcela. 8 bordes son fijos; las otras 22, cabaña o cuartel.
+    var puestos = [
+      [-32, 30, 'herreria'], [-32, 18, ''], [-32, 6, ''], [-32, -6, ''], [-32, -18, ''], [-32, -30, 'vigia'],
+      [-20, 30, ''], [-20, 18, ''], [-20, -18, ''], [-20, -30, ''],
+      [-8, 30, 'establo'], [-8, 18, ''], [-8, -18, ''], [-8, -30, 'academia'],
+      [8, 30, ''], [8, 18, ''], [8, -18, ''], [8, -30, 'relevo'],
+      [20, 30, 'torre'], [20, 18, ''], [20, 6, ''], [20, -6, ''], [20, -18, 'mercado'], [20, -30, ''],
+      [32, 30, ''], [32, 18, ''], [32, 6, ''], [32, -6, ''], [32, -18, 'embajada'], [32, -30, '']
+    ];
+    var ciudad = [], fijo = [];
+    puestos.forEach(function (p) { ciudad.push(aMundo(p[0], p[1])); fijo.push(p[2] || ''); });
+    var campos = [];
     for (var fa = -1.5; fa <= 1.5; fa++) for (var fb = -2.5; fb <= 2.5; fb++) campos.push(aMundo(CAMPOS_RECT.a + fa * 10, CAMPOS_RECT.b + fb * 10));
-    function porCercania(p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); }
-    ciudad.sort(porCercania); campos.sort(porCercania);
-    var total = PARCELAS_INICIO + PARCELAS_POR_NIVEL * (NIVEL_MAX - 1);
-    var base = ciudad.slice(0, 16), extra = ciudad.slice(16, total);
+    campos.sort(function (p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); });
     campos = campos.slice(0, 24);
-    var todas = base.concat(campos).concat(extra);
-    // orden en que se abren las parcelas de la ciudad (de la más cerca del castillo a la más lejos)
-    var orden = [];
-    base.forEach(function (p, k) { orden.push(k); });
-    extra.forEach(function (p, k) { orden.push(16 + campos.length + k); });
-    return { todas: todas, nCiudad: 16, nCampos: campos.length, orden: orden, esCampo: function (i) { return i >= 16 && i < 16 + campos.length; } };
+    var nCiudad = ciudad.length;
+    var orden = ciudad.map(function (_, i) { return i; }).sort(function (i, j) {
+      return Math.hypot(ciudad[i][0], ciudad[i][1]) - Math.hypot(ciudad[j][0], ciudad[j][1]);
+    });
+    return { todas: ciudad.concat(campos), nCiudad: nCiudad, nCampos: campos.length, orden: orden, fijo: fijo, esCampo: function (i) { return i >= nCiudad && i < nCiudad + campos.length; } };
   })();
 
   function materialAgua(op, color) { return new THREE.MeshPhongMaterial({ color: color || 0x3a9ad8, specular: 0x2a4a5e, shininess: 110, transparent: true, opacity: op, side: THREE.DoubleSide }); }
@@ -551,6 +553,15 @@
     losa(CA + HA - 1, -8, 0, 0, 0.09, AN);
     losa(0, 0, 8, R_CIUDAD + 5, 0.09, AN);
     losa(0, 0, -8, -(R_CIUDAD + 5), 0.09, AN);
+    // caminitos entre las 30 parcelas, sin meterse en la plaza del castillo
+    [-24, -12, 12, 24].forEach(function (p) {
+      losa(-46, -16, p, p, 0.075, 1.35);
+      losa(16, 46, p, p, 0.075, 1.35);
+    });
+    [-26, -14, 14, 26].forEach(function (p) {
+      losa(p, p, -46, -16, 0.075, 1.35);
+      losa(p, p, 16, 46, 0.075, 1.35);
+    });
     var plaza = new THREE.Mesh(new THREE.CircleGeometry(10.5, 40), matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.position.y = 0.085; plaza.receiveShadow = true; G.add(plaza);
     // rejilla de caminitos de piedra entre las parcelas de los campos
     for (var cb = -30; cb <= 30; cb += 10) losa(CA - 20, CA + HA - 1, cb, cb, 0.1, 1.6);
@@ -654,12 +665,17 @@
   (function crearNaturaleza() {
     var arboles = [];
     function libre(x, z, extra) {
-      if (Math.hypot(x, z) < 15) return false;
+      if (Math.hypot(x, z) < 18) return false;
       if (distRio(x, z) < 5 + extra) return false;
       var mfx = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mfz = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
       if (Math.abs(Math.sqrt(mfx * mfx + mfz * mfz) - 1) < 0.1) return false;
       if (distCamino(x, z) < 3.4 + extra) return false;
-      for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < 7 + extra) return false;
+      for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (i < PARCELAS.nCiudad ? 3.6 : 7) + extra) return false;
+      var lc = aLocal(x, z), callesB = [-24, -12, 12, 24], callesA = [-26, -14, 14, 26];
+      for (var ci = 0; ci < callesB.length; ci++) {
+        if (Math.abs(lc.a) > 15 && Math.abs(lc.a) < 48 && Math.abs(lc.b - callesB[ci]) < 1.4) return false;
+        if (Math.abs(lc.b) > 15 && Math.abs(lc.b) < 48 && Math.abs(lc.a - callesA[ci]) < 1.4) return false;
+      }
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 1.5) return false;
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
       if (MINA_ENTRADA && Math.hypot(x - MINA_ENTRADA.x, z - MINA_ENTRADA.z) < 7 + extra) return false;
@@ -675,7 +691,7 @@
       if (rnd() > Math.max(bosqueDensidad, borde)) continue;
       if (!libre(x, z, 0)) continue;
       var mex = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mez = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
-      if (mex * mex + mez * mez < 1.15 && rnd() > 0.05) continue;
+      if (mex * mex + mez * mez < 1.02) continue;
       // mezcla de especies: pinos en el bosque oscuro, palmeras cerca del pueblo y del estanque
       var cerca = Math.hypot(x, z) < 68 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
       var enBosque = bosqueDensidad > 0.2 || (x < -32 && z < 0);
@@ -689,12 +705,29 @@
         tono: new THREE.Color().setHSL(TONOS[0] + rnd() * TONOS[1], TONOS[2], TONOS[3] + rnd() * TONOS[4]).getHex()
       });
     }
+    // árboles sueltos en el pasto de la ciudad, entre las calles, lejos del castillo
+    for (var ti = 0; ti < 280; ti++) {
+      var angT = rnd() * Math.PI * 2, radT = 20 + rnd() * 30;
+      var tx = Math.cos(angT) * radT, tz = Math.sin(angT) * radT;
+      if (!libre(tx, tz, 0.6)) continue;
+      var u2 = rnd(), tipo2 = u2 < 0.42 ? 1 : u2 < 0.74 ? 2 : 3;
+      var T2 = [[0.31, 0.04, 0.32, 0.24, 0.06], [0.22, 0.06, 0.38, 0.33, 0.08], [0.27, 0.04, 0.34, 0.26, 0.07], [0.23, 0.04, 0.42, 0.33, 0.07]][tipo2];
+      arboles.push({
+        x: tx, z: tz, s: 0.55 + rnd() * 0.4, rot: rnd() * 6, tipo: tipo2, lean: rnd(),
+        tono: new THREE.Color().setHSL(T2[0] + rnd() * T2[1], T2[2], T2[3] + rnd() * T2[4]).getHex()
+      });
+    }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
     var arb = [], matas = [];
     for (var ia = 0; ia < 1600 && arb.length < 230; ia++) {
       var bx = (rnd() - 0.5) * 190, bz = (rnd() - 0.5) * 190;
       if (libre(bx, bz, 0.3)) arb.push({ x: bx, z: bz, s: 0.7 + rnd() * 0.6, rot: rnd() * 6 });
+    }
+    for (var imi = 0; imi < 600; imi++) {
+      var angM = rnd() * Math.PI * 2, radM = 16 + rnd() * 34;
+      var ix = Math.cos(angM) * radM, iz = Math.sin(angM) * radM;
+      if (libre(ix, iz, -0.2)) matas.push({ x: ix, z: iz, rot: rnd() * 6 });
     }
     for (var im2 = 0; im2 < 4000 && matas.length < 1100; im2++) {
       var mx = (rnd() - 0.5) * 180, mz = (rnd() - 0.5) * 180;
@@ -1113,11 +1146,13 @@
     else dir = { x: -Math.sign(lp.a) * EJE_U.x, z: -Math.sign(lp.a) * EJE_U.z };
     g.rotation.y = Math.atan2(dir.x, dir.z);
     var t = M.parcelaLibre(campo);
+    // dentro de la muralla el cuadro es la mitad: el edificio ocupa 1 cuadro, no 2
+    if (!campo) t.scale.setScalar(0.5);
     g.add(t);
-    var tc = campo ? null : M.parcelaCerrada(); if (tc) { tc.visible = false; g.add(tc); }
+    var tc = campo ? null : M.parcelaCerrada(); if (tc) { tc.scale.setScalar(0.5); tc.visible = false; g.add(tc); }
     g.userData.slot = i;
     escena.add(g);
-    return { i: i, campo: campo, orden: campo ? -1 : PARCELAS.orden.indexOf(i), pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, tierraCerrada: tc, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0, guardado: 0 };
+    return { i: i, campo: campo, fijo: campo ? '' : (PARCELAS.fijo[i] || ''), orden: campo ? -1 : PARCELAS.orden.indexOf(i), pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, tierraCerrada: tc, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0, guardado: 0 };
   });
   // ---- PARCELAS QUE ABRE EL CASTILLO ----
   function parcelasAbiertas() { return PARCELAS_INICIO + PARCELAS_POR_NIVEL * ((estado.castillo || 1) - 1); }
@@ -2509,7 +2544,7 @@
       // v6.32: cada nivel del castillo pide tu nivel, la muralla y subir los demás edificios (del 18 al 30, todos al 17)
       if (L2 >= 2) l.push(filaReq('jugador', Math.min(60, L2 <= NIVEL_MAX ? L2 : NIVEL_MAX + Math.round((L2 - NIVEL_MAX) * 3.31))));
       if (L2 >= 3) l.push(filaReq('muralla', Math.min(NIVEL_MAX, L2 - 2)));
-      [['cuartel', 3, 1], ['granja', 4, 1], ['academia', 5, 2], ['aserradero', 6, 2], ['mina', 7, 2], ['herreria', 8, 3], ['cantera', 9, 3], ['establo', 11, 4],
+      [['cuartel', 3, 1], ['cabana', 4, 2], ['granja', 4, 1], ['academia', 5, 2], ['aserradero', 6, 2], ['mina', 7, 2], ['herreria', 8, 3], ['cantera', 9, 3], ['establo', 11, 4],
         ['galeria', 12, 4], ['enfermeria', 13, 4], ['torre', 14, 5], ['almacen', 16, 5], ['mercado', 18, 6], ['vigia', 20, 6]]
         .forEach(function (q) { if (L2 >= q[1]) l.push(filaReq(q[0], Math.min(NIVEL_MAX, L2 - q[2]))); });
       return l;
@@ -3204,17 +3239,31 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : M.torre(n);
+    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n);
     M.crecerEdificio(m, tramo, tipo);
     return M.mejorarPorTramo(m, tramo, tipo);
   }
 
+  function repetibleCiudad(tipo) { return tipo === 'cabana' || tipo === 'cuartel'; }
+  function parcelaAcepta(s, tipo) {
+    if (!s || s.campo !== esCampo(tipo)) return false;
+    if (s.campo) return true;
+    if (s.fijo) return s.fijo === tipo;
+    if (repetibleCiudad(tipo)) return true;
+    if (tipo === 'galeria' || tipo === 'enfermeria' || tipo === 'almacen') return contarEdificios(tipo) < 1;
+    return false;
+  }
   function construir(i, tipo) {
     var s = slots[i];
     if (s.edificio || s.obra) return;
-    if (s.campo !== esCampo(tipo)) { consejoTemporal(T(s.campo ? 'solo_ciudad' : 'solo_campo')); sonar('error'); return; }
+    if (!parcelaAcepta(s, tipo)) {
+      consejoTemporal(s.fijo ? L('Aquí solo va ' + N(s.fijo) + '.', 'Only ' + N(s.fijo) + ' goes here.') : (repetibleCiudad(tipo) || esCampo(tipo) ? T(s.campo ? 'solo_ciudad' : 'solo_campo') : L('Ese edificio solo puede haber uno, en su parcela del borde.', 'That building can exist only once, on its edge plot.')));
+      sonar('error');
+      return;
+    }
     if (cerrada(s)) { consejoTemporal(T('parcela_cerrada', { n: nivelParaParcela(s) })); sonar('error'); return; }
     var fo = faltaObra(tipo, 1); if (fo) { consejoTemporal('🔒 ' + fo); sonar('error'); return; }
+    if (tipo !== 'cabana' && faltanObreros()) return;
     var d = EDIFICIOS[tipo];
     if (!pagar(costoEdif(tipo, 0))) return;
     empezarObra(s, tipo, 1);
@@ -3230,6 +3279,7 @@
     if (n >= NIVEL_MAX) return;
     var fm = faltaObra(s.edificio.tipo, n + 1); if (fm) { consejoTemporal('🔒 ' + fm); sonar('error'); return; }
     var pendE = trabajosPendientes('edificio', n + 1); if (pendE.length) { avisoTrabajos(pendE); return; }
+    if (s.edificio.tipo !== 'cabana' && faltanObreros()) return;
     if (!pagar(costoEdif(s.edificio.tipo, n))) return;
     empezarObra(s, s.edificio.tipo, n + 1);
     sonar('martillo');
@@ -3265,7 +3315,7 @@
     }
   }
   // Que el edificio quepa en su parcela con aire alrededor (crece un poco con cada tramo de nivel) y quede centrado
-  var MAX_EDIFICIO = [0, 4.7, 5.7, 6.5, 7.3];
+  var MAX_EDIFICIO = [0, 2.35, 2.85, 3.25, 3.65];
   function encajarEnParcela(m, tr) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
     var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = MAX_EDIFICIO[tr] || 6;
@@ -3282,11 +3332,12 @@
     // dentro de cada tramo el edificio también crece un poco por nivel: cada mejora se nota
     s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (nivel > 12 ? 1.1 + 0.04 * (nivel - 12) : 1 + 0.05 * ((nivel - 1) % 3)));
     encajarEnParcela(s.modelo, tr);
+    s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     if (tipo !== 'torre') { s.adornos = M.adornosNivel(nivel, new THREE.Box3().setFromObject(s.modelo)); s.grupo.add(s.adornos); }
     if (s.insignia) s.grupo.remove(s.insignia);
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
-    s.insignia.position.set(0, (tipo === 'torre' ? 9.5 : 5.2) * ESCALA_TRAMO[tr] + (tr >= 4 ? 0.9 : 0), 0);
+    s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
     s.grupo.add(s.insignia);
     s.grupo.add(s.modelo);
     s.cd = 0;
@@ -3784,6 +3835,10 @@
     consejoTemporal(T('curados', { n: n }));
     actualizarHUD();
   }
+  // ---- POBLACIÓN (v6.33): base del castillo + regalo a los que ya jugaban + cabañas. Las tropas la ocupan. ----
+  function poblacionMax() { return POB_BASE + (estado.pobRegalo || 0) + edificiosDe('cabana').reduce(function (a, s) { return a + EDIFICIOS.cabana.poblacion[s.edificio.nivel - 1]; }, 0); }
+  function poblacionLibre() { return poblacionMax() - tropasOcupadas(); }
+  function faltanObreros() { if (estado.dueno || poblacionLibre() >= OBREROS_OBRA) return false; consejoTemporal(T('pob_obreros', { n: OBREROS_OBRA })); sonar('error'); return true; }
   function tropasOcupadas() { return tropasNormales() + totalHeridos() + colaEntreno.length; }
   function tropasNormales() { return tropas.filter(function (u) { return u.tipo !== 'heroe' && !u.invocada && !u.refuerzo; }).length; }
 
@@ -3960,17 +4015,18 @@
   }
   // cuántas se pueden entrenar ahora (por espacio y por recursos)
   function maxEntrenar(tipo) {
-    var libre = Math.min(500, Math.max(0, capacidad() - tropasOcupadas())), c = costoTropa(tipo), n = libre;
+    var libre = Math.min(500, Math.max(0, capacidad() - tropasOcupadas()), estado.dueno ? 1e9 : Math.max(0, poblacionLibre())), c = costoTropa(tipo), n = libre;
     if (!estado.oroInfinito) RECURSOS.forEach(function (r) { if (c[r]) n = Math.min(n, Math.floor(cantidad(r) / c[r])); });
     return Math.max(0, n);
   }
   function entrenar(tipo, cuantas) {
     if (!puedeEntrenarTipo(tipo)) { consejoTemporal(avisoEdificioTropa(tipo)); sonar('error'); return; }
     if (tropasOcupadas() >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
+    if (!estado.dueno && poblacionLibre() < 1) { consejoTemporal(T('pob_llena')); sonar('error'); return; }
     var n = cuantas === 'max' ? maxEntrenar(tipo) : Math.max(1, cuantas || 1);
     var hechas = 0;
     for (var k = 0; k < n; k++) {
-      if (tropasOcupadas() >= capacidad()) break;
+      if (tropasOcupadas() >= capacidad() || (!estado.dueno && poblacionLibre() < 1)) break;
       if (!(hechas ? puedePagar(costoTropa(tipo)) : true)) break;
       if (!pagar(costoTropa(tipo))) break;
       colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
@@ -4140,7 +4196,7 @@
         s.rebote = Math.min(1, s.rebote + dt * 2.2);
         var k = s.rebote, c1 = 1.70158, c3 = c1 + 1;
         var e = 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2);
-        s.modelo.scale.setScalar(Math.max(0.05, e) * ESCALA_EDIFICIO * ESCALA_TRAMO[tramoNivel(s.edificio ? s.edificio.nivel : 1)]);
+        s.modelo.scale.setScalar(Math.max(0.05, e) * (s.escala || ESCALA_EDIFICIO));
       }
       if (!s.edificio) return;
       var ed = s.edificio, d = EDIFICIOS[ed.tipo];
@@ -4755,7 +4811,7 @@
     if (cerrada(s)) { cerrarMenuEdif(); consejoTemporal(T('parcela_cerrada', { n: nivelParaParcela(s) })); return; }
     if (modoColocar === 'barricada') { consejoTemporal(T('colocando_barr')); sonar('error'); return; }
     if (modoColocar) {
-      if (!s.edificio && !s.obra && s.campo !== esCampo(modoColocar)) { consejoTemporal(T(s.campo ? 'solo_ciudad' : 'solo_campo')); sonar('error'); return; }
+      if (!s.edificio && !s.obra && !parcelaAcepta(s, modoColocar)) { consejoTemporal(s.fijo ? L('Aquí solo va ' + N(s.fijo) + '.', 'Only ' + N(s.fijo) + ' goes here.') : T(s.campo ? 'solo_ciudad' : 'solo_campo')); sonar('error'); return; }
       if (!s.edificio && !s.obra) construir(i, modoColocar);
       else { consejoTemporal(T('ocupado')); sonar('error'); }
       return;
@@ -4770,7 +4826,7 @@
   // ------------------------------------------------------------------
   var modoColocar = null, slotElegido = null;
   function entrarModoColocar(tipo) {
-    if (!slots.some(function (s) { return !s.edificio && !s.obra && s.campo === esCampo(tipo) && !cerrada(s); })) { consejoTemporal(T(esCampo(tipo) ? 'sin_campo' : 'sin_terreno')); sonar('error'); return; }
+    if (!slots.some(function (s) { return !s.edificio && !s.obra && !cerrada(s) && parcelaAcepta(s, tipo); })) { consejoTemporal(T(esCampo(tipo) ? 'sin_campo' : 'sin_terreno')); sonar('error'); return; }
     var falta = faltante(costoEdif(tipo, 0));
     if (falta) { avisarFalta(falta); return; }
     salirModoColocar();
@@ -4779,7 +4835,7 @@
     $('btn-construir').classList.add('activo');
     // vista previa transparente del edificio en cada terreno libre
     slots.forEach(function (s) {
-      if (s.edificio || s.obra || s.campo !== esCampo(tipo) || cerrada(s)) return;
+      if (s.edificio || s.obra || cerrada(s) || !parcelaAcepta(s, tipo)) return;
       var f = crearModelo(tipo, 1);
       f.traverse(function (o) {
         if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.45; o.material.depthWrite = false; o.castShadow = false; }
@@ -4834,7 +4890,7 @@
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
-      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria', 'vigia'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = foto(m, 5.5, 0.9); });
+      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria', 'vigia', 'cabana'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = t === 'cabana' ? foto(m, 9, 1.6) : foto(m, 5.5, 0.9); });
       HEROES.forEach(function (h) { var hu = M.heroe(h, 1); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 1.55 * hu.escala, (hu.cabezaY - 0.12) * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
@@ -4935,6 +4991,7 @@
   // ------------------------------------------------------------------
   var panelActual = null;
   function abrirPanel(titulo, html, cual) {
+    $('panel').classList.remove('cafe'); var gmV = document.querySelector('#panel .cafe-mas'); if (gmV) gmV.remove();
     if (menuEdif.el) cerrarMenuEdif();
     $('panel-titulo').textContent = titulo;
     $('panel-cuerpo').innerHTML = html;
@@ -5038,6 +5095,8 @@
   // detalle de un edificio antes de construirlo (desde la lista de Construir)
   var tipoAConstruir = null;
   function abrirDetalleConstruir(tipo) {
+    if (slotElegido !== null && !parcelaAcepta(slots[slotElegido], tipo)) { consejoTemporal(L('Ese edificio no va en esta parcela.', 'That building does not go on this plot.')); sonar('error'); return; }
+    if (!repetibleCiudad(tipo) && !esCampo(tipo) && contarEdificios(tipo) >= 1) { consejoTemporal(L('Ya tienes uno.', 'You already have one.')); sonar('error'); return; }
     tipoAConstruir = tipo;
     var seg = EDIFICIOS[tipo].tiempo[0] * (1 - bono('obras')), costo = costoEdif(tipo, 0);
     var html = '<button class="comprar mini volver-lista" data-accion="volver-construir">◀ ' + L('Volver', 'Back') + '</button>' +
@@ -5064,11 +5123,13 @@
     if (tipo === 'cuartel') return '<span>⚔️ ' + T('sin_tope') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
     if (tipo === 'almacen') return '<span>🔒 ' + T('protege_txt', { n: d.protege[i] }) + '</span>';
+    if (tipo === 'cabana') return '<span>👥 +' + d.poblacion[i] + ' ' + L('habitantes', 'people') + '</span>';
     if (tipo === 'vigia') return '<span>🛡️ ' + T('vig_txt', { n: Math.round(d.defensa[i] * 100) }) + '</span><span>👁️ ' + T('vig_ve') + '</span>';
     if (tipo === 'mercado') return '<span>⚖️ ' + T('tasa_txt', { n: Math.round(d.tasa[i] * 100) }) + '</span>';
     if (tipo === 'herreria') return '<span>⚒️ ' + T('herreria_txt', { n: ARMAS.herreria.filter(function (r) { return r <= i + 1; }).length }) + '</span>';
     if (tipo === 'establo' || tipo === 'galeria') return '<span>' + d.icono + ' ' + N(tipo === 'establo' ? 'caballeria' : 'arquero') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'academia') return '<span>📜 ' + T('nivel') + ' máx. ' + d.tope[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>⏱ x' + d.rapidez[i] + '</span>' : '');
+    if (tipo === 'embajada' || tipo === 'relevo') return '<span>' + EDIFICIOS[tipo].icono + ' ' + N(tipo) + '</span>';
     return '<span>' + T('dano') + ': ' + d.dano[i] + '</span><span>' + T('alcance') + ': ' + d.alcance[i] + '</span>';
   }
   function htmlMuralla() {
@@ -5099,9 +5160,9 @@
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
     var sl = slotElegido !== null ? slots[slotElegido] : null;
-    ['granja', 'aserradero', 'mina', 'cantera', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado', 'vigia'].filter(function (t) { return !sl || sl.campo === esCampo(t); }).forEach(function (t) {
-      var fo = faltaObra(t, 1);
-      html += '<button class="fila-construir' + (fo ? ' bloq' : '') + '" data-accion="detalle-construir" data-tipo="' + t + '"><span class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + (fo ? '<b class="candado">🔒</b>' : '') + '</span><span class="fc-txt"><b>' + N(t) + '</b><small>' + D(t) + '</small>' + (fo ? '<small class="aviso-rojo">' + fo + '</small>' : '') + '<small class="t-obra">⏱ ' + fmtTiempo(EDIFICIOS[t].tiempo[0] * (1 - bono('obras'))) + '</small></span><span class="fc-flecha">›</span></button>';
+    ['granja', 'aserradero', 'mina', 'cantera', 'cabana', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado', 'vigia', 'embajada', 'relevo'].filter(function (t) { return !sl || parcelaAcepta(sl, t); }).forEach(function (t) {
+      var fo = faltaObra(t, 1), lleno = !repetibleCiudad(t) && !esCampo(t) && contarEdificios(t) >= 1;
+      html += '<button class="fila-construir' + (fo || lleno ? ' bloq' : '') + '" data-accion="detalle-construir" data-tipo="' + t + '"><span class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + (fo || lleno ? '<b class="candado">🔒</b>' : '') + '</span><span class="fc-txt"><b>' + N(t) + '</b><small>' + D(t) + '</small>' + (fo ? '<small class="aviso-rojo">' + fo + '</small>' : '') + (lleno ? '<small class="aviso-rojo">' + L('Ya tienes uno', 'You already have one') + '</small>' : '') + '<small class="t-obra">⏱ ' + fmtTiempo(EDIFICIOS[t].tiempo[0] * (1 - bono('obras'))) + '</small></span><span class="fc-flecha">›</span></button>';
     });
     if (!sl || !sl.campo) html += htmlBarricada() + htmlMuralla();
     html += '</div>';
@@ -5390,7 +5451,7 @@
       if (tropaDetalle) { $('panel').scrollTop = arribaP; var sl = $('det-n'); if (sl) sl.addEventListener('input', function () { cantDetalle = +this.value; refrescarFicha(); }); refrescarFicha(); }
       return;
     }
-    var html = '<div class="carta"><div class="cab"><div class="foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</div><div><h3>' + N(tipo) + ' — ' + T('nivel_de', { n: nivel, m: NIVEL_MAX }) + '</h3><p>' + D(tipo) + '</p></div></div>';
+    var html = htmlCafeArriba(i, s, tipo, nivel);
     if (s.obra) {
       html += '<p class="nota"><b>' + (s.obra.nivel === 1 ? L('Construyendo', 'Building') : L('Mejorando a nivel ', 'Upgrading to level ') + s.obra.nivel) + '</b> <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo((s.obra.total - s.obra.t) / velObras()) + '</span></p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="obra:' + i + '">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((s.obra.total - s.obra.t) / velObras()), 'terminar-gemas', 'data-que="obra:' + i + '"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '<button class="comprar rojo" data-accion="cancelar-obra" data-slot="' + i + '">✖ ' + L('Cancelar', 'Cancel') + '</button></div>';
     } else {
@@ -5402,14 +5463,69 @@
       if (nivel < NIVEL_MAX) {
         var pendP = trabajosPendientes('edificio', nivel + 1);
         var segE = EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'));
-        html += '<div class="sig-nivel"><b>⬆️ ' + L('Mejorar: nivel ', 'Upgrade: level ') + nivel + ' → ' + (nivel + 1) + '</b><div class="stats">' + statsEdificio(tipo, nivel + 1) + '</div></div>' +
-          tablaRequisitos(costoEdif(tipo, nivel), requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)), segE) +
-          botonesObra(costoEdif(tipo, nivel), segE, 'mejorar', 'mejorar-ya', 'data-slot="' + i + '"', '⬆️ ' + T('mejorar'), faltaObra(tipo, nivel + 1) ? botonFalta(faltaObra(tipo, nivel + 1)) : pendP.length ? botonBloqueadoTrabajos(pendP) : '', 'mejorar:' + i);
+        // v6.33: como en la ventana café: Cancelar (azul) y Mejorar (verde) arriba, y la tabla Tipo · Necesitas · Tienes abajo
+        html += '<div class="sig-nivel cafe-oculto"></div>' + botonesCafe(botonesObra(costoEdif(tipo, nivel), segE, 'mejorar', 'mejorar-ya', 'data-slot="' + i + '"', '⬆️ ' + T('mejorar'), faltaObra(tipo, nivel + 1) ? botonFalta(faltaObra(tipo, nivel + 1)) : pendP.length ? botonBloqueadoTrabajos(pendP) : '', 'mejorar:' + i)) +
+          tablaRequisitos(costoEdif(tipo, nivel), requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)), segE);
       } else html += '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
     }
     if (s.edificio && !oleadaActiva) html += '<button class="comprar rojo demoler-panel" data-accion="demoler-panel" data-slot="' + i + '">🧨 ' + T('mb_demoler') + '</button>';
     html += '</div>';
-    abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', (esCuartel ? htmlPestanasCuartel() : '') + html, { tipo: 'edificio', slot: i });
+    abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', (esCuartel ? htmlPestanasCuartel() : htmlPestanasCafe(i, tipo, 'det')) + html, { tipo: 'edificio', slot: i });
+    ponerCafe();
+  }
+  // ---------- VENTANA CAFÉ (v6.33): foto grande, descripción, siguiente nivel, Mejorando... con reloj, botones y tabla ----------
+  function textoStats(h) { return String(h || '').replace(/<\/span>\s*<span[^>]*>/g, ' · ').replace(/<[^>]+>/g, ''); }
+  function htmlCafeArriba(i, s, tipo, nivel) {
+    var h = '<div class="carta"><div class="cafe-det"><div class="cafe-foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</div><div class="cafe-lado"><p class="cafe-desc">' + D(tipo) + '</p>';
+    if (s.obra) {
+      h += '<div class="cafe-sig">⬆️ ' + L('Sig. nivel ', 'Next level ') + s.obra.nivel + ' — ' + textoStats(statsEdificio(tipo, s.obra.nivel)) + '</div>' +
+        '<div class="cafe-mejorando">🔨 ' + (s.obra.nivel === 1 ? L('Construyendo...', 'Building...') : L('Mejorando...', 'Upgrading...')) + '</div>';
+    } else if (nivel < NIVEL_MAX) {
+      h += '<div class="cafe-sig">⬆️ ' + L('Sig. nivel ', 'Next level ') + (nivel + 1) + ' — ' + textoStats(statsEdificio(tipo, nivel + 1)) + '</div>' +
+        '<div class="cafe-reloj">⏳ ' + fmtTiempo(EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras')) / velObras()) + '</div>';
+    } else h += '<div class="cafe-sig">⭐ ' + T('nivel_max') + ' ★★★</div>';
+    return h + '</div></div>';
+  }
+  // Cancelar a la izquierda en azul, la acción principal en verde y la de gemas en morado
+  function botonesCafe(h) {
+    if (h.indexOf('bloqueado') >= 0 || h.indexOf('disabled') >= 0) return h.replace('<div class="obra-botones">', '<div class="obra-botones"><button class="comprar azul cafe-cancelar" data-accion="cafe-cerrar">' + L('Cancelar', 'Cancel') + '</button>');
+    return h.replace(/class="comprar verde"/g, 'class="comprar morado"').replace(/class="comprar azul"/, 'class="comprar verde cafe-principal"')
+      .replace('<div class="obra-botones">', '<div class="obra-botones"><button class="comprar azul cafe-cancelar" data-accion="cafe-cerrar">' + L('Cancelar', 'Cancel') + '</button>');
+  }
+  // pestañas: el edificio y, si tiene, su segunda pantalla (Población, Investigación, Comerciar, Forjar)
+  function htmlPestanasCafe(i, tipo, cual) {
+    var seg = tipo === 'cabana' ? ['cafe-pob', '👥 ' + L('Población', 'Population')] : tipo === 'academia' ? ['investigacion', '📜 ' + L('Investigación', 'Research')] :
+      tipo === 'mercado' ? ['abrir-mercado', '⚖️ ' + T('mb_comerciar')] : tipo === 'herreria' ? ['abrir-herreria', '⚒️ ' + T('mb_forjar')] : null;
+    var h = '<div class="cafe-tabs"><button class="' + (cual === 'det' ? 'activo' : '') + '" data-accion="cafe-det" data-slot="' + i + '"><span class="ct-foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</span>' + N(tipo) + '</button>';
+    h += seg ? '<button class="' + (cual === 'seg' ? 'activo' : '') + '" data-accion="' + seg[0] + '" data-slot="' + i + '">' + seg[1] + '</button>' : '<button class="bloq" disabled>🔒 ' + L('Pronto', 'Soon') + ' 🔒</button>';
+    return h + '</div>';
+  }
+  // marca el panel como café y pone el botón verde de gemas arriba
+  function ponerCafe() {
+    var p = $('panel'); p.classList.add('cafe');
+    var cab = p.querySelector('.panel-cab'); if (!cab || cab.querySelector('.cafe-mas')) return;
+    var b = document.createElement('button'); b.className = 'cafe-mas'; b.setAttribute('data-accion', 'cafe-gemas');
+    b.innerHTML = '<span class="ico gema"></span>' + (estado.gemasInfinitas ? '∞' : corto(estado.gemas || 0)) + ' ' + L('Más', 'More');
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); var bt = $('btn-tienda'); if (bt) bt.click(); });
+    cab.insertBefore(b, $('panel-cerrar'));
+  }
+  // pestaña Población de la Cabaña
+  function abrirPanelPoblacion(i) {
+    var s = slots[i]; if (!s || !(s.edificio || s.obra)) return;
+    var tipo = 'cabana', nivel = s.edificio ? s.edificio.nivel : s.obra.nivel, max = poblacionMax(), usada = tropasOcupadas(), libre = max - usada;
+    var cab = edificiosDe('cabana');
+    var h = '<div class="carta"><div class="cafe-det"><div class="cafe-foto">' + fotoHTML(tipo, '🛖') + '</div><div class="cafe-lado">' +
+      '<p class="cafe-desc">' + L('Tu gente vive en las cabañas. Cada tropa ocupa 1 de población y cada obra necesita ' + OBREROS_OBRA + ' obreros libres.', 'Your people live in the cottages. Each troop takes 1 population and every build needs ' + OBREROS_OBRA + ' free workers.') + '</p>' +
+      '<div class="cafe-sig">👥 ' + L('Población: ', 'Population: ') + formatoNumero(usada) + ' / ' + formatoNumero(max) + '</div>' +
+      (libre < OBREROS_OBRA ? '<div class="cafe-mejorando">⚠️ ' + L('¡Población llena!', 'Population full!') + '</div>' : '<div class="cafe-reloj">✅ ' + L('Libres: ', 'Free: ') + formatoNumero(libre) + '</div>') + '</div></div>';
+    h += '<table class="req"><tr><th>' + L('Tipo', 'Type') + '</th><th>' + L('Habitantes', 'People') + '</th><th></th></tr>' +
+      '<tr class="si"><td>🏰 ' + T('castillo') + '</td><td>' + formatoNumero(POB_BASE) + '</td><td>✅</td></tr>' +
+      (estado.pobRegalo ? '<tr class="si"><td>🎁 ' + L('Regalo del reino', 'Kingdom gift') + '</td><td>' + formatoNumero(estado.pobRegalo) + '</td><td>✅</td></tr>' : '') +
+      cab.map(function (c, k) { return '<tr class="si"><td>🛖 ' + N('cabana') + ' ' + (k + 1) + ' (' + L('Nv ', 'Lv ') + c.edificio.nivel + ')</td><td>+' + formatoNumero(EDIFICIOS.cabana.poblacion[c.edificio.nivel - 1]) + '</td><td>✅</td></tr>'; }).join('') +
+      '<tr class="tiempo"><td>⚔️ ' + L('Ocupada por tus tropas', 'Taken by your troops') + '</td><td colspan="2">' + formatoNumero(usada) + '</td></tr></table>';
+    h += '<div class="obra-botones"><button class="comprar azul cafe-cancelar" data-accion="cafe-cerrar">' + L('Cancelar', 'Cancel') + '</button><button class="comprar verde cafe-principal" data-accion="cafe-det" data-slot="' + i + '">⬆️ ' + T('mejorar') + '</button></div></div>';
+    abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', htmlPestanasCafe(i, tipo, 'seg') + h, { tipo: 'poblacion', slot: i });
+    ponerCafe();
   }
 
   function abrirPanelUnidad(u) {
@@ -6784,13 +6900,12 @@
     else if ((estado.castillo || 1) < CASTILLO_MAX) { estado.castillo = CASTILLO_MAX; ponerCastillo(); actualizarParcelas(); }
     if (obraMuralla) terminarMuralla();
     if ((estado.muralla || 0) < NIVEL_MAX) { estado.muralla = NIVEL_MAX; ponerMuralla(NIVEL_MAX); }
-    // parcelas vacías: la ciudad y los campos se llenan con edificios nivel 17, repartidos (se pone el tipo que menos hay)
-    var tiposCiudad = Object.keys(EDIFICIOS).filter(function (t) { return !esCampo(t); });
+    // la ciudad: el edificio fijo de cada borde, y el resto cabañas y cuarteles. Los campos se quedan vacíos.
     slots.forEach(function (s) {
-      if (s.edificio || s.obra || cerrada(s)) return;
-      var lista = s.campo ? TIPOS_CAMPO : tiposCiudad;
-      var tipo = lista.slice().sort(function (a, b) { return contarEdificios(a) - contarEdificios(b); })[0];
-      ponerEdificio(s, tipo, NIVEL_MAX);
+      if (s.edificio || s.obra || cerrada(s) || s.campo) return;
+      if (s.fijo) { ponerEdificio(s, s.fijo, NIVEL_MAX); return; }
+      var tipo = contarEdificios('cuartel') < 4 ? 'cuartel' : 'cabana';
+      ponerEdificio(s, tipo, 1);
     });
     estado.vidaCastillo = vidaMaxCastillo();
     estado.invest = estado.invest || {};
@@ -7027,6 +7142,10 @@
     else if (a === 'comprar-mejora') comprarMejora(b.getAttribute('data-que'));
     else if (a === 'acelerar-que') { sonar('click'); abrirAcelerar(b.getAttribute('data-que')); }
     else if (a === 'cancelar-obra') { sonar('click'); cancelarObra(+b.getAttribute('data-slot')); }
+    else if (a === 'cafe-cerrar') { sonar('click'); cerrarPanel(); }
+    else if (a === 'cafe-pob') { sonar('click'); abrirPanelPoblacion(+b.getAttribute('data-slot')); }
+    else if (a === 'cafe-det') { sonar('click'); abrirPanelEdificio(+b.getAttribute('data-slot')); }
+    else if (a === 'cafe-gemas') { sonar('click'); var btT = $('btn-tienda'); if (btT) btT.click(); }
     else if (a === 'mis-pest') { sonar('click'); pestMis = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelMisiones(); }
     else if (a === 'mis-reclamar') reclamarMision(b.getAttribute('data-id'));
     else if (a === 'cuartel-pest') { sonar('click'); pestCuartel = b.getAttribute('data-p'); tropaDetalle = null; abrirPanelEdificio(slotElegido); }
@@ -7221,6 +7340,7 @@
     if ($('xp-barra')) $('xp-barra').title = L('Experiencia: ', 'Experience: ') + formatoNumero((estado.xp || 0) - x0) + ' / ' + formatoNumero(x1 - x0);
     if ($('perfil-nombre')) { var pn = (hayCuenta() ? Cuentas.nombrePublico() : L('Rey', 'King')) + ' · ' + L('Nv ', 'Lv ') + nj; if ($('perfil-nombre').textContent !== pn) $('perfil-nombre').textContent = pn; }
     $('avatar').classList.toggle('dueno', !!estado.dueno);
+    var pobT = $('pob-txt'); if (pobT) { pobT.textContent = formatoNumero(tropasOcupadas()) + ' / ' + formatoNumero(poblacionMax()); pobT.parentNode.classList.toggle('llena', poblacionLibre() < OBREROS_OBRA); }
     $('gemas').textContent = estado.gemasInfinitas ? '∞' : corto(estado.gemas);
     $('tropas').textContent = textoTropas();
     actualizarBotonDefensa(); actualizarPillEntreno();
@@ -7568,6 +7688,7 @@
       estado.monedas = g.monedas; estado.gemas = g.gemas; estado.oleada = g.oleada || 1;
       estado.infinito = !!g.infinito;
       estado.muralla = g.muralla || 0;
+      estado.pobRegalo = typeof g.pobRegalo === 'number' ? g.pobRegalo : undefined;
       estado.alianza = g.alianza || null;
       estado.armadura = g.armadura || {};
       estado.mochila = g.mochila || {};
@@ -7628,6 +7749,35 @@
         }
         eds = nE; obs = nO;
       }
+      if (!g.mapaCuadricula) {
+        var civ = [], rec = [], nSlots = Math.max(eds.length, obs.length);
+        for (var qi = 0; qi < nSlots; qi++) {
+          var e1 = eds[qi] || null, o1 = obs[qi] || null, tp1 = (e1 && e1.tipo) || (o1 && o1.tipo);
+          if (!tp1 || !EDIFICIOS[tp1]) continue;
+          (esCampo(tp1) ? rec : civ).push({ e: e1, o: o1, tipo: tp1, nivel: (e1 && e1.nivel) || (o1 && o1.nivel) || 1 });
+        }
+        civ.sort(function (a, b) { return b.nivel - a.nivel; });
+        var uso = {}, quedar = [];
+        civ.forEach(function (c) {
+          var max = (c.tipo === 'cabana' || c.tipo === 'cuartel') ? 99 : 1;
+          uso[c.tipo] = uso[c.tipo] || 0;
+          if (uso[c.tipo] >= max) return;
+          uso[c.tipo]++;
+          quedar.push(c);
+        });
+        var nE2 = [], nO2 = [], puesto = {};
+        slots.forEach(function (s) { if (s.fijo) puesto[s.fijo] = s.i; });
+        var libres = slots.filter(function (s) { return !s.campo && !s.fijo; }).map(function (s) { return s.i; });
+        quedar.forEach(function (c) {
+          var dest = puesto[c.tipo];
+          if (dest === undefined) dest = libres.shift();
+          if (dest === undefined) return;
+          nE2[dest] = c.e || null; nO2[dest] = c.o || null;
+        });
+        var fi2 = PARCELAS.nCiudad;
+        rec.forEach(function (c) { if (fi2 < slots.length) { nE2[fi2] = c.e || null; nO2[fi2] = c.o || null; fi2++; } });
+        eds = nE2; obs = nO2;
+      }
       eds.forEach(function (e, i) { if (e && slots[i] && EDIFICIOS[e.tipo]) ponerEdificio(slots[i], e.tipo, e.nivel); });
       // tiempo que pasó con el juego cerrado (máximo 14 días)
       var cerrado = g.actualizado ? Math.max(0, Math.min(14 * 86400, (Date.now() - g.actualizado) / 1000)) : 0;
@@ -7683,6 +7833,9 @@
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
     setTimeout(function () { if (!enMenu) publicarAldea(true); }, 800);
     setTimeout(function () { revisarAtaques(true); }, 2500);
+    // v6.33: los que ya jugaban reciben población de regalo para no quedarse trabados (sus tropas + 200 libres)
+    if (typeof estado.pobRegalo !== 'number') { estado.pobRegalo = Math.max(0, tropasOcupadas() + 200 - POB_BASE); guardar(); }
+    setTimeout(actualizarHUD, 300);
   }
 
   // ------------------------------------------------------------------
@@ -7856,7 +8009,7 @@
     var b = (Math.sin(performance.now() / 250) + 1) / 2;
     slots.forEach(function (s, i) {
       var libre = !s.edificio && !s.obra;
-      var on = (modoColocar && libre && modoColocar !== 'barricada' && s.campo === esCampo(modoColocar) && !cerrada(s)) || slotElegido === i;
+      var on = (modoColocar && libre && modoColocar !== 'barricada' && parcelaAcepta(s, modoColocar) && !cerrada(s)) || slotElegido === i;
       s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
       if (s.terreno.userData.mas) s.terreno.userData.mas.visible = libre && !cerrada(s);
       // estacas y cuerda: solo en modo construcción

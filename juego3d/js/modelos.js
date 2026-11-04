@@ -583,6 +583,29 @@ var M = (function () {
     g.userData.tela = b.userData.tela;
     return g;
   }
+  // v6.33: CABAÑA: casita de paredes claras con vigas, techo de paja y chimenea; con el nivel se suman casitas
+  function cabana(nivel) {
+    var g = new THREE.Group(), PAJA = 0xd9b45a, PAJA2 = 0xb8923e, MAD = 0x7a4a26, PIE = 0x8f8a80;
+    function casita(x, z, s, rot) {
+      var c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = rot || 0; c.scale.setScalar(s);
+      c.add(caja(2.6, 0.4, 2.2, PIE, 0, 0.2, 0));
+      c.add(caja(2.4, 1.5, 2.0, 0xeadfc4, 0, 1.15, 0));
+      [-1.15, 1.15].forEach(function (x2) { c.add(caja(0.16, 1.5, 0.16, MAD, x2, 1.15, 1.0)); c.add(caja(0.16, 1.5, 0.16, MAD, x2, 1.15, -1.0)); });
+      c.add(caja(2.45, 0.14, 0.14, MAD, 0, 1.85, 1.02)); c.add(caja(0.12, 1.4, 0.1, MAD, -0.5, 1.15, 1.03).rotateZ(0.5));
+      var t1 = caja(2.95, 0.38, 1.6, PAJA, 0, 2.38, 0.56); t1.rotation.x = 0.75; c.add(t1);
+      var t2 = caja(2.95, 0.38, 1.6, PAJA2, 0, 2.38, -0.56); t2.rotation.x = -0.75; c.add(t2);
+      c.add(caja(0.56, 0.95, 0.12, 0x5a3418, 0.3, 0.88, 1.03));
+      c.add(ventana(0.36, 0.36, 0.1, -0.65, 1.3, 1.03));
+      c.add(caja(0.42, 1.4, 0.42, PIE, 0.8, 2.65, -0.45)); c.add(caja(0.5, 0.15, 0.5, 0x6e6a62, 0.8, 3.38, -0.45));
+      g.add(c);
+    }
+    casita(0, 0.2, 1, 0);
+    if (nivel >= 2) casita(-2.0, -1.4, 0.72, 0.5);
+    if (nivel >= 3) casita(2.0, -1.5, 0.68, -0.45);
+    for (var i = -3; i <= 3; i++) if (i !== 1) g.add(caja(0.1, 0.55, 0.1, MAD, i * 0.5, 0.28, 2.1));
+    g.add(caja(3.2, 0.08, 0.08, MAD, 0, 0.45, 2.1));
+    return g;
+  }
   function almacen(nivel) {
     nivel = Math.min(3, nivel); var g = new THREE.Group();
     casaPiedra(g, 0, -0.4, 3.0, 2.0, 1.4, nivel, true);
@@ -3061,11 +3084,57 @@ var M = (function () {
     return g;
   }
 
+  function embajada(nivel) {
+    var g = new THREE.Group();
+    g.add(caja(3.1, 0.18, 2.3, 0xcfc6b4, 0, 0.09, 0));
+    g.add(caja(2.5, 1.35, 1.7, 0xf6f1e6, 0, 0.85, 0));
+    [-0.95, 0.95].forEach(function (x) { g.add(cil(0.1, 0.12, 1.35, 8, 0xfbf8f2, x, 0.75, 0.9)); });
+    g.add(caja(0.7, 1.05, 0.08, 0x6d533c, 0, 0.62, 0.9));
+    g.add(caja(2.9, 0.14, 2.15, 0x3a6fbe, 0, 1.6, 0));
+    g.add(caja(1.5, 0.55, 1.15, 0xf7f3ea, 0, 1.95, 0));
+    g.add(caja(1.7, 0.1, 1.3, 0x2c589e, 0, 2.28, 0));
+    var b = bandera(0x3a6fbe, 1.1); b.position.set(0, 2.45, 0); g.add(b);
+    g.userData.tela = b.userData.tela;
+    return g;
+  }
+  function relevo(nivel) {
+    var g = new THREE.Group();
+    g.add(caja(1.5, 0.1, 1.1, 0xc4b59a, 0, 0.05, 0));
+    [-0.5, 0.5].forEach(function (x) { g.add(cil(0.05, 0.06, 1.35, 6, 0x6b4423, x, 0.72, 0)); });
+    g.add(caja(1.35, 0.55, 0.08, 0xf4e7c4, 0, 1.2, 0));
+    g.add(caja(1.4, 0.07, 0.1, 0x6b4423, 0, 1.5, 0));
+    g.add(caja(0.45, 0.28, 0.4, 0x8a5a32, 0.15, 0.2, 0.55));
+    return g;
+  }
+
+  function embajada(nivel) {
+    var g = new THREE.Group();
+    g.add(caja(3.1, 0.18, 2.3, 0xcfc6b4, 0, 0.09, 0));
+    g.add(caja(2.5, 1.35, 1.7, 0xf6f1e6, 0, 0.85, 0));
+    [-0.95, 0.95].forEach(function (x) { g.add(cil(0.1, 0.12, 1.35, 8, 0xfbf8f2, x, 0.75, 0.9)); });
+    g.add(caja(0.7, 1.05, 0.08, 0x6d533c, 0, 0.62, 0.9));
+    g.add(caja(2.9, 0.14, 2.15, 0x3a6fbe, 0, 1.6, 0));
+    g.add(caja(1.5, 0.55, 1.15, 0xf7f3ea, 0, 1.95, 0));
+    g.add(caja(1.7, 0.1, 1.3, 0x2c589e, 0, 2.28, 0));
+    var b = bandera(0x3a6fbe, 1.1); b.position.set(0, 2.45, 0); g.add(b);
+    g.userData.tela = b.userData.tela;
+    return g;
+  }
+  function relevo(nivel) {
+    var g = new THREE.Group();
+    g.add(caja(1.5, 0.1, 1.1, 0xc4b59a, 0, 0.05, 0));
+    [-0.5, 0.5].forEach(function (x) { g.add(cil(0.05, 0.06, 1.35, 6, 0x6b4423, x, 0.72, 0)); });
+    g.add(caja(1.35, 0.55, 0.08, 0xf4e7c4, 0, 1.2, 0));
+    g.add(caja(1.4, 0.07, 0.1, 0x6b4423, 0, 1.5, 0));
+    g.add(caja(0.45, 0.28, 0.4, 0x8a5a32, 0.15, 0.2, 0.55));
+    return g;
+  }
+
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
     castillo: castillo, castilloEtapa: castilloEtapa, etapaCastillo: etapaCastillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
-    vigia: vigia, almacen: almacen, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria,
+    vigia: vigia, almacen: almacen, cabana: cabana, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria, embajada: embajada, relevo: relevo, embajada: embajada, relevo: relevo,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,

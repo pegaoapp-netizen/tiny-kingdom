@@ -277,3 +277,69 @@ body.tema-oscuro #panel.tropas-oscuro .inv-tropa-btn {
   box-shadow: 0 0 0 2px #000, 0 3px 0 #000 !important; font-family: var(--to-num); font-weight: 900 !important; text-shadow: 0 1px 2px #000 !important;
 }
 body.tema-oscuro #panel.tropas-oscuro .tropa-cantidad .comprar.mini { background: linear-gradient(#f2d27a, #c08a2a 65%, #8a5a14) !important; color: #2a1800 !important; border: 2px solid #ffe9a8 !important; }
+
+/* ============================================================
+   VENTANA CAFÉ DE LOS EDIFICIOS (v6.33): madera café, pestañas,
+   foto grande, siguiente nivel, Mejorando... y tabla de pergamino
+   ============================================================ */
+body.tema-oscuro #panel.cafe {
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 2px, transparent 2px 30px, rgba(255,220,160,.04) 30px 32px, transparent 32px 60px),
+    linear-gradient(180deg, #4a3220, #2e1f14 55%, #24180f) !important;
+  border: 3px solid #2a1c12 !important; outline: 2px solid #a8782a; outline-offset: -8px;
+  box-shadow: 0 0 0 2px #120b06, 0 -6px 22px rgba(0,0,0,.6), inset 0 0 26px rgba(0,0,0,.6) !important; color: #f3e6c8 !important;
+}
+body.tema-oscuro #panel.cafe .panel-cab { background: linear-gradient(180deg, #5a3d26, #3a2717) !important; border-bottom: 3px solid #a8782a !important; box-shadow: 0 3px 8px rgba(0,0,0,.5) !important; }
+body.tema-oscuro #panel.cafe #panel-titulo { font-family: var(--to-letra) !important; font-size: 27px !important; color: #f6dc8a !important; text-shadow: 0 2px 3px #000 !important; }
+body.tema-oscuro #panel.cafe #panel-cerrar { background: linear-gradient(#5a3d26, #2a1c12) !important; border: 2px solid #a8782a !important; color: #ffe9a8 !important; }
+body.tema-oscuro #panel.cafe .cafe-mas {
+  margin-left: auto; margin-right: 8px; padding: 6px 12px; border-radius: 10px; border: 2px solid #c9e89a; display: flex; align-items: center; gap: 5px;
+  background: linear-gradient(#7ac04a, #3f8a26 60%, #2a6a18); color: #fff; font-family: var(--to-num); font-weight: 900; font-size: 15px; text-shadow: 0 1px 2px #000; box-shadow: 0 3px 0 #1a3a0c;
+}
+body.tema-oscuro #panel.cafe .cafe-tabs { display: flex; gap: 8px; margin: 2px 0 10px; }
+body.tema-oscuro #panel.cafe .cafe-tabs button, body.tema-oscuro #panel.cafe .subtabs button {
+  flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 52px; border-radius: 10px !important;
+  background: linear-gradient(#6a5a48, #4a3e32) !important; border: 2px solid #2a1c12 !important; color: #d8ccb4 !important;
+  font-family: var(--to-num); font-weight: 900 !important; font-size: 17px !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 3px 0 #120b06 !important; text-shadow: 0 1px 2px #000;
+}
+body.tema-oscuro #panel.cafe .cafe-tabs button.activo, body.tema-oscuro #panel.cafe .subtabs button.activo {
+  background: linear-gradient(#f0a050, #c8641c 60%, #9a4410) !important; border-color: #ffd68a !important; color: #fff3d6 !important; box-shadow: 0 0 0 2px #5a2a08, 0 0 12px rgba(255,160,60,.6) !important;
+}
+body.tema-oscuro #panel.cafe .cafe-tabs button.bloq { opacity: .7; }
+body.tema-oscuro #panel.cafe .cafe-tabs .ct-foto img { width: 34px; height: 34px; object-fit: contain; display: block; }
+body.tema-oscuro #panel.cafe .carta { background: linear-gradient(180deg, rgba(58,39,23,.92), rgba(36,24,15,.95)) !important; border: 2px solid #6a4a22 !important; box-shadow: inset 0 0 18px rgba(0,0,0,.5) !important; color: #f3e6c8 !important; }
+body.tema-oscuro #panel.cafe .cafe-det { display: grid; grid-template-columns: 46% 1fr; gap: 10px; align-items: stretch; margin-bottom: 10px; }
+body.tema-oscuro #panel.cafe .cafe-foto {
+  border-radius: 10px; border: 3px solid #c9a46a; box-shadow: 0 0 0 2px #2a1c12, inset 0 0 20px rgba(0,0,0,.4); min-height: 170px;
+  background: radial-gradient(ellipse at 50% 70%, #f6e7c4, #c9a87a 60%, #8a6a44); display: flex; align-items: center; justify-content: center; font-size: 70px; overflow: hidden;
+}
+body.tema-oscuro #panel.cafe .cafe-foto img { width: 100%; height: 100%; max-height: 210px; object-fit: contain; }
+body.tema-oscuro #panel.cafe .cafe-lado { display: flex; flex-direction: column; gap: 7px; }
+body.tema-oscuro #panel.cafe .cafe-desc { margin: 0; font-size: 14px; line-height: 1.35; color: #f3e6c8 !important; background: rgba(20,12,7,.45); border: 1px solid #5a3e1e; border-radius: 8px; padding: 7px 8px; }
+body.tema-oscuro #panel.cafe .cafe-sig { background: linear-gradient(#e8a85a, #b8742e); color: #2a1400; border: 2px solid #ffd68a; box-shadow: 0 0 0 1px #5a3008; border-radius: 6px; padding: 7px 8px; font-weight: 800; font-size: 14px; line-height: 1.3; }
+body.tema-oscuro #panel.cafe .cafe-mejorando { color: #ff6a50; font-family: var(--to-num); font-weight: 900; font-size: 17px; text-shadow: 0 1px 2px #000; }
+body.tema-oscuro #panel.cafe .cafe-reloj { background: rgba(20,12,7,.7); border: 2px solid #6a4a22; border-radius: 10px; padding: 6px 10px; text-align: center; font-family: var(--to-num); font-weight: 900; font-size: 20px; color: #ffe9a8; }
+body.tema-oscuro #panel.cafe .reloj-panel { font-family: var(--to-num); font-weight: 900; font-size: 20px; color: #ffe9a8 !important; background: rgba(20,12,7,.7); border: 2px solid #6a4a22; border-radius: 10px; padding: 4px 10px; display: inline-block; }
+body.tema-oscuro #panel.cafe .nota b { color: #ff7a5c; }
+body.tema-oscuro #panel.cafe .cafe-oculto { display: none !important; }
+body.tema-oscuro #panel.cafe .stats span { background: linear-gradient(#3a2717, #24180f) !important; border: 1px solid #6a4a22 !important; color: #f3e6c8 !important; }
+body.tema-oscuro #panel.cafe .obra-botones { display: flex !important; gap: 10px; margin: 8px 0 10px; flex-wrap: wrap; }
+body.tema-oscuro #panel.cafe .obra-botones > button { flex: 1 1 30%; min-height: 54px; font-size: 19px !important; font-family: var(--to-num); font-weight: 900 !important; border-radius: 12px !important; text-shadow: 0 1px 2px #000 !important; }
+body.tema-oscuro #panel.cafe button.comprar.azul { background: linear-gradient(#5a9ae8, #2a62b8 60%, #1a4288) !important; border: 2px solid #a8d0ff !important; color: #fff !important; box-shadow: 0 0 0 2px #0c2448, 0 4px 0 #0c2448 !important; }
+body.tema-oscuro #panel.cafe button.comprar.verde { background: linear-gradient(#7ac04a, #3f8a26 60%, #2a6a18) !important; border: 2px solid #c9e89a !important; color: #fff !important; box-shadow: 0 0 0 2px #1a3a0c, 0 4px 0 #1a3a0c !important; }
+body.tema-oscuro #panel.cafe button.comprar.morado { background: linear-gradient(#9a6ad8, #6a3aa8) !important; border: 2px solid #d8b8ff !important; color: #fff !important; }
+body.tema-oscuro #panel.cafe button.comprar.rojo { background: linear-gradient(#d8503a, #8a1e12) !important; border: 2px solid #ffb0a0 !important; color: #fff !important; }
+body.tema-oscuro #panel.cafe .banner-rojo { background: linear-gradient(#c8402a, #8a1e12) !important; color: #fff !important; border: 2px solid #ffb0a0 !important; border-radius: 8px; font-weight: 900; text-shadow: 0 1px 2px #000; }
+body.tema-oscuro #panel.cafe table.req { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 10px; overflow: hidden; border: 3px solid #5a3d26; box-shadow: 0 0 0 2px #2a1c12; background: linear-gradient(#efe0bc, #d9c393) !important; }
+body.tema-oscuro #panel.cafe table.req th { background: linear-gradient(#5a3d26, #3a2717) !important; color: #f6dc8a !important; font-family: var(--to-num); font-size: 16px; padding: 8px 6px; border: 0 !important; }
+body.tema-oscuro #panel.cafe table.req td { color: #2a1a0c !important; font-weight: 800; font-size: 15px; padding: 8px 6px; border: 0 !important; border-top: 1px solid rgba(90,60,30,.35) !important; background: transparent !important; }
+body.tema-oscuro #panel.cafe table.req tr.no td { color: #9a1e12 !important; }
+body.tema-oscuro #panel.cafe table.req tr.tiempo td { background: rgba(90,60,30,.15) !important; }
+@media (max-width: 600px) {
+  body.tema-oscuro #panel.cafe .cafe-det { grid-template-columns: 1fr; }
+  body.tema-oscuro #panel.cafe .cafe-foto { min-height: 140px; }
+  body.tema-oscuro #panel.cafe #panel-titulo { font-size: 22px !important; }
+  body.tema-oscuro #panel.cafe .cafe-tabs button { font-size: 14px !important; min-height: 46px; }
+}
+body.tema-oscuro #panel-rey .pr-pob { font-family: var(--to-num); font-weight: 900; font-size: 12px; color: #f0e2c0; text-shadow: 0 1px 2px #000; border-top: 1px solid rgba(232,196,106,.35); padding-top: 4px; }
+body.tema-oscuro #panel-rey .pr-pob.llena { color: #ff8a6a; }
