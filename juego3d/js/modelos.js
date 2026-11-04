@@ -1462,7 +1462,8 @@ var M = (function () {
     var per = 2 * Math.PI * Math.sqrt((f.rx * f.rx + f.rz * f.rz) / 2);
     var N = Math.round(per / 2.6);
     function punto(t) { return { x: f.cx + Math.cos(t) * f.rx, z: f.cz + Math.sin(t) * f.rz }; }
-    function enPuerta(t) { var d = Math.abs(((t - f.puerta) + Math.PI * 3) % (Math.PI * 2) - Math.PI); return d < f.hueco; }
+    var puertas = f.puertas || [f.puerta];
+    function enPuerta(t) { return puertas.some(function (pp) { var d = Math.abs(((t - pp) + Math.PI * 3) % (Math.PI * 2) - Math.PI); return d < f.hueco; }); }
     var torres = [];
     for (var i = 0; i < N; i++) {
       var t0 = i / N * Math.PI * 2, t1 = (i + 1) / N * Math.PI * 2, tm = (t0 + t1) / 2;
@@ -1488,7 +1489,14 @@ var M = (function () {
       if (i % 5 === 0 && !enPuerta(t0 - 0.2) && !enPuerta(t0 + 0.2)) torres.push({ p: a, puerta: false });
     }
     // torres grandes a los dos lados de la puerta
-    torres.push({ p: punto(f.puerta - f.hueco - 0.03), puerta: true }, { p: punto(f.puerta + f.hueco + 0.03), puerta: true });
+    puertas.forEach(function (pp) {
+      var pa = punto(pp - f.hueco - 0.03), pb = punto(pp + f.hueco + 0.03);
+      torres.push({ p: pa, puerta: true }, { p: pb, puerta: true });
+      // arco de piedra encima de la puerta
+      var ldx = pb.x - pa.x, ldz = pb.z - pa.z, arco = caja(Math.hypot(ldx, ldz), 1.1, 1.5, C.piedra, (pa.x + pb.x) / 2, alto + 0.75, (pa.z + pb.z) / 2);
+      arco.rotation.y = -Math.atan2(ldz, ldx); g.add(arco);
+      var arco2 = caja(Math.hypot(ldx, ldz) * 0.7, 0.35, 1.6, C.piedraOsc, (pa.x + pb.x) / 2, alto + 0.12, (pa.z + pb.z) / 2); arco2.rotation.y = arco.rotation.y; g.add(arco2);
+    });
     var _fin = function () { return fusionar(g); };
     torres.forEach(function (tq) {
       var x = tq.p.x, z = tq.p.z, h = alto + (tq.puerta ? 1.8 : 1.1), r = tq.puerta ? 1.1 : 0.8;

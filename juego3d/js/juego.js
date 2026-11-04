@@ -153,7 +153,27 @@
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = 3.55;
   var CENTRO_REINO = new V3(0, 0, 0);
-  var LIMITE_CAM = 74;
+  // ---------- DISEÑO v6.31: ciudad redonda con 4 caminos de piedra en cruz, y los campos en un recinto amurallado ----------
+  // El eje U mira hacia la cámara (abajo en la pantalla) y el eje V va de lado a lado.
+  var EJE_U = { x: Math.cos(AZ_CAM), z: Math.sin(AZ_CAM) }, EJE_V = { x: -Math.sin(AZ_CAM), z: Math.cos(AZ_CAM) };
+  function aMundo(a, b) { return [EJE_U.x * a + EJE_V.x * b, EJE_U.z * a + EJE_V.z * b]; }
+  function aLocal(x, z) { return { a: x * EJE_U.x + z * EJE_U.z, b: x * EJE_V.x + z * EJE_V.z }; }
+  var R_CIUDAD = MURALLA_FORMA.rx;
+  // recinto de los campos: detrás de la ciudad, al otro lado del río (centro y medio fondo / medio ancho)
+  var CAMPOS_RECT = { a: -(R_CIUDAD + 52), b: 0, ha: 29, hb: 47 };
+  function fueraCampos(x, z) { var l = aLocal(x, z); return Math.hypot(Math.max(0, Math.abs(l.a - CAMPOS_RECT.a) - CAMPOS_RECT.ha), Math.max(0, Math.abs(l.b - CAMPOS_RECT.b) - CAMPOS_RECT.hb)); }
+  function enCampos(x, z, m) { var l = aLocal(x, z); return Math.abs(l.a - CAMPOS_RECT.a) < CAMPOS_RECT.ha + (m || 0) && Math.abs(l.b - CAMPOS_RECT.b) < CAMPOS_RECT.hb + (m || 0); }
+  // las oleadas entran derecho por la puerta de delante hasta el castillo
+  CAMINO = [74, 60, 46, 32, 18, 4.9].map(function (a) { return aMundo(a, 0); });
+  (function () { var p = aMundo(18, 0); PUNTO_REUNION[0] = p[0]; PUNTO_REUNION[1] = p[1]; })();
+  // distancia a los 4 brazos de la cruz de piedra (delante y atrás hasta los campos; a los lados hasta las puertas)
+  function distCruz(x, z) {
+    var l = aLocal(x, z);
+    var d1 = (l.a < CAMPOS_RECT.a + CAMPOS_RECT.ha - 2 || l.a > R_CIUDAD + 18) ? 1e9 : Math.abs(l.b);
+    var d2 = Math.abs(l.b) > R_CIUDAD + 6 ? 1e9 : Math.abs(l.a);
+    return Math.min(d1, d2);
+  }
+  var LIMITE_CAM = 140; // v6.31: llega hasta el recinto de los campos
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
   var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
   var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: AZ_CAM, polar: 1.0 };
@@ -268,12 +288,12 @@
   //  SUELO, CAMINO, BOSQUE, AGUA, NUBES
   // ------------------------------------------------------------------
   var rnd = (function (a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; })(7);
-  var ESTANQUE = { x: 25, z: -22, r: 5 };
+  var ESTANQUE = { x: 2000, z: 2000, r: 5 }; // v6.31: la ciudad nueva no lleva estanque
 
   function altura(x, z) {
-    var r = Math.sqrt(x * x + z * z);
-    if (r < 76) return 0;
-    var k = Math.min(r - 76, 70);
+    var r = Math.sqrt(x * x + z * z), rr = Math.min(r - 76, fueraCampos(x, z) - 14);
+    if (rr < 0) return 0;
+    var k = Math.min(rr, 70);
     // colinas irregulares (no en filas): mezcla de ondas de distinto tamaño
     return k * 0.3 * (0.72 + 0.5 * ruido(x * 0.55 + 7, z * 0.55 - 3)) + ruido(x * 1.9, z * 1.6) * 0.5 * Math.min(1, k / 10);
   }
@@ -397,23 +417,16 @@
   //  PARCELAS EN CUADRÍCULA: la ciudad (dentro de la muralla) y los campos (fuera)
   // ------------------------------------------------------------------
   var PARCELAS = (function () {
-    function enMuralla(x, z) { var a = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, b = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz; return Math.sqrt(a * a + b * b); }
-    // distancia real del borde de la parcela (con su marco de pasto) a la muralla: nada la toca
-    function aireMuralla(x, z) {
-      var m = 1e9, f = MURALLA_FORMA;
-      for (var a = 0; a < 6.283; a += 0.01) { var dx = Math.max(0, Math.abs(f.cx + Math.cos(a) * f.rx - x) - 4.25), dz = Math.max(0, Math.abs(f.cz + Math.sin(a) * f.rz - z) - 4.25); m = Math.min(m, Math.hypot(dx, dz)); }
-      return m;
+    var ciudad = [], campos = [], C1 = 10, lim = R_CIUDAD - 2.5;
+    for (var i = -6; i <= 6; i++) for (var j = -6; j <= 6; j++) {
+      if (!i || !j) continue; // ahí van los dos caminos de piedra en cruz
+      var a = i * C1, b = j * C1;
+      if (Math.hypot(Math.abs(a) + 4.25, Math.abs(b) + 4.25) > lim) continue;
+      var w = aMundo(a, b);
+      if (Math.hypot(w[0] - PUNTO_REUNION[0], w[1] - PUNTO_REUNION[1]) < 7.5) continue;
+      ciudad.push(w);
     }
-    var ciudad = [], campos = [], C1 = 10, C2 = 10;
-    for (var i = -7; i <= 7; i++) for (var j = -7; j <= 7; j++) {
-      var x = i * C1, z = j * C1;
-      if (enMuralla(x, z) < 1 && aireMuralla(x, z) >= 2.5 && Math.hypot(x, z) > 12 && distCamino(x, z) > 7.5 &&
-        Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) > 7.5 && Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) > ESTANQUE.r + 5.5) ciudad.push([x, z]);
-    }
-    for (var a = -9; a <= 9; a++) for (var b = -9; b <= 9; b++) {
-      var fx = MURALLA_FORMA.cx + a * C2, fz = MURALLA_FORMA.cz + b * C2, m = enMuralla(fx, fz);
-      if (m > 1 && m < 1.75 && aireMuralla(fx, fz) >= 2.5 && distCamino(fx, fz) > 9 && Math.abs(fx) < 120 && Math.abs(fz) < 120) campos.push([fx, fz]);
-    }
+    for (var fa = -1.5; fa <= 1.5; fa++) for (var fb = -2.5; fb <= 2.5; fb++) campos.push(aMundo(CAMPOS_RECT.a + fa * 10, CAMPOS_RECT.b + fb * 10));
     function porCercania(p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); }
     ciudad.sort(porCercania); campos.sort(porCercania);
     var total = PARCELAS_INICIO + PARCELAS_POR_NIVEL * (NIVEL_MAX - 1);
@@ -432,8 +445,8 @@
   var RIO = (function () {
     var pts = [];
     // nace arriba en la colina, cae en cascada y sigue por el valle hasta perderse entre los cerros
-    [[1.02, 112], [0.98, 100], [0.95, 90], [0.9, 82], [0.7, 79], [0.45, 80], [0.2, 81], [-0.05, 80], [-0.3, 79], [-0.55, 81], [-0.8, 86], [-1.0, 96], [-1.15, 112], [-1.25, 130]]
-      .forEach(function (q) { pts.push(new V3(Math.cos(q[0]) * q[1], 0, Math.sin(q[0]) * q[1])); });
+    // v6.31: baja de las colinas de un lado, pasa entre la ciudad y los campos (con puente) y se pierde del otro lado
+    for (var k = 0; k <= 12; k++) { var w = aMundo(-(R_CIUDAD + 13) + Math.sin(k * 0.9) * 2.5 * (k === 6 ? 0 : 1), 160 - k * 26.67); pts.push(new V3(w[0], 0, w[1])); }
     var c = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
     return { curva: c, m: c.getSpacedPoints(300) };
   })();
@@ -476,28 +489,19 @@
     // puentecito de madera donde el río pasa más cerca
     var pb = RIO.curva.getPointAt(0.5), tb = RIO.curva.getTangentAt(0.5);
     var puente = new THREE.Group();
-    puente.add(M.caja(3.2, 0.25, 7.5, 0x8a5a32, 0, 0.55, 0));
-    [-1, 1].forEach(function (s) { puente.add(M.caja(0.18, 0.5, 7.5, 0x6a4424, s * 1.5, 0.9, 0)); });
-    puente.position.set(pb.x, altura(pb.x, pb.z), pb.z); puente.rotation.y = Math.atan2(tb.x, tb.z) + Math.PI / 2; escena.add(puente);
+    // v6.31: puente de piedra justo donde el camino de atrás cruza el río hacia los campos
+    puente.add(M.caja(5.4, 0.45, 13, 0xa7a196, 0, 0.5, 0));
+    [-1, 1].forEach(function (s) { puente.add(M.caja(0.45, 0.7, 13, 0x8a847a, s * 2.7, 1.05, 0)); [-5.6, 0, 5.6].forEach(function (zz) { puente.add(M.caja(0.7, 1.1, 0.7, 0x7a746a, s * 2.7, 1.1, zz)); }); });
+    var pw = aMundo(-(R_CIUDAD + 13), 0); puente.position.set(pw[0], 0, pw[1]); puente.rotation.y = Math.atan2(EJE_U.x, EJE_U.z); escena.add(puente);
   })();
   // ---------- CAMPOS: dónde mira la cámara en la vista Campos y la entrada de la mina ----------
   var CAMPOS_CENTRO = (function () {
-    var l = PARCELAS.todas.slice(PARCELAS.nCiudad, PARCELAS.nCiudad + PARCELAS.nCampos).slice().sort(function (a, b) { return b[1] - a[1]; }).slice(0, 10);
-    var x = 0, z = 0; l.forEach(function (p) { x += p[0]; z += p[1]; });
-    return l.length ? new V3(x / l.length, 0, z / l.length) : CENTRO_REINO.clone();
+    var w = aMundo(CAMPOS_RECT.a, CAMPOS_RECT.b);
+    return new V3(w[0], 0, w[1]);
   })();
   var MINA_ENTRADA = (function () {
-    var f = MURALLA_FORMA, ang0 = Math.atan2(CAMPOS_CENTRO.z - f.cz, CAMPOS_CENTRO.x - f.cx);
-    for (var k = 0; k < 80; k++) {
-      var a = ang0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.05;
-      for (var r = 1.5; r <= 2.05; r += 0.05) {
-        var x = f.cx + Math.cos(a) * f.rx * r, z = f.cz + Math.sin(a) * f.rz * r;
-        if (distCamino(x, z) < 6 || distRio(x, z) < 7) continue;
-        if (PARCELAS.todas.some(function (p) { return Math.hypot(p[0] - x, p[1] - z) < 9; })) continue;
-        return new V3(x, altura(x, z), z);
-      }
-    }
-    return null;
+    var w = aMundo(CAMPOS_RECT.a, CAMPOS_RECT.b - CAMPOS_RECT.hb - 13);
+    return new V3(w[0], altura(w[0], w[1]), w[1]);
   })();
   (function crearEntradaMina() {
     if (!MINA_ENTRADA) return;
@@ -518,30 +522,103 @@
   })();
   // ---------- CAMINOS DE TIERRA entre los campos, y de los campos a la mina ----------
   (function caminosCampos() {
-    var c = PARCELAS.todas.slice(PARCELAS.nCiudad, PARCELAS.nCiudad + PARCELAS.nCampos), g = new THREE.Group(), mat = new THREE.MeshLambertMaterial({ color: 0xa8865a, polygonOffset: true, polygonOffsetFactor: -2 });
-    function tramo(ax, az, bx, bz, ancho) {
-      var lx = bx - ax, lz = bz - az, lar = Math.hypot(lx, lz); if (lar < 0.5) return;
-      var m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, lar), mat); m.rotation.x = -Math.PI / 2; m.rotation.z = -Math.atan2(lx, lz);
-      var mx = (ax + bx) / 2, mz = (az + bz) / 2; m.position.set(mx, altura(mx, mz) + 0.11, mz); m.receiveShadow = true; g.add(m);
+    // adoquines pintados en el momento (sin imágenes)
+    function texturaAdoquin() {
+      var T = 256, c = document.createElement('canvas'); c.width = c.height = T;
+      var x = c.getContext('2d'), s = 9; x.fillStyle = '#7d776c'; x.fillRect(0, 0, T, T);
+      var r = (function (q) { return function () { q = (q * 16807) % 2147483647; return q / 2147483647; }; })(777);
+      for (var fy = 0; fy < T; fy += 21) for (var fx = -((fy / 21) % 2) * 16; fx < T; fx += 32) {
+        var tono = 150 + Math.floor(r() * 50); x.fillStyle = 'rgb(' + (tono + 8) + ',' + (tono + 4) + ',' + (tono - 6) + ')';
+        x.beginPath(); x.roundRect ? x.roundRect(fx + 2, fy + 2, 28, 17, 5) : x.rect(fx + 2, fy + 2, 28, 17); x.fill();
+        x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(fx + 5, fy + 4, 20, 3);
+      }
+      var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
     }
-    c.forEach(function (p, i) { c.forEach(function (q, k) { if (k <= i) return; var dd = Math.hypot(p[0] - q[0], p[1] - q[1]); if (dd > 9.4 && dd < 10.6) tramo(p[0], p[1], q[0], q[1], 1.5); }); });
-    if (MINA_ENTRADA && c.length) {
-      var cerca = c.slice().sort(function (p, q) { return Math.hypot(p[0] - MINA_ENTRADA.x, p[1] - MINA_ENTRADA.z) - Math.hypot(q[0] - MINA_ENTRADA.x, q[1] - MINA_ENTRADA.z); })[0];
-      tramo(cerca[0], cerca[1], MINA_ENTRADA.x, MINA_ENTRADA.z, 1.8);
+    var tex = texturaAdoquin(), matPiedra = new THREE.MeshLambertMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -3 });
+    var matBorde = new THREE.MeshLambertMaterial({ color: 0x6a655c, polygonOffset: true, polygonOffsetFactor: -2 });
+    // todo se dibuja en un grupo girado con los ejes de la ciudad: (a, b) -> (x = -b, z = a)
+    var G = new THREE.Group(); G.rotation.y = Math.atan2(EJE_U.x, EJE_U.z);
+    function losa(a0, a1, b0, b1, y, ancho) {
+      var la = Math.abs(a1 - a0), lb = Math.abs(b1 - b0); if (la < 0.3 && lb < 0.3) return;
+      var w = lb || ancho, h = la || ancho;
+      var bo = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.7, h + 0.7), matBorde); bo.rotation.x = -Math.PI / 2; bo.position.set(-(b0 + b1) / 2, y - 0.01, (a0 + a1) / 2); bo.receiveShadow = true; G.add(bo);
+      var ge = new THREE.PlaneGeometry(w, h), uv = ge.attributes.uv; for (var i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 4, uv.getY(i) * h / 4);
+      var m = new THREE.Mesh(ge, matPiedra); m.rotation.x = -Math.PI / 2; m.position.set(-(b0 + b1) / 2, y, (a0 + a1) / 2); m.receiveShadow = true; G.add(m);
     }
-    escena.add(g);
+    var AN = 4.6, CA = CAMPOS_RECT.a, HA = CAMPOS_RECT.ha, HB = CAMPOS_RECT.hb;
+    // la cruz de la ciudad: delante hasta fuera de la puerta, detrás hasta la puerta de los campos, a los lados hasta las puertas
+    losa(8, R_CIUDAD + 16, 0, 0, 0.09, AN);
+    losa(CA + HA - 1, -8, 0, 0, 0.09, AN);
+    losa(0, 0, 8, R_CIUDAD + 5, 0.09, AN);
+    losa(0, 0, -8, -(R_CIUDAD + 5), 0.09, AN);
+    var plaza = new THREE.Mesh(new THREE.CircleGeometry(10.5, 40), matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.position.y = 0.085; plaza.receiveShadow = true; G.add(plaza);
+    // rejilla de caminitos de piedra entre las parcelas de los campos
+    for (var cb = -30; cb <= 30; cb += 10) losa(CA - 20, CA + HA - 1, cb, cb, 0.1, 1.6);
+    for (var ca2 = -20; ca2 <= 20; ca2 += 10) losa(CA + ca2, CA + ca2, -30, 30, 0.1, 1.6);
+    escena.add(G);
+
+    // muralla cuadrada de los campos, con torres en las esquinas y puerta hacia la ciudad
+    var M2 = new THREE.Group(), alto = 2.6, piedra = 0x9a958c, piedra2 = 0x7a756c;
+    function muro(a0, b0, a1, b1) {
+      var lar = Math.hypot(a1 - a0, b1 - b0), ang = Math.atan2(-(b1 - b0), a1 - a0);
+      var mu = M.caja(1.2, alto, lar, piedra, -(b0 + b1) / 2, alto / 2, (a0 + a1) / 2); mu.rotation.y = ang; M2.add(mu);
+      var ta = M.caja(1.6, 0.6, lar, piedra2, -(b0 + b1) / 2, 0.3, (a0 + a1) / 2); ta.rotation.y = ang; M2.add(ta);
+      var n = Math.floor(lar / 2.2);
+      for (var i = 0; i < n; i++) { var u = (i + 0.5) / n, al = M.caja(1.25, 0.55, 0.9, piedra, -(b0 + (b1 - b0) * u), alto + 0.27, a0 + (a1 - a0) * u); al.rotation.y = ang; M2.add(al); }
+    }
+    function torre(a, b, grande) {
+      var s = grande ? 3.2 : 2.6, h = alto + (grande ? 2 : 1.3);
+      M2.add(M.caja(s, h, s, piedra, -b, h / 2, a));
+      M2.add(M.caja(s + 0.5, 0.4, s + 0.5, piedra2, -b, h + 0.2, a));
+      [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]].forEach(function (q) { M2.add(M.caja(0.55, 0.5, 0.55, piedra, -b + q[0] * (s / 2), h + 0.65, a + q[1] * (s / 2))); });
+    }
+    var A0 = CA - HA, A1 = CA + HA, P = 3.4; // P: medio ancho de la puerta
+    muro(A0, -HB, A0, HB);                 // fondo
+    muro(A0, -HB, A1, -HB); muro(A0, HB, A1, HB); // lados
+    muro(A1, -HB, A1, -P); muro(A1, P, A1, HB);   // frente con la puerta
+    [[A0, -HB], [A0, HB], [A1, -HB], [A1, HB], [A0, 0], [CA, -HB], [CA, HB], [A1, -HB / 2], [A1, HB / 2]].forEach(function (q) { torre(q[0], q[1], false); });
+    torre(A1, -P - 1.3, true); torre(A1, P + 1.3, true);
+    var dintel = M.caja(2 * P + 2, 1.1, 1.8, piedra, 0, alto + 1.4, A1); M2.add(dintel);
+    // molinos en las esquinas de atrás y graneros con cajas a un lado
+    var aspas = [];
+    function molino(a, b) {
+      var g = new THREE.Group(); g.position.set(-b, 0, a);
+      g.add(M.cil(2.0, 2.5, 6.5, 8, 0xb89a6a, 0, 3.25, 0));
+      g.add(M.cil(2.05, 2.05, 0.35, 8, 0x6a4a2a, 0, 6.6, 0));
+      g.add(M.cono(2.6, 2.8, 8, 0x7a4a2a, 0, 8.2, 0));
+      g.add(M.caja(0.9, 1.6, 0.2, 0x4a2c18, 0, 0.8, 2.35));
+      var eje = new THREE.Group(); eje.position.set(0, 6.6, 2.4);
+      for (var k = 0; k < 4; k++) { var aspa = new THREE.Group(); aspa.rotation.z = k * Math.PI / 2; aspa.add(M.caja(0.25, 5.2, 0.12, 0x5a3a20, 0, 2.6, 0)); aspa.add(M.caja(1.1, 4.0, 0.06, 0xefe6d0, 0.6, 3.0, 0.05)); eje.add(aspa); }
+      eje.add(M.cil(0.35, 0.35, 0.6, 8, 0x3a2414, 0, 0, 0).rotateX(Math.PI / 2));
+      g.add(eje); aspas.push(eje); M2.add(g);
+    }
+    molino(A0 + 8, -HB + 9); molino(A0 + 8, HB - 9);
+    function granero(a, b) {
+      var g = new THREE.Group(); g.position.set(-b, 0, a);
+      g.add(M.caja(5.5, 3.2, 4.2, 0x8a5a32, 0, 1.6, 0));
+      var t1 = M.caja(6.2, 0.3, 2.9, 0x6a3a22, 0, 3.9, 1.05); t1.rotation.x = 0.62; g.add(t1);
+      var t2 = M.caja(6.2, 0.3, 2.9, 0x6a3a22, 0, 3.9, -1.05); t2.rotation.x = -0.62; g.add(t2);
+      g.add(M.caja(1.6, 2.2, 0.15, 0x4a2c18, 0, 1.1, 2.12));
+      [[2.2, 2.8], [3.1, 2.4], [2.6, 3.6]].forEach(function (q) { g.add(M.caja(1, 1, 1, 0xa87a4a, q[0], 0.5, q[1])); });
+      M2.add(g);
+    }
+    granero(CA + 6, HB - 9); granero(CA + 16, HB - 10);
+    var GM = new THREE.Group(); GM.rotation.y = G.rotation.y; GM.add(M2); escena.add(GM);
+    setInterval(function () { aspas.forEach(function (e) { e.rotation.z += 0.025; }); }, 40);
+    // caminito de tierra de los campos a la mina
+    if (MINA_ENTRADA) { var lm = aLocal(MINA_ENTRADA.x, MINA_ENTRADA.z); losa(CA, CA, -HB, lm.b + 3, 0.1, 2); }
   })();
   // ---------- ACANTILADOS al fondo de la Villa, con una cascada que cae al valle ----------
   (function crearAcantilados() {
     var fondo = Math.atan2(-Math.sin(AZ_CAM), -Math.cos(AZ_CAM)), g = new THREE.Group();
     for (var k = 0; k < 40; k++) {
-      var a = fondo - 1.2 + k / 39 * 2.4, r = 112 + Math.sin(k * 1.7) * 7, x = Math.cos(a) * r, z = Math.sin(a) * r;
+      var a = fondo - 1.0 + k / 39 * 2.0, r = 172 + Math.sin(k * 1.7) * 7, x = Math.cos(a) * r, z = Math.sin(a) * r;
       var h = 18 + Math.abs(Math.sin(k * 0.9)) * 16, s = 10 + (k % 3) * 2.5;
       var ro = M.roca(s, k % 2 ? 0x6f665c : 0x80776c); ro.scale.set(s, h / 1.2, s * 0.8); ro.rotation.set(0, a, 0); ro.position.set(x, altura(x, z) + h * 0.38, z); g.add(ro);
       if (k % 4 === 0) { var cima = M.roca(s * 0.6, 0x5d7a4a); cima.scale.set(s * 0.7, 1.4, s * 0.55); cima.position.set(x, altura(x, z) + h * 0.86, z); g.add(cima); }
     }
     escena.add(M.fusionar(g));
-    var a0 = fondo + 0.22, xr = Math.cos(a0) * 104, zr = Math.sin(a0) * 104, base0 = altura(xr, zr);
+    var a0 = fondo + 0.32, xr = Math.cos(a0) * 164, zr = Math.sin(a0) * 164, base0 = altura(xr, zr);
     var cae = new THREE.Mesh(new THREE.PlaneGeometry(5, 30), new THREE.MeshBasicMaterial({ color: 0xd8f1ff, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false }));
     cae.position.set(xr, base0 + 15, zr); cae.rotation.y = Math.atan2(Math.cos(AZ_CAM), Math.sin(AZ_CAM)); escena.add(cae);
     var hilo = new THREE.Mesh(new THREE.PlaneGeometry(2, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
@@ -564,12 +641,15 @@
       var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(q[0], 3)); g.setIndex(id.slice()); g.computeVertexNormals();
       var m = new THREE.Mesh(g, q[3] ? materialAgua(0.9) : new THREE.MeshLambertMaterial({ color: q[1], side: THREE.DoubleSide, transparent: q[2] < 1, opacity: q[2], depthWrite: q[2] >= 1 })); m.receiveShadow = true; escena.add(m);
     });
-    var fm = formaMuralla(), tp = fm.puerta, cx = Math.cos(tp), cz = Math.sin(tp);
+    var fm = formaMuralla();
+    fm.puertas.forEach(function (tp) {
+    var cx = Math.cos(tp), cz = Math.sin(tp);
     var px = f.cx + cx * (f.rx + 1.8), pz = f.cz + cz * (f.rz + 1.8);
     var pu = new THREE.Group();
     pu.add(M.caja(4.6, 0.3, 3.8, 0xa7a196, 0, 0.32, 0));
     [-1, 1].forEach(function (s2) { pu.add(M.caja(4.6, 0.45, 0.3, 0x948e84, 0, 0.62, s2 * 1.75)); [-1.9, 1.9].forEach(function (x2) { pu.add(M.caja(0.5, 0.75, 0.5, 0x8a847a, x2, 0.75, s2 * 1.75)); }); });
     pu.position.set(px, 0, pz); pu.rotation.y = -Math.atan2(cz * f.rz, cx * f.rx); escena.add(pu);
+    });
   })();
   (function crearNaturaleza() {
     var arboles = [];
@@ -583,6 +663,8 @@
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 1.5) return false;
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
       if (MINA_ENTRADA && Math.hypot(x - MINA_ENTRADA.x, z - MINA_ENTRADA.z) < 7 + extra) return false;
+      if (enCampos(x, z, 5 + extra)) return false;
+      if (distCruz(x, z) < 4 + extra) return false;
       return true;
     }
     for (var i = 0; i < 3400 && arboles.length < 680; i++) {
@@ -951,7 +1033,8 @@
         var q = muestras[i], ux = (q.x - f.cx) / f.rx, uz = (q.z - f.cz) / f.rz;
         if (ux * ux + uz * uz < 1) { tPuerta = Math.atan2(uz, ux); break; }
       }
-      f.puerta = tPuerta; f.hueco = 0.16;
+      f.puerta = tPuerta; f.hueco = 0.1;
+      f.puertas = [tPuerta, tPuerta + Math.PI / 2, tPuerta + Math.PI, tPuerta - Math.PI / 2];
     }
     return f;
   }
@@ -1024,9 +1107,11 @@
     var g = new THREE.Group(), campo = PARCELAS.esCampo(i);
     g.position.set(p[0], 0, p[1]);
     // los edificios de la ciudad miran hacia el camino; los campos, hacia el castillo
-    var haciaCamino = campo ? new V3(0, 0, 0) : puntoMasCercano(p[0], p[1]);
-    // girado solo en pasos de 90°: todo queda alineado con la cuadrícula
-    g.rotation.y = campo ? Math.round(Math.atan2(-p[0], -p[1]) / (Math.PI / 2)) * (Math.PI / 2) : Math.round(Math.atan2(haciaCamino.x - p[0], haciaCamino.z - p[1]) / (Math.PI / 2)) * (Math.PI / 2);
+    var lp = aLocal(p[0], p[1]), dir;
+    if (campo) dir = EJE_U;
+    else if (Math.abs(lp.b) <= Math.abs(lp.a)) dir = { x: -Math.sign(lp.b) * EJE_V.x, z: -Math.sign(lp.b) * EJE_V.z };
+    else dir = { x: -Math.sign(lp.a) * EJE_U.x, z: -Math.sign(lp.a) * EJE_U.z };
+    g.rotation.y = Math.atan2(dir.x, dir.z);
     var t = M.parcelaLibre(campo);
     g.add(t);
     var tc = campo ? null : M.parcelaCerrada(); if (tc) { tc.visible = false; g.add(tc); }
@@ -1852,7 +1937,7 @@
       if (enMundo) cerrarMundo();
       camVuelta = null;
       if (v === 'ciudad') { cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial(); }
-      else { cam.meta.copy(MINA_ENTRADA ? CAMPOS_CENTRO.clone().lerp(MINA_ENTRADA, 0.5).setY(0) : CAMPOS_CENTRO); cam.distMeta = window.innerWidth < window.innerHeight ? 80 : 60; }
+      else { cam.meta.copy(CAMPOS_CENTRO); cam.distMeta = window.innerWidth < window.innerHeight ? 96 : 74; }
       cam.vel.set(0, 0, 0);
     }
     vistaActual = v; pintarVista(); avisoVista(v); sonar('click');
