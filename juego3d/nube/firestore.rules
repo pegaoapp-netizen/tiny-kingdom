@@ -48,6 +48,17 @@ service cloud.firestore {
     // Alianzas: el id es la etiqueta (2 a 4 letras o números, en mayúsculas).
     // Cualquiera con cuenta puede crear una (si la etiqueta está libre) y verlas.
     // Solo el líder puede borrarla. Nadie la puede modificar después.
+    // v6.34: torneo semanal. Cada jugador escribe solo sus puntos de la semana que corre.
+    match /torneos/{semana}/puntos/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && semana.matches('^[0-9]{4,6}$')
+        && request.resource.data.keys().hasOnly(['nombre', 'puntos', 'alianza', 'actualizado'])
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
+        && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 100000000
+        && (request.resource.data.alianza == null || request.resource.data.alianza is string)
+        && request.resource.data.actualizado is int;
+    }
     match /alianzas/{tag} {
       allow read: if request.auth != null;
       allow create: if request.auth != null

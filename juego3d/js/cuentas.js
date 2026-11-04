@@ -149,6 +149,34 @@ var Cuentas = (function () {
         return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
       });
     },
+    // v6.34: buscar alianza por nombre o etiqueta (sin importar mayúsculas ni tildes)
+    buscarAlianzas: function (texto) {
+      function limpio(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim(); }
+      var q = limpio(texto), tag = String(texto || '').trim().toUpperCase();
+      var porTag = /^[A-Z0-9]{2,4}$/.test(tag) ? db.collection('alianzas').doc(tag).get().then(function (d) { return d.exists ? [d.data()] : []; }).catch(function () { return []; }) : Promise.resolve([]);
+      var todas = db.collection('alianzas').orderBy('creada', 'desc').limit(400).get().then(function (r) { return r.docs.map(function (d) { return d.data(); }); });
+      return Promise.all([porTag, todas]).then(function (r) {
+        var vistos = {}, out = [];
+        r[0].concat(r[1].filter(function (a) { return limpio(a.nombre).indexOf(q) >= 0 || limpio(a.tag).indexOf(q) >= 0; })).forEach(function (a) { if (a && !vistos[a.tag]) { vistos[a.tag] = 1; out.push(a); } });
+        return out;
+      });
+    },
+    // v6.34: ranking de todos los jugadores por poder
+    ranking: function () {
+      return db.collection('aldeas').orderBy('poder', 'desc').limit(100).get().then(function (q) {
+        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+      });
+    },
+    // v6.34: torneo semanal
+    puntosTorneo: function (semana, datos) {
+      if (!usuario) return Promise.resolve();
+      return db.collection('torneos').doc(String(semana)).collection('puntos').doc(usuario.uid).set(datos);
+    },
+    topTorneo: function (semana, n) {
+      return db.collection('torneos').doc(String(semana)).collection('puntos').orderBy('puntos', 'desc').limit(n || 50).get().then(function (q) {
+        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+      });
+    },
     alianza: function (tag) {
       return db.collection('alianzas').doc(tag).get().then(function (d) { return d.exists ? d.data() : null; });
     },

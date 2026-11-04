@@ -1644,3 +1644,19 @@ body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barr
 @media (max-width: 380px) { #abajo .txt { font-size: 10.5px !important; } }
 #panel .carta .stats span { color: #3a2414 !important; font-weight: 800; }
 #panel .demoler-panel { background: linear-gradient(#ff7a5c, #a8221a) !important; color: #fff !important; border-color: #6b0f0b !important; margin-top: 16px !important; }
+
+/* v6.34: buscar alianza y ranking */
+.al-buscar { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.al-buscar .campo { flex: 1; min-width: 0; margin: 0 !important; }
+.al-buscar .comprar { flex: 0 0 auto; }
+.rk-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+.rk-tabs button { flex: 1; }
+.rk-fila .rk-pos { min-width: 34px; text-align: center; }
+.rk-fila .rk-nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rk-fila.yo { outline: 2px solid #f2c45a; border-radius: 8px; }
+.rk-tuyo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
+.rk-tuyo .reloj-panel { width: 100%; margin: 4px 0 0; }
+/* v6.34: los números de las filas se leen bien también en el tema oscuro */
+#panel .fila-miembro .chip { color: #3a2414 !important; white-space: nowrap; }
+.rk-tuyo .chip { color: #3a2414 !important; background: #f3e2bb; border-radius: 8px; padding: 2px 8px; font-weight: 800; }
+#consejo:empty { display: none !important; }
