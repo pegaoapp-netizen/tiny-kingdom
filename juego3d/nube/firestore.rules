@@ -130,8 +130,8 @@ service cloud.firestore {
           && botinOk(request.resource.data.botin)
           && request.resource.data.botin.oro <= resource.data.botin.oro && request.resource.data.botin.comida <= resource.data.botin.comida
           && request.resource.data.botin.madera <= resource.data.botin.madera && request.resource.data.botin.piedra <= resource.data.botin.piedra)
-        // el defensor se muda con un portal antes de que llegue: el ataque se cancela sin botín ni bajas
-        || (resource.data.defensor == request.auth.uid
+        // el defensor se muda con un portal antes de que llegue (o el atacante cancela su marcha): se cancela sin botín ni bajas
+        || ((resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid)
           && resource.data.get('resuelto', true) == false
           && request.time.toMillis() < resource.data.llega
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cancelado', 'resuelto', 'gano', 'bajas', 'defensa', 'botin'])
