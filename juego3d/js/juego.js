@@ -794,7 +794,18 @@
   window.addEventListener('castillo-glb', function () { ponerCastillo(); });
   // cuando llega un modelo de Tripo, se vuelven a poner los edificios (los que ya lo tengan lo usan)
   var timerTripo = null;
-  window.addEventListener('tripo-glb', function () { clearTimeout(timerTripo); timerTripo = setTimeout(function () { slots.forEach(function (s) { if (s.edificio && !s.obra) ponerEdificio(s, s.edificio.tipo, s.edificio.nivel); }); }, 300); });
+  window.addEventListener('tripo-glb', function () { clearTimeout(timerTripo); timerTripo = setTimeout(function () { slots.forEach(function (s) { if (s.edificio && !s.obra) ponerEdificio(s, s.edificio.tipo, s.edificio.nivel); }); ponerAdornosCiudad(); }, 300); });
+  // v6.40: pozo y molino en esquinas libres cerca del castillo
+  var adornosCiudad = [];
+  function ponerAdornosCiudad() {
+    adornosCiudad.forEach(function (o) { escena.remove(o); }); adornosCiudad = [];
+    [['pozo', 2.2, 13, 12, 0.6], ['molino', 6.5, -14, -13, 2.2]].forEach(function (q) {
+      var o = M.adornoTripo(q[0], q[1]); if (!o) return;
+      var p = aMundo(q[2], q[3]); o.position.set(p[0], 0, p[1]); o.rotation.y = Math.atan2(EJE_U.x, EJE_U.z) + q[4];
+      escena.add(o); adornosCiudad.push(o);
+    });
+  }
+  setTimeout(ponerAdornosCiudad, 1500);
   function ponerCastillo() {
     escena.remove(castillo);
     // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
@@ -3275,7 +3286,7 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = M.edificioTripo(tipo) || (tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n));
+    var m = M.edificioTripo(tipo, crearModeloBase.nivel) || (tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n));
     if (m.userData.tripo) return m; // v6.37: los modelos de Tripo ya vienen completos (crecen por escala)
     M.crecerEdificio(m, tramo, tipo);
     return M.mejorarPorTramo(m, tramo, tipo);
@@ -3366,7 +3377,7 @@
     if (s.modelo) s.grupo.remove(s.modelo);
     s.edificio = { tipo: tipo, nivel: nivel };
     var tr = tramoNivel(nivel);
-    s.modelo = crearModelo(tipo, tr);
+    crearModeloBase.nivel = nivel; s.modelo = crearModelo(tipo, tr); crearModeloBase.nivel = 0;
     // dentro de cada tramo el edificio también crece un poco por nivel: cada mejora se nota
     s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (nivel > 12 ? 1.1 + 0.04 * (nivel - 12) : 1 + 0.05 * ((nivel - 1) % 3)));
     encajarEnParcela(s.modelo, tr);
@@ -4077,24 +4088,24 @@
     return c.pos.clone().add(new V3(Math.sin(c.grupo.rotation.y), 0, Math.cos(c.grupo.rotation.y)).multiplyScalar(1.8));
   }
   // cuántas se pueden entrenar ahora (por espacio y por recursos)
+  var TOPE_ORDEN = 10000, TOPE_COLA = 50000;
   function maxEntrenar(tipo) {
-    var libre = Math.max(0, capacidad() - tropasOcupadas()), c = costoTropa(tipo), n = libre;
+    // v6.40: cada orden llega hasta TOPE_ORDEN tropas y la cola hasta TOPE_COLA (con recursos infinitos el Máx congelaba el juego)
+    var libre = Math.max(0, Math.min(capacidad() - tropasOcupadas(), TOPE_ORDEN, TOPE_COLA - colaEntreno.length)), c = costoTropa(tipo), n = libre;
     if (!estado.oroInfinito) RECURSOS.forEach(function (r) { if (c[r]) n = Math.min(n, Math.floor(cantidad(r) / c[r])); });
     return Math.max(0, n);
   }
   function entrenar(tipo, cuantas) {
     if (!puedeEntrenarTipo(tipo)) { consejoTemporal(avisoEdificioTropa(tipo)); sonar('error'); return; }
     if (tropasOcupadas() >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
-    var n = cuantas === 'max' ? maxEntrenar(tipo) : Math.max(1, cuantas || 1);
-    var hechas = 0;
-    for (var k = 0; k < n; k++) {
-      if (tropasOcupadas() >= capacidad()) break;
-      if (!(hechas ? puedePagar(costoTropa(tipo)) : true)) break;
-      if (!pagar(costoTropa(tipo))) break;
-      colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
-      hechas++;
-    }
-    if (!hechas) return;
+    if (colaEntreno.length >= TOPE_COLA) { consejoTemporal(L('La cola está llena (' + formatoNumero(TOPE_COLA) + '). Espera a que salgan tropas.', 'The queue is full. Wait for troops to finish.')); sonar('error'); return; }
+    var n = Math.min(cuantas === 'max' ? maxEntrenar(tipo) : Math.max(1, cuantas || 1), TOPE_ORDEN, TOPE_COLA - colaEntreno.length);
+    // se cobra todo junto (antes se cobraba tropa por tropa y con muchas el juego se trababa)
+    n = Math.min(n, maxEntrenar(tipo));
+    if (n < 1) { var fa = faltante(costoTropa(tipo)); if (fa) avisarFalta(fa); else sonar('error'); return; }
+    if (!pagar(costoTropas(tipo, n))) return;
+    for (var k = 0; k < n; k++) colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
+    var hechas = n;
     sumarLogro('tropas', hechas);
     if (hechas > 1) consejoTemporal(T('entrenando_n', { n: hechas }));
     sonar('click');
@@ -5080,8 +5091,8 @@
   // ================= v6.34: RANKING DE TODOS Y TORNEO SEMANAL =================
   var PUNTOS_TORNEO = { tropas: 2, recolectas: 5, acel: 5, campamentos: 60, oleada: 40, obra: 25, ataque: 120 };
   var PREMIOS_TORNEO = [
-    { hasta: 1, gemas: 500, oro: 200000, objeto: 'acel_15m' }, { hasta: 2, gemas: 300, oro: 120000 }, { hasta: 3, gemas: 200, oro: 80000 },
-    { hasta: 10, gemas: 100, oro: 40000 }, { hasta: 50, gemas: 50, oro: 15000 }, { hasta: 1e9, gemas: 20, oro: 5000 }
+    { hasta: 1, gemas: 500, oro: 200000, objeto: 'acel_15m', piezas: 3, mitico: true }, { hasta: 2, gemas: 300, oro: 120000, piezas: 2, mitico: true }, { hasta: 3, gemas: 200, oro: 80000, piezas: 2, mitico: true },
+    { hasta: 10, gemas: 100, oro: 40000, piezas: 1 }, { hasta: 50, gemas: 50, oro: 15000, piezas: 1 }, { hasta: 1e9, gemas: 20, oro: 5000 }
   ];
   function semanaActual() { return Math.floor((Date.now() / 86400000 + 3) / 7); } // la semana empieza el lunes
   function finDeSemana(sem) { return ((sem + 1) * 7 - 3) * 86400000; }
@@ -5120,7 +5131,14 @@
       var items = [{ ico: '💎', n: p.gemas, nom: L('Gemas', 'Gems') }, { ico: '🪙', n: p.oro, nom: T('r_oro') }];
       if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) });
       nuevoCorreo('sistema', '🏆 ' + L('Torneo de la semana: puesto ', 'Weekly tournament: place ') + (pos > 100 ? '100+' : pos), L('Torneo', 'Tournament'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos > 100 ? '100+' : '#' + pos], [L('Premio', 'Prize'), p.gemas + ' 💎 · ' + formatoNumero(p.oro) + ' 🪙']]));
-      mostrarRecompensas('🏆 ' + L('Torneo · puesto ', 'Tournament · place ') + (pos > 100 ? '100+' : pos), items, function () { darPremio(p); guardar(true); });
+      for (var ip = 0; ip < (p.piezas || 0); ip++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza de armadura de héroe', 'Hero armor piece') });
+      if (p.mitico) items.push({ ico: '🦸', n: 1, nom: L('Héroe mítico', 'Mythic hero') });
+      mostrarRecompensas('🏆 ' + L('Torneo · puesto ', 'Tournament · place ') + (pos > 100 ? '100+' : pos), items, function () {
+        darPremio(p);
+        for (var q = 0; q < (p.piezas || 0); q++) darPiezaHeroe();
+        if (p.mitico) { var hm = darHeroeMitico(); consejoTemporal(hm.nuevo ? T('heroe_nuevo', { n: NH(hm.id) }) : T('heroe_frag', { f: 30, n: NH(hm.id) })); }
+        guardar(true);
+      });
     }).catch(function () { revisarTorneo.andando = false; });
   }
   function filaRanking(pos, nombre, al, extra, yo) {
@@ -5156,7 +5174,8 @@
         listo('<div class="carta rk-tuyo"><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b><span class="chip">' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</span>' +
           '<p class="reloj-panel">⏳ ' + L('Termina en ', 'Ends in ') + fmtTiempo(faltan) + '</p></div>' +
           '<div class="carta" style="margin-top:8px"><h3>' + L('Cómo ganar puntos', 'How to earn points') + '</h3>' + como.map(function (c) { return '<div class="fila-miembro"><b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</div>' +
-          '<div class="carta" style="margin-top:8px"><h3>' + L('Premios del lunes', 'Monday prizes') + '</h3>' + premios.map(function (q) { var p = PREMIOS_TORNEO[q[1]]; return '<div class="fila-miembro"><b>' + q[0] + '</b><span class="chip">💎 ' + p.gemas + '</span><span class="chip">🪙 ' + formatoNumero(p.oro) + '</span></div>'; }).join('') +
+          '<div class="carta" style="margin-top:8px"><h3>' + L('Premios del lunes', 'Monday prizes') + '</h3>' + premios.map(function (q) { var p = PREMIOS_TORNEO[q[1]]; return '<div class="fila-miembro"><b>' + q[0] + '</b><span class="chip">💎 ' + p.gemas + '</span><span class="chip">🪙 ' + formatoNumero(p.oro) + '</span>' + (p.piezas ? '<span class="chip">🛡️ ×' + p.piezas + '</span>' : '') + (p.mitico ? '<span class="chip">🦸</span>' : '') + '</div>'; }).join('') +
+          '<p class="nota">🛡️ ' + L('Pieza de la armadura mítica de uno de tus héroes (6 piezas por héroe; 3 piezas: +15% daño; 6 piezas: +30% daño y +10% defensa).', 'A piece of one of your heroes\' mythic armor (6 pieces per hero; 3 pieces: +15% damage; 6 pieces: +30% damage and +10% defense).') + '<br>🦸 ' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle.') + '</p>' +
           '<p class="nota">' + L('Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>' +
           '<div class="carta" style="margin-top:8px"><h3>' + L('Mejores de la semana', 'Top of the week') + '</h3>' +
           (lista.length ? lista.map(function (a, k) { return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span>', a.uid === yo); }).join('') : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>');
@@ -5425,7 +5444,7 @@
     // escena con el muñeco
     html += '<div class="tropa-escena"><div class="visor-tropa" id="visor-tropa"></div>' +
       '<div class="tropa-nombre"><h3>' + N(t) + '</h3><span class="rango-chapa r' + r + '">' + T('rango') + ' ' + ROMANO[r] + '</span></div>' +
-      '<div class="tropa-cuenta"><span>👥 ' + T('esc_tienes', { n: formatoNumero(cuentaTipo(t)) }) + '</span><span>⏱ ' + T('esc_entrenando', { n: formatoNumero(colaEntreno.filter(function (c) { return c.tipo === t; }).length) }) + '</span></div>' +
+      '<div class="tropa-cuenta"><span>👥 ' + T('esc_tienes', { n: formatoNumero(cuentaTipo(t)) }) + '</span><span>⏱ ' + T('esc_entrenando', { n: formatoNumero((infoCola().cuenta[t] || 0)) }) + '</span></div>' +
       (lista.length > 1 ? '<div class="tropa-elegir">' + lista.map(function (k) {
         return '<button data-accion="tropa-tipo" data-tipo="' + k + '" class="' + (k === t ? 'activo' : '') + '" title="' + N(k) + '">' + fotoHTML(k, TROPAS[k].icono) + '</button>';
       }).join('') + '</div>' : '') +
@@ -5575,7 +5594,7 @@
   function htmlEntrenarLista() {
     return '<div class="cq-rejilla">' + TROPAS_LISTA.map(function (t) {
       if (t === 'carreta') { var cr = carretas(); return '<button class="cq-carta" data-accion="cuartel-carretas"><div class="cq-foto">' + fotoHTML('carreta', '<span class="cq-emoji">🛒</span>') + '<span class="cq-tier">T ' + ROMANO5[2] + '</span></div><div class="cq-info"><b>' + N('carreta') + '</b><div class="cq-fila"><span>' + L('Carga', 'Cargo') + '</span><span>' + formatoNumero(cr.n) + '</span></div></div></button>'; }
-      var na = nivelArmadura(t), ok = puedeEntrenarTipo(t), ent = colaEntreno.filter(function (c) { return c.tipo === t; }).length, est = TROPA_RANGO_ESTRELLAS[t] || 1, tier = Math.min(5, est + na), seg = '';
+      var na = nivelArmadura(t), ok = puedeEntrenarTipo(t), ent = infoCola().cuenta[t] || 0, est = TROPA_RANGO_ESTRELLAS[t] || 1, tier = Math.min(5, est + na), seg = '';
       for (var k = 0; k < 4; k++) seg += '<i class="' + (k <= na ? 'si' : '') + '"></i>';
       return '<button class="cq-carta' + (ok ? '' : ' bloq') + '" data-accion="cuartel-tropa" data-tipo="' + t + '"><div class="cq-foto">' + fotoHTML(t, '<span class="cq-emoji">' + TROPAS[t].icono + '</span>') + '<span class="cq-tier">T ' + ROMANO5[tier] + '</span>' +
         (ent ? '<span class="cq-marca azul">🔨 ' + formatoNumero(ent) + '</span>' : ok ? '<span class="cq-marca">↑</span>' : '<span class="cq-marca gris">🔒</span>') + '</div>' +
@@ -5584,7 +5603,7 @@
   }
   function htmlColaCuartel() {
     if (!colaEntreno.length) return '<div class="carta"><p class="nota">' + L('No hay tropas entrenando. Ve a Entrenar tropas.', 'No troops in training. Go to Train troops.') + '</p></div>';
-    var grupos = {}; colaEntreno.forEach(function (c) { grupos[c.tipo] = (grupos[c.tipo] || 0) + 1; });
+    var grupos = infoCola().cuenta;
     var primero = colaEntreno[0], pct = Math.round(Math.min(1, primero.t / primero.total) * 100);
     return '<div class="carta">' + Object.keys(grupos).map(function (t) {
       return '<div class="fila-miembro"><span class="foto mini">' + fotoHTML(t, TROPAS[t].icono) + '</span><b>' + N(t) + '</b><span class="chip">×' + formatoNumero(grupos[t]) + '</span></div>';
@@ -5700,10 +5719,10 @@
   // pestaña Población de la Cabaña
   function abrirPanelPoblacion(i) {
     var s = slots[i]; if (!s || !(s.edificio || s.obra)) return;
-    var tipo = 'cabana', nivel = s.edificio ? s.edificio.nivel : s.obra.nivel, max = poblacionMax(), usada = tropasOcupadas(), libre = max - usada;
+    var tipo = 'cabana', nivel = s.edificio ? s.edificio.nivel : s.obra.nivel, max = poblacionMax(), usada = obrerosOcupados(), libre = max - usada;
     var cab = edificiosDe('cabana');
     var h = '<div class="carta"><div class="cafe-det"><div class="cafe-foto">' + fotoHTML(tipo, '🛖') + '</div><div class="cafe-lado">' +
-      '<p class="cafe-desc">' + L('Tu gente vive en las cabañas. Cada tropa ocupa 1 de población y cada obra necesita ' + OBREROS_OBRA + ' obreros libres.', 'Your people live in the cottages. Each troop takes 1 population and every build needs ' + OBREROS_OBRA + ' free workers.') + '</p>' +
+      '<p class="cafe-desc">' + L('Tu gente vive en las cabañas y trabaja en las obras: cada obra en marcha usa ' + OBREROS_OBRA + ' obreros. Más cabañas, más obras a la vez.', 'Your people live in the cottages and work on builds: each build in progress uses ' + OBREROS_OBRA + ' workers. More cottages, more builds at once.') + '</p>' +
       '<div class="cafe-sig">👥 ' + L('Población: ', 'Population: ') + formatoNumero(usada) + ' / ' + formatoNumero(max) + '</div>' +
       (libre < OBREROS_OBRA ? '<div class="cafe-mejorando">⚠️ ' + L('¡Población llena!', 'Population full!') + '</div>' : '<div class="cafe-reloj">✅ ' + L('Libres: ', 'Free: ') + formatoNumero(libre) + '</div>') + '</div></div>';
     h += '<table class="req"><tr><th>' + L('Tipo', 'Type') + '</th><th>' + L('Habitantes', 'People') + '</th><th></th></tr>' +
@@ -5847,9 +5866,9 @@
     arma: { icono: '⚔️', dano: 6 }, casco: { icono: '⛑️', vida: 60 }, pechera: { icono: '🛡️', vida: 90, def: 0.02 },
     guantes: { icono: '🧤', danoP: 0.03 }, botas: { icono: '🥾', vida: 40, vel: 0.03 }, amuleto: { icono: '📿', recarga: 0.03 }
   };
-  var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
+  var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
-  function nombrePieza(p) { return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
+  function nombrePieza(p) { if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
   function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
   function textoPieza(p) {
     var r = [];
@@ -5866,6 +5885,9 @@
   function bonosEquipo(id) {
     var b = { dano: 0, danoP: 0, vida: 0, def: 0, vel: 0, recarga: 0 };
     piezasDe(id).forEach(function (p) { for (var k in b) b[k] += valorPieza(p, k); });
+    var deSet = piezasDe(id).filter(function (p) { return p.s === id; }).length;
+    if (deSet >= 3) b.danoP += 0.15;
+    if (deSet >= 6) { b.danoP += 0.15; b.def += 0.1; }
     b.def = Math.min(0.5, b.def); b.recarga = Math.min(0.5, b.recarga);
     return b;
   }
@@ -5876,11 +5898,29 @@
     consejoTemporal(T('eq_nueva', { n: nombrePieza(p) }));
     return p;
   }
+  function darPiezaHeroe(idPreferido) {
+    var mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
+    if (!mios.length) return null;
+    var id = idPreferido && estado.heroes[idPreferido] ? idPreferido : (estado.equipo || []).filter(function (k) { return estado.heroes[k]; })[Math.floor(Math.random() * 3)] || mios[Math.floor(Math.random() * mios.length)];
+    var tiene = piezas().filter(function (p) { return p.s === id; }).map(function (p) { return p.t; });
+    var faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; });
+    var tipo = faltan.length ? faltan[Math.floor(Math.random() * faltan.length)] : TIPOS_EQ[Math.floor(Math.random() * 6)];
+    var p = darPieza(tipo, 'mitico'); if (p) p.s = id;
+    return p;
+  }
+  // héroe mítico de premio: si no lo tienes, es tuyo; si ya lo tienes, ganas fragmentos
+  function darHeroeMitico() {
+    var mit = HEROES.filter(function (h) { return h.rareza === 'mitico'; }), nuevos = mit.filter(function (h) { return !estado.heroes[h.id]; });
+    var h = (nuevos.length ? nuevos : mit)[Math.floor(Math.random() * (nuevos.length || mit.length))];
+    if (!estado.heroes[h.id]) { estado.heroes[h.id] = { nivel: 1, estrellas: 1, frag: 0 }; cargarModelosHeroes(); return { id: h.id, nuevo: true }; }
+    estado.heroes[h.id].frag += 30; return { id: h.id, nuevo: false };
+  }
   function rarezaAlAzar(nivel) { var r = Math.random(); return r < 0.03 + nivel * 0.006 ? 'legendario' : r < 0.25 + nivel * 0.02 ? 'raro' : 'comun'; }
   function costoMejoraPieza(p) { var m = MULT_RAREZA_EQ[p.r]; return { oro: Math.round(60 * m * Math.pow(p.n, 1.35)), piedra: Math.round(20 * m * p.n) }; }
   function oroAlFundir(p) { return Math.round(40 * MULT_RAREZA_EQ[p.r] * p.n); }
   function equiparPieza(id, i) {
     var p = piezas().filter(function (x) { return x.i === i; })[0]; if (!p) return;
+    if (p.s && p.s !== id) { consejoTemporal(L('Esta armadura es solo de ' + NH(p.s) + '.', 'This armor is only for ' + NH(p.s) + '.')); sonar('error'); return; }
     piezasDe(id).forEach(function (x) { if (x.t === p.t) x.h = null; });
     p.h = id; sonar('martillo');
   }
@@ -5888,7 +5928,7 @@
     var puso = 0;
     TIPOS_EQ.forEach(function (t) {
       var actual = piezasDe(id).filter(function (p) { return p.t === t; })[0];
-      var mejor = piezas().filter(function (p) { return p.t === t && !p.h; }).sort(function (a, b) { return puntosPieza(b) - puntosPieza(a); })[0];
+      var mejor = piezas().filter(function (p) { return p.t === t && !p.h && (!p.s || p.s === id); }).sort(function (a, b) { return puntosPieza(b) - puntosPieza(a); })[0];
       if (mejor && (!actual || puntosPieza(mejor) > puntosPieza(actual))) { if (actual) actual.h = null; mejor.h = id; puso++; }
     });
     if (!puso) { consejoTemporal(T('eq_nada_que')); sonar('error'); return; }
@@ -5913,7 +5953,7 @@
   function abrirHueco(id, t) {
     var v = $('eq-elegir'); if (v) v.remove();
     var actual = piezasDe(id).filter(function (x) { return x.t === t; })[0];
-    var lista = piezas().filter(function (p) { return p.t === t && p !== actual; }).sort(function (a, b) { return (a.h ? 1 : 0) - (b.h ? 1 : 0) || puntosPieza(b) - puntosPieza(a); });
+    var lista = piezas().filter(function (p) { return p.t === t && p !== actual && (!p.s || p.s === id); }).sort(function (a, b) { return (a.h ? 1 : 0) - (b.h ? 1 : 0) || puntosPieza(b) - puntosPieza(a); });
     function fila(p, esActual) {
       var c = costoMejoraPieza(p);
       return '<div class="eq-fila ' + p.r + '"><span class="eq-ico">' + EQ[p.t].icono + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b><span>' + textoPieza(p) + (p.h && !esActual ? ' · ' + T('eq_de', { n: NH(p.h) }) : '') + '</span></div><div class="eq-bts">' +
@@ -6288,10 +6328,20 @@
   // Las obras van a tiempo real: el x2 del jugador no las acelera (solo el dueño con su x10)
   function velObras() { return estado.dueno ? velReal() : 1; }
   function gemasParaTerminar(seg) { return Math.max(1, Math.ceil(Math.max(0, seg) / 600) * GEMAS_POR_10MIN); }
+  // v6.40: la cola puede tener miles de tropas; el resumen se calcula una vez y se reusa mientras no cambie
+  var resumenCola = { n: -1, p: null, resto: 0, cuenta: {} };
+  function infoCola() {
+    if (resumenCola.n !== colaEntreno.length || resumenCola.p !== colaEntreno[0]) {
+      var resto = 0, cuenta = {};
+      for (var i = 0; i < colaEntreno.length; i++) { var c = colaEntreno[i]; if (i) resto += c.total; cuenta[c.tipo] = (cuenta[c.tipo] || 0) + 1; }
+      resumenCola = { n: colaEntreno.length, p: colaEntreno[0], resto: resto, cuenta: cuenta };
+    }
+    return resumenCola;
+  }
   function faltaEntreno() {
-    var r = rapidezEntreno() * velReal(), t = 0;
-    colaEntreno.forEach(function (c) { t += (c.total - c.t) / r; });
-    return t;
+    if (!colaEntreno.length) return 0;
+    var r = rapidezEntreno() * velReal(), c0 = colaEntreno[0];
+    return (c0.total - c0.t + infoCola().resto) / r;
   }
   function faltaInvestigacion() {
     var ii = estado.investigando, ia = academiaLista();
@@ -7511,8 +7561,7 @@
       var h = '<div>' + T('tropas_vivas', { a: tropasNormales(), b: capacidad() }) + '</div>' + '<div>🍞 ' + T('comen', { n: Math.round(tropas.length * 60 / COMIDA_TROPA.cada) }) + '</div>' + (totalHeridos() ? '<div>' + T('en_enfermeria', { n: totalHeridos() }) + '</div>' : '');
       if (colaEntreno.length) {
         var c0 = colaEntreno[0];
-        var cuenta = {};
-        colaEntreno.forEach(function (c) { cuenta[c.tipo] = (cuenta[c.tipo] || 0) + 1; });
+        var cuenta = infoCola().cuenta;
         h += '<div>' + T('en_cola') + ': ' + Object.keys(cuenta).map(function (k) { return N(k) + ' ×' + cuenta[k]; }).join(', ') + '</div>' +
           '<div class="barra"><div style="width:' + Math.min(100, c0.t / c0.total * 100) + '%"></div></div>' +
           '<div class="reloj-panel">⏱ ' + T('entrenando_t', { t: fmtTiempo(faltaEntreno()) }) + '</div>';
@@ -7542,7 +7591,7 @@
     if ($('xp-barra')) $('xp-barra').title = L('Experiencia: ', 'Experience: ') + formatoNumero((estado.xp || 0) - x0) + ' / ' + formatoNumero(x1 - x0);
     if ($('perfil-nombre')) { var pn = (hayCuenta() ? Cuentas.nombrePublico() : L('Rey', 'King')) + ' · ' + L('Nv ', 'Lv ') + nj; if ($('perfil-nombre').textContent !== pn) $('perfil-nombre').textContent = pn; }
     $('avatar').classList.toggle('dueno', !!estado.dueno);
-    var pobT = $('pob-txt'); if (pobT) { pobT.textContent = formatoNumero(tropasOcupadas()) + ' / ' + formatoNumero(poblacionMax()); pobT.parentNode.classList.toggle('llena', poblacionLibre() < OBREROS_OBRA); }
+    var pobT = $('pob-txt'); if (pobT) { pobT.textContent = formatoNumero(obrerosOcupados()) + ' / ' + formatoNumero(poblacionMax()); pobT.parentNode.classList.toggle('llena', poblacionLibre() < OBREROS_OBRA); }
     $('gemas').textContent = estado.gemasInfinitas ? '∞' : corto(estado.gemas);
     $('tropas').textContent = textoTropas();
     actualizarBotonDefensa(); actualizarPillEntreno();
@@ -8006,7 +8055,7 @@
       colaEntreno = [];
       (g.colaEntreno || []).forEach(function (q) {
         if (!q || !TROPAS[q[0]] || q[0] === 'heroe') return;
-        for (var k = 0; k < Math.min(q[1] || 0, 5000); k++) colaEntreno.push({ tipo: q[0], t: k === 0 ? (q[2] || 0) : 0, total: TROPAS[q[0]].tiempo });
+        for (var k = 0; k < Math.min(q[1] || 0, TOPE_COLA - colaEntreno.length); k++) colaEntreno.push({ tipo: q[0], t: k === 0 ? (q[2] || 0) : 0, total: TROPAS[q[0]].tiempo });
       });
       var avance = cuartelesListos().length ? cerrado * rapidezEntreno() : 0;
       while (colaEntreno.length && avance > 0) {

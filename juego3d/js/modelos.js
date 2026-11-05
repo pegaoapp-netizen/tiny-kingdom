@@ -603,12 +603,21 @@ var M = (function () {
   }
   // v6.38: edificios de Tripo. Si el tipo está en la lista, se usa su archivo modelos/<tipo>_tripo.glb
   var TRIPO_EDIFICIOS = { cabana: 3.0, cuartel: 3.6, granja: 3.6, aserradero: 3.6, mina: 3.6, cantera: 3.6, academia: 3.6, mercado: 3.6, herreria: 3.6, establo: 3.6, enfermeria: 3.6, galeria: 3.6, almacen: 3.6, vigia: 2.6, embajada: 3.6, relevo: 3.6 };
-  function edificioTripo(tipo) {
+  // v6.40: cuántas versiones tiene cada edificio (cambia de modelo en el nivel 10 y en el 20)
+  var TRIPO_ETAPAS = { cuartel: 3 };
+  function etapaEdificio(nivel) { return nivel >= 20 ? 3 : nivel >= 10 ? 2 : 1; }
+  function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
-    var t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb');
+    var et = Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
+    var t = et > 1 ? modeloTripo(tipo + et, tipo + '_tripo_' + et + '.glb', 'tripo-glb') : modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb');
+    if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior
     if (!t) return null;
     var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(esc); gT.add(mT); gT.userData.noFusionar = true; gT.userData.tripo = true; gT.userData.alturaDisparo = 3;
     return gT;
+  }
+  function adornoTripo(nombre, esc) {
+    var t = modeloTripo(nombre, nombre + '_tripo.glb', 'tripo-glb'); if (!t) return null;
+    var g = new THREE.Group(), m = t.clone(true); m.scale.setScalar(esc); g.add(m); return g;
   }
   function cabana(nivel) {
     var g = new THREE.Group(), PAJA = 0xd9b45a, PAJA2 = 0xb8923e, MAD = 0x7a4a26, PIE = 0x8f8a80;
@@ -1601,6 +1610,15 @@ var M = (function () {
   }
 
   function torre(nivel) {
+    // v6.40: torre de Tripo con el arquero arriba (sigue disparando)
+    var tT = modeloTripo('torre', 'torre_tripo.glb', 'tripo-glb');
+    if (tT) {
+      var gT = new THREE.Group(), mT = tT.clone(true); mT.scale.setScalar(3.4); gT.add(mT); mT.updateMatrixWorld(true);
+      var bbT = new THREE.Box3().setFromObject(mT), arqT = unidad('arquero', 1);
+      arqT.grupo.scale.setScalar(0.8); arqT.grupo.position.y = bbT.max.y * 0.9; arqT.grupo.userData.noFusionar = true; gT.add(arqT.grupo);
+      gT.userData.arquero = arqT; gT.userData.alturaDisparo = bbT.max.y * 0.9 + 0.9; gT.userData.noFusionar = true; gT.userData.tripo = true;
+      return gT;
+    }
     nivel = Math.min(3, nivel);
     if (nivel >= 1) return torreFortaleza(nivel);
     var g = new THREE.Group();
@@ -3344,7 +3362,7 @@ var M = (function () {
 
   return {
     mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
-    castillo: castillo, edificioTripo: edificioTripo, castilloEtapa: castilloEtapa, etapaCastillo: etapaCastillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
+    castillo: castillo, edificioTripo: edificioTripo, adornoTripo: adornoTripo, castilloEtapa: castilloEtapa, etapaCastillo: etapaCastillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
     vigia: vigia, almacen: almacen, cabana: cabana, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria, embajada: embajada, relevo: relevo, embajada: embajada, relevo: relevo,
     unidad: unidad, animarUnidad: animarUnidad, mejorarPorTramo: mejorarPorTramo, campoParcela: campoParcela, minaOro: minaOro, cantera: cantera, etiquetaEdificio: etiquetaEdificio,

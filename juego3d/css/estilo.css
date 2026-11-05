@@ -1660,3 +1660,13 @@ body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barr
 #panel .fila-miembro .chip { color: #3a2414 !important; white-space: nowrap; }
 .rk-tuyo .chip { color: #3a2414 !important; background: #f3e2bb; border-radius: 8px; padding: 2px 8px; font-weight: 800; }
 #consejo:empty { display: none !important; }
+
+/* v6.41: rareza mítica (héroes y armaduras de héroe) */
+.hcard.mitico { background: linear-gradient(#ff7a5a, #b0141e 55%, #5a0a10); }
+.heroe-ficha.mitico { background: linear-gradient(#ffe2da, #ffb0a0); }
+.hf.mitico { background: linear-gradient(135deg, #ff8a5a, #c0181e 45%, #6a0a10); border-color: #ffd36a; box-shadow: 0 0 0 2px #ffd36a, 0 0 18px rgba(255,120,60,.7); background-size: 200% 200%; }
+.hcard.mitico .rz-cinta, .hf.mitico .rz-cinta { background: linear-gradient(#ffd36a, #e0a020); color: #5a0a10; }
+.eq-fila.mitico { border-left: 4px solid #e0302a; background: linear-gradient(90deg, rgba(224,48,42,.18), transparent 70%); }
+.eq-hueco.mitico { border: 2px solid #c0181e; background: linear-gradient(#ffd8cf, #ff8a6a); box-shadow: 0 0 10px rgba(224,48,42,.6); }
+.eq-fila.mitico { border-color: #e0302a; background: #ffe8e2; }
+.hcard.mitico { border-color: #ffd36a; box-shadow: 0 0 0 2px #6a0a10, 0 0 12px rgba(255,120,60,.6); }
