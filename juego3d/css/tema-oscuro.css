@@ -343,3 +343,46 @@ body.tema-oscuro #panel.cafe table.req tr.tiempo td { background: rgba(90,60,30,
 }
 body.tema-oscuro #panel-rey .pr-pob { font-family: var(--to-num); font-weight: 900; font-size: 12px; color: #f0e2c0; text-shadow: 0 1px 2px #000; border-top: 1px solid rgba(232,196,106,.35); padding-top: 4px; }
 body.tema-oscuro #panel-rey .pr-pob.llena { color: #ff8a6a; }
+
+/* ============================================================
+   VENTANA DEL EDIFICIO (v6.38): como la foto del dueño
+   ============================================================ */
+body.tema-oscuro #panel.cafe .ve-icono { width: 46px; height: 46px; flex: 0 0 46px; border-radius: 8px; border: 2px solid #c9a46a; background: linear-gradient(#5a3d26, #2a1c12); box-shadow: 0 0 0 2px #120b06; display: flex; align-items: center; justify-content: center; margin-right: 8px; }
+body.tema-oscuro #panel.cafe .ve-icono img { width: 36px; height: 36px; object-fit: contain; }
+body.tema-oscuro #panel.cafe .ve { display: flex; flex-direction: column; gap: 10px; }
+body.tema-oscuro #panel.cafe .ve-arriba { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; position: relative; padding-right: 4px; }
+body.tema-oscuro #panel.cafe .ve-foto { width: 96px; height: 80px; border-radius: 6px; border: 2px solid #c9a46a; box-shadow: 0 0 0 2px #2a1c12; overflow: hidden; background: radial-gradient(ellipse at 50% 70%, #f6e7c4, #c9a87a 60%, #8a6a44); display: flex; align-items: center; justify-content: center; font-size: 40px; }
+body.tema-oscuro #panel.cafe .ve-foto img { width: 100%; height: 100%; object-fit: cover; }
+body.tema-oscuro #panel.cafe .ve-desc { margin: 0; font-size: 14px; line-height: 1.35; color: #f3e6c8 !important; padding-bottom: 28px; }
+body.tema-oscuro #panel.cafe .ve-info { position: absolute; right: 2px; bottom: 0; width: 30px; height: 30px; border-radius: 4px; border: 1px solid #6a4a22; background: linear-gradient(#4a3424, #2a1c12); color: #f0c040; font: 900 18px Georgia, serif; box-shadow: inset 0 0 0 1px rgba(255,220,150,.15); cursor: pointer; }
+body.tema-oscuro #panel.cafe .ve-stats.oculto { display: none; }
+body.tema-oscuro #panel.cafe .ve-sig { display: grid; grid-template-columns: 96px 1fr; gap: 10px; }
+body.tema-oscuro #panel.cafe .ve-sig-n, body.tema-oscuro #panel.cafe .ve-sig-t { background: rgba(20,12,7,.62); border: 1px solid #4a3220; border-radius: 8px; box-shadow: inset 0 0 12px rgba(0,0,0,.6); color: #f3e6c8; }
+body.tema-oscuro #panel.cafe .ve-sig-n { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 15px; padding: 10px 4px; min-height: 76px; }
+body.tema-oscuro #panel.cafe .ve-sig-n b { font-size: 20px; font-weight: 600; margin-top: 4px; }
+body.tema-oscuro #panel.cafe .ve-sig-t { padding: 12px; font-size: 14px; line-height: 1.35; }
+body.tema-oscuro #panel.cafe .ve-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-left: 106px; }
+body.tema-oscuro #panel.cafe .ve-botones > .bloqueado-tr { grid-column: 1 / -1; }
+body.tema-oscuro #panel.cafe .ve-botones > button { min-height: 60px; border-radius: 6px !important; font-family: Georgia, 'Times New Roman', serif !important; font-weight: 700 !important; font-size: 19px !important; text-shadow: 0 1px 2px #000 !important; padding: 6px 4px !important; }
+body.tema-oscuro #panel.cafe .ve-botones > button.azul { background: linear-gradient(#2f6fb4, #1c4f8c 60%, #143a6a) !important; border: 2px solid #0c2448 !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 0 #08182e !important; color: #fff !important; }
+body.tema-oscuro #panel.cafe .ve-botones > button.verde { background: linear-gradient(#2fa034, #1d7a22 60%, #145a18) !important; border: 2px solid #0c3a0e !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 3px 0 #082a0a !important; color: #fff !important; }
+body.tema-oscuro #panel.cafe .ve-botones > button .costo, body.tema-oscuro #panel.cafe .ve-botones > button .ico { font-size: 13px; }
+body.tema-oscuro #panel.cafe .ve-tiempo { display: flex; justify-content: space-between; align-items: center; margin-left: 106px; color: #f3e6c8; font-size: 14px; }
+body.tema-oscuro #panel.cafe .ve-gemas { display: flex; align-items: center; gap: 4px; font-weight: 800; }
+body.tema-oscuro #panel.cafe .ve-mejorando { margin: 0 0 0 106px; color: #ff8a6a; font-weight: 800; }
+body.tema-oscuro #panel.cafe table.ve-tabla { width: 100%; border-collapse: separate; border-spacing: 0; border-radius: 8px; overflow: hidden; border: 2px solid #4a3220; background: rgba(20,12,7,.55); box-shadow: inset 0 0 14px rgba(0,0,0,.6); }
+body.tema-oscuro #panel.cafe table.ve-tabla th { background: linear-gradient(#4a3020, #2e1d12); color: #f3e6c8; font-weight: 500; font-size: 16px; padding: 9px 6px; border-right: 1px solid #1a100a; }
+body.tema-oscuro #panel.cafe table.ve-tabla th:last-child { border-right: 0; }
+body.tema-oscuro #panel.cafe table.ve-tabla td { color: #f3e6c8; font-size: 15px; padding: 8px 8px; border-top: 1px solid rgba(90,60,30,.35); white-space: nowrap; }
+body.tema-oscuro #panel.cafe table.ve-tabla tr.no td { color: #ff8a6a; }
+body.tema-oscuro #panel.cafe .ve-r { width: 22px; height: 22px; vertical-align: middle; margin-right: 6px; object-fit: contain; }
+body.tema-oscuro #panel.cafe .ve-ok { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; margin-right: 6px; font-size: 13px; font-weight: 900; color: #fff; vertical-align: middle; }
+body.tema-oscuro #panel.cafe .ve-ok.si { background: radial-gradient(circle at 35% 30%, #c8f27a, #5aa81e 60%, #2e6a0c); box-shadow: 0 0 0 1px #1a3a06; }
+body.tema-oscuro #panel.cafe .ve-ok.no { background: radial-gradient(circle at 35% 30%, #ff9a7a, #c8301e 60%, #7a140c); }
+body.tema-oscuro #panel.cafe .ve-demoler, body.tema-oscuro #panel.cafe .ve-cancelar { align-self: flex-start; width: 46%; min-height: 54px; border-radius: 6px !important; font-family: Georgia, 'Times New Roman', serif !important; font-weight: 700 !important; font-size: 19px !important; background: linear-gradient(#b8281e, #8a1810 60%, #6a100a) !important; border: 2px solid #3a0806 !important; color: #fff !important; text-shadow: 0 1px 2px #000; box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 3px 0 #2a0604 !important; }
+body.tema-oscuro #panel.cafe .ve-tabs button { min-height: 46px; font-family: Georgia, 'Times New Roman', serif !important; font-weight: 500 !important; }
+@media (max-width: 420px) {
+  body.tema-oscuro #panel.cafe .ve-botones, body.tema-oscuro #panel.cafe .ve-tiempo, body.tema-oscuro #panel.cafe .ve-mejorando { margin-left: 0; }
+  body.tema-oscuro #panel.cafe .ve-botones > button { font-size: 17px !important; }
+  body.tema-oscuro #panel.cafe table.ve-tabla td { font-size: 13px; padding: 7px 5px; }
+}

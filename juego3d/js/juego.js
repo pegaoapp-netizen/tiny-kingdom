@@ -792,7 +792,9 @@
   var insigniaCastillo = null, andamiosCastillo = [], barraCastillo = null;
   var adornosCastillo = null;
   window.addEventListener('castillo-glb', function () { ponerCastillo(); });
-  ['cabana', 'cuartel'].forEach(function (tipoG) { window.addEventListener(tipoG + '-glb', function () { slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === tipoG && !s.obra) ponerEdificio(s, tipoG, s.edificio.nivel); }); }); });
+  // cuando llega un modelo de Tripo, se vuelven a poner los edificios (los que ya lo tengan lo usan)
+  var timerTripo = null;
+  window.addEventListener('tripo-glb', function () { clearTimeout(timerTripo); timerTripo = setTimeout(function () { slots.forEach(function (s) { if (s.edificio && !s.obra) ponerEdificio(s, s.edificio.tipo, s.edificio.nivel); }); }, 300); });
   function ponerCastillo() {
     escena.remove(castillo);
     // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
@@ -3273,7 +3275,7 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n);
+    var m = M.edificioTripo(tipo) || (tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n));
     if (m.userData.tripo) return m; // v6.37: los modelos de Tripo ya vienen completos (crecen por escala)
     M.crecerEdificio(m, tramo, tipo);
     return M.mejorarPorTramo(m, tramo, tipo);
@@ -3370,7 +3372,8 @@
     encajarEnParcela(s.modelo, tr);
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
-    if (tipo !== 'torre') { s.adornos = M.adornosNivel(nivel, new THREE.Box3().setFromObject(s.modelo)); s.grupo.add(s.adornos); }
+    // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
+    if (tipo !== 'torre' && !s.modelo.userData.tripo) { s.adornos = M.adornosNivel(nivel, new THREE.Box3().setFromObject(s.modelo)); s.grupo.add(s.adornos); }
     if (s.insignia) s.grupo.remove(s.insignia);
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
@@ -4854,7 +4857,8 @@
       return;
     }
     enfocar(s.pos);
-    if (s.edificio || s.obra) abrirMenuEdif(i);
+    // v6.38: tocar un edificio abre su ventana directo
+    if (s.edificio || s.obra) { if (menuEdif.slot !== null || menuEdif.castillo) cerrarMenuEdif(); if (s.campo && s.edificio && (s.guardado || 0) >= 1) recolectarCampo(s); pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(i); }
     else { cerrarMenuEdif(); abrirPanelConstruir(i); }
   }
 
@@ -5028,7 +5032,7 @@
   // ------------------------------------------------------------------
   var panelActual = null;
   function abrirPanel(titulo, html, cual) {
-    $('panel').classList.remove('cafe'); var gmV = document.querySelector('#panel .cafe-mas'); if (gmV) gmV.remove();
+    $('panel').classList.remove('cafe'); var gmV = document.querySelector('#panel .cafe-mas'); if (gmV) gmV.remove(); var icV = document.querySelector('#panel .ve-icono'); if (icV) icV.remove();
     if (menuEdif.el) cerrarMenuEdif();
     $('panel-titulo').textContent = titulo;
     $('panel-cuerpo').innerHTML = html;
@@ -5575,27 +5579,60 @@
       if (tropaDetalle) { $('panel').scrollTop = arribaP; var sl = $('det-n'); if (sl) sl.addEventListener('input', function () { cantDetalle = +this.value; refrescarFicha(); }); refrescarFicha(); }
       return;
     }
-    var html = htmlCafeArriba(i, s, tipo, nivel);
+    // v6.38: ventana del edificio como la foto del dueño: foto + descripción, Sig. nivel, Mejorar / Construir ya,
+    // tiempo con gemas, tabla Tipo · Necesitas · Tienes y Demoler abajo
+    var html = '<div class="ve">' + '<div class="ve-arriba"><div class="ve-foto">' + fotoHTML(tipo, EDIFICIOS[tipo].icono) + '</div><p class="ve-desc">' + D(tipo) + '</p>' +
+      '<button class="ve-info" data-accion="ve-info" title="Info">i</button></div>' +
+      '<div class="ve-stats oculto" id="ve-stats"><div class="stats">' + statsEdificio(tipo, nivel) + '</div></div>';
     if (s.obra) {
-      html += '<p class="nota"><b>' + (s.obra.nivel === 1 ? L('Construyendo', 'Building') : L('Mejorando a nivel ', 'Upgrading to level ') + s.obra.nivel) + '</b> <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo((s.obra.total - s.obra.t) / velObras()) + '</span></p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="obra:' + i + '">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((s.obra.total - s.obra.t) / velObras()), 'terminar-gemas', 'data-que="obra:' + i + '"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '<button class="comprar rojo" data-accion="cancelar-obra" data-slot="' + i + '">✖ ' + L('Cancelar', 'Cancel') + '</button></div>';
+      var faltaO = (s.obra.total - s.obra.t) / velObras();
+      html += '<div class="ve-sig"><div class="ve-sig-n">' + L('Sig. nivel', 'Next level') + '<b>' + s.obra.nivel + '</b></div><div class="ve-sig-t">' + textoStats(statsEdificio(tipo, s.obra.nivel)) + '</div></div>' +
+        '<p class="ve-mejorando">🔨 ' + (s.obra.nivel === 1 ? L('Construyendo...', 'Building...') : L('Mejorando...', 'Upgrading...')) + ' <span class="reloj-panel" id="reloj-obra" data-slot="' + i + '">⏱ ' + fmtTiempo(faltaO) + '</span></p>' +
+        '<div class="ve-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="obra:' + i + '">' + T('mb_acelerar') + '</button>' +
+        botonGemas(gemasParaTerminar(faltaO), 'terminar-gemas', 'data-que="obra:' + i + '"', T('terminar_ya') + ' ').replace('comprar morado', 'comprar verde') + '</div>' +
+        '<button class="comprar ve-cancelar" data-accion="cancelar-obra" data-slot="' + i + '">✖ ' + L('Cancelar obra', 'Cancel build') + '</button>';
     } else {
-      html += '<div class="stats">' + statsEdificio(tipo, nivel) + '</div>';
       if (tipo === 'enfermeria') html += '<p class="nota">' + T('en_enfermeria', { n: totalHeridos() }) + '</p>';
-      if (tipo === 'academia') html += '<button class="comprar naranja boton-oleada-grande" data-accion="investigacion">' + T('inv_abrir') + '</button>';
-      if (tipo === 'mercado') html += '<button class="comprar naranja boton-oleada-grande" data-accion="abrir-mercado">⚖️ ' + T('mb_comerciar') + '</button>';
-      if (tipo === 'herreria') html += '<button class="comprar naranja boton-oleada-grande" data-accion="abrir-herreria">⚒️ ' + T('mb_forjar') + '</button>';
       if (nivel < NIVEL_MAX) {
-        var pendP = trabajosPendientes('edificio', nivel + 1);
-        var segE = EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras'));
-        // v6.33: como en la ventana café: Cancelar (azul) y Mejorar (verde) arriba, y la tabla Tipo · Necesitas · Tienes abajo
-        html += '<div class="sig-nivel cafe-oculto"></div>' + botonesCafe(botonesObra(costoEdif(tipo, nivel), segE, 'mejorar', 'mejorar-ya', 'data-slot="' + i + '"', '⬆️ ' + T('mejorar'), faltaObra(tipo, nivel + 1) ? botonFalta(faltaObra(tipo, nivel + 1)) : pendP.length ? botonBloqueadoTrabajos(pendP) : '', 'mejorar:' + i)) +
-          tablaRequisitos(costoEdif(tipo, nivel), requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)), segE);
-      } else html += '<p class="nota"><b>' + T('nivel_max') + ' ★★★</b></p>';
+        var pendP = trabajosPendientes('edificio', nivel + 1), segE = EDIFICIOS[tipo].tiempo[nivel] * (1 - bono('obras')), costoE = costoEdif(tipo, nivel);
+        var traba = faltaObra(tipo, nivel + 1) ? botonFalta(faltaObra(tipo, nivel + 1)) : pendP.length ? botonBloqueadoTrabajos(pendP) : '';
+        var fr = faltanRecursos(costoE), gYa = gemasParaTerminar(segE / velObras()) + gemasRecursos(fr);
+        html += '<div class="ve-sig"><div class="ve-sig-n">' + L('Sig. nivel', 'Next level') + '<b>' + (nivel + 1) + '</b></div><div class="ve-sig-t">' + textoStats(statsEdificio(tipo, nivel + 1)) + '</div></div>';
+        if (traba) html += '<div class="ve-botones">' + traba + '</div>';
+        else html += '<div class="ve-botones"><button class="comprar azul" data-accion="mejorar" data-slot="' + i + '" data-costo=\'' + JSON.stringify(costoE) + '\'>' + T('mejorar') + '</button>' +
+          (fr ? '<button class="comprar verde" data-accion="comprar-mejora" data-que="mejorar:' + i + '" data-gemas="' + gYa + '">' + L('Construir ya', 'Build now') + '</button>'
+              : '<button class="comprar verde" data-accion="mejorar-ya" data-slot="' + i + '">' + L('Construir ya', 'Build now') + '</button>') + '</div>';
+        html += '<div class="ve-tiempo"><span>⏱ ' + L('Tiempo de construcción: ', 'Build time: ') + fmtTiempo(segE / velObras()) + '</span><span class="ve-gemas"><span class="ico gema"></span>' + gYa + '</span></div>';
+        html += tablaVentana(costoE, requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)));
+      } else html += '<div class="ve-sig"><div class="ve-sig-n">' + L('Nivel', 'Level') + '<b>' + nivel + '</b></div><div class="ve-sig-t">⭐ ' + T('nivel_max') + ' ★★★</div></div>';
     }
-    if (s.edificio && !oleadaActiva) html += '<button class="comprar rojo demoler-panel" data-accion="demoler-panel" data-slot="' + i + '">🧨 ' + T('mb_demoler') + '</button>';
+    if (s.edificio && !oleadaActiva) html += '<button class="comprar ve-demoler" data-accion="demoler-panel" data-slot="' + i + '">' + T('mb_demoler') + '</button>';
     html += '</div>';
-    abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', (esCuartel ? htmlPestanasCuartel() : htmlPestanasCafe(i, tipo, 'det')) + html, { tipo: 'edificio', slot: i });
+    abrirPanel(N(tipo) + ' (' + L('Nvl.', 'Lvl.') + nivel + ')', pestanasVentana(i, tipo) + html, { tipo: 'edificio', slot: i });
     ponerCafe();
+  }
+  // tabla Tipo · Necesitas · Tienes con ✔ verde o ✖ rojo
+  function tablaVentana(costo, filas) {
+    var IMG = { comida: 'r_comida', madera: 'r_madera', piedra: 'r_piedra', oro: 'r_oro' };
+    function ok(b) { return '<span class="ve-ok ' + (b ? 'si' : 'no') + '">' + (b ? '✔' : '✖') + '</span>'; }
+    var h = '<table class="ve-tabla"><tr><th>' + L('Tipo', 'Type') + '</th><th>' + L('Necesitas', 'Required') + '</th><th>' + L('Tienes', 'You have') + '</th></tr>';
+    (filas || []).forEach(function (q) { h += '<tr class="' + (q.ok ? 'si' : 'no') + '"><td>' + q.nombre + '</td><td>' + q.pide + '</td><td>' + ok(q.ok) + q.tiene + '</td></tr>'; });
+    ['comida', 'madera', 'piedra', 'oro'].forEach(function (r) {
+      if (!costo[r]) return;
+      var b = estado.oroInfinito || cantidad(r) >= costo[r];
+      h += '<tr class="' + (b ? 'si' : 'no') + '"><td><img class="ve-r" src="iconos/ui/' + IMG[r] + '.webp" alt="">' + NOMBRE_R[r][estado.idioma === 'en' ? 1 : 0] + '</td><td>' + formatoNumero(costo[r]) + '</td><td>' + ok(b) + formatoNumero(cantidad(r)) + '</td></tr>';
+    });
+    return h + '</table>';
+  }
+  // pestañas: Detalles y las pantallas propias del edificio
+  function pestanasVentana(i, tipo) {
+    var t = [['cafe-det', L('Detalles', 'Details'), true]];
+    if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
+    else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
+    else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
+    else if (tipo === 'mercado') t.push(['abrir-mercado', T('mb_comerciar')]);
+    else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
+    return '<div class="cafe-tabs ve-tabs">' + t.map(function (q) { return '<button class="' + (q[2] ? 'activo' : '') + '" data-accion="' + q[0] + '" data-slot="' + i + '">' + q[1] + '</button>'; }).join('') + '</div>';
   }
   // ---------- VENTANA CAFÉ (v6.33): foto grande, descripción, siguiente nivel, Mejorando... con reloj, botones y tabla ----------
   function textoStats(h) { return String(h || '').replace(/<\/span>\s*<span[^>]*>/g, ' · ').replace(/<[^>]+>/g, ''); }
@@ -5626,8 +5663,10 @@
   }
   // marca el panel como café y pone el botón verde de gemas arriba
   function ponerCafe() {
-    var p = $('panel'); p.classList.add('cafe');
-    var cab = p.querySelector('.panel-cab'); if (!cab || cab.querySelector('.cafe-mas')) return;
+    var p = $('panel'); p.classList.add('cafe'); p.classList.remove('oscuro', 'tropas-oscuro');
+    var cab = p.querySelector('.panel-cab'); if (!cab) return;
+    if (!cab.querySelector('.ve-icono')) { var ic = document.createElement('span'); ic.className = 've-icono'; ic.innerHTML = '<img src="iconos/ui/b_edificios.webp" alt="">'; cab.insertBefore(ic, cab.firstChild); }
+    if (cab.querySelector('.cafe-mas')) return;
     var b = document.createElement('button'); b.className = 'cafe-mas'; b.setAttribute('data-accion', 'cafe-gemas');
     b.innerHTML = '<span class="ico gema"></span>' + (estado.gemasInfinitas ? '∞' : corto(estado.gemas || 0)) + ' ' + L('Más', 'More');
     b.addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); var bt = $('btn-tienda'); if (bt) bt.click(); });
@@ -7278,7 +7317,8 @@
     else if (a === 'cancelar-obra') { sonar('click'); cancelarObra(+b.getAttribute('data-slot')); }
     else if (a === 'cafe-cerrar') { sonar('click'); cerrarPanel(); }
     else if (a === 'cafe-pob') { sonar('click'); abrirPanelPoblacion(+b.getAttribute('data-slot')); }
-    else if (a === 'cafe-det') { sonar('click'); abrirPanelEdificio(+b.getAttribute('data-slot')); }
+    else if (a === 'cafe-det') { sonar('click'); pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(+b.getAttribute('data-slot')); }
+    else if (a === 've-info') { sonar('click'); var vs = $('ve-stats'); if (vs) vs.classList.toggle('oculto'); }
     else if (a === 'cafe-gemas') { sonar('click'); var btT = $('btn-tienda'); if (btT) btT.click(); }
     else if (a === 'mis-pest') { sonar('click'); pestMis = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelMisiones(); }
     else if (a === 'mis-reclamar') reclamarMision(b.getAttribute('data-id'));
@@ -8152,10 +8192,13 @@
       var libre = !s.edificio && !s.obra;
       var on = (modoColocar && libre && modoColocar !== 'barricada' && parcelaAcepta(s, modoColocar) && !cerrada(s)) || slotElegido === i;
       s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
+      // v6.38: el letrero de nivel solo se ve en el edificio que tocaste
+      if (s.insignia) s.insignia.visible = menuEdif.slot === i || (slotElegido === i && !!panelActual);
       if (s.terreno.userData.mas) s.terreno.userData.mas.visible = libre && !cerrada(s);
       // estacas y cuerda: solo en modo construcción
       if (s.terreno.userData.marcas) s.terreno.userData.marcas.visible = !!on;
     });
+    if (insigniaCastillo) insigniaCastillo.visible = !!menuEdif.castillo || !!(panelActual && panelActual.tipo === 'castillo');
     slots.forEach(function (s) { if (s.fantasma) s.fantasma.position.y = 0.15 + Math.sin(performance.now() / 300) * 0.12; });
     barricadas.forEach(function (bq) { bq.marca.material.opacity = (modoColocar === 'barricada' && !bq.nivel) ? 0.3 + b * 0.4 : 0; if (bq.fantasma) bq.fantasma.position.y = 0.1 + Math.sin(performance.now() / 300) * 0.1; });
     actualizarRelojes();
