@@ -603,7 +603,7 @@ var M = (function () {
   }
   function cabana(nivel) {
     var t = modeloTripo('cabana', 'cabana_tripo.glb', 'cabana-glb');
-    if (t) { var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(3.0); gT.add(mT); gT.userData.noFusionar = true; return gT; }
+    if (t) { var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(3.0); gT.add(mT); gT.userData.noFusionar = true; gT.userData.tripo = true; return gT; }
     var g = new THREE.Group(), PAJA = 0xd9b45a, PAJA2 = 0xb8923e, MAD = 0x7a4a26, PIE = 0x8f8a80;
     function casita(x, z, s, rot) {
       var c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = rot || 0; c.scale.setScalar(s);
@@ -1388,6 +1388,9 @@ var M = (function () {
   // Cuartel: fortaleza de piedra con portón grande (por ahí salen las tropas),
   // dos torrecitas con techo rojo y banderas. Nivel 9+: adornos de oro.
   function cuartel(nivel) {
+    // v6.37 prueba: Cuartel 3D hecho en Tripo (mientras carga se ve el dibujado)
+    var t = modeloTripo('cuartel', 'cuartel_tripo.glb', 'cuartel-glb');
+    if (t) { var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(3.6); gT.add(mT); gT.userData.noFusionar = true; gT.userData.tripo = true; return gT; }
     nivel = Math.min(3, nivel);
     var g = new THREE.Group();
     var oro = nivel >= 3, adorno = oro ? C.oro : C.metalOsc;

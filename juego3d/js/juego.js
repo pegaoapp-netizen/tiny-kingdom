@@ -792,7 +792,7 @@
   var insigniaCastillo = null, andamiosCastillo = [], barraCastillo = null;
   var adornosCastillo = null;
   window.addEventListener('castillo-glb', function () { ponerCastillo(); });
-  window.addEventListener('cabana-glb', function () { slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'cabana' && !s.obra) ponerEdificio(s, 'cabana', s.edificio.nivel); }); });
+  ['cabana', 'cuartel'].forEach(function (tipoG) { window.addEventListener(tipoG + '-glb', function () { slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === tipoG && !s.obra) ponerEdificio(s, tipoG, s.edificio.nivel); }); }); });
   function ponerCastillo() {
     escena.remove(castillo);
     // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
@@ -3274,6 +3274,7 @@
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
     var m = tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n);
+    if (m.userData.tripo) return m; // v6.37: los modelos de Tripo ya vienen completos (crecen por escala)
     M.crecerEdificio(m, tramo, tipo);
     return M.mejorarPorTramo(m, tramo, tipo);
   }
