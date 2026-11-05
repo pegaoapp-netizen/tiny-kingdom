@@ -128,14 +128,15 @@ var M = (function () {
     Object.keys(porMat).forEach(function (k) {
       var e = porMat[k];
       if (e.lista.length < 2) { quitar.splice(quitar.indexOf(e.lista[0]), 1); return; }
-      var pos = [], nor = [];
+      var pos = [], nor = [], cu = e.mat.userData && e.mat.userData.conUV, uvs = [];
       var m4 = new THREE.Matrix4(), m3 = new THREE.Matrix3(), v = new THREE.Vector3();
       e.lista.forEach(function (o) {
         var g = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry;
         if (!g.attributes.normal) g.computeVertexNormals();
         m4.multiplyMatrices(inv, o.matrixWorld);
         m3.getNormalMatrix(m4);
-        var P = g.attributes.position, N = g.attributes.normal;
+        var P = g.attributes.position, N = g.attributes.normal, UV = g.attributes.uv;
+        if (cu) for (var j = 0; j < P.count; j++) uvs.push(UV ? UV.getX(j) : 0, UV ? UV.getY(j) : 0);
         for (var i = 0; i < P.count; i++) {
           v.fromBufferAttribute(P, i).applyMatrix4(m4); pos.push(v.x, v.y, v.z);
           v.fromBufferAttribute(N, i).applyMatrix3(m3).normalize(); nor.push(v.x, v.y, v.z);
@@ -144,6 +145,7 @@ var M = (function () {
       var bg = new THREE.BufferGeometry();
       bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       bg.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+      if (cu) bg.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
       bg.computeBoundingSphere();
       var mm = new THREE.Mesh(bg, e.mat);
       mm.castShadow = e.sombra; mm.receiveShadow = true;
@@ -803,8 +805,194 @@ var M = (function () {
     });
   }, 40);
   function etapaCastillo(n) { return n >= 30 ? 5 : n >= 15 ? 4 : n >= 10 ? 3 : n >= 5 ? 2 : 1; }
+  // =================================================================
+  //  v6.35 (prueba): castillo de piedra arenisca con torres redondas, ménsulas, almenas,
+  //  techos cónicos de teja, banderas rojas y puerta en arco con rastrillo. Texturas dibujadas aquí.
+  // =================================================================
+  function lienzo(w, h, fn) { var c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t; }
+  var TEX_ARENA = null, TEX_TEJA = null, TEX_PENDON = null;
+  function texArena() {
+    return TEX_ARENA || (TEX_ARENA = lienzo(256, 256, function (x, W, H) {
+      var sem = 21; function rnd() { sem = (sem * 16807) % 2147483647; return sem / 2147483647; }
+      x.fillStyle = '#86704f'; x.fillRect(0, 0, W, H);
+      var filas = 8, alto = H / filas;
+      for (var f = 0; f < filas; f++) {
+        var px = -rnd() * 50;
+        while (px < W) {
+          var w = 26 + rnd() * 40, l = 56 + rnd() * 16, s = 30 + rnd() * 16, hue = 33 + rnd() * 8;
+          for (var d = -W; d <= W; d += W) {
+            var bx = px + d; if (bx > W || bx + w < 0) continue;
+            x.fillStyle = 'hsl(' + hue + ',' + s + '%,' + l + '%)'; x.fillRect(bx + 1.5, f * alto + 1.5, w - 3, alto - 3);
+            x.fillStyle = 'rgba(255,240,210,.16)'; x.fillRect(bx + 1.5, f * alto + 1.5, w - 3, 3);
+            x.fillStyle = 'rgba(60,40,20,.22)'; x.fillRect(bx + 1.5, f * alto + alto - 4.5, w - 3, 3);
+            x.fillStyle = 'rgba(60,40,20,.12)'; x.fillRect(bx + w - 4, f * alto + 1.5, 2.5, alto - 3);
+          }
+          px += w;
+        }
+      }
+      for (var i = 0; i < 3500; i++) { x.fillStyle = rnd() < 0.5 ? 'rgba(70,50,25,.12)' : 'rgba(255,245,220,.10)'; x.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 2, 1 + rnd() * 2); }
+      for (var k = 0; k < 10; k++) { var mx = rnd() * W, my = rnd() * H, mr = 10 + rnd() * 22, g = x.createRadialGradient(mx, my, 0, mx, my, mr); g.addColorStop(0, 'rgba(90,70,40,.22)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(mx - mr, my - mr, mr * 2, mr * 2); }
+    }));
+  }
+  function texTeja() {
+    return TEX_TEJA || (TEX_TEJA = lienzo(128, 128, function (x, W, H) {
+      x.fillStyle = '#6e2e1c'; x.fillRect(0, 0, W, H);
+      var filas = 8, alto = H / filas, ancho = W / 8;
+      for (var f = 0; f < filas; f++) for (var c = -1; c <= 8; c++) {
+        var cx = c * ancho + (f % 2 ? ancho / 2 : 0), y = f * alto;
+        var g = x.createLinearGradient(0, y, 0, y + alto); g.addColorStop(0, '#c86a42'); g.addColorStop(1, '#93432a');
+        x.fillStyle = g; x.beginPath(); x.moveTo(cx + 1, y); x.lineTo(cx + ancho - 1, y); x.lineTo(cx + ancho - 1, y + alto * 0.55);
+        x.quadraticCurveTo(cx + ancho / 2, y + alto + 2, cx + 1, y + alto * 0.55); x.closePath(); x.fill();
+        x.fillStyle = 'rgba(255,220,180,.15)'; x.fillRect(cx + 2, y + 1, ancho - 4, 2);
+      }
+    }));
+  }
+  function texPendon() {
+    return TEX_PENDON || (TEX_PENDON = (function () {
+      var c = document.createElement('canvas'); c.width = 64; c.height = 128; var x = c.getContext('2d');
+      x.beginPath(); x.moveTo(0, 0); x.lineTo(64, 0); x.lineTo(64, 128); x.lineTo(32, 104); x.lineTo(0, 128); x.closePath();
+      var g = x.createLinearGradient(0, 0, 64, 0); g.addColorStop(0, '#9a1c14'); g.addColorStop(0.5, '#c8301e'); g.addColorStop(1, '#9a1c14'); x.fillStyle = g; x.fill();
+      x.lineWidth = 3; x.strokeStyle = '#e8b84a'; x.stroke();
+      // ave dorada con las alas abiertas (dibujo propio)
+      x.save(); x.translate(32, 52); x.fillStyle = '#f0c23e';
+      x.beginPath(); x.ellipse(0, 4, 6, 13, 0, 0, 7); x.fill();
+      x.beginPath(); x.arc(0, -12, 5, 0, 7); x.fill();
+      x.beginPath(); x.moveTo(4, -13); x.lineTo(10, -11); x.lineTo(4, -9); x.fill();
+      [-1, 1].forEach(function (s) { x.beginPath(); x.moveTo(0, -2); x.lineTo(s * 24, -16); x.lineTo(s * 20, -8); x.lineTo(s * 25, -4); x.lineTo(s * 19, 2); x.lineTo(s * 22, 8); x.lineTo(0, 8); x.closePath(); x.fill(); });
+      x.beginPath(); x.moveTo(-6, 15); x.lineTo(0, 26); x.lineTo(6, 15); x.fill();
+      x.restore();
+      return new THREE.CanvasTexture(c);
+    })());
+  }
+  var MAT_ARENA = {}, MAT_TEJA = null, MAT_PENDON = null;
+  function matArena(tono) { if (!MAT_ARENA[tono]) { MAT_ARENA[tono] = new THREE.MeshLambertMaterial({ color: tono, map: texArena() }); MAT_ARENA[tono].userData.conUV = true; } return MAT_ARENA[tono]; }
+  function matTeja() { if (!MAT_TEJA) { MAT_TEJA = new THREE.MeshLambertMaterial({ map: texTeja() }); MAT_TEJA.userData.conUV = true; } return MAT_TEJA; }
+  // figuras con la textura a escala real (los bloques no se estiran)
+  var ESC_PIEDRA = 1 / 2.4, ESC_TEJA = 1 / 1.5;
+  function cajaU(w, h, d, m, x, y, z) {
+    var g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, dim = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+    for (var f = 0; f < 6; f++) for (var k = 0; k < 4; k++) { var i = f * 4 + k; uv.setXY(i, uv.getX(i) * dim[f][0] * ESC_PIEDRA, uv.getY(i) * dim[f][1] * ESC_PIEDRA); }
+    return malla(g, m, x, y, z);
+  }
+  function cilU(rt, rb, h, seg, m, x, y, z) {
+    var g = new THREE.CylinderGeometry(rt, rb, h, seg), uv = g.attributes.uv, cir = Math.PI * (rt + rb);
+    for (var i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * cir * ESC_PIEDRA, uv.getY(i) * h * ESC_PIEDRA);
+    return malla(g, m, x, y, z);
+  }
+  function conoU(r, h, seg, x, y, z) {
+    var g = new THREE.ConeGeometry(r, h, seg), uv = g.attributes.uv, lado = Math.hypot(r, h);
+    for (var i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * Math.PI * 2 * r * ESC_TEJA, uv.getY(i) * lado * ESC_TEJA);
+    return malla(g, matTeja(), x, y, z);
+  }
+  function castilloArena(n, e) {
+    var g = new THREE.Group(), banderas = [], A = matArena(0xffffff), A2 = matArena(0xd9cdb8), A3 = matArena(0xb8a88e);
+    var OSC = 0x22180f, ROJO = 0xb3261e, MADERA = 0x4a3020;
+    function flag(x, y, z, alto) { var b = bandera(ROJO, alto || 1.5); b.position.set(x, y, z); b.userData.noFusionar = true; g.add(b); banderas.push(b.userData.tela); }
+    function pendon(x, y, z, ry, tam) {
+      if (!MAT_PENDON) MAT_PENDON = new THREE.MeshLambertMaterial({ map: texPendon(), alphaTest: 0.5, side: THREE.DoubleSide });
+      var p = new THREE.Mesh(new THREE.PlaneGeometry(0.8 * (tam || 1), 1.6 * (tam || 1)), MAT_PENDON); p.position.set(x, y, z); p.rotation.y = ry || 0; p.userData.noFusionar = true; g.add(p);
+      g.add(cil(0.04, 0.04, 0.95 * (tam || 1), 5, 0x3a2a1a, x, y + 0.82 * (tam || 1), z + 0.02).rotateZ(Math.PI / 2).rotateY(ry || 0));
+    }
+    function rendija(x, y, z, ry) { var r = caja(0.1, 0.48, 0.08, OSC, x, y, z); r.rotation.y = ry || 0; g.add(r); }
+    // torre redonda: cuerpo, ménsulas, parapeto con almenas y techo de teja
+    function torre(x, z, r, h, conTecho, conBandera) {
+      g.add(cilU(r, r * 1.06, h, 22, A, x, h / 2, z));
+      g.add(cilU(r * 1.12, r * 1.16, 0.5, 22, A3, x, 0.25, z));
+      var nM = Math.max(10, Math.round(r * 11));
+      for (var i = 0; i < nM; i++) { var a = i / nM * Math.PI * 2, m = cajaU(0.16, 0.42, 0.34, A2, x + Math.sin(a) * (r + 0.1), h - 0.15, z + Math.cos(a) * (r + 0.1)); m.rotation.y = a; g.add(m); }
+      g.add(cilU(r + 0.3, r + 0.3, 0.72, 22, A, x, h + 0.42, z));
+      var nA = Math.max(8, Math.round(r * 8));
+      for (var k = 0; k < nA; k++) { var b = (k + 0.5) / nA * Math.PI * 2, al = cajaU(0.36, 0.42, 0.24, A, x + Math.sin(b) * (r + 0.2), h + 0.99, z + Math.cos(b) * (r + 0.2)); al.rotation.y = b; g.add(al); }
+      // rendijas hacia afuera (frente y costado)
+      [0.35, 0.62].forEach(function (q) { rendija(x, h * q, z + r * 1.03, 0); rendija(x + (x >= 0 ? 1 : -1) * r * 1.03, h * q + 0.5, z, Math.PI / 2); });
+      var top = h + 1.2;
+      if (conTecho) {
+        var rt = r + 0.45, ht = rt * 2.15;
+        g.add(conoU(rt, ht, 22, x, h + 0.78 + ht / 2, z));
+        g.add(cil(0.05, 0.05, 0.6, 5, 0x3a3a3a, x, h + 0.78 + ht + 0.25, z));
+        top = h + 0.78 + ht + 0.5;
+      }
+      if (conBandera) flag(x, top - 0.1, z, 1.4);
+      return top;
+    }
+    // muralla recta con ménsulas y almenas por fuera
+    function muro(x1, z1, x2, z2, h, t) {
+      var L = Math.hypot(x2 - x1, z2 - z1), ry = Math.atan2(x2 - x1, z2 - z1), cx = (x1 + x2) / 2, cz = (z1 + z2) / 2;
+      var nx = -Math.cos(ry), nz = Math.sin(ry); // normal hacia afuera
+      var p = cajaU(t, h, L, A, cx, h / 2, cz); p.rotation.y = ry; g.add(p);
+      var c = cajaU(t + 0.4, 0.5, L, A2, cx + nx * 0.1, h - 0.1, cz + nz * 0.1); c.rotation.y = ry; g.add(c);
+      var nA = Math.max(3, Math.round(L / 0.75));
+      for (var i = 0; i < nA; i += 2) {
+        var u = -L / 2 + (i + 0.5) * L / nA, ax = cx + Math.sin(ry) * u + nx * (t / 2 + 0.05), az = cz + Math.cos(ry) * u + nz * (t / 2 + 0.05);
+        var al = cajaU(0.42, 0.5, 0.26, A, ax, h + 0.4, az); al.rotation.y = ry + Math.PI / 2; g.add(al);
+      }
+      for (var k = 1; k < 3; k++) { var v = -L / 2 + k * L / 3; rendija(cx + Math.sin(ry) * v + nx * (t / 2 + 0.02), h * 0.55, cz + Math.cos(ry) * v + nz * (t / 2 + 0.02), ry + Math.PI / 2); }
+    }
+    var W = 5.6, D = 4.6, HM = 4.4;
+    g.add(cajaU(W * 2 - 0.4, 0.12, D * 2 - 0.4, A3, 0, 0.06, 0)); // patio
+    // murallas (el frente lleva la puerta en el medio)
+    muro(-W, D, -2.0, D, HM, 0.8); muro(2.0, D, W, D, HM, 0.8);
+    muro(W, D, W, -D, HM, 0.8); muro(W, -D, -W, -D, HM, 0.8); muro(-W, -D, -W, D, HM, 0.8);
+    // torre del homenaje con techo de cuatro aguas
+    var KH = 8.2;
+    g.add(cajaU(5.0, KH, 4.0, A, 0, KH / 2, -1.4));
+    g.add(cajaU(5.4, 0.5, 4.4, A2, 0, KH - 0.1, -1.4));
+    for (var i = 0; i < 7; i++) { var u = -2.5 + (i + 0.5) * 5 / 7; if (i % 2 === 0) { g.add(cajaU(0.42, 0.5, 0.26, A, u, KH + 0.4, 0.75)); g.add(cajaU(0.42, 0.5, 0.26, A, u, KH + 0.4, -3.55)); } }
+    var techo = conoU(3.4, 2.6, 4, 0, KH + 0.1 + 1.3, -1.4); techo.rotation.y = Math.PI / 4; techo.scale.set(1, 1, 0.82); g.add(techo);
+    [-1.3, 0, 1.3].forEach(function (x) { rendija(x, KH * 0.6, 0.62, 0); }); rendija(0, KH * 0.38, 0.62, 0);
+    pendon(-1.5, KH * 0.62, 0.63, 0, 1.1); pendon(1.5, KH * 0.62, 0.63, 0, 1.1);
+    // torres: 4 esquinas, 2 de la puerta, 2 altas atrás, 2 torrecillas adentro y 1 muy alta
+    var esq = [[-W, D, 1.3, 6.4], [W, D, 1.3, 6.4], [-W, -D, 1.35, 7.4], [W, -D, 1.35, 7.4]];
+    esq.forEach(function (q, k) { torre(q[0], q[1], q[2], q[3], true, k >= 2); });
+    [-2.05, 2.05].forEach(function (x) { torre(x, D + 0.35, 1.3, 7.6, true, true); pendon(x, 4.2, D + 0.35 + 1.39, 0, 1.05); });
+    [[-3.1, -3.0, 1.05, 10.6], [3.1, -3.0, 1.05, 10.6]].forEach(function (q) { torre(q[0], q[1], q[2], q[3], true, true); });
+    [[-3.3, 1.6, 0.75, 7.8], [3.3, 1.6, 0.75, 7.8]].forEach(function (q) { torre(q[0], q[1], q[2], q[3], true, false); });
+    torre(0.9, -3.9, 0.95, 12.2, true, false);
+    // puerta: bloque entre las dos torres, arco de piedra, rastrillo de madera y escalones
+    var ZP = D + 0.55;
+    g.add(cajaU(3.0, 5.4, 1.5, A, 0, 2.7, D + 0.1));
+    g.add(cajaU(3.3, 0.45, 1.8, A2, 0, 5.3, D + 0.1));
+    for (var a2 = 0; a2 < 4; a2++) g.add(cajaU(0.42, 0.5, 0.26, A, -1.2 + a2 * 0.8, 5.8, D + 0.9));
+    g.add(caja(1.7, 2.3, 0.1, OSC, 0, 1.15, ZP + 0.31));
+    var hueco = cil(0.85, 0.85, 0.1, 18, OSC, 0, 2.3, ZP + 0.31); hueco.rotation.x = Math.PI / 2; g.add(hueco);
+    var arco = new THREE.Mesh(new THREE.TorusGeometry(1.02, 0.2, 8, 20, Math.PI), A2); arco.position.set(0, 2.3, ZP + 0.36); g.add(arco);
+    [-1.02, 1.02].forEach(function (x) { g.add(cajaU(0.4, 2.3, 0.4, A2, x, 1.15, ZP + 0.36)); });
+    for (var v = -0.6; v <= 0.61; v += 0.3) g.add(caja(0.07, v === 0 ? 3.1 : 2.9 - Math.abs(v) * 0.6, 0.08, MADERA, v, 1.45 - Math.abs(v) * 0.3, ZP + 0.38));
+    for (var hh = 0.35; hh < 3.0; hh += 0.45) g.add(caja(Math.min(1.6, 2 * Math.sqrt(Math.max(0.01, 0.85 * 0.85 - Math.max(0, hh - 2.3) * Math.max(0, hh - 2.3)))), 0.07, 0.08, MADERA, 0, hh, ZP + 0.39));
+    for (var s = 0; s < 3; s++) g.add(cajaU(2.4 + s * 0.3, 0.16, 0.45, A3, 0, 0.08 + (2 - s) * 0.16, ZP + 0.6 + s * 0.42));
+    rendija(-0.6, 4.2, ZP + 0.31, 0); rendija(0.6, 4.2, ZP + 0.31, 0);
+    // un poco más grande en cada etapa y dentro de la etapa
+    var base = [0, 0, 0.78, 0.88, 0.98, 1.08][e], ini = [0, 1, 5, 10, 15, 30][e], paso = e === 4 ? 0.006 : 0.015;
+    g.scale.setScalar(base * (1 + paso * Math.max(0, n - ini)));
+    var r = fusionar(g) || g; r.userData.banderas = banderas; r.userData.etapa = e;
+    return r;
+  }
+  // v6.35 prueba: castillo 3D hecho en Tripo por el dueño (se carga una vez; mientras tanto se ve el dibujado)
+  var CAST_GLB = null, CAST_GLB_CARGANDO = false;
+  function castilloTripo(n, e) {
+    if (CAST_GLB) {
+      var g = new THREE.Group(), m = CAST_GLB.clone(true);
+      m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      g.add(m);
+      var base = [0, 0, 0.78, 0.88, 0.98, 1.08][e], ini = [0, 1, 5, 10, 15, 30][e], paso = e === 4 ? 0.006 : 0.015;
+      g.scale.setScalar(15 * base * (1 + paso * Math.max(0, n - ini)));
+      g.userData.banderas = []; g.userData.etapa = e;
+      return g;
+    }
+    if (!CAST_GLB_CARGANDO) {
+      CAST_GLB_CARGANDO = true;
+      var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
+      new THREE.GLTFLoader().load('modelos/castillo_tripo.glb' + v, function (gl) {
+        // mismos colores y luz que el resto del juego
+        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? 0x4a4a4a : 0x000000, emissiveMap: mp || null }); } });
+        CAST_GLB = gl.scene; window.dispatchEvent(new Event('castillo-glb'));
+      }, undefined, function () {});
+    }
+    return null;
+  }
   function castilloEtapa(n) {
     var e = etapaCastillo(n), g = new THREE.Group(), banderas = [];
+    if (e >= 2) return castilloTripo(n, e) || castilloArena(n, e); // v6.35 prueba: castillo de Tripo (o el dibujado mientras carga)
     var GR = 0x9b9da3, GR2 = 0x77797f, GR3 = 0x5d5f66, AZUL = 0x2f5fae, AZUL2 = 0x1e3f7a, ORO = 0xe8b84a, MAD = 0x8f5c32, MAD2 = 0x6a4224;
     function flag(x, y, z, alto) { var b = bandera(AZUL, alto || 1.6); b.position.set(x, y, z); b.userData.noFusionar = true; g.add(b); banderas.push(b.userData.tela); }
     function almenas(cx, cz, w, d, y, col) {
