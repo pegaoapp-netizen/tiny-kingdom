@@ -586,7 +586,24 @@ var M = (function () {
     return g;
   }
   // v6.33: CABAÑA: casita de paredes claras con vigas, techo de paja y chimenea; con el nivel se suman casitas
+  // v6.36 prueba: Cabaña 3D hecha en Tripo (mientras carga se ve la dibujada)
+  var MODELOS_TRIPO = {};
+  function modeloTripo(clave, archivo, evento) {
+    var e = MODELOS_TRIPO[clave] || (MODELOS_TRIPO[clave] = { escena: null, cargando: false });
+    if (e.escena) return e.escena;
+    if (!e.cargando) {
+      e.cargando = true;
+      var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
+      new THREE.GLTFLoader().load('modelos/' + archivo + v, function (gl) {
+        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? 0x4a4a4a : 0x000000, emissiveMap: mp || null }); o.castShadow = true; o.receiveShadow = true; } });
+        e.escena = gl.scene; window.dispatchEvent(new Event(evento));
+      }, undefined, function () {});
+    }
+    return null;
+  }
   function cabana(nivel) {
+    var t = modeloTripo('cabana', 'cabana_tripo.glb', 'cabana-glb');
+    if (t) { var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(3.0); gT.add(mT); gT.userData.noFusionar = true; return gT; }
     var g = new THREE.Group(), PAJA = 0xd9b45a, PAJA2 = 0xb8923e, MAD = 0x7a4a26, PIE = 0x8f8a80;
     function casita(x, z, s, rot) {
       var c = new THREE.Group(); c.position.set(x, 0, z); c.rotation.y = rot || 0; c.scale.setScalar(s);

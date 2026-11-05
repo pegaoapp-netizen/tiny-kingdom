@@ -792,6 +792,7 @@
   var insigniaCastillo = null, andamiosCastillo = [], barraCastillo = null;
   var adornosCastillo = null;
   window.addEventListener('castillo-glb', function () { ponerCastillo(); });
+  window.addEventListener('cabana-glb', function () { slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'cabana' && !s.obra) ponerEdificio(s, 'cabana', s.edificio.nivel); }); });
   function ponerCastillo() {
     escena.remove(castillo);
     // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
