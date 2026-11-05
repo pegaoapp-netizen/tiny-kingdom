@@ -864,7 +864,7 @@
     andamiosDelCastillo(false);
     ponerCastillo();
     actualizarParcelas();
-    if (o.nivel <= NIVEL_MAX) setTimeout(function () { consejoTemporal(T('parcelas_nuevas', { n: PARCELAS_POR_NIVEL })); }, 2500);
+    if (o.nivel <= NIVEL_VIEJO) setTimeout(function () { consejoTemporal(T('parcelas_nuevas', { n: PARCELAS_POR_NIVEL })); }, 2500);
     chispas(new V3(0, 6, 0), 0xffe14a, 30, 5);
     sonar('listo'); sonar('victoria');
     consejoTemporal(T('castillo_listo', { n: o.nivel })); sumarXP(40 * o.nivel);
@@ -2546,7 +2546,7 @@
     var l = [];
     if (que === 'castillo') {
       // v6.32: cada nivel del castillo pide tu nivel, la muralla y subir los demás edificios (del 18 al 30, todos al 17)
-      if (L2 >= 2) l.push(filaReq('jugador', Math.min(60, L2 <= NIVEL_MAX ? L2 : NIVEL_MAX + Math.round((L2 - NIVEL_MAX) * 3.31))));
+      if (L2 >= 2) l.push(filaReq('jugador', Math.min(60, L2 <= NIVEL_VIEJO ? L2 : NIVEL_VIEJO + Math.round((L2 - NIVEL_VIEJO) * 3.31))));
       if (L2 >= 3) l.push(filaReq('muralla', Math.min(NIVEL_MAX, L2 - 2)));
       [['cuartel', 3, 1], ['cabana', 4, 2], ['granja', 4, 1], ['academia', 5, 2], ['aserradero', 6, 2], ['mina', 7, 2], ['herreria', 8, 3], ['cantera', 9, 3], ['establo', 11, 4],
         ['galeria', 12, 4], ['enfermeria', 13, 4], ['torre', 14, 5], ['almacen', 16, 5], ['mercado', 18, 6], ['vigia', 20, 6]]
@@ -3440,7 +3440,7 @@
       var r = seg * rapidezEntreno();
       while (r > 0 && colaEntreno.length) {
         var c = colaEntreno[0], f = c.total - c.t;
-        if (r >= f) { r -= f; colaEntreno.shift(); crearTropa(c.tipo, puertaCuartel()); } else { c.t += r; r = 0; }
+        if (r >= f) { r -= f; colaEntreno.shift(); sumarTropa(c.tipo, puertaCuartel()); } else { c.t += r; r = 0; }
       }
       return;
     }
@@ -3551,6 +3551,8 @@
   // qué edificio entrena cada tropa
   function edificioTropa(tipo) { return (TROPA_REQ[tipo] || {}).ed || 'cuartel'; }
   function faltaTropa(tipo) {
+    // v6.39: cualquier tipo de tropa se entrena mientras haya recursos (sin pedir niveles ni edificios extra)
+    return null;
     var r = TROPA_REQ[tipo]; if (!r || estado.dueno) return null;
     if (nivelMayor(r.ed) < r.n) return r.n > 1 ? L('Necesitas ' + N(r.ed) + ' nivel ' + r.n, 'You need ' + N(r.ed) + ' level ' + r.n) : T(r.ed === 'establo' ? 'necesitas_establo' : r.ed === 'galeria' ? 'necesitas_galeria' : 'necesitas_cuartel_t');
     if (r.otro && nivelMayor(r.otro[0]) < r.otro[1]) return L('Necesitas ' + N(r.otro[0]) + ' nivel ' + r.otro[1], 'You need ' + N(r.otro[0]) + ' level ' + r.otro[1]);
@@ -3850,7 +3852,7 @@
   function capacidad() {
     var c = cuartelesListos().reduce(function (a, s) { return a + EDIFICIOS.cuartel.capacidad[s.edificio.nivel - 1]; }, 0) + edificiosDe('establo').length + edificiosDe('galeria').length;
     // sin tope: se entrena mientras haya materiales (el límite es la comida, porque las tropas comen)
-    return c ? 100000 : 0;
+    return c ? 1e8 : 0;
   }
   function rapidezEntreno() {
     return cuartelesListos().reduce(function (a, s) { return Math.max(a, EDIFICIOS.cuartel.rapidez[s.edificio.nivel - 1]); }, 1) * (1 + bono('entreno'));
@@ -3876,10 +3878,11 @@
   }
   // ---- POBLACIÓN (v6.33): base del castillo + regalo a los que ya jugaban + cabañas. Las tropas la ocupan. ----
   function poblacionMax() { return POB_BASE + (estado.pobRegalo || 0) + edificiosDe('cabana').reduce(function (a, s) { return a + EDIFICIOS.cabana.poblacion[s.edificio.nivel - 1]; }, 0); }
-  function poblacionLibre() { return poblacionMax() - tropasOcupadas(); }
+  function obrerosOcupados() { return OBREROS_OBRA * (slots.filter(function (s) { return s.obra; }).length + (estado.obraCastillo ? 1 : 0) + (obraMuralla ? 1 : 0)); }
+  function poblacionLibre() { return poblacionMax() - obrerosOcupados(); }
   function faltanObreros() { if (estado.dueno || poblacionLibre() >= OBREROS_OBRA) return false; consejoTemporal(T('pob_obreros', { n: OBREROS_OBRA })); sonar('error'); return true; }
   function tropasOcupadas() { return tropasNormales() + totalHeridos() + colaEntreno.length; }
-  function tropasNormales() { return tropas.filter(function (u) { return u.tipo !== 'heroe' && !u.invocada && !u.refuerzo; }).length; }
+  function tropasNormales() { return visiblesNormales() + totalReserva(); }
 
   // ------------------------------------------------------------------
   //  UNIDADES
@@ -3897,6 +3900,27 @@
   function velU(u) { return u.d.vel * (1 + bonoTropa(u.tipo, 'velocidad')); }
   function vidaTropa(tipo, na) { return TROPAS[tipo].vida * (1 + ARMADURA.vida * (na || 0) + bono('escudos') + bonoTropa(tipo, 'vida')); }
   function nivelArmadura(tipo) { return (estado.armadura && estado.armadura[tipo]) || 0; }
+  // v6.39: se entrena sin tope (solo cuentan los recursos). En la ciudad caminan hasta TOPE_VISIBLE tropas;
+  // el resto espera en el cuartel (reserva), cuenta para el poder y la fuerza, y sale cuando hay lugar.
+  var TOPE_VISIBLE = 250;
+  function visiblesNormales() { return tropas.filter(function (u) { return u.tipo !== 'heroe' && !u.invocada && !u.refuerzo; }).length; }
+  function reserva() { return estado.reserva || (estado.reserva = {}); }
+  function totalReserva() { var r = reserva(), n = 0; for (var k in r) n += r[k] || 0; return n; }
+  function sumarTropa(tipo, desde) {
+    if (TROPAS[tipo] && visiblesNormales() >= TOPE_VISIBLE) { reserva()[tipo] = (reserva()[tipo] || 0) + 1; return null; }
+    return crearTropa(tipo, desde);
+  }
+  function sacarDeReserva() {
+    if (visiblesNormales() >= TOPE_VISIBLE) return;
+    var r = reserva(), tipos = Object.keys(r).filter(function (k) { return r[k] > 0 && TROPAS[k]; });
+    if (!tipos.length) return;
+    var k = tipos[Math.floor(Math.random() * tipos.length)]; r[k]--; crearTropa(k, puertaCuartel());
+  }
+  function valorReserva() {
+    var r = reserva(), v = 0;
+    for (var k in r) if (r[k] > 0 && TROPAS[k]) { var na = nivelArmadura(k); v += r[k] * valorTropa({ tipo: k, d: TROPAS[k], max: vidaTropa(k, na), defensa: ARMADURA.defensa * na }); }
+    return v;
+  }
   function crearTropa(tipo, desde, invocada, heroeId) {
     var hd = heroeId ? HEROE[heroeId] : null;
     var d = hd ? statsHeroe(heroeId) : TROPAS[tipo];
@@ -4054,18 +4078,17 @@
   }
   // cuántas se pueden entrenar ahora (por espacio y por recursos)
   function maxEntrenar(tipo) {
-    var libre = Math.min(500, Math.max(0, capacidad() - tropasOcupadas()), estado.dueno ? 1e9 : Math.max(0, poblacionLibre())), c = costoTropa(tipo), n = libre;
+    var libre = Math.max(0, capacidad() - tropasOcupadas()), c = costoTropa(tipo), n = libre;
     if (!estado.oroInfinito) RECURSOS.forEach(function (r) { if (c[r]) n = Math.min(n, Math.floor(cantidad(r) / c[r])); });
     return Math.max(0, n);
   }
   function entrenar(tipo, cuantas) {
     if (!puedeEntrenarTipo(tipo)) { consejoTemporal(avisoEdificioTropa(tipo)); sonar('error'); return; }
     if (tropasOcupadas() >= capacidad()) { consejoTemporal(T('sin_espacio')); sonar('error'); return; }
-    if (!estado.dueno && poblacionLibre() < 1) { consejoTemporal(T('pob_llena')); sonar('error'); return; }
     var n = cuantas === 'max' ? maxEntrenar(tipo) : Math.max(1, cuantas || 1);
     var hechas = 0;
     for (var k = 0; k < n; k++) {
-      if (tropasOcupadas() >= capacidad() || (!estado.dueno && poblacionLibre() < 1)) break;
+      if (tropasOcupadas() >= capacidad()) break;
       if (!(hechas ? puedePagar(costoTropa(tipo)) : true)) break;
       if (!pagar(costoTropa(tipo))) break;
       colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
@@ -4339,14 +4362,16 @@
       }
     }
 
+    // ---- la reserva del cuartel sale cuando hay lugar (unas 4 por segundo) ----
+    if (estado.reserva && Math.random() < dt * 4) sacarDeReserva();
     // ---- entrenamiento ----
     if (colaEntreno.length && (cuartelesListos().length || edificiosDe('establo').length || edificiosDe('galeria').length)) {
       var c = colaEntreno[0];
       c.t += dt * rapidezEntreno();
       if (c.t >= c.total) {
         colaEntreno.shift();
-        var u = crearTropa(c.tipo, puertaCuartel());
-        chispas(u.pos.clone().setY(1), 0x9fd0ff, 8, 2);
+        var u = sumarTropa(c.tipo, puertaCuartel());
+        if (u) chispas(u.pos.clone().setY(1), 0x9fd0ff, 8, 2);
         sonar('entrenado');
         actualizarHUD();
         guardar();
@@ -5315,7 +5340,7 @@
     return { grupo: g, cuerpo: lider.cuerpo, p: lider.p, escala: lider.escala, baseY: lider.baseY, miembros: miembros };
   }
   function cuentaRango(tipo, r) { return tropas.filter(function (u) { return u.tipo === tipo && !u.invocada && !u.refuerzo && !u.heroeId && (u.armadura || 0) === r; }).length; }
-  function cuentaTipo(tipo) { return tropas.filter(function (u) { return u.tipo === tipo && !u.invocada && !u.refuerzo && !u.heroeId; }).length; }
+  function cuentaTipo(tipo) { return tropas.filter(function (u) { return u.tipo === tipo && !u.invocada && !u.refuerzo && !u.heroeId; }).length + (reserva()[tipo] || 0); }
   function visorTropa(cont, tipo, rango) { visorModelo(cont, 'esc:' + tipo + ':' + rango, function () { return escuadron(tipo, rango); }); }
   // visor 3D que gira: lo usan la pantalla de tropas y la ficha del héroe
   function visorModelo(cont, clave, fabrica) {
@@ -5484,7 +5509,7 @@
   function rolTropa(t) { var f = FAMILIA[t]; return f === 'inf' ? L('Infantería', 'Infantry') : f === 'dist' ? L('Distancia', 'Ranged') : f === 'cab' ? L('Caballería', 'Cavalry') : L('Asedio', 'Siege'); }
   function htmlPestanasCuartel() {
     var s = slots[slotElegido], tipo = s && s.edificio ? s.edificio.tipo : 'cuartel', nv = s && s.edificio ? s.edificio.nivel : 1;
-    var total = tropas.filter(function (u) { return !u.heroeId; }).length, hay = colaEntreno.length;
+    var total = tropasNormales(), hay = colaEntreno.length;
     var h = '<div class="cq-cab"><div class="cq-escudo">🛡️</div><div class="cq-tit"><small>' + L('MILITAR · NV ', 'MILITARY · LV ') + nv + '</small><b>' + N(tipo) + '</b></div>' +
       '<div class="cq-stats"><div class="cq-stat"><span>👥</span><div><small>' + L('TROPAS', 'TROOPS') + '</small><b>' + formatoNumero(total) + '</b></div></div>' +
       '<div class="cq-stat' + (hay ? ' activo' : '') + '"><span>🔨</span><div><small>' + L('COLA', 'QUEUE') + '</small><b class="cq-cola-t">' + (hay ? fmtTiempo(faltaEntreno()) : L('Libre', 'Idle')) + '</b></div></div></div></div>';
@@ -6318,7 +6343,7 @@
   }
   // ---------- ATAQUES ENTRE JUGADORES ----------
   function valorTropa(u) { return u.max * 0.5 + u.d.dano * 5 * (1 + bono('espadas') + bonoTropa(u.tipo, 'ataque')) * factorArmas(u.tipo) * (1 + (u.defensa || 0)); }
-  function fuerzaEjercito() { return Math.round(tropas.reduce(function (a, u) { return a + valorTropa(u); }, 0)); }
+  function fuerzaEjercito() { return Math.round(tropas.reduce(function (a, u) { return a + valorTropa(u); }, 0) + valorReserva()); }
   function defensaReino() {
     var d = vidaMaxCastillo() / 8 + danoCastillo() * 8;
     torresPuerta.forEach(function () { d += (TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * 6; });
@@ -6778,7 +6803,7 @@
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) sumarRecurso(r, p[r]); });
     if (p.gemas) sumarGemas(p.gemas);
     if (p.objeto) estado.mochila[p.objeto] = (estado.mochila[p.objeto] || 0) + 1;
-    if (p.tropas) Object.keys(p.tropas).forEach(function (t) { for (var k = 0; k < p.tropas[t]; k++) crearTropa(t, reunion.clone().add(new V3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3)), true); });
+    if (p.tropas) Object.keys(p.tropas).forEach(function (t) { for (var k = 0; k < p.tropas[t]; k++) sumarTropa(t, reunion.clone().add(new V3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3)), true); });
     actualizarHUD();
   }
   function reclamarDiario() {
@@ -6905,7 +6930,7 @@
       return; // v4.9: el entrenamiento solo se acelera con aceleradores
       if (!colaEntreno.length) return;
       if (!pagar(0, gemasEntreno())) return;
-      while (colaEntreno.length) { var ce = colaEntreno.shift(); crearTropa(ce.tipo, puertaCuartel()); }
+      while (colaEntreno.length) { var ce = colaEntreno.shift(); sumarTropa(ce.tipo, puertaCuartel()); }
       sonar('magia'); consejoTemporal(T('terminado_gemas')); actualizarHUD(); guardar(true); reabrirPanel();
       return;
     }
@@ -7549,6 +7574,7 @@
   function calcularPoder() {
     var p = 0;
     tropas.forEach(function (u) { p += Math.round(u.d.vida * 2 + u.d.dano * 25); });
+    var rv = reserva(); for (var kr in rv) if (TROPAS[kr]) p += (rv[kr] || 0) * Math.round(TROPAS[kr].vida * 2 + TROPAS[kr].dano * 25);
     slots.forEach(function (s) { if (s.edificio) p += s.edificio.nivel * 450; });
     p += estado.muralla * 600 + ((estado.castillo || 1) - 1) * 800;
     for (var ik in estado.invest) p += (estado.invest[ik] || 0) * PODER_INVEST;
@@ -7909,6 +7935,7 @@
       estado.obraCastillo = g.obraCastillo || null;
       estado.investigando = g.investigando || null;
       estado.diario = g.diario || { ultimo: '', racha: 0 };
+      estado.reserva = g.reserva || {};
       estado.torneo = g.torneo || null;
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
@@ -7971,7 +7998,7 @@
       if (g.obraMuralla && g.obraMuralla.nivel === estado.muralla + 1) iniciarObraMuralla(g.obraMuralla.nivel, Math.min(g.obraMuralla.total, (g.obraMuralla.t || 0) + cerrado), g.obraMuralla.total);
       var t = g.tropas || {};
       Object.keys(t).forEach(function (tipo) {
-        for (var k = 0; k < t[tipo]; k++) crearTropa(tipo, reunion.clone().add(new V3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4)));
+        for (var k = 0; k < t[tipo]; k++) sumarTropa(tipo, reunion.clone().add(new V3((Math.random() - 0.5) * 4, 0, (Math.random() - 0.5) * 4)));
       });
       var iv = g.invocadas || {};
       Object.keys(iv).forEach(function (tipo) { for (var k = 0; k < iv[tipo]; k++) crearTropa(tipo, reunion.clone(), true); });
@@ -7984,7 +8011,7 @@
       var avance = cuartelesListos().length ? cerrado * rapidezEntreno() : 0;
       while (colaEntreno.length && avance > 0) {
         var ce = colaEntreno[0], falta = ce.total - ce.t;
-        if (avance >= falta) { avance -= falta; colaEntreno.shift(); crearTropa(ce.tipo, reunion.clone()); } else { ce.t += avance; avance = 0; }
+        if (avance >= falta) { avance -= falta; colaEntreno.shift(); sumarTropa(ce.tipo, reunion.clone()); } else { ce.t += avance; avance = 0; }
       }
       tropas.forEach(guardarDentro);
     }
