@@ -3467,21 +3467,23 @@
   function faltaDe(que) {
     if (que === 'castillo') { var oc = estado.obraCastillo; return oc ? (oc.total - oc.t) / velObras() : 0; }
     if (que === 'muralla') return obraMuralla ? (obraMuralla.total - obraMuralla.t) / velObras() : 0;
-    if (que === 'entreno') return faltaEntreno() * velReal();
-    if (que === 'invest') return faltaInvestigacion() * velReal();
+    // v6.47: una sola fuente de verdad: el tiempo real que falta (el mismo que muestra el panel de Tropas)
+    if (que === 'entreno') return faltaEntreno();
+    if (que === 'invest') return faltaInvestigacion();
     var s = slots[+String(que).split(':')[1]];
     return s && s.obra ? (s.obra.total - s.obra.t) / velObras() : 0;
   }
   function aplicarAcelerador(que, seg) {
-    if (que === 'castillo' && estado.obraCastillo) { var oc = estado.obraCastillo; oc.t = Math.min(oc.total, oc.t + seg); return; }
-    if (que === 'muralla' && obraMuralla) { obraMuralla.t = Math.min(obraMuralla.total, obraMuralla.t + seg); return; }
-    if (que === 'invest' && estado.investigando) { var ii = estado.investigando; ii.t = Math.min(ii.total, ii.t + seg * rapidezAcademia()); return; }
+    // v6.47: el acelerador quita exactamente su tiempo del reloj que ve el jugador
+    if (que === 'castillo' && estado.obraCastillo) { var oc = estado.obraCastillo; oc.t = Math.min(oc.total, oc.t + seg * velObras()); return; }
+    if (que === 'muralla' && obraMuralla) { obraMuralla.t = Math.min(obraMuralla.total, obraMuralla.t + seg * velObras()); return; }
+    if (que === 'invest' && estado.investigando) { var ii = estado.investigando; ii.t = Math.min(ii.total, ii.t + seg * rapidezAcademia() * velReal()); return; }
     if (que === 'entreno') {
-      avanzarCola(seg * rapidezEntreno(), puertaCuartel);
+      avanzarCola(seg * rapidezEntreno() * velReal(), puertaCuartel);
       return;
     }
     var s = slots[+String(que).split(':')[1]];
-    if (s && s.obra) s.obra.t = Math.min(s.obra.total, s.obra.t + seg);
+    if (s && s.obra) s.obra.t = Math.min(s.obra.total, s.obra.t + seg * velObras());
   }
   // nombre de lo que se está acelerando ("Granja (Nv 2)")
   function nombreDeQue(que) {
@@ -4841,7 +4843,7 @@
     if (!s) return null;
     if (s.obra) return { que: 'obra:' + s.i, gemas: gemasParaTerminar((s.obra.total - s.obra.t) / velObras()) };
     if (s.edificio && s.edificio.tipo === 'cuartel' && colaEntreno.length) return { que: 'entreno', gemas: 0, sinGemas: true };
-    if (s.edificio && s.edificio.tipo === 'academia' && estado.investigando) return { que: 'invest', gemas: gemasParaTerminar(faltaInvestigacion() * velReal()) };
+    if (s.edificio && s.edificio.tipo === 'academia' && estado.investigando) return { que: 'invest', gemas: gemasParaTerminar(faltaInvestigacion()) };
     return null;
   }
   function botonMenu2(accion, icono, texto, apagado, extra) {
@@ -5548,7 +5550,7 @@
     guardar(true);
     reabrirPanel();
   }
-  function gemasEntreno() { return gemasParaTerminar(faltaEntreno() * velReal()); }
+  function gemasEntreno() { return gemasParaTerminar(faltaEntreno()); }
 
   function abrirPanelInvocar() {
     var d = TROPAS.heroe;
@@ -7133,7 +7135,7 @@
     if (que === 'invest') {
       var ii = estado.investigando;
       if (!ii) return;
-      if (!pagar(0, gemasParaTerminar(faltaInvestigacion() * velReal()))) return;
+      if (!pagar(0, gemasParaTerminar(faltaInvestigacion()))) return;
       ii.t = ii.total; sonar('magia'); consejoTemporal(T('terminado_gemas')); actualizarHUD(); guardar(true);
       return;
     }
