@@ -51,22 +51,26 @@
       im.count = 0; im.frustumCulled = false; im.renderOrder = 1; grupo.add(im); capas[n] = im;
     });
 
-    var tmp = new THREE.Object3D(), centro = null;
+    var tmp = new THREE.Object3D(), centro = null, memo = {};
+    // v6.45: cada casilla se calcula una sola vez (antes se recalculaban 2.400 en cada paso y el arrastre daba tirones)
+    function dibujoDe(x, y) {
+      var k = x + '_' + y, d = memo[k]; if (d !== undefined) return d;
+      var c = op.casilla(x, y), n = null, s = 0.92 + op.hash(x * 3.1, y * 1.7) * 0.16;
+      if (c.tipo === 'bosque') n = 'bosque';
+      else if (c.tipo === 'montana') { n = 'montana'; s += c.nivel * 0.03; }
+      else if (c.tipo === 'colina') n = 'colina';
+      else if (c.tipo === 'lago') n = 'lago';
+      else if ((x < 0 || y < 0 || x >= op.tam || y >= op.tam) && op.hash(x * 1.37 + 11, y * 2.11 - 4) < 0.06) { n = 'castillo'; s = 0.62 + c.nivel * 0.04; }
+      if (!n) { memo[k] = null; return null; }
+      tmp.position.set((x - MITAD + 0.5) * CELDA, 0, (y - MITAD + 0.5) * CELDA).addScaledVector(ARRIBA, alzar(n) * s); tmp.quaternion.copy(giro); tmp.scale.setScalar(s); tmp.updateMatrix();
+      d = memo[k] = { n: n, m: tmp.matrix.clone() }; return d;
+    }
     function rellenar(cx, cy) {
       centro = { x: cx, y: cy };
       for (var k in capas) capas[k].count = 0;
       for (var y = cy - R; y <= cy + R; y++) for (var x = cx - R; x <= cx + R; x++) {
-        if (op.ocupada(x, y)) continue;
-        var c = op.casilla(x, y), n = null, s = 0.92 + op.hash(x * 3.1, y * 1.7) * 0.16;
-        if (c.tipo === 'bosque') n = 'bosque';
-        else if (c.tipo === 'montana') { n = 'montana'; s += c.nivel * 0.03; }
-        else if (c.tipo === 'colina') n = 'colina';
-        else if (c.tipo === 'lago') n = 'lago';
-        else if ((x < 0 || y < 0 || x >= op.tam || y >= op.tam) && op.hash(x * 1.37 + 11, y * 2.11 - 4) < 0.06) { n = 'castillo'; s = 0.8 + c.nivel * 0.05; }
-        if (!n) continue;
-        var px = (x - MITAD + 0.5) * CELDA, pz = (y - MITAD + 0.5) * CELDA;
-        tmp.position.set(px, 0, pz).addScaledVector(ARRIBA, alzar(n) * s); tmp.quaternion.copy(giro); tmp.scale.setScalar(s); tmp.updateMatrix();
-        var im = capas[n]; im.setMatrixAt(im.count++, tmp.matrix);
+        var d = dibujoDe(x, y); if (!d || op.ocupada(x, y)) continue;
+        var im = capas[d.n]; im.setMatrixAt(im.count++, d.m);
       }
       for (var k2 in capas) capas[k2].instanceMatrix.needsUpdate = true;
       var bx = (cx - MITAD) * CELDA, bz = (cy - MITAD) * CELDA;
@@ -77,7 +81,7 @@
       actualizar: function (obj) {
         suelo.position.set(Math.round(obj.x / TILE) * TILE, 0, Math.round(obj.z / TILE) * TILE);
         var cx = Math.floor(obj.x / CELDA + MITAD), cy = Math.floor(obj.z / CELDA + MITAD);
-        if (!centro || Math.abs(cx - centro.x) > 3 || Math.abs(cy - centro.y) > 3) rellenar(cx, cy);
+        if (!centro || Math.abs(cx - centro.x) > 6 || Math.abs(cy - centro.y) > 6) rellenar(cx, cy);
       },
       refrescar: function () { if (centro) rellenar(centro.x, centro.y); }
     };

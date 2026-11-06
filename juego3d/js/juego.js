@@ -1479,7 +1479,7 @@
     var cam = new THREE.PerspectiveCamera(38, 1, 0.5, 300);
     // de día: mapa pintado con dibujos (js/mapa-camelot.js)
     var CAM_M = DIA_M && !!window.CAMELOT; MUNDO_PLANO = CAM_M;
-    if (CAM_M) { cam.fov = 32; r.setClearColor(0x6f8a3c); e.fog = new THREE.Fog(0x6f8a3c, 80, 160); }
+    if (CAM_M) { cam.fov = 32; r.setClearColor(0x6f8a3c); e.fog = new THREE.Fog(0x6f8a3c, 80, 160); r.shadowMap.enabled = false; sol.castShadow = false; r.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1)); } // v6.45: el suelo pintado no recibe sombras: no se calculan
     if (!CAM_M) {
     // ---- suelo continuo: los terrenos se mezclan suave, con textura de pasto, colinas y lagos hundidos ----
     // noche: pasto azulado, tierra fría y lagos profundos
@@ -1603,7 +1603,7 @@
     // mover con el dedo / ratón, acercar con rueda o pellizco, tocar para elegir
     var el = r.domElement, dedos = {}, inicio = null, pell = null;
     el.style.touchAction = 'none';
-    el.addEventListener('pointerdown', function (ev) { try { el.setPointerCapture(ev.pointerId); } catch (x) {} dedos[ev.pointerId] = { x: ev.clientX, y: ev.clientY }; var ids = Object.keys(dedos); if (ids.length === 1) inicio = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, movio: false }; if (ids.length === 2) { var a = dedos[ids[0]], b = dedos[ids[1]]; pell = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: M3.dist }; inicio = null; } });
+    el.addEventListener('pointerdown', function (ev) { M3.vel = null; try { el.setPointerCapture(ev.pointerId); } catch (x) {} dedos[ev.pointerId] = { x: ev.clientX, y: ev.clientY }; var ids = Object.keys(dedos); if (ids.length === 1) inicio = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, movio: false }; if (ids.length === 2) { var a = dedos[ids[0]], b = dedos[ids[1]]; pell = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: M3.dist }; inicio = null; } });
     el.addEventListener('pointermove', function (ev) {
       if (!dedos[ev.pointerId]) return; dedos[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
       var ids = Object.keys(dedos);
@@ -1613,13 +1613,17 @@
       if (Math.hypot(ev.clientX - inicio.sx, ev.clientY - inicio.sy) > 6) { inicio.movio = true; M3.seguir = null; }
       var kk = M3.dist / el.clientHeight * 1.3, lim = TAM_MUNDO * CELDA_M / 2;
       var Ar = 0.7071, mvx = -dx * kk, mvz = -dy * kk * 1.25;
-      M3.obj.x = Math.max(-lim, Math.min(lim, M3.obj.x + Ar * (mvx + mvz))); M3.obj.z = Math.max(-lim, Math.min(lim, M3.obj.z + Ar * (mvz - mvx)));
+      var ddx = Ar * (mvx + mvz), ddz = Ar * (mvz - mvx), ahoraI = performance.now(), dtI = Math.max(8, ahoraI - (inicio.tm || ahoraI - 16)); inicio.tm = ahoraI;
+      M3.obj.x = Math.max(-lim, Math.min(lim, M3.obj.x + ddx)); M3.obj.z = Math.max(-lim, Math.min(lim, M3.obj.z + ddz));
+      // v6.45: velocidad del dedo (para que el mapa siga deslizando suave al soltar)
+      M3.vel = { x: (M3.vel ? M3.vel.x * 0.5 : 0) + ddx / dtI * 8, z: (M3.vel ? M3.vel.z * 0.5 : 0) + ddz / dtI * 8, t: ahoraI };
     });
     function soltar(ev) {
       var era = inicio; delete dedos[ev.pointerId];
       if (Object.keys(dedos).length < 2) pell = null;
       if (era && !era.movio && ev.type === 'pointerup') tocarMundo(ev.clientX, ev.clientY);
       if (!Object.keys(dedos).length) inicio = null;
+      if (!era || !era.movio || !M3.vel || performance.now() - M3.vel.t > 90) M3.vel = null; else M3.vel.suelto = true;
     }
     el.addEventListener('pointerup', soltar); el.addEventListener('pointercancel', soltar);
     el.addEventListener('wheel', function (ev) { ev.preventDefault(); M3.dist = Math.max(12, Math.min(75, M3.dist * (ev.deltaY > 0 ? 1.1 : 0.9))); }, { passive: false });
@@ -1656,6 +1660,7 @@
     if (M3.w !== w || M3.h !== h) { M3.r.setSize(w, h); M3.cam.aspect = w / h; M3.cam.updateProjectionMatrix(); M3.w = w; M3.h = h; }
     if (M3.zoom) { var kz = Math.min(1, (performance.now() - M3.zoom.t0) / 750), ez = 1 - Math.pow(1 - kz, 3); M3.dist = M3.zoom.de + (M3.zoom.a - M3.zoom.de) * ez; if (kz >= 1) M3.zoom = null; }
     var d = M3.dist;
+    if (M3.vel && M3.vel.suelto) { var limV = TAM_MUNDO * CELDA_M / 2; M3.obj.x = Math.max(-limV, Math.min(limV, M3.obj.x + M3.vel.x)); M3.obj.z = Math.max(-limV, Math.min(limV, M3.obj.z + M3.vel.z)); M3.vel.x *= 0.9; M3.vel.z *= 0.9; if (Math.abs(M3.vel.x) + Math.abs(M3.vel.z) < 0.01) M3.vel = null; }
     if (M3.seguir && M3.columnas && M3.columnas[M3.seguir]) { var gsg = M3.columnas[M3.seguir].position; M3.obj.x += (gsg.x - M3.obj.x) * 0.2; M3.obj.z += (gsg.z - M3.obj.z) * 0.2; }
     if (M3.camelot) { var dcm = CAMELOT.dirCamara; d = Math.min(d, 60); M3.cam.position.set(M3.obj.x + dcm.x * d, dcm.y * d, M3.obj.z + dcm.z * d); M3.camelot.actualizar(M3.obj); }
     else M3.cam.position.set(M3.obj.x + d * 0.438, d * 0.85, M3.obj.z + d * 0.438);
@@ -1706,12 +1711,12 @@
     lista.forEach(function (a, i) {
       var c = celdaDe(a.x, a.y), p = posCelda(c.x, c.y), g = new THREE.Group();
       var tam = a.uid === yo ? nivelVisual(estado.castillo || 1) : (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3);
-      if (M3.camelot) g.add(CAMELOT.sprite(a.uid === yo ? 'castillo-yo' : 'castillo', 0.85 + tam * 0.08));
+      if (M3.camelot) g.add(CAMELOT.sprite(a.uid === yo ? 'castillo-yo' : 'castillo', (a.uid === yo ? 0.56 : 0.6) + tam * 0.06)); // v6.45: aldeas más chicas, del tamaño de una casilla
       else { var cs = M.castillo(tam); cs.scale.setScalar(0.12); g.add(cs); }
       var esYo = a.uid === yo, aliada = estado.alianza && a.alianza === estado.alianza;
       if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
       var prot = (a.escudo || 0) > Date.now();
-      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, 2.7, 0); et.scale.multiplyScalar(0.62); g.add(et);
+      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, M3.camelot ? 2.0 : 2.7, 0); et.scale.multiplyScalar(M3.camelot ? 0.52 : 0.62); g.add(et);
       if (estado.alianza && (aliada || esYo)) { g.add(M.cil(0.05, 0.05, 1.7, 6, 0x5e3d24, -1.05, 0.85, 0.2)); g.add(M.caja(0.62, 0.42, 0.04, 0x2a6ad0, -0.71, 1.45, 0.2)); g.add(M.caja(0.2, 0.2, 0.05, 0xf2c45a, -0.71, 1.45, 0.23)); }
       if (prot) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.3, depthWrite: false })); g.add(cup); }
       g.position.copy(p); M3.cosas.add(g);
@@ -2179,6 +2184,26 @@
     guardar(true); actualizarHUD(); mostrarCampamento(i);
   }
   // ---------- PORTALES: mudar el reino a otro lugar del mapa ----------
+  // v6.45: un jugador nuevo (castillo nivel 3 o menos, sin lugar fijo) aparece cerca de otros reinos y no perdido en un rincón del mapa
+  function ubicarCercaDeOtros(listo) {
+    if (!hayCuenta() || estado.lugar || (estado.castillo || 1) > 3) { listo(); return; }
+    var yo = Cuentas.usuario().uid;
+    Cuentas.aldeas().then(function (lista) {
+      aldeasCache = lista;
+      var otros = lista.filter(function (a) { return a.uid !== yo; });
+      if (!otros.length) { listo(); return; }
+      var mia = celdaDe(miLugar().x, miLugar().y);
+      if (otros.some(function (a) { var q = celdaDe(a.x, a.y); return Math.max(Math.abs(q.x - mia.x), Math.abs(q.y - mia.y)) <= 6; })) { listo(); return; }
+      // al lado del reino que jugó más hace poco
+      otros.sort(function (a, b) { return (b.actualizado || 0) - (a.actualizado || 0); });
+      for (var r = 2; r <= 7; r++) for (var i = 0; i < 40; i++) {
+        var o = celdaDe(otros[i % Math.min(5, otros.length)].x, otros[i % Math.min(5, otros.length)].y), ang = Math.random() * Math.PI * 2;
+        var x = Math.round(o.x + Math.cos(ang) * r), y = Math.round(o.y + Math.sin(ang) * r);
+        if (celdaLibre(x, y)) { estado.lugar = { x: aCoord(x), y: aCoord(y) }; aldeasCache.forEach(function (a) { if (a.uid === yo) { a.x = estado.lugar.x; a.y = estado.lugar.y; } }); guardar(true); listo(); return; }
+      }
+      listo();
+    }).catch(function () { listo(); });
+  }
   function miLugar() { return estado.lugar || (hayCuenta() ? Cuentas.lugar() : { x: 50, y: 50 }); }
   function aCoord(c) { return Math.round((c + 0.5) * 100 / TAM_MUNDO); } // el centro de la casilla, en coordenadas 0..99
   function celdaLibre(x, y) {
@@ -8331,7 +8356,7 @@
     actualizarHUD();
     guardar();
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
-    setTimeout(function () { if (!enMenu) publicarAldea(true); }, 800);
+    setTimeout(function () { if (!enMenu) ubicarCercaDeOtros(function () { publicarAldea(true); }); }, 800);
     setTimeout(function () { revisarAtaques(true); }, 2500);
     // v6.33: los que ya jugaban reciben población de regalo para no quedarse trabados (sus tropas + 200 libres)
     if (typeof estado.pobRegalo !== 'number') { estado.pobRegalo = Math.max(0, tropasOcupadas() + 200 - POB_BASE); guardar(); }
@@ -8548,7 +8573,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 
