@@ -823,7 +823,7 @@
     var nvC = estado.castillo || 1;
     castillo = M.castilloEtapa(nvC);
     castillo.userData.castillo = true;
-    castillo.rotation.y = Math.atan2(EJE_U.x, EJE_U.z);
+    castillo.rotation.y = Math.atan2(EJE_U.x, EJE_U.z) - GIRO_DIAG; // v6.49: la puerta mira de frente a la cámara en diagonal
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
