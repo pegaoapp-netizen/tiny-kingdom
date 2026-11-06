@@ -150,7 +150,9 @@
     return Math.max(70, Math.min(260, Math.max(ancho, alto)));
   }
   function distInicial() { return 68; }
-  function distMaxima() { return distEncuadre() * 1.3; }
+  function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
+  // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
+  function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 155 : 115; }
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = 3.55;
   var CENTRO_REINO = new V3(0, 0, 0);
@@ -1993,7 +1995,7 @@
       if (enMundo) cerrarMundo();
       camVuelta = null;
       if (v === 'ciudad') { cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial(); }
-      else { cam.meta.copy(CAMPOS_CENTRO); cam.distMeta = window.innerWidth < window.innerHeight ? 96 : 74; }
+      else { cam.meta.copy(CAMPOS_CENTRO).multiplyScalar(0.6); cam.distMeta = DIST_CAMPOS(); }
       cam.vel.set(0, 0, 0);
     }
     vistaActual = v; pintarVista(); avisoVista(v); sonar('click');
@@ -8527,7 +8529,7 @@
       cam.az = AZ_CAM + Math.sin(tiempo * 0.15) * 0.25;
       castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     }
-    if (!enMenu) cam.az += (AZ_CAM - cam.az) * Math.min(1, dtReal * 3);
+    if (!enMenu) cam.az += ((vistaActual === 'campos' ? AZ_CAM + Math.PI : AZ_CAM) - cam.az) * Math.min(1, dtReal * 3);
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
     if (window.NOCHE) NOCHE.moverBruma(brumaCiudad, dtReal);
