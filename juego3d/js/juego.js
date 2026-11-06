@@ -2947,7 +2947,8 @@
     }
     return new V3(8, 0, 8);
   }
-  ['gallina', 'gallina', 'gallina', 'gallina', 'gallina', 'cabra', 'cabra', 'cabra', 'cabra', 'caballo', 'caballo', 'caballo', 'caballo'].forEach(function (tipo) {
+  // v6.44: sin animales sueltos (no tienen huesos y se deslizan); vuelven cuando haya modelos animados
+  [].forEach(function (tipo) {
     var an = M.animal(tipo), p0 = puntoAnimal(tipo);
     an.grupo.position.copy(p0);
     an.grupo.rotation.y = Math.random() * 6;
