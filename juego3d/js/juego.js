@@ -1917,7 +1917,7 @@
     $('bestia-atacar').addEventListener('click', function () { this.disabled = true; atacarBestia(i); });
   }
   // ---------- MARCHAS a aldeas bárbaras, bestias y casillas: las tropas se ven caminando hasta el objetivo ----------
-  var marchasPVE = [], idPVE = 0;
+  var marchasPVE = [], idPVE = 0, llegadasPVE = [];
   function marcharA(dest, txt, alLlegar) {
     if (marchasPVE.some(function (m) { return !m.vuelta; })) { consejoTemporal(L('Tus tropas ya van marchando: espera a que lleguen.', 'Your troops are already marching: wait for them to arrive.')); sonar('error'); return; }
     var yo = celdaDe(miLugar().x, miLugar().y), dist = Math.hypot(dest.x - yo.x, dest.y - yo.y);
@@ -3767,7 +3767,7 @@
     var ahora = Date.now(), vivos = {}, lista = [], yo = miLugar();
     marchas.forEach(function (m) { if (m.resuelto || m.cancelado || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 12) }); });
     entrantes.forEach(function (r) { if (r.resuelto || r.llega <= ahora || r.cancelado) return; var d = lugarDe(r.atacante) || (r.prueba ? { x: Math.min(98, yo.x + 18), y: Math.max(1, yo.y - 14) } : null); if (d) lista.push({ id: 'e' + r.id, de: d, a: yo, sale: r.fecha || (r.llega - 120000), llega: r.llega, color: 0xd0302a, txt: '🔥 ' + String(r.atacanteNombre || '').slice(0, 12), enemigo: true }); });
-    marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? L('Vuelven', 'Returning') : L('Van a atacar', 'Attacking') }); });
+    marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven', 'Returning')) : L('Van a atacar', 'Attacking') }); });
     (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x2a6ad0, txt: (v.botin ? '💰 ' : '🏇 ') + L('Vuelven', 'Returning'), botin: !!v.botin }); });
     var t = performance.now() / 1000;
     lista.forEach(function (v) {
@@ -3775,7 +3775,7 @@
       var u = Math.max(0, Math.min(1, (ahora - v.sale) / Math.max(1, v.llega - v.sale)));
       var g = M3.columnas[v.id];
       if (!g) {
-        g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col = M3.camelot && retratos[tipoC] ? columnaPintada(tipoC, v.color) : modeloColumna(v.color, tipoC); g.add(col); g.userData.col = col;
+        g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col = modeloColumna(v.color, tipoC); g.add(col); g.userData.col = col; col.traverse(function (o) { o.frustumCulled = false; });
         if (v.botin) { var saco = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8c45a })); saco.position.set(0, 0.25, -0.75); col.add(saco); }
         var lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p0.x, 0.14, p0.z), new THREE.Vector3(p1.x, 0.14, p1.z)]);
         var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color, dashSize: 0.45, gapSize: 0.3, transparent: true, opacity: 0.9 })); linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
@@ -3783,14 +3783,16 @@
         var aro = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.8, 28), new THREE.MeshBasicMaterial({ color: v.enemigo ? 0xff4a3a : 0xffd36a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: !M3.camelot })); aro.rotation.x = -Math.PI / 2; aro.position.set(p1.x, 0.16, p1.z); aro.renderOrder = 7; M3.e.add(aro); linea.userData.aro = aro;
         M3.e.add(g); M3.columnas[v.id] = g;
         // en el mapa pintado los dibujos están parados frente a la cámara: la columna se dibuja encima y un poco más grande
-        if (M3.camelot) { if (!col.userData.sprites) col.scale.setScalar(2.4); linea.material.depthTest = false; linea.renderOrder = 7; }
+        if (M3.camelot) { col.scale.setScalar(3.6); linea.material.depthTest = false; linea.renderOrder = 7; }
       }
       g.position.set(p0.x + (p1.x - p0.x) * u, 0.06, p0.z + (p1.z - p0.z) * u);
       g.userData.col.rotation.y = Math.atan2(p1.x - p0.x, p1.z - p0.z);
-      g.userData.col.userData.us.forEach(function (un, i) { M.animarUnidad(un, t + i * 0.37, true, 0); });
+      // caminan solo mientras van por el camino; antes de salir (peleando) y al llegar se quedan quietos
+      var anda = !v.quieto && ahora >= v.sale && u < 1;
+      g.userData.col.userData.us.forEach(function (un, i) { M.animarUnidad(un, t + i * 0.37, anda, 0); });
       if (g.userData.col.userData.sprites) g.userData.col.userData.sprites.forEach(function (s, i) { s.position.y = 0.75 + Math.abs(Math.sin(t * 7 + i * 1.3)) * 0.2; });
       // las figuras llegan después de cargar: cada cuadro se revisa que todo se dibuje encima de los dibujos del mapa
-      if (M3.camelot) g.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = false; o.renderOrder = 8; o.userData.encima = true; } });
+      if (M3.camelot) g.traverse(function (o) { o.frustumCulled = false; if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = false; if (o.material.emissive && (o.isSkinnedMesh || o.material.map)) { o.material.emissive.setHex(0x3a3a3a); if (o.material.map) o.material.emissiveMap = o.material.map; } o.renderOrder = 8; o.userData.encima = true; } });
       // etiqueta con lo que falta (se cambia una vez por segundo)
       var txt = v.txt + ' · ' + fmtTiempo((v.llega - ahora) / 1000);
       if (g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) {
@@ -5720,7 +5722,7 @@
     if (cab.querySelector('.cafe-mas')) return;
     var b = document.createElement('button'); b.className = 'cafe-mas'; b.setAttribute('data-accion', 'cafe-gemas');
     b.innerHTML = '<span class="ico gema"></span>' + (estado.gemasInfinitas ? '∞' : corto(estado.gemas || 0)) + ' ' + L('Más', 'More');
-    b.addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); var bt = $('btn-tienda'); if (bt) bt.click(); });
+    b.addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); abrirTiendaGemas(); });
     cab.insertBefore(b, $('panel-cerrar'));
   }
   // pestaña Población de la Cabaña
@@ -6746,7 +6748,12 @@
       else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
       if (r.gano) sumarTorneo(PUNTOS_TORNEO.ataque);
       if (estado.destinos) delete estado.destinos[r.id];
-      nuevoCorreo('guerras', L('Ataque a ' + r.defensorNombre + ': ', 'Attack on ' + r.defensorNombre + ': ') + (r.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), Cuentas.nombrePublico(), htmlInforme([[L('Resultado', 'Result'), r.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(r.fuerza)], [L('Su defensa', 'Their defense'), formatoNumero(r.defensa || 0)], [L('Bajas', 'Losses'), caidas]], r.gano ? r.botin : null));
+      var um = estado.ultimaMarcha || {}, envi = 0; for (var kU in (um.tropas || {})) envi += um.tropas[kU] || 0; if (!envi) envi = tropasNormales();
+      var herid = Math.round(caidas * 0.3);
+      nuevoCorreo('guerras', L('Ataque a ' + r.defensorNombre + ': ', 'Attack on ' + r.defensorNombre + ': ') + (r.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), Cuentas.nombrePublico(), htmlInformeBatalla({ gano: r.gano, fecha: r.llega, lugar: destM, botin: r.gano ? r.botin : null,
+        atacante: { nombre: Cuentas.nombrePublico(), heroe: um.heroe, poder: r.fuerza, lucharon: envi, muertos: caidas - herid, heridos: herid, revivir: herid, sobreviven: Math.max(0, envi - caidas) },
+        defensor: { nombre: r.defensorNombre, poder: r.defensa || 0, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), r.gano ? { gemas: 5, objeto: 'libro_peq' } : null, { informe: true });
+      var _infViejo = (htmlInforme([[L('Resultado', 'Result'), r.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(r.fuerza)], [L('Su defensa', 'Their defense'), formatoNumero(r.defensa || 0)], [L('Bajas', 'Losses'), caidas]], r.gano ? r.botin : null));
       Cuentas.cobrarAtaque(r.id).catch(function () {});
       guardar(true); actualizarHUD(); actualizarAlertas();
       escenaBatalla({ nombre: r.defensorNombre, nivel: 1 }, r.fuerza, r.defensa, r.gano, function (cb) {
@@ -6852,7 +6859,10 @@
           html += '<p class="aviso-rojo">' + T('rep_perdiste', { b: textoBotin(real).replace(/\+/g, '-') }) + '</p>';
         } else html += '<p><b>' + T('rep_resististe') + '</b></p>';
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
-        nuevoCorreo('guerras', L(r.atacanteNombre + ' te atacó: ', r.atacanteNombre + ' attacked you: ') + (r.gano ? L('perdiste', 'you lost') : L('resististe', 'you held')), r.atacanteNombre, htmlInforme([[L('Resultado', 'Result'), r.gano ? '💔 ' + L('Te saquearon', 'You were raided') : '🛡️ ' + L('Resististe', 'You held')], [L('Su fuerza', 'Their strength'), formatoNumero(r.fuerza || 0)], [L('Tu defensa', 'Your defense'), formatoNumero(r.defensa || 0)]]));
+        nuevoCorreo('guerras', L(r.atacanteNombre + ' te atacó: ', r.atacanteNombre + ' attacked you: ') + (r.gano ? L('perdiste', 'you lost') : L('resististe', 'you held')), r.atacanteNombre, htmlInformeBatalla({ gano: !r.gano, fecha: r.llega,
+          atacante: { nombre: r.atacanteNombre, poder: r.fuerza || 0, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null },
+          defensor: { nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), heroe: (estado.equipo || [])[0], poder: r.defensa || 0, lucharon: tropasNormales(), sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { de: misMejoras() } }));
+        var _infViejo2 = (htmlInforme([[L('Resultado', 'Result'), r.gano ? '💔 ' + L('Te saquearon', 'You were raided') : '🛡️ ' + L('Resististe', 'You held')], [L('Su fuerza', 'Their strength'), formatoNumero(r.fuerza || 0)], [L('Tu defensa', 'Your defense'), formatoNumero(r.defensa || 0)]]));
         Cuentas.marcarVisto(r.id).catch(function () {});
       });
       // tropas en ON: defienden y algunas mueren (más si se pierde); en OFF no mueren
@@ -7117,9 +7127,14 @@
     cerrarPanel();
     guardar(true);
   }
-  function usarObjeto(k) {
+  function usarObjeto(k, confirmado) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
+    if (esCofre(k) && !confirmado) {
+      confirmarJuego(o.icono + ' ' + L('¿Abrir ', 'Open ') + N(k) + '?', '<b>' + L('Qué trae:', 'What is inside:') + '</b>' + htmlContenido(k) + '<small>' + L('Tienes ', 'You have ') + estado.mochila[k] + '</small>', L('Abrir', 'Open'), function () { usarObjeto(k, true); });
+      var cs = $('cj-si'); if (cs) { cs.classList.remove('rojo'); cs.classList.add('verde'); }
+      return;
+    }
     if (o.segundos) { abrirUsarAcelerador(k); return; }
     if (o.portal === 'elegir') { consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
     if (o.portal === 'azar') { if (portalAlAzar()) { cerrarPanel(); abrirMundo(); } return; }
@@ -7156,7 +7171,7 @@
       chispas(castilloPos.clone().setY(6), 0xffe14a, 24, 5);
     }
     estado.mochila[k]--;
-    if (premio) { darPremio(premio); if (o.cofre) mostrarRecompensas(N(k), premioAItems(premio)); else consejoTemporal(T('recibiste', { t: textoPremio(premio) })); }
+    if (premio) { if (o.cofre) { var pr = premio; mostrarRecompensas(N(k), premioAItems(pr), function () { darPremio(pr); guardar(true); }); } else { darPremio(premio); consejoTemporal(T('recibiste', { t: textoPremio(premio) })); } }
     sonar('gemas');
     guardar(true);
     reabrirPanel();
@@ -7164,14 +7179,57 @@
   // ---------- TIENDA ----------
   var pestTienda = 'acelerar';
   var CATS_TIENDA = [['varios', L('Varios', 'Misc.')], ['acelerar', L('Acelerar', 'Speed up')], ['combate', L('Combate', 'Combat')], ['recursos', L('Recursos', 'Resources')], ['cofres', L('Cofres', 'Chests')]];
+  // v6.42: qué trae o qué hace cada objeto (se ve antes de comprar o usar)
+  function rangoTxt(a) { return a[0] === a[1] ? formatoNumero(a[0]) : formatoNumero(a[0]) + ' – ' + formatoNumero(a[1]); }
+  function contenidoObjeto(k) {
+    var o = OBJETOS[k] || {}, l = [];
+    if (o.cofre) Object.keys(o.cofre).forEach(function (r) { l.push([r === 'gemas' ? '💎' : ICONO_RECURSO[r], r === 'gemas' ? L('Gemas', 'Gems') : T('r_' + r), rangoTxt(o.cofre[r])]); });
+    if (o.paquete) Object.keys(o.paquete).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.paquete[q]]); });
+    if (o.mejora) o.mejora.forEach(function (r) { l.push(['🧰', L('Pieza de equipo ', 'Equipment piece ') + T('eq_r_' + r), '×1']); });
+    if (o.equipo) l.push(['🧰', L('Pieza de equipo rara (20% legendaria)', 'Rare equipment piece (20% legendary)'), '×1']);
+    if (o.da) Object.keys(o.da).forEach(function (r) { l.push([ICONO_RECURSO[r], T('r_' + r), formatoNumero(o.da[r])]); });
+    if (o.tropas) Object.keys(o.tropas).forEach(function (t) { l.push([TROPAS[t].icono, N(t), '×' + o.tropas[t]]); });
+    if (o.segundos) l.push(['⏱️', o.soloInv ? L('Quita tiempo a una investigación', 'Takes time off a research') : L('Quita tiempo a una obra, entrenamiento o investigación', 'Takes time off a build, training or research'), fmtTiempo(o.segundos)]);
+    if (o.acelera) l.push(['⏩', L('Adelanta todas las obras', 'Speeds up all builds'), fmtTiempo(ACELERADOR_SEG)]);
+    if (o.escudo) l.push(['🛡️', L('Nadie te puede atacar durante', 'No one can attack you for'), o.escudo + ' h']);
+    if (o.exp) l.push(['📘', L('Experiencia para un héroe', 'Experience for a hero'), formatoNumero(o.exp)]);
+    if (o.pergamino) l.push(['📜', L('Sube habilidades de héroe', 'Levels up hero skills'), '×1']);
+    if (o.portal) l.push(['🌀', o.portal === 'elegir' ? L('Mueve tu reino al lugar que elijas', 'Moves your kingdom where you choose') : L('Mueve tu reino a un lugar al azar', 'Moves your kingdom to a random place'), '']);
+    return l;
+  }
+  function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo); }
+  function htmlContenido(k) {
+    var l = contenidoObjeto(k);
+    return '<div class="oi-lista">' + l.map(function (x) { return '<div class="oi-fila"><span class="oi-ic">' + x[0] + '</span><b>' + x[1] + '</b><span class="oi-n">' + x[2] + '</span></div>'; }).join('') + '</div>';
+  }
+  function abrirInfoObjeto(k) {
+    var v = $('obj-info'); if (v) v.remove();
+    var it = TIENDA.filter(function (x) { return x.id === k; })[0], tiene = (estado.mochila && estado.mochila[k]) || 0;
+    var d = document.createElement('div'); d.id = 'obj-info';
+    d.innerHTML = '<div class="oi-caja"><div class="oi-cab"><span class="oi-grande">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + tiene + '</small></div><button class="mc-x" id="oi-x">✕</button></div>' +
+      '<p class="oi-desc">' + D(k) + '</p><h4>' + (esCofre(k) ? L('Qué trae', 'What is inside') : L('Qué hace', 'What it does')) + '</h4>' + htmlContenido(k) +
+      '<div class="oi-botones">' + (it ? '<button class="comprar verde" id="oi-comprar"><span class="ico gema"></span>' + it.gemas + ' · ' + L('Comprar', 'Buy') + '</button>' : '') + (tiene ? '<button class="comprar naranja" id="oi-usar">' + L('Usar', 'Use') + '</button>' : '') + '</div></div>';
+    document.body.appendChild(d);
+    $('oi-x').addEventListener('click', function () { sonar('click'); d.remove(); });
+    d.addEventListener('click', function (ev) { if (ev.target === d) d.remove(); });
+    var bc = $('oi-comprar'); if (bc) bc.addEventListener('click', function () { var i = TIENDA.indexOf(it); d.remove(); comprarTienda(i); });
+    var bu = $('oi-usar'); if (bu) bu.addEventListener('click', function () { d.remove(); usarObjeto(k); });
+  }
+  var pestTiendaArriba = 'tienda';
+  function catTiendaDe(k) { var it = TIENDA.filter(function (x) { return x.id === k; })[0]; return it ? (it.cat || 'varios') : 'varios'; }
+  function barraGemasTienda() {
+    return '<div class="tienda-arriba"><div class="subtabs tienda-top"><button data-accion="tienda-arriba" data-p="tienda" class="' + (pestTiendaArriba === 'tienda' ? 'activo' : '') + '">🛒 ' + L('Tienda', 'Shop') + '</button><button data-accion="tienda-arriba" data-p="mios" class="' + (pestTiendaArriba === 'mios' ? 'activo' : '') + '">🎒 ' + L('Mis objetos', 'My items') + '</button></div>' +
+      '<div class="tienda-saldo"><span><span class="ico gema"></span> <b>' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></span><button class="comprar verde mini" data-accion="abrir-gemas">💎 ' + L('Más', 'More') + '</button></div></div>';
+  }
   function abrirPanelTienda() {
+    if (pestTiendaArriba === 'mios') return abrirMisObjetos();
     var cats = [['varios', L('Varios', 'Misc.')], ['acelerar', L('Acelerar', 'Speed up')], ['combate', L('Combate', 'Combat')], ['recursos', L('Recursos', 'Resources')], ['cofres', L('Cofres', 'Chests')]];
     var arriba = panelActual && panelActual.tipo === 'tienda' ? $('panel').scrollTop : 0;
-    var html = '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var oferta = c[0] === 'cofres' && TIENDA.some(function (it) { return it.antes; }); return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (oferta ? ' <span class="mail-n">%</span>' : '') + '</button>'; }).join('') + '</div><div class="tienda-lista">';
+    var html = barraGemasTienda() + '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var oferta = c[0] === 'cofres' && TIENDA.some(function (it) { return it.antes; }); return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (oferta ? ' <span class="mail-n">%</span>' : '') + '</button>'; }).join('') + '</div><div class="tienda-lista">';
     TIENDA.forEach(function (it, i) {
       if ((it.cat || 'varios') !== pestTienda) return;
       var o = OBJETOS[it.id], tiene = (estado.mochila && estado.mochila[it.id]) || 0;
-      html += '<div class="fila-tienda"><span class="ft-ico' + (o.soloInv ? ' arcano' : '') + '">' + o.icono + '</span><span class="ft-info"><b>' + N(it.id) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + tiene + '</small><small>' + D(it.id) + '</small>' +
+      html += '<div class="fila-tienda"><span class="ft-ico' + (o.soloInv ? ' arcano' : '') + '" data-accion="obj-info" data-k="' + it.id + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(it.id) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + tiene + '</small><small>' + D(it.id) + '</small>' +
         '<span class="ft-precio">' + (it.antes ? '<s>' + it.antes + '</s> ' : '') + '<span class="ico gema"></span>' + it.gemas + (it.antes ? ' <i class="oferta">⏳ ' + L('Oferta', 'Offer') + '</i>' : '') + '</span></span>' +
         '<button class="comprar verde" data-accion="comprar" data-i="' + i + '" data-gemas="' + it.gemas + '">' + L('Comprar', 'Buy') + '</button></div>';
     });
@@ -7186,6 +7244,45 @@
     });
     html += '</div><p class="nota" style="opacity:.75">💳 ' + T('tienda_real') + '</p>';
     abrirPanel(T('p_tienda'), html, { tipo: 'tienda' }); $('panel').scrollTop = arriba;
+  }
+  function abrirMisObjetos() {
+    var cats = CATS_TIENDA, mios = Object.keys(estado.mochila || {}).filter(function (k) { return OBJETOS[k] && estado.mochila[k] > 0; });
+    if (!cats.some(function (c) { return c[0] === pestTienda; })) pestTienda = 'varios';
+    var html = barraGemasTienda() + '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var n = mios.filter(function (k) { return catTiendaDe(k) === c[0]; }).length; return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (n ? ' <span class="mail-n">' + n + '</span>' : '') + '</button>'; }).join('') + '</div><div class="lista">';
+    var de = mios.filter(function (k) { return catTiendaDe(k) === pestTienda; });
+    if (!de.length) html += '<p class="nota">' + L('No tienes objetos de esta categoría. Cómpralos en la Tienda o gánalos jugando.', 'You have no items in this category. Buy them in the Shop or win them playing.') + '</p>';
+    de.forEach(function (k) {
+      var o = OBJETOS[k];
+      html += '<div class="fila-tienda"><span class="ft-ico" data-accion="obj-info" data-k="' + k + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(k) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + estado.mochila[k] + '</small><small>' + D(k) + '</small></span>' +
+        '<button class="comprar naranja" data-accion="usar" data-obj="' + k + '">' + L('Usar', 'Use') + '</button></div>';
+    });
+    abrirPanel(T('p_tienda'), html + '</div>', { tipo: 'tienda' });
+  }
+  // ---------- tienda de gemas (paquetes propios; todavía no se cobra dinero real) ----------
+  var PAQUETES_GEMAS = [
+    { id: 'p1', nombre: ['Puñado de gemas', 'Handful of gems'], gemas: 100, extra: 0, precio: '0,99' },
+    { id: 'p2', nombre: ['Bolsita de gemas', 'Little gem pouch'], gemas: 550, extra: 10, precio: '4,99' },
+    { id: 'p3', nombre: ['Cofre de gemas', 'Gem chest'], gemas: 1200, extra: 20, precio: '9,99' },
+    { id: 'p4', nombre: ['Baúl de gemas', 'Gem trunk'], gemas: 2600, extra: 30, precio: '19,99' },
+    { id: 'p5', nombre: ['Arca del reino', 'Kingdom ark'], gemas: 7000, extra: 40, precio: '49,99' },
+    { id: 'p6', nombre: ['Tesoro real', 'Royal treasure'], gemas: 15000, extra: 50, precio: '99,99' }
+  ];
+  function abrirTiendaGemas() {
+    var h = '<div class="tienda-saldo grande"><span>' + L('Tus gemas', 'Your gems') + '</span><b><span class="ico gema"></span> ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></div>' +
+      '<p class="nota">' + L('Las gemas sirven para Construir ya, Terminar ahora, acelerar y comprar cofres y objetos. Siempre ves el costo antes de gastar.', 'Gems are used to Build now, Finish now, speed up and buy chests and items. You always see the cost before spending.') + '</p><div class="gemas-rejilla">';
+    PAQUETES_GEMAS.forEach(function (p, i) {
+      h += '<div class="gema-paq"><div class="gp-ico">' + ['💎', '💎', '💰', '🧰', '🏆', '👑'][i] + '</div><b>' + p.nombre[estado.idioma === 'en' ? 1 : 0] + '</b><div class="gp-n"><span class="ico gema"></span>' + formatoNumero(p.gemas) + '</div>' +
+        (p.extra ? '<span class="gp-extra">+' + p.extra + '% ' + L('extra', 'extra') + '</span>' : '<span class="gp-extra vacio">&nbsp;</span>') +
+        '<button class="comprar verde" data-accion="gemas-paq" data-i="' + i + '">US$ ' + p.precio + '</button></div>';
+    });
+    h += '</div><p class="nota" style="opacity:.8">💳 ' + L('Las compras con dinero real todavía no están activas: no se cobra nada.', 'Real-money purchases are not active yet: nothing is charged.') + '</p>';
+    abrirPanel('💎 ' + L('Gemas', 'Gems'), h, { tipo: 'gemas' });
+  }
+  function comprarPaquete(i) {
+    var p = PAQUETES_GEMAS[i]; if (!p) return;
+    confirmarJuego('💎 ' + p.nombre[estado.idioma === 'en' ? 1 : 0], L('Recibirías ', 'You would get ') + '<b>' + formatoNumero(p.gemas) + ' 💎</b> ' + L('por', 'for') + ' <b>US$ ' + p.precio + '</b>.', L('Comprar', 'Buy'), function () {
+      confirmarJuego('💳 ' + L('Todavía no', 'Not yet'), L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {});
+    });
   }
   function comprarTienda(i) {
     var it = TIENDA[i];
@@ -7395,6 +7492,23 @@
   function sinLeer(cat) { return correoLista().filter(function (m) { return !m.leido && (cat === 'marcados' ? m.marcado : m.cat === cat); }).length; }
   function actualizarBuzon() { var b = $('badge-buzon'); if (b) { var n = correoLista().filter(function (m) { return !m.leido; }).length, t = n ? (n > 99 ? '99+' : String(n)) : ''; if (b.textContent !== t) b.textContent = t; } }
   function fechaCorta(ts) { var d = new Date(ts); return d.toLocaleDateString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: '2-digit', month: '2-digit' }) + ' ' + d.toLocaleTimeString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { hour: '2-digit', minute: '2-digit' }); }
+  // v6.42: informe de batalla: resultado grande, recursos, atacantes y defensores lado a lado y mejoras
+  function htmlInformeBatalla(o) {
+    function lado(x, titulo, cls) {
+      var hz = x.heroe && HEROE[x.heroe] ? '<div class="ib-heroe"><div class="mc-foto chica">' + fotoHTML('h_' + x.heroe, '🦸') + '</div><b>' + NH(x.heroe) + '</b></div>' : '<div class="ib-heroe"><div class="mc-foto chica">❔</div><b>' + L('Sin héroe', 'No hero') + '</b></div>';
+      function f(n) { return n === null || n === undefined ? '?' : formatoNumero(n); }
+      return '<div class="ib-lado ' + cls + '"><h4>' + titulo + '</h4><b class="ib-nom">' + escaparHTML(x.nombre || '?') + '</b>' + hz +
+        '<div class="ib-filas"><span>💪 ' + L('Poder', 'Power') + '</span><b>' + f(x.poder) + '</b><span>⚔️ ' + L('Lucharon', 'Fought') + '</span><b>' + f(x.lucharon) + '</b><span>✅ ' + L('Sobrevivieron', 'Survived') + '</span><b>' + f(x.sobreviven) + '</b>' +
+        '<span>☠️ ' + L('Murieron', 'Died') + '</span><b>' + f(x.muertos) + '</b><span>🩹 ' + L('Heridos', 'Wounded') + '</span><b>' + f(x.heridos) + '</b><span>✨ ' + L('Se pueden revivir', 'Can be revived') + '</span><b>' + f(x.revivir) + '</b></div></div>';
+    }
+    var mej = o.mejoras || {}, filasMej = [['⚔️', L('Ataque', 'Attack'), 'ataque'], ['❤️', L('Vida', 'Health'), 'vida'], ['👟', L('Velocidad', 'Speed'), 'vel'], ['📦', L('Carga', 'Load'), 'carga'], ['👥', L('Límite', 'Limit'), 'limite']];
+    return '<div class="ib"><div class="ib-res ' + (o.gano ? 'si' : 'no') + '">' + (o.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')) + '</div>' +
+      (o.botin ? '<p class="ib-botin">' + L('Recursos: ', 'Resources: ') + textoBotin(o.botin) + '</p>' : '') +
+      '<div class="ib-lados">' + lado(o.atacante, L('Atacantes', 'Attackers'), 'at') + lado(o.defensor, L('Defensores', 'Defenders'), 'de') + '</div>' +
+      '<h4 class="ib-tit">' + L('Mejoras', 'Bonuses') + '</h4><div class="ib-mej">' + filasMej.map(function (q) { var a = (mej.at || {})[q[2]], d = (mej.de || {})[q[2]]; return '<span>' + (a === undefined ? '?' : '+' + Math.round(a * 100) + '%') + '</span><b>' + q[0] + ' ' + q[1] + '</b><span>' + (d === undefined ? '?' : '+' + Math.round(d * 100) + '%') + '</span>'; }).join('') + '</div>' +
+      '<p class="nota">' + new Date(o.fecha || Date.now()).toLocaleString() + (o.lugar ? ' · X ' + o.lugar.x + ' · Y ' + o.lugar.y : '') + '</p></div>';
+  }
+  function misMejoras() { return { ataque: bono('espadas'), vida: bono('escudos'), vel: 0, carga: bono('carga'), limite: 0 }; }
   function htmlInforme(filas, botin) {
     return '<div class="casilla-tabla">' + filas.map(function (f) { return '<span>' + f[0] + '</span><b>' + f[1] + '</b>'; }).join('') + '</div>' + (botin ? '<p class="nota">' + textoBotin(botin) + '</p>' : '');
   }
@@ -7420,7 +7534,7 @@
         '<button class="mail-estrella' + (m.marcado ? ' si' : '') + '" data-accion="mail-marcar" data-id="' + m.id + '">' + (m.marcado ? '★' : '☆') + '</button></div>' +
         (abierto ? '<div class="mail-cuerpo">' + m.cuerpo + (m.premio ? '<p class="mail-premio">🎁 ' + textoPremioCorreo(m.premio) + '</p>' + (m.reclamado ? '<p class="nota">✓ ' + L('Reclamado', 'Claimed') + '</p>' : '<button class="comprar naranja mini" data-accion="mail-reclamar" data-id="' + m.id + '">' + L('Reclamar', 'Claim') + '</button>') : '') + '</div>' : '') + '</div>';
     }).join('') + '</div>';
-    h += '<div class="mail-botones"><button class="comprar mini rojo" data-accion="mail-borrar">🗑️ ' + L('Eliminar leídos', 'Delete read') + '</button><button class="comprar mini naranja" data-accion="mail-todo">📬 ' + L('Leer y reclamar todo', 'Read and claim all') + '</button></div>';
+    h += '<div class="mail-botones"><button class="comprar mini" data-accion="mail-leidos">✓ ' + L('Marcar todo leído', 'Mark all read') + '</button><button class="comprar mini azul" data-accion="mail-enviar">✉️ ' + L('Enviar', 'Send') + '</button><button class="comprar mini rojo" data-accion="mail-borrar">🗑️ ' + L('Eliminar leídos', 'Delete read') + '</button><button class="comprar mini naranja" data-accion="mail-todo">📬 ' + L('Leer y reclamar todo', 'Read and claim all') + '</button></div>';
     abrirPanel('📬 ' + L('Correo', 'Mail'), h, { tipo: 'buzon' });
     actualizarBuzon();
   }
@@ -7434,6 +7548,13 @@
       var n = 0; correoLista().filter(function (x) { return pestanaCorreo === 'marcados' ? x.marcado : x.cat === pestanaCorreo; }).forEach(function (x) { x.leido = true; if (reclamarCorreo(x)) n++; if (x.ver) estado.novedadesVistas = x.ver; });
       sonar(n ? 'gemas' : 'click'); if (n) consejoTemporal(L('🎁 Reclamaste ' + n + ' recompensa(s)', '🎁 You claimed ' + n + ' reward(s)')); guardar(true); abrirCorreo(); return;
     }
+    if (a === 'mail-leidos') {
+      confirmarJuego('✓ ' + L('Marcar todo leído', 'Mark all read'), L('Todos los mensajes de esta pestaña quedan como leídos. Las recompensas siguen esperando a que las reclames.', 'All messages in this tab are marked as read. Rewards still wait for you to claim them.'), L('Aceptar', 'OK'), function () {
+        correoLista().forEach(function (x) { if (pestanaCorreo === 'marcados' ? x.marcado : x.cat === pestanaCorreo) x.leido = true; }); sonar('click'); guardar(); abrirCorreo();
+      });
+      return;
+    }
+    if (a === 'mail-enviar') { sonar('click'); abrirPanelChat(); return; }
     if (a === 'mail-borrar') {
       confirmarJuego('🗑️ ' + L('Eliminar leídos', 'Delete read'), L('Se borran los mensajes leídos de esta pestaña. Los que tienen recompensa sin reclamar y los marcados no se borran.', 'Read messages in this tab will be deleted. Messages with unclaimed rewards and starred ones are kept.'), L('Eliminar', 'Delete'), function () {
         estado.buzon = correoLista().filter(function (x) { var enTab = pestanaCorreo === 'marcados' ? x.marcado : x.cat === pestanaCorreo; return !(enTab && x.leido && !x.marcado && !(x.premio && !x.reclamado)); });
@@ -7516,7 +7637,11 @@
     else if (a === 'cafe-pob') { sonar('click'); abrirPanelPoblacion(+b.getAttribute('data-slot')); }
     else if (a === 'cafe-det') { sonar('click'); pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(+b.getAttribute('data-slot')); }
     else if (a === 've-info') { sonar('click'); var vs = $('ve-stats'); if (vs) vs.classList.toggle('oculto'); }
-    else if (a === 'cafe-gemas') { sonar('click'); var btT = $('btn-tienda'); if (btT) btT.click(); }
+    else if (a === 'cafe-gemas') { sonar('click'); abrirTiendaGemas(); }
+    else if (a === 'abrir-gemas') { sonar('click'); abrirTiendaGemas(); }
+    else if (a === 'gemas-paq') { sonar('click'); comprarPaquete(+b.getAttribute('data-i')); }
+    else if (a === 'obj-info') { sonar('click'); abrirInfoObjeto(b.getAttribute('data-k')); }
+    else if (a === 'tienda-arriba') { sonar('click'); pestTiendaArriba = b.getAttribute('data-p'); abrirPanelTienda(); }
     else if (a === 'mis-pest') { sonar('click'); pestMis = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelMisiones(); }
     else if (a === 'mis-reclamar') reclamarMision(b.getAttribute('data-id'));
     else if (a === 'cuartel-pest') { sonar('click'); pestCuartel = b.getAttribute('data-p'); tropaDetalle = null; abrirPanelEdificio(slotElegido); }
@@ -8421,7 +8546,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, marcha: function (a) { abrirMarcha(a); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 

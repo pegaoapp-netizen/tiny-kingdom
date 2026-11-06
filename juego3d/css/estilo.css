@@ -1703,3 +1703,31 @@ body.mg-abierto #btn-vista, body.mg-abierto #btn-menu-mas, body.mg-abierto #barr
 #marcha .mc-guia p { flex: 1; margin: 0; font-size: 13px; }
 #marcha .fc-vs { display: flex; align-items: center; justify-content: space-around; text-align: center; } #marcha .fc-vs small { display: block; color: #d8c8a8; } #marcha .fc-vs b { font-size: 18px; color: #ffe9a8; }
 #marcha .fc-aviso { margin: 0; font-size: 13px; text-align: center; }
+
+/* v6.42: tienda con pestañas arriba, info de objetos, gemas e informe de batalla */
+.tienda-arriba { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.tienda-arriba .tienda-top { flex: 1; min-width: 200px; display: flex; gap: 6px; } .tienda-arriba .tienda-top button { flex: 1; }
+.tienda-saldo { display: flex; align-items: center; gap: 8px; font-weight: 900; }
+.tienda-saldo.grande { justify-content: space-between; padding: 10px 12px; border-radius: 10px; background: rgba(20,12,7,.55); font-size: 18px; margin-bottom: 8px; }
+.ft-ico { position: relative; cursor: pointer; } .ft-i { position: absolute; right: -4px; bottom: -4px; width: 18px; height: 18px; border-radius: 50%; background: #2a62b8; color: #fff; font: 900 12px/18px Georgia, serif; text-align: center; font-style: normal; border: 1px solid #fff; }
+#obj-info { position: fixed; inset: 0; z-index: 70; background: rgba(10,6,3,.55); display: flex; align-items: center; justify-content: center; padding: 12px; }
+#obj-info .oi-caja { width: min(400px, 100%); max-height: calc(100vh - 24px); overflow-y: auto; border-radius: 14px; padding: 12px; color: #f3e6c8; background: linear-gradient(180deg, #4a3220, #2e1f14 60%, #24180f); border: 3px solid #2a1c12; outline: 2px solid #a8782a; outline-offset: -7px; display: flex; flex-direction: column; gap: 8px; }
+#obj-info .oi-cab { display: flex; align-items: center; gap: 10px; } #obj-info .oi-cab div { flex: 1; display: flex; flex-direction: column; } #obj-info .oi-cab b { font-size: 18px; color: #f6dc8a; } #obj-info .oi-cab small { color: #d8c8a8; }
+#obj-info .oi-grande { font-size: 42px; } #obj-info h4 { margin: 4px 0 0; color: #f6dc8a; } #obj-info .oi-desc { margin: 0; font-size: 14px; }
+#obj-info .mc-x { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #a8782a; background: linear-gradient(#5a3d26, #2a1c12); color: #ffe9a8; font-weight: 900; }
+.oi-lista { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; } .oi-fila { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 8px; background: rgba(20,12,7,.35); }
+.oi-fila b { flex: 1; font-size: 14px; } .oi-ic { font-size: 20px; } .oi-n { font-weight: 900; }
+#confirmar-juego .oi-fila { background: rgba(0,0,0,.08); text-align: left; }
+#obj-info .oi-botones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } #obj-info .oi-botones button { min-height: 46px; font-weight: 900; }
+.gemas-rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.gema-paq { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px; border-radius: 12px; background: linear-gradient(#3a2717, #24180f); border: 2px solid #a8782a; text-align: center; }
+.gema-paq .gp-ico { font-size: 34px; } .gema-paq .gp-n { font-size: 20px; font-weight: 900; color: #ffe9a8; } .gp-extra { color: #7ae07a; font-weight: 900; font-size: 13px; } .gema-paq button { width: 100%; font-weight: 900; }
+.ib { display: flex; flex-direction: column; gap: 8px; } .ib-res { text-align: center; font-size: 26px; font-weight: 900; padding: 8px; border-radius: 10px; }
+.ib-res.si { background: linear-gradient(#ffe08a, #e0a020); color: #3a2400; } .ib-res.no { background: linear-gradient(#d8503a, #8a1e12); color: #fff; }
+.ib-botin { text-align: center; font-weight: 800; margin: 0; }
+.ib-lados { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .ib-lado { border-radius: 10px; padding: 8px; background: rgba(0,0,0,.08); } .ib-lado.at { border-left: 4px solid #2a62b8; } .ib-lado.de { border-left: 4px solid #c0302a; }
+.ib-lado h4 { margin: 0 0 4px; font-size: 13px; text-transform: uppercase; opacity: .8; } .ib-nom { display: block; font-size: 15px; margin-bottom: 4px; }
+.ib-heroe { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; } .ib-heroe .mc-foto { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #c9a46a; }
+.ib-heroe .mc-foto img { width: 100%; height: 100%; object-fit: cover; }
+.ib-filas { display: grid; grid-template-columns: 1fr auto; gap: 2px 6px; font-size: 13px; }
+.ib-tit { margin: 4px 0 0; } .ib-mej { display: grid; grid-template-columns: 1fr auto 1fr; gap: 3px 8px; font-size: 13px; text-align: center; } .ib-mej span:first-child { color: #2a62b8; }
