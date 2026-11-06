@@ -430,3 +430,56 @@ body.tk-barra-nueva #panel-rey #perfil, body.tk-barra-nueva #panel-rey #ciudad-n
 #menu-grande .mg-emoji { font-size: 28px; }
 #menu-grande .mg-txt { font-size: 12px; font-weight: 800; color: #f2ead6; text-shadow: 0 1px 2px #000; text-align: center; white-space: nowrap; }
 #tk-arriba, #tk-arriba * { text-transform: none !important; letter-spacing: 0 !important; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important; }
+
+/* ---------------- v6.50: DISEÑO FINO (como pidió el dueño) ----------------
+   barras de lado a lado de la pantalla, sin el cuadro del Castillo, gema de verdad,
+   botones oscuros y finos con dorado suave; menú café oscuro elegante */
+:root { --tk-fondo1: #1c2233; --tk-fondo2: #10141f; --tk-oro-suave: rgba(214,178,108,.55); --tk-texto: #f2e6c8; }
+body.tk-barra-nueva #panel-rey { display: none !important; }
+#tk-arriba { left: 0 !important; transform: none !important; width: 100vw !important; top: env(safe-area-inset-top) !important; gap: 0 !important;
+  background: linear-gradient(var(--tk-fondo1), var(--tk-fondo2)); border-bottom: 1px solid var(--tk-oro-suave); box-shadow: 0 2px 8px rgba(0,0,0,.45); }
+#tk-arriba .tk-fila1 { grid-template-columns: 1.1fr 1.2fr 0.8fr auto !important; gap: 4px !important; padding: 3px 6px 2px; }
+#tk-arriba button { height: 38px !important; border-radius: 7px !important; background: linear-gradient(#262e45, #161b2a) !important; border: 1px solid var(--tk-oro-suave) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 1px 3px rgba(0,0,0,.4) !important; }
+#tk-gemas { background: linear-gradient(#262e45, #161b2a) !important; border-color: var(--tk-oro-suave) !important; }
+#tk-gemas .tk-dat b { color: #e6ccff !important; }
+#tk-gemas .tk-dat small { color: #d6b26c !important; }
+#tk-arriba .tk-gema { width: 26px; height: 23px; flex: none; filter: drop-shadow(0 0 3px rgba(190,130,255,.6)) drop-shadow(0 1px 1px rgba(0,0,0,.6)); }
+#tk-jugador .tk-nv { background: linear-gradient(#2f3a58, #1a2032) !important; border: 1px solid var(--tk-oro-suave) !important; width: 30px !important; height: 30px !important; }
+#tk-arriba .tk-botones { display: flex; gap: 4px; align-items: center; }
+#tk-arriba .tk-botones button { width: 38px; padding: 0 !important; justify-content: center; font-size: 12px !important; font-weight: 800; color: var(--tk-texto) !important; }
+#tk-arriba .tk-fila2 { border-radius: 0 !important; border: 0 !important; border-top: 1px solid rgba(214,178,108,.25) !important; box-shadow: none !important; background: rgba(8,11,18,.55) !important; height: 22px !important; padding: 0 10px !important; }
+/* vida del castillo: barrita fina debajo de la barra de arriba, solo cuando está herido */
+#vida-castillo.tk-vida { position: fixed !important; z-index: 30; left: 50% !important; right: auto !important; transform: translateX(-50%) !important;
+  width: min(320px, 70vw) !important; display: none !important; background: rgba(16,20,31,.85) !important; border: 1px solid var(--tk-oro-suave) !important; border-radius: 8px !important; padding: 3px 8px !important; }
+#vida-castillo.tk-vida.tk-ver { display: block !important; }
+/* barra de abajo de lado a lado, con el botón Castillo a la izquierda */
+body.tema-oscuro #abajo { left: 0 !important; transform: none !important; width: 100vw !important; bottom: 0 !important; border-radius: 0 !important;
+  background: linear-gradient(var(--tk-fondo1), var(--tk-fondo2)) !important; border: 0 !important; border-top: 1px solid var(--tk-oro-suave) !important; box-shadow: 0 -2px 8px rgba(0,0,0,.45) !important;
+  padding-bottom: calc(5px + env(safe-area-inset-bottom)) !important; outline: none !important; }
+body.tema-oscuro #abajo #tk-castillo .tk-cas-ico { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; font-size: 28px; border-radius: 50%;
+  background: radial-gradient(#2f3a58, #151a28); border: 1px solid var(--tk-oro-suave); box-shadow: 0 2px 5px rgba(0,0,0,.5); }
+/* botones de la derecha: oscuros y finos */
+body.tema-oscuro #lateral .redondo, body.tema-oscuro #lateral .pill { background: linear-gradient(#262e45, #161b2a) !important; border: 1px solid var(--tk-oro-suave) !important;
+  color: var(--tk-texto) !important; box-shadow: 0 1px 4px rgba(0,0,0,.45) !important; }
+body.tema-oscuro #lateral .pill b, body.tema-oscuro #lateral .redondo b { color: var(--tk-texto) !important; }
+/* menú: café oscuro elegante, iconos redondeados con sombra suave, sin bordes gruesos */
+#menu-grande { background: linear-gradient(#2a1e15, #150e09) !important; border-top: 1px solid var(--tk-oro-suave) !important; }
+#menu-grande .mg-cab { background: linear-gradient(#33251a, rgba(32,23,16,.97)) !important; border-bottom: 1px solid rgba(214,178,108,.3) !important; }
+#menu-grande .mg-cab b { color: #e9d3a0 !important; font-weight: 700; }
+#menu-grande .mg-ico { border: 1px solid rgba(214,178,108,.35) !important; border-radius: 14px !important; background: radial-gradient(#3a2c20, #1d150e) !important; box-shadow: 0 3px 8px rgba(0,0,0,.55) !important; }
+#menu-grande .mg-txt { color: #eadcbc !important; font-weight: 700 !important; }
+/* el aviso del tutorial va debajo de la barra de arriba, no encima */
+body.tk-barra-nueva #consejo { top: calc(env(safe-area-inset-top) + 76px) !important; }
+/* la barra vieja de arriba queda apagada del todo (no roba toques) */
+body.tk-barra-nueva #arriba, body.tk-barra-nueva #arriba * { pointer-events: none !important; visibility: hidden !important; }
+/* teléfono: barra de arriba más compacta */
+@media (max-width: 520px) {
+  #tk-arriba .tk-fila1 { grid-template-columns: 1fr 1.05fr 0.75fr auto !important; gap: 3px !important; padding: 3px 4px 2px; }
+  #tk-arriba button { padding: 2px 5px !important; gap: 4px !important; }
+  #tk-jugador .tk-nv { width: 24px !important; height: 26px !important; font-size: 8px !important; }
+  #tk-ciudad img { width: 24px !important; height: 24px !important; }
+  #tk-arriba .tk-gema { width: 20px; height: 18px; }
+  #tk-arriba .tk-botones button { width: 28px !important; font-size: 10px !important; }
+}
+#vida-castillo.tk-vida { left: 8px !important; transform: none !important; width: min(230px, 56vw) !important; }

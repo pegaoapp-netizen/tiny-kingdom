@@ -3399,10 +3399,15 @@
   }
   // Que el edificio quepa en su parcela con aire alrededor (crece un poco con cada tramo de nivel) y quede centrado
   var MAX_EDIFICIO = [0, 2.35, 2.85, 3.25, 3.65];
-  function encajarEnParcela(m, tr) {
+  // v6.50: tamaño por importancia (el castillo manda; medianos llenan su parcela; cabaña y campos chiquitos)
+  // y cada edificio crece un poco EN CADA NIVEL, del 1 al 30
+  var TAM_TIPO = { cuartel: 5.6, almacen: 5.6, embajada: 5.6, academia: 5.4, relevo: 5.2, mercado: 5.2, herreria: 5.0, establo: 5.2, enfermeria: 5.0, galeria: 5.0,
+    cabana: 2.6, granja: 3.2, aserradero: 3.2, mina: 3.2, cantera: 3.2 };
+  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 4.2) * (0.62 + 0.38 * (n - 1) / 29); }
+  function encajarEnParcela(m, tr, tipo, nivel) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
-    var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = MAX_EDIFICIO[tr] || 6;
-    if (lado > max) { m.scale.multiplyScalar(max / lado); m.updateMatrixWorld(true); caja.setFromObject(m); }
+    var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6);
+    if (tipo ? lado > 0.01 : lado > max) { m.scale.multiplyScalar(max / lado); m.updateMatrixWorld(true); caja.setFromObject(m); }
     var c = caja.getCenter(new V3());
     m.position.x -= c.x; m.position.z -= c.z;
     m.position.y = 0.2;
@@ -3414,7 +3419,7 @@
     crearModeloBase.nivel = nivel; s.modelo = crearModelo(tipo, tr); crearModeloBase.nivel = 0;
     // dentro de cada tramo el edificio también crece un poco por nivel: cada mejora se nota
     s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (nivel > 12 ? 1.1 + 0.04 * (nivel - 12) : 1 + 0.05 * ((nivel - 1) % 3)));
-    encajarEnParcela(s.modelo, tr);
+    encajarEnParcela(s.modelo, tr, tipo, nivel);
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
@@ -7467,6 +7472,7 @@
   var toquesOro = [];
   $('pill-gemas').addEventListener('click', function () { if (enMenu) return; var bt = $('btn-tienda'); if (bt) bt.click(); });
   window.TK_gemas = function () { if (enMenu) return; sonar('click'); abrirTiendaGemas(); };
+  window.TK_castillo = function () { if (enMenu) return; sonar('click'); cerrarMenuGrande(); abrirPanelCastillo(); };
   $('pill-monedas').addEventListener('click', function () {
     if (!TOQUES_DUENO_ACTIVO || enMenu) return;
     var ahora = performance.now();
@@ -7989,12 +7995,13 @@
     function abajo(id) { var e = $(id); if (!e) return 0; var cs = getComputedStyle(e); if (cs.display === 'none' || e.classList.contains('oculto')) return 0; var r = e.getBoundingClientRect(); return r.height ? r.bottom : 0; }
     function poner(id, top) { var e = $(id); if (e) e.style.setProperty('top', Math.round(top) + 'px', 'important'); }
     var y;
-    if (document.getElementById('panel-rey')) y = abajo('panel-rey') + 6; // tema oscuro: perfil, reino y vida van dentro del panel del rey
+    if (document.getElementById('tk-arriba')) { y = abajo('tk-arriba') + 6; poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6; } // v6.50: barra nueva de arriba; sin cuadro del Castillo
+    else if (document.getElementById('panel-rey')) y = abajo('panel-rey') + 6; // tema oscuro: perfil, reino y vida van dentro del panel del rey
     else { y = abajo('perfil') + 4; poner('ciudad-nombre', y); y = (abajo('ciudad-nombre') || y) + 4;
     poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6; }
     poner('mision', y); y = (abajo('mision') || y) + 6;
     poner('consejo', y);
-    poner('lateral', abajo('recursos') + 6);
+    poner('lateral', (abajo('tk-arriba') || abajo('recursos')) + 6);
   }
   setInterval(acomodarHUD, 400); window.addEventListener('resize', acomodarHUD); setTimeout(acomodarHUD, 50);
   $('mision').addEventListener('click', function () { if (!enMenu) tocarMision(); });
