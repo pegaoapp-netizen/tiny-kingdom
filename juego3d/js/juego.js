@@ -134,14 +134,17 @@
   })();
 
   // ángulo estrecho: las fachadas no se estiran y el reino se ve como en la foto
-  function fovPantalla() { return window.innerWidth < window.innerHeight ? 34 : 30; }
-  var camara = new THREE.PerspectiveCamera(fovPantalla(), window.innerWidth / window.innerHeight, 0.5, 900);
+  // v6.48: vista isométrica fija estilo 2D: la cámara se aleja ISO_K veces con un lente ISO_K veces más cerrado (casi sin perspectiva)
+  var ISO_K = 5;
+  function fovBase() { return window.innerWidth < window.innerHeight ? 34 : 30; }
+  function fovPantalla() { return 2 * Math.atan(Math.tan(fovBase() * Math.PI / 360) / ISO_K) * 180 / Math.PI; }
+  var camara = new THREE.PerspectiveCamera(fovPantalla(), window.innerWidth / window.innerHeight, 2, 9000);
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   // de lejos: se ve el reino entero con el castillo en el centro
   // muralla completa y los campos de fuera (en teléfono vertical: la muralla entera y el borde de los campos)
   function radioReino() { return window.innerWidth < window.innerHeight ? 55 : 66; }
   function distEncuadre() {
-    var asp = window.innerWidth / window.innerHeight, fv = camara.fov * Math.PI / 180;
+    var asp = window.innerWidth / window.innerHeight, fv = fovBase() * Math.PI / 180;
     var RADIO_REINO = radioReino();
     var ancho = RADIO_REINO / Math.tan(Math.atan(Math.tan(fv / 2) * asp)) * 1.02;
     // lo de arriba y lo de abajo lo tapan los botones: se deja ese espacio
@@ -149,12 +152,16 @@
     var alto = RADIO_REINO * 0.78 / Math.tan(fv / 2) / util;
     return Math.max(70, Math.min(260, Math.max(ancho, alto)));
   }
-  function distInicial() { return 68; }
+  // v6.48: al entrar se ve la ciudad entera de una mirada, todo más chico (antes 68: el castillo llenaba la pantalla)
+  function distInicial() { return window.innerWidth < window.innerHeight ? 175 : 125; }
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
   function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 155 : 115; }
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = 3.55;
+  // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
+  var GIRO_DIAG = Math.PI / 4;
+  function azVista() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? AZ_CAM + Math.PI : AZ_CAM + GIRO_DIAG; }
   var CENTRO_REINO = new V3(0, 0, 0);
   // ---------- DISEÑO v6.31: ciudad redonda con 4 caminos de piedra en cruz, y los campos en un recinto amurallado ----------
   // El eje U mira hacia la cámara (abajo en la pantalla) y el eje V va de lado a lado.
@@ -179,7 +186,7 @@
   var LIMITE_CAM = 140; // v6.31: llega hasta el recinto de los campos
   // meta: a dónde va la cámara (se desliza suave hacia ahí); vel: inercia al soltar el dedo
   var camSigue = false; // durante la oleada la cámara sigue al enemigo que va más adelante
-  var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: AZ_CAM, polar: 1.0 };
+  var cam = { objetivo: CENTRO_REINO.clone(), meta: CENTRO_REINO.clone(), vel: new V3(), dist: distInicial(), distMeta: distInicial(), az: AZ_CAM + GIRO_DIAG, polar: 1.0 };
 
   var hemi = new THREE.HemisphereLight(0xe6e2d4, 0x6a5a3a, 0.56);
   escena.add(hemi);
@@ -778,8 +785,9 @@
   var nubes = [];
   for (var nn = 0; nn < 14; nn++) {
     var nu = M.nube();
-    nu.position.set((rnd() - 0.5) * 220, 30 + rnd() * 10, (rnd() - 0.5) * 170);
-    nu.userData.v = 0.6 + rnd() * 0.8;
+    var angN = rnd() * Math.PI * 2, radN = 240 + rnd() * 80; // v6.48: nubes alrededor, no encima de la ciudad
+    nu.position.set(Math.cos(angN) * radN, 30 + rnd() * 10, Math.sin(angN) * radN);
+    nu.userData.v = 0.6 + rnd() * 0.8; nu.userData.r = radN;
     escena.add(nu);
     nubes.push(nu);
   }
@@ -2007,15 +2015,12 @@
     var m = $('menu-grande'); if (!m) return;
     if (!m.classList.contains('oculto')) { cerrarMenuGrande(); return; }
     cerrarPanel(); if (menuAbierto()) cerrarMenuEdif();
+    // v6.48: el menú con sus 13 botones fijos, en cuadrícula
     var items = [];
-    Array.prototype.forEach.call(document.querySelectorAll('#abajo button'), function (b) {
-      var ic = b.querySelector('.icono'), tx = b.querySelector('.txt'), bd = b.querySelector('.badge');
-      if (b.offsetParent === null && getComputedStyle(b).display === 'none') return;
-      items.push({ id: b.id, ico: ic ? ic.innerHTML : '', txt: tx ? tx.textContent : '', n: bd ? bd.textContent : '' });
-    });
-    [['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'], ['btn-chat', '💬', 'Chat', 'badge-chat'],
-      ['mg-investigar', '📚', L('Investigar', 'Research')], ['mg-procesos', '🧭', L('Procesos', 'Activity')], ['mg-ciudad', '🏰', L('Ciudad', 'City')], ['mg-campos', '🌾', L('Campos', 'Fields')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')]]
-      .forEach(function (q) { var bd = q[3] ? $(q[3]) : null; items.push({ id: q[0], ico: '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
+    [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
+      ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
+      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')]]
+      .forEach(function (q) { var bd = q[3] ? $(q[3]) : null; items.push({ id: q[0], ico: q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span>' + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
@@ -3885,6 +3890,8 @@
     s.guardado -= n;
     sumarLogro('recolectas');
     sumarRecurso(r, n, s.pos.clone().setY(3.5));
+    // v6.48: las minas también sacan hierro (la mitad de lo que dan de oro)
+    if (s.edificio.tipo === 'mina') { var nh = Math.max(1, Math.floor(n / 2)); estado.hierro = (estado.hierro || 0) + nh; pulso('pill-hierro'); actualizarHUD(); }
     sonar('moneda');
     guardar();
   }
@@ -4641,11 +4648,13 @@
     cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
     cam.objetivo.lerp(cam.meta, kp);
     // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
-    cam.polar = 1.05;
+    cam.polar = Math.PI / 3; // v6.48: isométrica clásica: la cámara mira 30 grados hacia abajo
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
-    escena.fog.near = cam.dist * 1.8; escena.fog.far = cam.dist * 4 + 140;
+    escena.fog.near = cam.dist * (ISO_K + 0.8); escena.fog.far = cam.dist * (ISO_K + 3) + 140;
     var o = cam.objetivo, s = Math.sin(cam.polar);
-    camara.position.set(o.x + cam.dist * s * Math.cos(cam.az), o.y + cam.dist * Math.cos(cam.polar), o.z + cam.dist * s * Math.sin(cam.az));
+    var dR = cam.dist * ISO_K;
+    camara.position.set(o.x + dR * s * Math.cos(cam.az), o.y + dR * Math.cos(cam.polar), o.z + dR * s * Math.sin(cam.az));
+    if (escena.userData.domo) escena.userData.domo.position.copy(camara.position);
     var cerca = 6;
     camara.lookAt(o.x + Math.cos(cam.az) * cerca, o.y + 2, o.z + Math.sin(cam.az) * cerca);
     // la caja de sombras sigue a la cámara y crece con el zoom
@@ -7457,6 +7466,7 @@
   // 5 toques seguidos en el oro
   var toquesOro = [];
   $('pill-gemas').addEventListener('click', function () { if (enMenu) return; var bt = $('btn-tienda'); if (bt) bt.click(); });
+  window.TK_gemas = function () { if (enMenu) return; sonar('click'); abrirTiendaGemas(); };
   $('pill-monedas').addEventListener('click', function () {
     if (!TOQUES_DUENO_ACTIVO || enMenu) return;
     var ahora = performance.now();
@@ -7861,7 +7871,7 @@
   // ------------------------------------------------------------------
   function actualizarHUD() {
     $('monedas').textContent = estado.oroInfinito ? '∞' : corto(estado.monedas);
-    ['comida', 'madera', 'piedra'].forEach(function (r) { $(r).textContent = estado.oroInfinito ? '∞' : corto(estado[r]); });
+    ['comida', 'madera', 'piedra', 'hierro'].forEach(function (r) { if ($(r)) $(r).textContent = estado.oroInfinito ? '∞' : corto(estado[r] || 0); });
     $('poder').textContent = formatoNumero(calcularPoder());
     $('nivel-rey').textContent = nivelJugador();
     var nj = nivelJugador(), x0 = xpParaNivel(nj), x1 = xpParaNivel(nj + 1);
@@ -7963,6 +7973,11 @@
   $('menu-grande').addEventListener('click', function (ev) {
     if (ev.target.closest('#mg-cerrar')) { sonar('click'); cerrarMenuGrande(); return; }
     var b = ev.target.closest('[data-mg]'); if (!b) return; var id = b.getAttribute('data-mg'); cerrarMenuGrande();
+    if (id === 'mg-azar') { sonar('click'); abrirPanelHeroes(); return; }
+    if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
+    if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
+    if (id === 'mg-equipo') { sonar('click'); var hq = (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || 'sol'; pestanaHeroe = 'equipo'; abrirPanelHeroe(hq); return; }
+    if (id === 'mg-publicar') { sonar('click'); var urlJ = 'https://tinykingdom-pegao.web.app', txtJ = L('¡Juega conmigo a Tiny Kingdom!', 'Play Tiny Kingdom with me!'); if (navigator.share) navigator.share({ title: 'Tiny Kingdom', text: txtJ, url: urlJ }).catch(function () {}); else { try { navigator.clipboard.writeText(txtJ + ' ' + urlJ); } catch (e) {} consejoTemporal(L('Enlace copiado: compártelo con tus amigos.', 'Link copied: share it with your friends.')); } return; }
     if (id === 'mg-ciudad') irAVista('ciudad'); else if (id === 'mg-campos') irAVista('campos'); else if (id === 'mg-investigar') { sonar('click'); abrirPanelInvestigacion(ramaInv); } else if (id === 'mg-procesos') { sonar('click'); abrirPanelVigia(); } else if ($(id)) $(id).click();
   });
   $('barra-acciones').addEventListener('click', function (ev) { var b = ev.target.closest('[data-ba]'); if (b) accionBarra(b.getAttribute('data-ba')); });
@@ -8515,7 +8530,7 @@
   }
   $('btn-ranking').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'ranking') cerrarPanel(); else abrirPanelRanking(); });
   $('btn-chat').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'chat') cerrarPanel(); else abrirPanelChat(); });
-  $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); });
+  $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); vistaActual = 'ciudad'; pintarVista(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); });
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
     requestAnimationFrame(bucle);
@@ -8528,15 +8543,15 @@
     } else {
       // en el menú la cámara gira despacio
       tiempo += dtReal;
-      cam.az = AZ_CAM + Math.sin(tiempo * 0.15) * 0.25;
+      cam.az = AZ_CAM + GIRO_DIAG + Math.sin(tiempo * 0.15) * 0.25;
       castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     }
-    if (!enMenu) cam.az += ((vistaActual === 'campos' ? AZ_CAM + Math.PI : AZ_CAM) - cam.az) * Math.min(1, dtReal * 3);
+    if (!enMenu) cam.az += (azVista() - cam.az) * Math.min(1, dtReal * 3);
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
     if (window.NOCHE) NOCHE.moverBruma(brumaCiudad, dtReal);
     // nubes
-    nubes.forEach(function (n) { n.position.x += n.userData.v * dtReal; if (n.position.x > 120) n.position.x = -120; });
+    nubes.forEach(function (n) { var a = Math.atan2(n.position.z, n.position.x) + n.userData.v * dtReal / n.userData.r, r = n.userData.r; n.position.x = Math.cos(a) * r; n.position.z = Math.sin(a) * r; });
     // brillo de terrenos libres
     var b = (Math.sin(performance.now() / 250) + 1) / 2;
     slots.forEach(function (s, i) {

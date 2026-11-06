@@ -28,7 +28,7 @@ window.addEventListener("error", function (e) {
 <link rel="stylesheet" href="css/estilo.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/tema-oscuro.css?v=638">
+<link rel="stylesheet" href="css/tema-oscuro.css?v=648">
 <link rel="stylesheet" href="css/oscuro.css">
 </head>
 <body>
@@ -51,6 +51,7 @@ window.addEventListener("error", function (e) {
     <div class="pill r" id="pill-comida" title="Comida"><span class="ico emo">🍞</span><b id="comida">0</b></div>
     <div class="pill r" id="pill-madera" title="Madera"><span class="ico emo">🪵</span><b id="madera">0</b></div>
     <div class="pill r" id="pill-piedra" title="Piedra"><span class="ico emo">🪨</span><b id="piedra">0</b></div>
+    <div class="pill r" id="pill-hierro" title="Hierro"><span class="ico emo">🔩</span><b id="hierro">0</b></div>
     <div class="pill r" id="pill-gemas" title="Gemas"><span class="ico gema"></span><b id="gemas">0</b><small class="gemas-mas">+</small></div>
     <button class="pill r boton-top" id="btn-idioma" title="Idioma / Language">ES</button>
     <button class="pill r boton-top" id="btn-salir" title="Cerrar sesión">⏻</button>
@@ -270,7 +271,7 @@ window.addEventListener("error", function (e) {
 <script src="js/firebase-firestore-compat.js"></script>
 <script src="js/cuentas.js"></script>
 <script src="js/juego.js"></script>
-<script src="js/tema-oscuro.js?v=633"></script>
+<script src="js/tema-oscuro.js?v=648"></script>
 <div id="sin-red" class="oculto" role="alertdialog" aria-live="assertive"><div class="sr-caja"><div class="sr-ico">📡</div><h2 id="sr-tit">Sin conexión</h2><p id="sr-txt">Tiny Kingdom se juega con internet. Revisa tu wifi o tus datos y vuelve a intentarlo.</p><button id="sr-reintentar">Reintentar</button></div></div>
 <script>
 // Sin internet no se puede jugar: el aviso tapa el juego hasta que vuelva la conexión

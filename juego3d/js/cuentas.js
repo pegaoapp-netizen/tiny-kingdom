@@ -20,6 +20,8 @@ var Cuentas = (function () {
     // Solo para pruebas en la computadora: usa el emulador local de Firebase
     if (/^(localhost|127.0.0.1)$/.test(location.hostname) && /emulador/.test(location.search)) {
       auth.useEmulator('http://127.0.0.1:9099');
+      // el navegador de pruebas corta el canal abierto: en el emulador se pide de a poco
+      try { db.settings({ experimentalForceLongPolling: true, experimentalAutoDetectLongPolling: false, merge: true }); } catch (e) {}
       db.useEmulator('127.0.0.1', 8080);
     }
     // el juego es solo con internet: no se guarda copia de la base de datos en el teléfono
