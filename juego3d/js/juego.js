@@ -806,6 +806,7 @@
     });
   }
   setTimeout(ponerAdornosCiudad, 1500);
+  var altoCastillo = 12;
   function ponerCastillo() {
     escena.remove(castillo);
     // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
@@ -816,7 +817,7 @@
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
-    altoC += 0.5;
+    altoC += 0.5; altoCastillo = altoC;
     if (insigniaCastillo) escena.remove(insigniaCastillo);
     insigniaCastillo = M.insigniaNivel(estado.castillo || 1);
     insigniaCastillo.position.set(0, altoC + 1.4, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
@@ -830,7 +831,7 @@
     if (barraCastillo) { escena.remove(barraCastillo); barraCastillo = null; }
     if (!mostrar) return;
     [[-3.8, -3.8], [3.8, -3.8], [-3.8, 3.8], [3.8, 3.8]].forEach(function (q) { var a = M.andamio(); a.scale.setScalar(1.25); a.position.set(q[0], 0, q[1]); escena.add(a); andamiosCastillo.push(a); });
-    barraCastillo = M.barraVida(false, 4); barraCastillo.position.set(0, 12.6, 0); escena.add(barraCastillo);
+    barraCastillo = M.barraVida(false, 4); barraCastillo.position.set(0, altoCastillo + 0.6, 0); escena.add(barraCastillo);
   }
   // ---------- TRABAJOS: además de pagar, para subir de nivel hay que haber jugado ----------
   function logro(k) { return (estado.logros && estado.logros[k]) || 0; }
@@ -6395,7 +6396,7 @@
         var ac = academiaLista();
         if (ac) ponerReloj('inv', ac.pos.clone().setY(6.6), '📜 ' + fmtTiempo(faltaInvestigacion()));
       }
-      if (estado.obraCastillo) ponerReloj('castillo', new V3(0, 13.6, 0), '🏰 ' + fmtTiempo((estado.obraCastillo.total - estado.obraCastillo.t) / velObras()));
+      if (estado.obraCastillo) ponerReloj('castillo', new V3(0, altoCastillo + 1.6, 0), '🏰 ' + fmtTiempo((estado.obraCastillo.total - estado.obraCastillo.t) / velObras()));
       if (obraMuralla) ponerReloj('muralla', new V3(0, 15, 0), '🧱 ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velObras()));
     }
     for (var k2 in relojesDiv) if (!relojesDiv[k2].dataset.vivo) relojesDiv[k2].classList.add('oculto');

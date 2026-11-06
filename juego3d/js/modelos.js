@@ -1007,8 +1007,9 @@ var M = (function () {
       var g = new THREE.Group(), m = CAST_GLB.clone(true);
       m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       g.add(m);
-      var base = [0, 0, 0.78, 0.88, 0.98, 1.08][e], ini = [0, 1, 5, 10, 15, 30][e], paso = e === 4 ? 0.006 : 0.015;
-      g.scale.setScalar(15 * base * (1 + paso * Math.max(0, n - ini)));
+      // v6.43: chico al empezar (nivel 1) y crece parejo hasta el nivel 30
+      var nn = Math.max(1, Math.min(30, n || 1));
+      g.scale.setScalar(15 * (0.38 + 0.70 * Math.pow((nn - 1) / 29, 0.85)));
       g.userData.banderas = []; g.userData.etapa = e;
       return g;
     }
@@ -1025,7 +1026,7 @@ var M = (function () {
   }
   function castilloEtapa(n) {
     var e = etapaCastillo(n), g = new THREE.Group(), banderas = [];
-    if (e >= 2) return castilloTripo(n, e) || castilloArena(n, e); // v6.35 prueba: castillo de Tripo (o el dibujado mientras carga)
+    var tpC = castilloTripo(n, e); if (tpC) return tpC; if (e >= 2) return castilloArena(n, e); // v6.43: el castillo de Tripo desde el nivel 1 (el fuerte de madera solo mientras carga) // v6.35 prueba: castillo de Tripo (o el dibujado mientras carga)
     var GR = 0x9b9da3, GR2 = 0x77797f, GR3 = 0x5d5f66, AZUL = 0x2f5fae, AZUL2 = 0x1e3f7a, ORO = 0xe8b84a, MAD = 0x8f5c32, MAD2 = 0x6a4224;
     function flag(x, y, z, alto) { var b = bandera(AZUL, alto || 1.6); b.position.set(x, y, z); b.userData.noFusionar = true; g.add(b); banderas.push(b.userData.tela); }
     function almenas(cx, cz, w, d, y, col) {
