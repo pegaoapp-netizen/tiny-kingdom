@@ -8404,6 +8404,7 @@
     guardar();
     // la aldea pública se actualiza con la partida de ESTA cuenta, ya cargada
     setTimeout(function () { if (!enMenu) ubicarCercaDeOtros(function () { publicarAldea(true); }); }, 800);
+    crearBarraChat(); if (hayCuenta()) iniciarChat();
     setTimeout(function () { revisarAtaques(true); }, 2500);
     // v6.33: los que ya jugaban reciben población de regalo para no quedarse trabados (sus tropas + 200 libres)
     if (typeof estado.pobRegalo !== 'number') { estado.pobRegalo = Math.max(0, tropasOcupadas() + 200 - POB_BASE); guardar(); }
@@ -8471,7 +8472,7 @@
         if (lista === null) { chat.msgs[c] = []; return; }
         chat.msgs[c] = lista;
         if (panelActual && panelActual.tipo === 'chat' && chat.canal === c) pintarMensajes(true);
-        actualizarBadgeChat();
+        actualizarBadgeChat(); if (c === 'global') pintarBarraChat();
       });
     });
     // si cambió de hermandad, deja el canal viejo
@@ -8521,14 +8522,45 @@
     if (!nuevo || abajo) box.scrollTop = box.scrollHeight;
     marcarVistoChat(c);
   }
-  function enviarMensaje() {
-    var inp = $('chat-texto'); if (!inp) return;
+  // v6.53: barra del chat del mundo siempre visible abajo (últimos 2 mensajes y caja para escribir)
+  function crearBarraChat() {
+    if ($('chat-barra')) return;
+    var b = document.createElement('div'); b.id = 'chat-barra';
+    b.innerHTML = '<button class="cb-ico" title="Chat">💬<span class="badge" id="cb-badge"></span></button><div class="cb-msgs" id="cb-msgs"></div>' +
+      '<form class="cb-escribir" id="cb-form"><input id="cb-texto" maxlength="200" autocomplete="off"><button type="submit">➤</button></form>';
+    document.body.appendChild(b); document.body.classList.add('con-chat-barra');
+    // va justo encima de la barra de abajo, mida lo que mida
+    function ubicar() { var ab = $('abajo'); if (!ab) return; var r = ab.getBoundingClientRect(); var y = Math.max(0, window.innerHeight - r.top); if (b.dataset.y !== String(y)) { b.dataset.y = y; b.style.bottom = y + 'px'; document.body.style.setProperty('--alto-chat', (b.offsetHeight + 4) + 'px'); } }
+    ubicar(); setInterval(ubicar, 700); window.addEventListener('resize', ubicar);
+    b.querySelector('.cb-ico').addEventListener('click', function () { if (enMenu) return; sonar('click'); abrirPanelChat('global'); });
+    $('cb-msgs').addEventListener('click', function () { if (enMenu) return; sonar('click'); abrirPanelChat('global'); });
+    $('cb-form').addEventListener('submit', function (ev) {
+      ev.preventDefault(); if (enMenu) return;
+      if ($('cb-texto').offsetParent === null) { sonar('click'); abrirPanelChat('global'); return; } // teléfono: el botón abre el chat para escribir
+      if (!hayCuenta()) { consejoTemporal(T('chat_cuenta')); return; }
+      iniciarChat(); enviarMensaje($('cb-texto'), 'global');
+    });
+    pintarBarraChat();
+  }
+  function pintarBarraChat() {
+    var box = $('cb-msgs'); if (!box) return;
+    $('cb-texto').placeholder = T('chat_escribe');
+    var l = (chat.msgs.global || []).filter(function (m) { return bloqueados().indexOf(m.uid) < 0; }).slice(-2);
+    var h = l.length ? l.map(function (m) {
+      var hora = new Date(m.fecha), hh = ('0' + hora.getHours()).slice(-2) + ':' + ('0' + hora.getMinutes()).slice(-2);
+      return '<div class="cb-m"><span class="cb-mundo">🌍</span><b>' + escaparHTML(m.nombre) + ':</b> <span class="cb-t">' + escaparHTML(filtrarTexto(m.texto)) + '</span><small>' + hh + '</small></div>';
+    }).join('') : '<div class="cb-m cb-vacio">' + (hayCuenta() ? T('chat_vacio') : T('chat_cuenta')) + '</div>';
+    if (box.dataset.h !== h) { box.innerHTML = h; box.dataset.h = h; }
+    var bd = $('cb-badge'), n = nuevosEn('global'); if (bd) bd.textContent = n ? (n > 9 ? '9+' : n) : '';
+  }
+  function enviarMensaje(inpOpt, canalOpt) {
+    var inp = inpOpt && inpOpt.nodeType ? inpOpt : $('chat-texto'); if (!inp) return;
     var texto = inp.value.replace(/\s+/g, ' ').trim().slice(0, 200);
     if (!texto) return;
     if (Date.now() - chat.ultimoEnvio < 3000) { consejoTemporal(T('chat_espera')); sonar('error'); return; }
     chat.ultimoEnvio = Date.now();
     inp.value = '';
-    Cuentas.enviarChat(chat.canal, { uid: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), texto: texto, fecha: Date.now() })
+    Cuentas.enviarChat(typeof canalOpt === 'string' ? canalOpt : chat.canal, { uid: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), texto: texto, fecha: Date.now() })
       .then(function () { sonar('click'); }).catch(function () { inp.value = texto; consejoTemporal(T('chat_error')); sonar('error'); });
   }
   // tocar un nombre: bloquear / reportar (o borrar el mensaje propio)
@@ -8620,7 +8652,7 @@
   window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
-    refuerzos: function () { revisarRefuerzos(true); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
+    refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
     mundo: function () { return { M3: M3, render: function () { var c = M3.corriendo; M3.corriendo = true; dibujarMundo3D(); }, elegir: elegirCelda, casilla: casillaMundo, ocupadas: ocupadasMundo }; },
     paso: function (seg) { for (var i = 0; i < seg * 30; i++) actualizar(1 / 30); actualizarCamara(1); actualizarRelojes(); render.render(escena, camara); } };
 

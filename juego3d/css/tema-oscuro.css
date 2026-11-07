@@ -483,3 +483,23 @@ body.tk-barra-nueva #arriba, body.tk-barra-nueva #arriba * { pointer-events: non
   #tk-arriba .tk-botones button { width: 28px !important; font-size: 10px !important; }
 }
 #vida-castillo.tk-vida { left: 8px !important; transform: none !important; width: min(230px, 56vw) !important; }
+
+/* ---------------- v6.53: CHAT DEL MUNDO SIEMPRE VISIBLE ABAJO ---------------- */
+#chat-barra { position: fixed; left: 0; right: 0; z-index: 41; display: flex; align-items: stretch; gap: 6px; padding: 3px 6px; box-sizing: border-box;
+  background: linear-gradient(rgba(16,20,31,.92), rgba(10,13,21,.95)); border-top: 1px solid var(--tk-oro-suave, rgba(214,178,108,.55)); }
+#chat-barra .cb-ico { position: relative; flex: none; width: 38px; border-radius: 8px; border: 1px solid var(--tk-oro-suave, rgba(214,178,108,.55)); background: linear-gradient(#262e45, #161b2a); font-size: 19px; cursor: pointer; color: #fff; }
+#chat-barra .cb-ico .badge { position: absolute; top: -5px; right: -5px; }
+#chat-barra .cb-ico .badge:empty { display: none; }
+#chat-barra .cb-msgs { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; cursor: pointer; }
+#chat-barra .cb-m { font: 600 12px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #e9e2cf; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#chat-barra .cb-m b { color: #ffd86a; font-weight: 800; }
+#chat-barra .cb-m small { margin-left: 6px; color: #9aa3b5; font-size: 11px; }
+#chat-barra .cb-mundo { margin-right: 3px; font-size: 11px; }
+#chat-barra .cb-vacio { color: #9aa3b5; font-weight: 600; }
+#chat-barra .cb-escribir { flex: 0 0 34%; display: flex; gap: 4px; align-items: center; margin: 0; }
+#chat-barra .cb-escribir input { flex: 1; min-width: 0; height: 30px; border-radius: 7px; border: 1px solid rgba(214,178,108,.4); background: #0d111b; color: #fff; padding: 0 8px; font: 13px system-ui, sans-serif; }
+#chat-barra .cb-escribir button { flex: none; width: 34px; height: 30px; border-radius: 7px; border: 1px solid var(--tk-oro-suave, rgba(214,178,108,.55)); background: linear-gradient(#3a4a72, #1d2640); color: #ffd86a; font-size: 15px; cursor: pointer; }
+@media (max-width: 520px) { #chat-barra .cb-escribir { flex: none; } #chat-barra .cb-escribir input { display: none; } #chat-barra .cb-escribir button { width: 38px; height: 34px; } #chat-barra .cb-m { font-size: 11.5px; } }
+/* lo que flota justo encima de la barra de abajo sube para dejar ver el chat */
+body.con-chat-barra #btn-vista, body.con-chat-barra #btn-menu-mas, body.con-chat-barra #barra-acciones { translate: 0 calc(-1 * var(--alto-chat, 0px)); }
+body.mg-abierto #chat-barra { display: none; }

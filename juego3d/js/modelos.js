@@ -605,7 +605,7 @@ var M = (function () {
   var TRIPO_EDIFICIOS = { cabana: 3.0, cuartel: 3.6, granja: 3.6, aserradero: 3.6, mina: 3.6, cantera: 3.6, academia: 3.6, mercado: 3.6, herreria: 3.6, establo: 3.6, enfermeria: 3.6, galeria: 3.6, almacen: 3.6, vigia: 2.6, embajada: 3.6, relevo: 3.6 };
   // v6.40: cuántas versiones tiene cada edificio (cambia de modelo en el nivel 10 y en el 20)
   // v6.52: edificios con 2 versiones: la grande y más detallada sale desde el nivel 15
-  var TRIPO_ETAPAS = { cuartel: 3, almacen: 2, embajada: 2, academia: 2, mercado: 2, herreria: 2, establo: 2, enfermeria: 2, galeria: 2, relevo: 2, cabana: 2, vigia: 2 }; // la granja se suma cuando llegue su modelo
+  var TRIPO_ETAPAS = { cuartel: 3, almacen: 2, embajada: 2, academia: 2, mercado: 2, herreria: 2, establo: 2, enfermeria: 2, galeria: 2, relevo: 2, cabana: 2, vigia: 2, granja: 2 };
   function etapaEdificio(nivel) { return nivel >= 20 ? 3 : nivel >= 10 ? 2 : 1; }
   function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
