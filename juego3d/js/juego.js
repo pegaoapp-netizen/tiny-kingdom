@@ -303,9 +303,13 @@
   function altura(x, z) {
     var r = Math.sqrt(x * x + z * z), rr = Math.min(r - 76, fueraCampos(x, z) - 14);
     if (rr < 0) return 0;
-    var k = Math.min(rr, 70);
-    // colinas irregulares (no en filas): mezcla de ondas de distinto tamaño
-    return k * 0.3 * (0.72 + 0.5 * ruido(x * 0.55 + 7, z * 0.55 - 3)) + ruido(x * 1.9, z * 1.6) * 0.5 * Math.min(1, k / 10);
+    // v6.51: la ciudad y sus campos están arriba de una meseta: afuera el terreno cae en un acantilado de roca
+    // y abajo sigue una pradera con lomas suaves
+    var borde = rr + ruido(x * 0.9 + 3, z * 0.9 - 5) * 2.2;
+    if (borde < 0) return 0;
+    var caida = borde < 2.5 ? borde * 0.35 : 0.9 + Math.min(borde - 2.5, 8) * 2.4;
+    var abajo = Math.max(0, rr - 12);
+    return -caida + (abajo > 0 ? ruido(x * 0.55 + 7, z * 0.55 - 3) * 2.5 * Math.min(1, abajo / 15) : 0) + ruido(x * 1.9, z * 1.6) * 0.4 * Math.min(1, rr / 10);
   }
 
   // Textura de pasto pintada en el momento (original, sin imágenes externas):
@@ -368,8 +372,9 @@
       pos.setY(i, y);
       var n = ruido(x, z);
       var c = base.clone();
-      // laderas de los cerros: roca gris con vetas
-      if (y > 1.2) { var kr = Math.min(1, (y - 1.2) / 3.5); c.lerp(ruido(x * 2.3, z * 2.1) > 0 ? roca : rocaOsc, kr * 0.85); }
+      // v6.51: la pared del acantilado es de roca gris con vetas (arriba y abajo hay pasto)
+      var rrA = Math.min(Math.hypot(x, z) - 76, fueraCampos(x, z) - 14);
+      if (rrA > 0.5 && rrA < 13) { var kr = Math.min(1, (rrA - 0.5) / 2) * Math.min(1, (13 - rrA) / 2.5); c.lerp(ruido(x * 2.3, z * 2.1) > 0 ? roca : rocaOsc, kr * 0.9); }
       if (n > 0) c.lerp(seco, Math.min(1, n * 1.3)); else c.lerp(humedo, Math.min(1, -n * 1.3));
       var dc = distCamino(x, z);
       if (dc < 4.2) c.lerp(tierra, (1 - dc / 4.2) * 0.55);
@@ -382,6 +387,22 @@
     var suelo = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: texturaPasto(), vertexColors: true }));
     suelo.receiveShadow = true;
     escena.add(suelo);
+    // v6.51: pared del acantilado con textura de roca (solo los triángulos de la caída)
+    (function paredRoca() {
+      var p2 = g.attributes.position, idx = g.index.array, enPared = [], tri = [];
+      for (var v = 0; v < p2.count; v++) { var vx = p2.getX(v), vz = p2.getZ(v), rA = Math.min(Math.hypot(vx, vz) - 76, fueraCampos(vx, vz) - 14); enPared.push(rA > 0.3 && rA < 14 && p2.getY(v) < -0.4); }
+      for (var t = 0; t < idx.length; t += 3) if (enPared[idx[t]] || enPared[idx[t + 1]] || enPared[idx[t + 2]]) tri.push(idx[t], idx[t + 1], idx[t + 2]);
+      if (!tri.length) return;
+      var gr = new THREE.BufferGeometry(); gr.setAttribute('position', p2); gr.setAttribute('normal', g.attributes.normal); gr.setAttribute('uv', g.attributes.uv); gr.setIndex(tri);
+      var T = 256, cv = document.createElement('canvas'); cv.width = cv.height = T; var cx = cv.getContext('2d'), sem = 77;
+      function az() { sem = (sem * 16807) % 2147483647; return sem / 2147483647; }
+      cx.fillStyle = '#8d8478'; cx.fillRect(0, 0, T, T);
+      for (var k = 0; k < 420; k++) { var gx = az() * T, gy = az() * T, w = 6 + az() * 26, h = 3 + az() * 9; cx.fillStyle = ['#a39a8c', '#776f64', '#6a6258', '#b3aa9a', '#857c70'][k % 5]; cx.fillRect(gx, gy, w, h); }
+      for (var q = 0; q < 60; q++) { cx.strokeStyle = 'rgba(40,34,28,.45)'; cx.lineWidth = 1 + az() * 1.5; cx.beginPath(); var sx = az() * T, sy = az() * T; cx.moveTo(sx, sy); cx.lineTo(sx + (az() - 0.5) * 30, sy + 10 + az() * 30); cx.stroke(); }
+      var tr = new THREE.CanvasTexture(cv); tr.wrapS = tr.wrapT = THREE.RepeatWrapping; tr.repeat.set(70, 70);
+      var pared = new THREE.Mesh(gr, new THREE.MeshLambertMaterial({ map: tr, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      pared.receiveShadow = true; escena.add(pared);
+    })();
   })();
 
   (function crearCamino() {
