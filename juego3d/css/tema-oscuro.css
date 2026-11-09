@@ -503,3 +503,143 @@ body.tk-barra-nueva #arriba, body.tk-barra-nueva #arriba * { pointer-events: non
 /* lo que flota justo encima de la barra de abajo sube para dejar ver el chat */
 body.con-chat-barra #btn-vista, body.con-chat-barra #btn-menu-mas, body.con-chat-barra #barra-acciones { translate: 0 calc(-1 * var(--alto-chat, 0px)); }
 body.mg-abierto #chat-barra { display: none; }
+
+/* ---------------- v6.54: CABALLEROS (equipo con números que suben, salón, guía) ---------------- */
+#eq-guia { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(10, 8, 6, .6); }
+#eq-guia .ac-caja { max-width: 440px; }
+#eq-guia p { margin: 8px 2px; line-height: 1.45; }
+.eq-numeros { display: flex; gap: 8px; align-items: stretch; margin: 6px 0 10px; }
+.eqn { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border-radius: 10px; background: rgba(0,0,0,.28); border: 1px solid rgba(214,178,108,.45); position: relative; }
+.eqn .eqn-ico { font-size: 20px; line-height: 1; }
+.eqn small { font-size: 11px; opacity: .85; }
+.eqn b { font-size: 20px; font-weight: 900; }
+.eqn b s { font-size: 14px; opacity: .6; font-weight: 700; }
+.eqn em { position: absolute; top: 4px; right: 8px; font-style: normal; font-weight: 900; font-size: 15px; }
+.eqn.sube { border-color: #5fd35a; box-shadow: 0 0 10px rgba(95,211,90,.45); animation: eqnSube 1.2s ease-out; }
+.eqn.sube b, .eqn.sube em { color: #6fe36a; }
+.eqn.baja { border-color: #e0605a; }
+.eqn.baja b, .eqn.baja em { color: #ff8a80; }
+@keyframes eqnSube { 0% { transform: scale(1.18); } 100% { transform: scale(1); } }
+.eq-guia-btn { flex: none; width: 34px; border-radius: 10px; border: 1px solid rgba(214,178,108,.6); background: linear-gradient(#3a4a72, #1d2640); color: #ffd86a; font-weight: 900; font-size: 18px; cursor: pointer; }
+.hf-foto { position: relative; }
+.hf-piezas { position: absolute; left: 4px; right: 4px; bottom: 4px; display: flex; justify-content: center; gap: 3px; flex-wrap: wrap; pointer-events: none; }
+.hfp { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 14px; border-radius: 6px; background: rgba(0,0,0,.45); opacity: .35; filter: grayscale(1); }
+.hfp.puesta { opacity: 1; filter: none; background: rgba(40,30,10,.8); box-shadow: 0 0 0 1px #d6b26c; }
+.hfp.puesta.raro { box-shadow: 0 0 0 1px #5aa8ff; } .hfp.puesta.epico { box-shadow: 0 0 0 1px #c07aff; } .hfp.puesta.legendario { box-shadow: 0 0 0 1px #ffb23a; }
+.salon-lista { display: flex; flex-direction: column; gap: 8px; }
+.salon-fila { display: flex; align-items: center; gap: 8px; padding: 6px; border-radius: 10px; background: rgba(0,0,0,.25); border: 1px solid rgba(214,178,108,.35); }
+.salon-foto { flex: none; width: 54px; height: 54px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(214,178,108,.6); }
+.salon-foto img, .salon-foto > * { width: 100%; height: 100%; object-fit: cover; }
+.salon-dat { flex: 1; min-width: 0; }
+.salon-dat > b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.salon-st { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; margin: 2px 0 4px; }
+.salon-exp { height: 14px; }
+.salon-bts { flex: none; display: flex; flex-direction: column; gap: 4px; }
+.salon-bts button { min-width: 74px; }
+
+/* v6.54: la ficha de otro reino no borronea el mapa: se ve su castillo detrás (solo la tarjeta es de vidrio) */
+body #ficha-ciudad { background: transparent !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; border: 0 !important; box-shadow: none !important; pointer-events: none; }
+body #ficha-ciudad .fc-caja { pointer-events: auto; }
+
+/* ---------------- v6.54: MUNDO — tarjeta encima de la casilla y coordenadas X/Y en cajitas ---------------- */
+.tarjeta-anclada { position: fixed !important; z-index: 45 !important; width: min(340px, calc(100vw - 16px)) !important; max-width: none !important; margin: 0 !important; transform: none !important; right: auto !important; bottom: auto !important; }
+.tarjeta-anclada::after { content: ''; position: absolute; left: var(--flecha-x, 50%); bottom: -12px; transform: translateX(-50%); border: 12px solid transparent; border-bottom: 0; border-top-color: rgba(214,178,108,.85); }
+.tarjeta-anclada.abajo::after { bottom: auto; top: -12px; border-top: 0; border-bottom: 12px solid rgba(214,178,108,.85); }
+#mundo-xy .mxy-et { font-size: 12px; font-weight: 800; color: #ffd86a; margin: 0 4px 0 6px; }
+#mundo-xy .mxy-v { display: inline-block; min-width: 46px; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,.92); color: #3a2a14; font-weight: 900; text-align: center; }
+#mundo-xy { white-space: nowrap; }
+@media (max-width: 520px) { #mundo-xy .mxy-v { min-width: 34px; padding: 1px 5px; } #mundo-xy .mxy-et { margin: 0 3px 0 4px; } .tarjeta-anclada .fc-cab { font-size: 14px; } }
+/* v6.54: Ciudad / Mundo dentro de la barra de abajo, en la esquina izquierda */
+body.tema-oscuro #abajo #btn-vista { position: relative !important; left: auto !important; bottom: auto !important; translate: none !important; flex: none; width: 58px !important; height: 58px !important; margin: -14px 4px 0 2px !important; z-index: 2; }
+/* tarjeta del mundo más compacta en el teléfono, para que quepa encima del castillo */
+@media (max-width: 520px) { .tarjeta-anclada .fc-retrato { width: 54px !important; height: 54px !important; font-size: 26px !important; } .tarjeta-anclada .fc-fila { padding-top: 1px !important; padding-bottom: 1px !important; font-size: 12px !important; } .tarjeta-anclada .fc-botones button { padding-top: 6px !important; padding-bottom: 6px !important; } }
+/* la tarjeta del mundo va por encima de la barra de acciones */
+.tarjeta-anclada { z-index: 60 !important; }
+.tarjeta-anclada { overflow: visible !important; }
+
+/* ---------------- v6.54: TARJETA DEL MUNDO estilo pergamino claro (como pidió el dueño) ---------------- */
+body .tarjeta-anclada, body .tarjeta-anclada.casilla-info, body #mundo-info .tarjeta-anclada {
+  width: min(360px, 76vw) !important; padding: 12px 14px 14px !important; border-radius: 16px !important;
+  background: linear-gradient(180deg, #faf1d6, #e8d6aa) !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  border: 2px solid #c8a764 !important; box-shadow: 0 6px 18px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.5) !important;
+  color: #2b1d0e !important; font-family: Georgia, "Times New Roman", serif !important;
+}
+body .tarjeta-anclada * { color: #2b1d0e !important; text-shadow: none !important; }
+body .tarjeta-anclada::after { border-top-color: #e3cf9f !important; }
+body .tarjeta-anclada.abajo::after { border-bottom-color: #f6ecd2 !important; }
+/* título y subtítulo centrados */
+body .tarjeta-anclada .fc-cab, body .tarjeta-anclada .perg-tit { text-align: center !important; font: 700 19px/1.2 Georgia, "Times New Roman", serif !important; background: none !important; border: 0 !important; padding: 2px 30px 6px !important; margin: 0 !important; border-bottom: 1px solid rgba(120,90,40,.35) !important; }
+body .tarjeta-anclada .fc-cab small, body .tarjeta-anclada .perg-sub { display: block; font: 400 13px/1.3 Georgia, serif !important; color: #5a4626 !important; text-align: center; }
+/* filas de datos: sin cajas, texto simple */
+body .tarjeta-anclada .fc-fila, body .tarjeta-anclada .casilla-tabla > * { background: none !important; border: 0 !important; font: 400 14px/1.45 Georgia, serif !important; padding: 0 !important; }
+body .tarjeta-anclada .fc-datos { background: none !important; border: 0 !important; }
+body .tarjeta-anclada .fc-nombre { color: #1f6fb8 !important; font: 700 16px Georgia, serif !important; }
+body .tarjeta-anclada .fc-nivel { background: none !important; color: #1f6fb8 !important; }
+body .tarjeta-anclada .fc-retrato { border: 2px solid #c8a764 !important; border-radius: 6px !important; }
+body .tarjeta-anclada .fc-aviso { background: rgba(170,40,30,.12) !important; border: 1px solid rgba(170,40,30,.4) !important; color: #8a2a1a !important; font-size: 12px !important; }
+body .tarjeta-anclada .fc-aviso * { color: #8a2a1a !important; }
+/* botones grandes azul marino, como en la foto */
+body .tarjeta-anclada .fc-botones, body .tarjeta-anclada .perg-botones { display: flex !important; gap: 18px !important; justify-content: center !important; margin-top: 10px !important; }
+body .tarjeta-anclada button.comprar, body .tarjeta-anclada .fc-botones button, body .tarjeta-anclada .perg-botones button {
+  flex: 1 1 0 !important; min-height: 50px !important; border-radius: 9px !important;
+  background: linear-gradient(180deg, #2f5d9a 0%, #1b3d6e 55%, #10264a 100%) !important;
+  border: 2px solid #0b1a33 !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 3px 6px rgba(0,0,0,.35) !important;
+  color: #fff !important; font: 700 18px Georgia, "Times New Roman", serif !important;
+}
+body .tarjeta-anclada button.comprar *, body .tarjeta-anclada .fc-botones button * { color: #fff !important; }
+body .tarjeta-anclada button.comprar:disabled { filter: grayscale(.6) brightness(.85); }
+body .tarjeta-anclada .fc-x, body .tarjeta-anclada .cerrar { background: rgba(120,90,40,.15) !important; color: #5a4626 !important; border: 1px solid rgba(120,90,40,.4) !important; }
+
+/* v6.54: tarjeta del reino como la foto del dueño: nombre arriba, coordenadas debajo, datos "Poder: 123" alineados a la izquierda */
+body .tarjeta-anclada .fc-cab { font-size: 22px !important; }
+body .tarjeta-anclada .fc-cuerpo { display: flex !important; gap: 14px !important; align-items: center !important; margin-top: 10px !important; }
+body .tarjeta-anclada .fc-retrato { flex: 0 0 86px !important; width: 86px !important; height: 100px !important; border: 3px solid #d4a94a !important; border-radius: 6px !important; box-shadow: 0 2px 5px rgba(0,0,0,.35) !important; }
+body .tarjeta-anclada .fc-retrato, body .tarjeta-anclada .fc-retrato * { color: #fff4d0 !important; }
+body .tarjeta-anclada .fc-nombre { font: 400 18px/1.3 Georgia, serif !important; color: #2a8ad8 !important; margin-bottom: 4px !important; }
+body .tarjeta-anclada .fc-fila { display: block !important; text-align: left !important; font: 400 15px/1.5 Georgia, serif !important; }
+@media (max-width: 520px) {
+  body .tarjeta-anclada .fc-cab { font-size: 19px !important; }
+  body .tarjeta-anclada .fc-retrato { flex-basis: 66px !important; width: 66px !important; height: 78px !important; }
+  body .tarjeta-anclada .fc-nombre { font-size: 15px !important; }
+  body .tarjeta-anclada .fc-fila { font-size: 13px !important; line-height: 1.45 !important; }
+}
+body .tarjeta-anclada .fc-fila span { font-weight: 400 !important; opacity: 1 !important; }
+
+/* ---------------- v6.54: BARRAS en color pergamino crema (como la tarjeta del mundo, pedido del dueño) ---------------- */
+:root { --perg-1: #faf1d6; --perg-2: #e8d6aa; --perg-borde: #c8a764; --perg-letra: #2b1d0e; --perg-suave: #5a4626; }
+/* barra de arriba */
+body.tema-oscuro #tk-arriba { background: linear-gradient(180deg, var(--perg-1), var(--perg-2)) !important; border-bottom: 2px solid var(--perg-borde) !important; box-shadow: 0 2px 8px rgba(0,0,0,.35) !important; }
+body.tema-oscuro #tk-arriba button { background: linear-gradient(180deg, #fff8e4, #efdfb6) !important; border: 1px solid var(--perg-borde) !important; box-shadow: inset 0 1px 0 rgba(255,255,255,.7) !important; }
+body.tema-oscuro #tk-arriba .tk-fila2 { background: rgba(255,248,228,.6) !important; border: 1px solid rgba(200,167,100,.6) !important; }
+body.tema-oscuro #tk-arriba, body.tema-oscuro #tk-arriba * { color: var(--perg-letra) !important; text-shadow: none !important; }
+body.tema-oscuro #tk-arriba .tk-dat small { color: var(--perg-suave) !important; }
+body.tema-oscuro #tk-arriba .tk-nv { background: linear-gradient(180deg, #2f5d9a, #10264a) !important; border-color: #0b1a33 !important; }
+body.tema-oscuro #tk-arriba .tk-nv, body.tema-oscuro #tk-arriba .tk-nv * { color: #fff !important; }
+/* misión de arriba a la izquierda */
+body.tema-oscuro #mision { background: linear-gradient(180deg, var(--perg-1), var(--perg-2)) !important; border: 2px solid var(--perg-borde) !important; box-shadow: 0 2px 6px rgba(0,0,0,.35) !important; }
+body.tema-oscuro #mision, body.tema-oscuro #mision * { color: var(--perg-letra) !important; text-shadow: none !important; }
+/* botones de la derecha */
+body.tema-oscuro #lateral .pill, body.tema-oscuro #lateral .redondo, body.tema-oscuro #btn-menu-mas {
+  background: linear-gradient(180deg, var(--perg-1), var(--perg-2)) !important; border: 2px solid var(--perg-borde) !important; box-shadow: 0 2px 6px rgba(0,0,0,.35) !important; }
+body.tema-oscuro #lateral .pill, body.tema-oscuro #lateral .pill *, body.tema-oscuro #lateral .redondo, body.tema-oscuro #btn-menu-mas { color: var(--perg-letra) !important; text-shadow: none !important; }
+/* barra del chat */
+body.tema-oscuro #chat-barra { background: linear-gradient(180deg, var(--perg-1), var(--perg-2)) !important; border-top: 2px solid var(--perg-borde) !important; border-bottom: 1px solid var(--perg-borde) !important; }
+body.tema-oscuro #chat-barra, body.tema-oscuro #chat-barra * { color: var(--perg-letra) !important; text-shadow: none !important; }
+body.tema-oscuro #chat-barra input { background: #fffaf0 !important; border: 1px solid var(--perg-borde) !important; }
+body.tema-oscuro #chat-barra input::placeholder { color: #8a7650 !important; }
+body.tema-oscuro #chat-barra button { background: linear-gradient(180deg, #2f5d9a, #10264a) !important; border: 1px solid #0b1a33 !important; }
+body.tema-oscuro #chat-barra button, body.tema-oscuro #chat-barra button * { color: #fff !important; }
+/* barra de abajo */
+body.tema-oscuro #abajo { background: linear-gradient(180deg, var(--perg-1), var(--perg-2)) !important; border-top: 2px solid var(--perg-borde) !important; box-shadow: 0 -2px 8px rgba(0,0,0,.3) !important; }
+body.tema-oscuro #abajo button, body.tema-oscuro #abajo button * { color: var(--perg-letra) !important; text-shadow: none !important; }
+/* el botón Ciudad / Mundo queda dentro de la barra, igual que los demás botones */
+body.tema-oscuro #abajo #btn-vista { width: 68px !important; height: 68px !important; margin: 0 !important; border-radius: 50% !important; background: radial-gradient(circle at 50% 40%, #fff8e4, #e3cd96) !important; border: 2px solid var(--perg-borde) !important; }
+body.tema-oscuro #abajo #btn-vista::after { background: #10264a !important; color: #fff !important; }
+body.tema-oscuro #lateral .pill b, body.tema-oscuro #lateral .pill b#escudo-t, body.tema-oscuro #lateral .pill b#tropas, body.tema-oscuro #lateral .pill b#oleada, body.tema-oscuro #lateral .pill b#entreno-t { color: #2b1d0e !important; -webkit-text-fill-color: #2b1d0e !important; text-shadow: none !important; }
+body.tema-oscuro #lateral .redondo svg path { fill: #4a2a00 !important; }
+body.tema-oscuro #lateral .redondo svg path[fill="none"] { fill: none !important; stroke: #4a2a00 !important; }
+@media (max-width: 520px) {
+  body.tema-oscuro #abajo #btn-vista { width: 50px !important; height: 50px !important; margin: 0 2px 0 0 !important; }
+  body.tema-oscuro #abajo #btn-vista .bv-ico { font-size: 20px !important; }
+}

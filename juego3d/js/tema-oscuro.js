@@ -83,10 +83,8 @@
   tkBot.appendChild($('btn-idioma')); tkBot.appendChild($('btn-salir'));
   tk.querySelector('.tk-fila1').appendChild(tkBot);
   var vidaC = $('vida-castillo'); document.body.appendChild(vidaC); vidaC.classList.add('tk-vida');
-  var bCas = document.createElement('button'); bCas.id = 'tk-castillo'; bCas.className = 'pestana';
-  bCas.innerHTML = '<span class="tk-cas-ico">🏰</span><span class="txt" id="tk-cas-txt">Castillo</span>';
-  abajo.insertBefore(bCas, abajo.firstChild);
-  bCas.addEventListener('click', function () { if (window.TK_castillo) window.TK_castillo(); });
+  // v6.54: el botón redondo de Ciudad / Campos / Mundo va dentro de la barra de abajo, a la izquierda (el Castillo se abre tocándolo en la ciudad)
+  var bVista = $('btn-vista'); if (bVista) abajo.insertBefore(bVista, abajo.firstChild);
   function copiar(de, a) { var x = $(de), y = $(a); if (x && y && y.textContent !== x.textContent) y.textContent = x.textContent; }
 
   // ---------- cosas que cambian: textos, poder, nivel y la posición del panel ----------
@@ -96,7 +94,7 @@
     var pnm = $('perfil-nombre'), nom = pnm ? pnm.textContent.split(' · ')[0] : ''; if ($('tk-nombre').textContent !== nom) $('tk-nombre').textContent = nom;
     ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (k) { copiar(k, 'tk-' + k); });
     var cn = $('ciudad-nombre'); if (cn) { var cb = cn.querySelector('b'), cs = cn.querySelector('small'); var cnom = cb ? cb.textContent.replace(/^Reino de /, '').replace(/'s kingdom$/, '') : ''; if (cb && $('tk-ciudad-n').textContent !== cnom) $('tk-ciudad-n').textContent = cnom; if (cs && $('tk-ciudad-xy').textContent !== cs.textContent) $('tk-ciudad-xy').textContent = cs.textContent; }
-    $('tk-mas').textContent = ingles() ? 'More' : 'Más'; $('tk-poder-et').textContent = t.poder; $('tk-cas-txt').textContent = ingles() ? 'Castle' : 'Castillo';
+    $('tk-mas').textContent = ingles() ? 'More' : 'Más'; $('tk-poder-et').textContent = t.poder
     var vf = $('vida-castillo-fill'), herido = vf && parseFloat(vf.style.width || '100') < 99.5; vidaC.classList.toggle('tk-ver', !!herido);
     var arr0 = $('arriba'); tk.style.display = arr0 && getComputedStyle(arr0).display === 'none' ? 'none' : '';
     var ets = document.querySelectorAll('.esc-et');

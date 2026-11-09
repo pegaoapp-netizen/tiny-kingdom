@@ -28,6 +28,13 @@ var Cuentas = (function () {
     disponible = true;
   } catch (e) { disponible = false; }
 
+  // v6.54: el Mundo mide MAPA_TAM × MAPA_TAM casillas y cada reino guarda su casilla exacta.
+  // Los reinos guardados con el mapa viejo (coordenadas 0 a 99, sin el campo "mapa") se pasan a su lugar en el mapa nuevo.
+  var MAPA_TAM = 300;
+  function normAldea(x) {
+    if (x && x.mapa !== MAPA_TAM && typeof x.x === 'number') { x.x = Math.min(MAPA_TAM - 1, Math.floor((x.x + 0.5) * MAPA_TAM / 100)); x.y = Math.min(MAPA_TAM - 1, Math.floor((x.y + 0.5) * MAPA_TAM / 100)); }
+    return x;
+  }
   function correoDe(texto) {
     var t = String(texto || '').trim().toLowerCase();
     return t.indexOf('@') >= 0 ? t : t + '@' + DOMINIO;
@@ -137,18 +144,18 @@ var Cuentas = (function () {
     lugar: function () {
       var s = usuario ? usuario.uid : 'x', h = 0;
       for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-      return { x: 8 + (h % 84), y: 8 + (Math.floor(h / 84) % 84) };
+      return { x: 20 + (h % (MAPA_TAM - 40)), y: 20 + (Math.floor(h / (MAPA_TAM - 40)) % (MAPA_TAM - 40)) };
     },
     publicarAldea: function (d) {
       if (!usuario) return Promise.resolve();
       return db.collection('aldeas').doc(usuario.uid).set({
-        nombre: d.nombre, nivel: d.nivel, poder: d.poder, x: d.x, y: d.y,
+        nombre: d.nombre, nivel: d.nivel, poder: d.poder, x: d.x, y: d.y, mapa: MAPA_TAM,
         alianza: d.alianza || null, actualizado: Date.now(), escudo: Math.floor(d.escudo || 0), defensa: Math.floor(d.defensa || 0), espia: d.espia || {}
       });
     },
     aldeas: function () {
       return db.collection('aldeas').orderBy('poder', 'desc').limit(150).get().then(function (q) {
-        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+        return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; });
       });
     },
     // v6.34: buscar alianza por nombre o etiqueta (sin importar mayúsculas ni tildes)
@@ -166,7 +173,7 @@ var Cuentas = (function () {
     // v6.34: ranking de todos los jugadores por poder
     ranking: function () {
       return db.collection('aldeas').orderBy('poder', 'desc').limit(100).get().then(function (q) {
-        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+        return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; });
       });
     },
     // v6.34: torneo semanal
@@ -189,7 +196,7 @@ var Cuentas = (function () {
     },
     miembros: function (tag) {
       return db.collection('aldeas').where('alianza', '==', tag).limit(60).get().then(function (q) {
-        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+        return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; });
       });
     },
     crearAlianza: function (nombre, tag) {
@@ -221,7 +228,7 @@ var Cuentas = (function () {
     leerAtaque: function (id) { return db.collection('ataques').doc(id).get().then(function (d) { var x = d.data(); x.id = d.id; return x; }); },
     resolverAtaque: function (id, datos) { return db.collection('ataques').doc(id).update(datos); },
     cobrarAtaque: function (id) { return db.collection('ataques').doc(id).update({ cobrado: true }); },
-    leerAldea: function (uid) { return db.collection('aldeas').doc(uid).get().then(function (d) { return d.exists ? d.data() : null; }); },
+    leerAldea: function (uid) { return db.collection('aldeas').doc(uid).get().then(function (d) { return d.exists ? normAldea(d.data()) : null; }); },
     // ---------------- REFUERZOS ENTRE ALIADOS ----------------
     enviarRefuerzo: function (r) { return db.collection('refuerzos').add(r); },
     refuerzosRecibidos: function () {
@@ -254,9 +261,9 @@ var Cuentas = (function () {
     donarPedido: function (id, n, nombre) { var FV = firebase.firestore.FieldValue; return db.collection('pedidos').doc(id).update({ recibido: FV.increment(n), donantes: FV.arrayUnion(String(nombre).slice(0, 20) + '|' + n + '|' + Date.now()) }); },
     // casillas del mapa conquistadas (id 'x_y')
     casillas: function () {
-      return db.collection('casillas').limit(500).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+      return db.collection('casillas').limit(500).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; if (x.mapa !== MAPA_TAM) { var p = d.id.split('_'); x.id = Math.min(MAPA_TAM - 1, Math.floor((+p[0] + 0.5) * MAPA_TAM / 80)) + '_' + Math.min(MAPA_TAM - 1, Math.floor((+p[1] + 0.5) * MAPA_TAM / 80)); } return x; }); });
     },
-    tomarCasilla: function (id, datos) { return db.collection('casillas').doc(id).set(datos); },
+    tomarCasilla: function (id, datos) { var dd = {}; for (var k in datos) dd[k] = datos[k]; dd.mapa = MAPA_TAM; return db.collection('casillas').doc(id).set(dd); },
     soltarCasilla: function (id) { return db.collection('casillas').doc(id).delete(); },
     // envíos de recursos dentro de la hermandad
     enviarRecursos: function (e) { return db.collection('envios').add(e); },
