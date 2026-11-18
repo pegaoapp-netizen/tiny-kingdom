@@ -880,3 +880,19 @@ body.tema-oscuro #panel.al-panel .al-aviso b { color: #c0281e !important; font: 
 body.tema-oscuro #panel.al-panel .al-post-t, body.tema-oscuro #panel.al-panel .al-muro .iv-vacio { color: #2b1d0e !important; }
 .al-escribe { display: flex; gap: 8px; margin-top: 8px; padding: 8px; border-radius: 8px; background: linear-gradient(180deg, #8a5a30, #5e3a1c); }
 .al-escribe input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #2a1a0c; background: #3a2414; color: #f1e2c0; font: 14px Georgia, serif; }
+
+/* ---------------- v6.60: PUNTO DE REUNIÓN ---------------- */
+.ru-caja { padding: 6px 2px; }
+.ru-tabla { width: 100%; border-collapse: collapse; border: 1px solid #5a3d22; border-radius: 8px; overflow: hidden; font: 14px Georgia, serif; }
+.ru-tabla th { background: linear-gradient(180deg, #4a2c16, #2e1a0c); color: #f1e2c0 !important; padding: 8px 6px; font-weight: 600; }
+.ru-tabla td { padding: 8px 6px; border-top: 1px solid #120b05; color: #e8d6b0 !important; text-align: center; }
+.ru-tabla td:first-child { text-align: left; }
+.ru-res { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; font: 14px Georgia, serif; color: #e8d6b0 !important; }
+.ru-res b, .ru-nota b { color: #f2c45a !important; }
+.ru-nota { font: 13px Georgia, serif; color: #cdb88e !important; margin: 4px 0 10px; }
+.ru-marcha { display: flex; align-items: center; gap: 10px; padding: 10px 6px; border-bottom: 1px solid #120b05; }
+.ru-ic { font-size: 26px; flex: none; }
+.ru-dat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ru-dat b { color: #f1e6d0 !important; font: 600 14px Georgia, serif; } .ru-dat small { color: #e8842e !important; font: 13px Georgia, serif; }
+.ru-t { color: #ff9a5a !important; font: 600 13px Georgia, serif; flex: none; }
+#panel:has(.cafe-mas) #panel-gemas { display: none !important; } /* v6.60: las ventanas de edificio ya traen su botón de gemas */

@@ -5895,12 +5895,39 @@
     return h + '</table>';
   }
   // pestañas: Detalles y las pantallas propias del edificio
+  // v6.60: PUNTO DE REUNIÓN: Detalles, Mis tropas y Mis Marchas
+  function abrirReunion(i, p) {
+    var s = slots[i]; if (!s || !s.edificio) return;
+    var tabs = pestanasVentana(i, 'relevo').replace('class="activo" data-accion="cafe-det"', 'class="" data-accion="cafe-det"').replace('data-p="' + p + '"', 'data-p="' + p + '" data-act="1"');
+    tabs = tabs.replace(/<button class="" data-accion="reunion-pest" data-p="(\w+)" data-act="1"/, '<button class="activo" data-accion="reunion-pest" data-p="$1"');
+    var h = '<div class="ru-caja">';
+    if (p === 'tropas') {
+      var casa = {}, pod = {}, heridos = totalHeridos();
+      tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; casa[u.tipo] = (casa[u.tipo] || 0) + 1; pod[u.tipo] = (pod[u.tipo] || 0) + valorTropa(u); });
+      var ref = tropas.filter(function (u) { return u.refuerzo; }).length;
+      h += '<table class="ru-tabla"><tr><th>' + L('Tropa', 'Troop') + '</th><th>' + L('En casa', 'Home') + '</th><th>' + L('Poder', 'Power') + '</th></tr>' + Object.keys(TROPAS).filter(function (k) { return casa[k]; }).map(function (k) {
+        return '<tr><td>' + TROPAS[k].icono + ' ' + N(k) + '</td><td>' + formatoNumero(casa[k]) + '</td><td>' + formatoNumero(Math.round(pod[k] || 0)) + '</td></tr>';
+      }).join('') + (Object.keys(casa).length ? '' : '<tr><td colspan="3">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</td></tr>') + '</table>' +
+        '<div class="ru-res"><span>🛡️ ' + L('Refuerzos de tu alianza: ', 'Alliance reinforcements: ') + '<b>' + ref + '</b></span><span>💚 ' + L('Heridos: ', 'Wounded: ') + '<b>' + heridos + '</b></span></div>';
+    } else {
+      var ahora = Date.now(), l = [];
+      marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Volviendo', 'Returning') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
+      marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).forEach(function (m) { l.push({ ico: '⚔️', dest: m.defensorNombre || '', x: m.x, y: m.y, est: L('Atacando', 'Attacking'), t: (m.llega - ahora) / 1000 }); });
+      h += '<p class="ru-nota">' + L('Marchas a la vez: ', 'Marches at once: ') + '<b>1</b> · ' + L('Mejora el Punto de reunión para enviar ejércitos más grandes.', 'Upgrade the Rally point to send bigger armies.') + '</p>';
+      h += l.length ? l.map(function (q) { return '<div class="ru-marcha"><span class="ru-ic">' + q.ico + '</span><div class="ru-dat"><b>' + escaparHTML(q.dest) + '</b><small>' + q.est + (q.x !== undefined ? ' · X ' + q.x + ' · Y ' + q.y : '') + '</small></div><span class="ru-t">⏱ ' + fmtTiempo(Math.ceil(q.t)) + '</span>' + (q.x !== undefined ? '<button class="iv-boton" data-accion="reunion-ver" data-x="' + q.x + '" data-y="' + q.y + '">' + L('Ver', 'View') + '</button>' : '') + '</div>'; }).join('')
+        : '<p class="iv-vacio">' + L('No tienes marchas ahora. Ve al Mundo, toca un lugar y elige Marchar.', 'No marches right now. Go to the World, tap a place and choose March.') + '</p>';
+    }
+    h += '</div>';
+    abrirPanel(N('relevo') + ' (' + L('Nvl.', 'Lvl.') + s.edificio.nivel + ')', tabs + h, { tipo: 'edificio', slot: i, reunion: p });
+    ponerCafe();
+  }
   function pestanasVentana(i, tipo) {
     var t = [['cafe-det', L('Detalles', 'Details'), true]];
     if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
     else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
     else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
     else if (tipo === 'mercado') t.push(['abrir-mercado', T('mb_comerciar')]);
+    else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
     return '<div class="cafe-tabs ve-tabs">' + t.map(function (q) { return '<button class="' + (q[2] ? 'activo' : '') + '" data-accion="' + q[0] + '" data-slot="' + i + '">' + q[1] + '</button>'; }).join('') + '</div>';
   }
@@ -8132,6 +8159,8 @@
     else if (a === 'inv-modo') { sonar('click'); abrirPanelMochila(b.getAttribute('data-m')); }
     else if (a === 'azar-modo') { sonar('click'); abrirAzar(b.getAttribute('data-m')); }
     else if (a === 'promo-reclamar') reclamarPromo(b.getAttribute('data-id'));
+    else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'reunion-ver') { sonar('click'); var rx = +b.getAttribute('data-x'), ry = +b.getAttribute('data-y'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(rx, ry)); elegirCelda(rx, ry); } }, 400); }
     else if (a === 'al-tab') { sonar('click'); alTab = b.getAttribute('data-t'); alSeccion = ''; pintarHubAlianza(); }
     else if (a === 'al-submi') { sonar('click'); alSubMi = b.getAttribute('data-t'); alPag = 0; pintarHubAlianza(); }
     else if (a === 'al-pag') { sonar('click'); alPag = +b.getAttribute('data-p'); pintarHubAlianza(); }
