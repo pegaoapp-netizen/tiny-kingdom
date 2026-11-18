@@ -99,12 +99,15 @@
   }
   // v6.55: el poder arriba va corto (16,3M) para que no se corte con puntos
   function cortoNum(txt) { var n = parseInt(String(txt).replace(/[^0-9]/g, ''), 10) || 0; var c = ingles() ? '.' : ','; function f(v) { return (Math.floor(v * 10) / 10).toString().replace('.', c); } return n >= 1e9 ? f(n / 1e9) + 'B' : n >= 1e6 ? f(n / 1e6) + 'M' : n >= 1e4 ? f(n / 1e3) + 'k' : String(txt); }
+  // v6.57: en cada ventana, arriba a la derecha, el botón verde de gemas con "Más"
+  var pcab = document.querySelector('#panel .panel-cab');
+  if (pcab) { var bg = document.createElement('button'); bg.id = 'panel-gemas'; bg.innerHTML = '<span class="pg-dat"><b id="pg-n">0</b><small id="pg-mas">Más</small></span>' + GEMA_SVG.replace('tk-gema', 'tk-gema pg-gema').replace(/tkg1/g, 'pgg1').replace(/tkg2/g, 'pgg2'); var cx = pcab.querySelector('.cerrar, button'); pcab.insertBefore(bg, cx || null); bg.addEventListener('click', function () { if (window.TK_gemas) window.TK_gemas(); }); }
   function copiar(de, a) { var x = $(de), y = $(a); if (x && y && y.textContent !== x.textContent) y.textContent = x.textContent; }
 
   // ---------- cosas que cambian: textos, poder, nivel y la posición del panel ----------
   function refrescar() {
     var t = ingles() ? EN : ES;
-    copiar('nivel-rey', 'tk-nv'); var pdr = $('poder'), tp = $('tk-poder'); if (pdr && tp) { var cp = cortoNum(pdr.textContent); if (tp.textContent !== cp) tp.textContent = cp; } copiar('gemas', 'tk-gemas-n');
+    copiar('nivel-rey', 'tk-nv'); copiar('gemas', 'pg-n'); if ($('pg-mas')) $('pg-mas').textContent = ingles() ? 'More' : 'Más'; var pdr = $('poder'), tp = $('tk-poder'); if (pdr && tp) { var cp = cortoNum(pdr.textContent); if (tp.textContent !== cp) tp.textContent = cp; } copiar('gemas', 'tk-gemas-n');
     var pnm = $('perfil-nombre'), nom = pnm ? pnm.textContent.split(' · ')[0] : ''; if ($('tk-nombre').textContent !== nom) $('tk-nombre').textContent = nom;
     ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (k) { copiar(k, 'tk-' + k); });
     var cn = $('ciudad-nombre'); if (cn) { var cb = cn.querySelector('b'), cs = cn.querySelector('small'); var cnom = cb ? cb.textContent.replace(/^Reino de /, '').replace(/'s kingdom$/, '') : ''; if (cb && $('tk-ciudad-n').textContent !== cnom) $('tk-ciudad-n').textContent = cnom; if (cs && $('tk-ciudad-xy').textContent !== cs.textContent) $('tk-ciudad-xy').textContent = cs.textContent; }

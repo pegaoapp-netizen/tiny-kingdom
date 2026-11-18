@@ -278,6 +278,22 @@ var Cuentas = (function () {
       return db.collection('canales').doc(canal).collection('mensajes').orderBy('fecha', 'desc').limit(60)
         .onSnapshot({ includeMetadataChanges: true }, function (q) { if (q.metadata.fromCache) return; /* solo lo que confirma el servidor (no la caché de otra cuenta) */ fn(q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).reverse()); }, function () { fn(null); });
     },
+    // v6.57: chat privado: canal pv_<uidA>_<uidB> y una lista de conversaciones por jugador (privados/{uid}/conv/{otro})
+    canalPrivado: function (otro) { return 'pv_' + [usuario.uid, otro].sort().join('_'); },
+    escucharPrivados: function (fn) {
+      if (!usuario) return function () {};
+      return db.collection('privados').doc(usuario.uid).collection('conv').orderBy('fecha', 'desc').limit(20)
+        .onSnapshot(function (q) { fn(q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; })); }, function () { fn([]); });
+    },
+    avisarPrivado: function (otro, otroNombre, miNombre, texto) {
+      var f = Date.now(), t = String(texto).slice(0, 200);
+      return Promise.all([
+        db.collection('privados').doc(otro).collection('conv').doc(usuario.uid).set({ nombre: String(miNombre).slice(0, 30), texto: t, fecha: f, nuevo: true }),
+        db.collection('privados').doc(usuario.uid).collection('conv').doc(otro).set({ nombre: String(otroNombre).slice(0, 30), texto: t, fecha: f, nuevo: false })
+      ]);
+    },
+    privadoVisto: function (otro) { return db.collection('privados').doc(usuario.uid).collection('conv').doc(otro).update({ nuevo: false }); },
+    vaciarPrivados: function () { return db.collection('privados').doc(usuario.uid).collection('conv').get().then(function (q) { return Promise.all(q.docs.map(function (d) { return d.ref.delete(); })); }); },
     enviarChat: function (canal, m) { return db.collection('canales').doc(canal).collection('mensajes').add(m); },
     borrarChat: function (canal, id) { return db.collection('canales').doc(canal).collection('mensajes').doc(id).delete(); },
     reportar: function (r) { return db.collection('reportes').add(r); },

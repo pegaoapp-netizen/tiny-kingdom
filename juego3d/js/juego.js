@@ -1713,6 +1713,7 @@
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
     var tS = performance.now() / 1000;
     (M3.npc || []).forEach(function (n) { var u = ((tS + n.fase) % n.dur) / n.dur, ida = u < 0.5, k = ida ? u * 2 : 2 - u * 2, p = n.cu.getPoint(k), t = n.cu.getTangent(k); n.g.position.set(p.x, 0.07, p.z); n.g.rotation.y = Math.atan2(-(ida ? t.z : -t.z), ida ? t.x : -t.x); });
+    if (M3.brilloYo) M3.brilloYo.material.opacity = 0.25 + 0.2 * (0.5 + 0.5 * Math.sin(tS * 3)); // v6.57: tu ciudad brilla suave
     (M3.humo || []).forEach(function (h) { var u = (tS * 0.35 + h.fase) % 1; h.m.position.set(h.base.x + u * 0.25, h.base.y + u * 1.3, h.base.z - u * 0.15); h.m.scale.setScalar(0.6 + u * 1.6); h.m.material.opacity = 0.5 * (1 - u); });
     var ahoraM = performance.now(), dtM = Math.min(0.05, (ahoraM - M3.tPrev) / 1000); M3.tPrev = ahoraM;
     if (window.NOCHE) NOCHE.moverBruma(M3.bruma, dtM);
@@ -1789,7 +1790,16 @@
       if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
       var prot = (a.escudo || 0) > Date.now();
       var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, M3.camelot ? 2.0 : 2.7, 0); et.scale.multiplyScalar(M3.camelot ? 0.52 : 0.62); g.add(et);
-      if (estado.alianza && (aliada || esYo)) { g.add(M.cil(0.05, 0.05, 1.7, 6, 0x5e3d24, -1.05, 0.85, 0.2)); g.add(M.caja(0.62, 0.42, 0.04, 0x2a6ad0, -0.71, 1.45, 0.2)); g.add(M.caja(0.2, 0.2, 0.05, 0xf2c45a, -0.71, 1.45, 0.23)); }
+      // v6.57: banderas al frente del dibujo del castillo: azul tu alianza, roja los hostiles (los que te atacaron)
+      var hostil = !esYo && !aliada && (estado.enemigos || {})[a.uid];
+      function banderaReino(color, marca) {
+        var fb = new THREE.Group(); fb.add(M.cil(0.05, 0.05, 1.7, 6, 0x5e3d24, 0, 0.85, 0)); fb.add(M.caja(0.62, 0.42, 0.04, color, 0.34, 1.45, 0)); fb.add(M.caja(0.2, 0.2, 0.05, marca, 0.34, 1.45, 0.03));
+        fb.traverse(function (o) { if (o.isMesh) { o.material = o.material.clone(); o.material.depthTest = false; o.material.transparent = true; o.renderOrder = 6; } });
+        fb.scale.setScalar(1.8); fb.position.set(0.55, 0.3, -0.55); return fb;
+      }
+      if (estado.alianza && (aliada || esYo)) g.add(banderaReino(0x2a6ad0, 0xf2c45a));
+      if (hostil) g.add(banderaReino(0xc0281e, 0x1a1a1a));
+      if (esYo) { var brillo = new THREE.Mesh(new THREE.CircleGeometry(1.25, 28), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.38, depthWrite: false })); brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.03; g.add(brillo); M3.brilloYo = brillo; }
       if (prot) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.3, depthWrite: false })); g.add(cup); }
       g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[c.x + '_' + c.y] = { aldea: i };
@@ -5242,6 +5252,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -7901,7 +7912,9 @@
     else if (a === 'armas') forjarArmas(b.getAttribute('data-tipo'), false);
     else if (a === 'armas-gemas') forjarArmas(b.getAttribute('data-tipo'), true);
     else if (a === 'abrir-mercado') abrirPanelMercado();
-    else if (a === 'chat-canal') { var cc = b.getAttribute('data-c'); sonar('click'); abrirPanelChat(cc === 'global' ? 'global' : (canalAlianza() || 'al')); }
+    else if (a === 'chat-canal') { var cc = b.getAttribute('data-c'); sonar('click'); abrirPanelChat(cc === 'global' ? 'global' : cc === 'pv' ? 'pv' : (canalAlianza() || 'al')); }
+    else if (a === 'chat-pv-abrir') { sonar('click'); abrirPrivado(b.getAttribute('data-uid'), b.getAttribute('data-n')); }
+    else if (a === 'chat-pv-vaciar') { sonar('click'); Cuentas.vaciarPrivados().then(function () { consejoTemporal(L('Conversaciones borradas.', 'Conversations cleared.')); }).catch(function () { consejoTemporal(T('chat_error')); }); }
     else if (a === 'chat-enviar') enviarMensaje();
     else if (a === 'chat-quien') opcionesChat(b);
     else if (a === 'acel-entreno') abrirAcelerar('entreno');
@@ -8615,7 +8628,7 @@
   // ------------------------------------------------------------------
   //  CHAT: global y de la hermandad, en vivo, con bloquear, reportar y filtro de groserías
   // ------------------------------------------------------------------
-  var chat = { canal: 'global', msgs: { }, escucha: {}, visto: {}, ultimoEnvio: 0, uid: null };
+  var chat = { canal: 'global', msgs: { }, escucha: {}, visto: {}, ultimoEnvio: 0, uid: null, privados: [], pv: null, escPv: null };
   try { chat.visto = JSON.parse(localStorage.getItem('tk_chat_visto') || '{}'); } catch (e) {}
   var GROSERIAS = ['puta', 'puto', 'mierda', 'pendejo', 'pendeja', 'cabron', 'cabrón', 'coño', 'verga', 'culero', 'joder', 'gilipollas', 'maricon', 'maricón', 'fuck', 'shit', 'bitch', 'asshole', 'dick', 'cunt', 'bastard', 'mamaguevo', 'mamahuevo', 'hijueputa', 'hdp', 'malparido', 'carajo', 'idiota', 'estupido', 'estúpido', 'imbecil', 'imbécil'];
   function filtrarTexto(t) {
@@ -8639,15 +8652,19 @@
         actualizarBadgeChat(); if (c === 'global') pintarBarraChat();
       });
     });
+    // v6.57: lista de conversaciones privadas (para el numerito de nuevos)
+    if (!chat.escPv) chat.escPv = Cuentas.escucharPrivados(function (l) { chat.privados = l; actualizarBadgeChat(); if (panelActual && panelActual.tipo === 'chat' && chat.canal === 'pv') abrirPanelChat('pv'); });
+    // la conversación privada abierta
+    if (chat.pv && !chat.escucha[chat.pv.canal]) { var cp = chat.pv.canal; chat.escucha[cp] = Cuentas.escucharChat(cp, function (lista) { chat.msgs[cp] = lista || []; if (panelActual && panelActual.tipo === 'chat' && chat.canal === cp) pintarMensajes(true); }); }
     // si cambió de hermandad, deja el canal viejo
-    Object.keys(chat.escucha).forEach(function (c) { if (c !== 'global' && c !== canalAlianza()) { try { chat.escucha[c](); } catch (e) {} delete chat.escucha[c]; delete chat.msgs[c]; } });
+    Object.keys(chat.escucha).forEach(function (c) { if (c !== 'global' && c !== canalAlianza() && !(chat.pv && c === chat.pv.canal)) { try { chat.escucha[c](); } catch (e) {} delete chat.escucha[c]; delete chat.msgs[c]; } });
   }
   function nuevosEn(c) {
     var l = chat.msgs[c] || [], v = chat.visto[c] || 0, yo = hayCuenta() ? Cuentas.usuario().uid : '';
     return l.filter(function (m) { return m.fecha > v && m.uid !== yo && bloqueados().indexOf(m.uid) < 0; }).length;
   }
   function actualizarBadgeChat() {
-    var n = nuevosEn('global') + (canalAlianza() ? nuevosEn(canalAlianza()) : 0);
+    var n = nuevosEn('global') + (canalAlianza() ? nuevosEn(canalAlianza()) : 0) + nuevosPrivados();
     ponerBadge('badge-chat', n ? (n > 9 ? '9+' : n) : '');
   }
   function marcarVistoChat(c) {
@@ -8656,14 +8673,28 @@
     try { localStorage.setItem('tk_chat_visto', JSON.stringify(chat.visto)); } catch (e) {}
     actualizarBadgeChat();
   }
+  function nuevosPrivados() { return (chat.privados || []).filter(function (c) { return c.nuevo && bloqueados().indexOf(c.uid) < 0; }).length; }
+  function esPv(c) { return c === 'pv' || String(c).indexOf('pv_') === 0; }
   function abrirPanelChat(canal) {
     if (canal) chat.canal = canal;
-    if (chat.canal !== 'global' && !canalAlianza()) chat.canal = 'global';
-    var html = '<div class="subtabs">' + [['global', '🌍 ' + T('chat_global'), nuevosEn('global')], ['al', '🛡️ ' + T('chat_hermandad'), canalAlianza() ? nuevosEn(canalAlianza()) : 0]].map(function (p) {
-      var activo = p[0] === 'global' ? chat.canal === 'global' : chat.canal !== 'global';
+    if (!esPv(chat.canal) && chat.canal !== 'global' && !canalAlianza()) chat.canal = 'al';
+    var html = '<div class="subtabs chat-tabs">' + [['global', L('Global', 'Global'), nuevosEn('global')], ['al', L('Alianza', 'Alliance'), canalAlianza() ? nuevosEn(canalAlianza()) : 0], ['pv', L('Privado', 'Private'), nuevosPrivados()]].map(function (p) {
+      var activo = p[0] === 'global' ? chat.canal === 'global' : p[0] === 'pv' ? esPv(chat.canal) : (chat.canal !== 'global' && !esPv(chat.canal));
       return '<button data-accion="chat-canal" data-c="' + p[0] + '" class="' + (activo ? 'activo' : '') + '">' + p[1] + (p[2] && !activo ? ' <span class="chat-n">' + p[2] + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     if (!hayCuenta()) html += '<p class="nota">' + T('chat_cuenta') + '</p>';
+    else if (chat.canal === 'pv') {
+      // lista de conversaciones privadas
+      var lp = (chat.privados || []).filter(function (c) { return bloqueados().indexOf(c.uid) < 0; });
+      html += '<div class="pv-lista">' + (lp.length ? lp.map(function (c) { var f = new Date(c.fecha), fs = ('0' + f.getDate()).slice(-2) + '/' + ('0' + (f.getMonth() + 1)).slice(-2) + ' ' + ('0' + f.getHours()).slice(-2) + ':' + ('0' + f.getMinutes()).slice(-2);
+        return '<button class="pv-fila' + (c.nuevo ? ' nuevo' : '') + '" data-accion="chat-pv-abrir" data-uid="' + c.uid + '" data-n="' + escaparHTML(c.nombre) + '"><span class="pv-av">' + escaparHTML(String(c.nombre || '?').charAt(0).toUpperCase()) + '</span><span class="pv-dat"><span class="pv-top"><b>' + escaparHTML(c.nombre) + '</b><small>' + fs + '</small></span><span class="pv-txt">' + escaparHTML(filtrarTexto(c.texto)) + '</span></span><i>›</i></button>'; }).join('')
+        : '<p class="nota">' + L('Todavía no tienes conversaciones. Toca el nombre de un jugador en el chat y elige Enviar mensaje.', 'No conversations yet. Tap a player name in the chat and choose Send message.') + '</p>') + '</div>' +
+        '<div class="pv-pie"><span>' + lp.length + '/20 ' + L('Conversaciones', 'Conversations') + '<br><b>' + nuevosPrivados() + ' ' + L('Nuevo', 'New') + '</b></span><button class="comprar azul" data-accion="chat-pv-vaciar"' + (lp.length ? '' : ' disabled') + '>' + L('Vaciar', 'Clear') + '</button></div>';
+    }
+    else if (esPv(chat.canal)) {
+      html += '<div class="pv-cab"><button class="comprar mini" data-accion="chat-canal" data-c="pv">‹ ' + L('Volver', 'Back') + '</button><b>' + escaparHTML(chat.pv ? chat.pv.nombre : '') + '</b></div>' +
+        '<div class="chat-lista" id="chat-lista"></div><div class="chat-escribir"><input id="chat-texto" maxlength="200" autocomplete="off" placeholder="' + T('chat_escribe') + '"><button class="comprar naranja" data-accion="chat-enviar">➤</button></div>';
+    }
     else if (chat.canal === 'al' || (chat.canal !== 'global' && !canalAlianza())) html += '<p class="nota">' + T('chat_sin_alianza') + '</p>';
     else {
       html += '<div class="chat-lista" id="chat-lista"></div>' +
@@ -8671,7 +8702,7 @@
         '<p class="nota chat-normas">' + T('chat_normas') + (bloqueados().length ? ' · ' + T('chat_bloqueados', { n: bloqueados().length }) : '') + '</p>';
     }
     abrirPanel(T('p_chat'), html, { tipo: 'chat' });
-    if (hayCuenta()) { iniciarChat(); pintarMensajes(false); }
+    if (hayCuenta()) { iniciarChat(); if (chat.canal !== 'pv') pintarMensajes(false); }
     var inp = $('chat-texto');
     if (inp) inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); enviarMensaje(); } });
   }
@@ -8724,12 +8755,61 @@
     if (Date.now() - chat.ultimoEnvio < 3000) { consejoTemporal(T('chat_espera')); sonar('error'); return; }
     chat.ultimoEnvio = Date.now();
     inp.value = '';
-    Cuentas.enviarChat(typeof canalOpt === 'string' ? canalOpt : chat.canal, { uid: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), texto: texto, fecha: Date.now() })
-      .then(function () { sonar('click'); }).catch(function () { inp.value = texto; consejoTemporal(T('chat_error')); sonar('error'); });
+    var canalE = typeof canalOpt === 'string' ? canalOpt : chat.canal, pvE = esPv(canalE) && chat.pv ? chat.pv : null;
+    Cuentas.enviarChat(canalE, { uid: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), texto: texto, fecha: Date.now() })
+      .then(function () { sonar('click'); if (pvE) Cuentas.avisarPrivado(pvE.uid, pvE.nombre, Cuentas.nombrePublico(), texto).catch(function () {}); }).catch(function () { inp.value = texto; consejoTemporal(T('chat_error')); sonar('error'); });
   }
   // tocar un nombre: bloquear / reportar (o borrar el mensaje propio)
+  // v6.57: abrir una conversación privada con un jugador
+  function abrirPrivado(uid, nombre) {
+    if (!hayCuenta() || !uid) return;
+    var c = Cuentas.canalPrivado(uid); chat.pv = { uid: uid, nombre: nombre || '?', canal: c };
+    var cv = (chat.privados || []).filter(function (x) { return x.uid === uid; })[0]; if (cv && cv.nuevo) Cuentas.privadoVisto(uid).catch(function () {});
+    abrirPanelChat(c);
+  }
+  // v6.57: Perfil del jugador (tocar su nombre en el chat)
+  function perfilJugador(uid, nombre, idMsg) {
+    var yo = Cuentas.usuario().uid, v = $('perfil-jugador'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'perfil-jugador';
+    function pintar(al, alNom) {
+      var dp = al ? diplomacia(al) : { t: L('Neutral', 'Neutral') }, inv = estado.alianza && al && !al.alianza && uid !== yo;
+      d.innerHTML = '<div class="pj-caja"><button class="pj-x" data-pj="cerrar">✕</button><h3>' + L('Perfil del jugador', 'Player profile') + '</h3>' +
+        '<div class="pj-cuerpo"><div class="pj-av">' + escaparHTML(String(nombre || '?').charAt(0).toUpperCase()) + '</div><div class="pj-dat"><b>' + escaparHTML(nombre) + '</b>' +
+        '<span>' + L('Nivel', 'Level') + ': ' + (al ? (al.nivel || 1) : '…') + '</span><span>' + L('Poder', 'Power') + ': ' + (al ? formatoNumero(al.poder || 0) : '…') + '</span></div></div>' +
+        '<div class="pj-al"><span>' + L('Alianza', 'Alliance') + ': <b>' + (al ? (al.alianza ? escaparHTML(alNom || al.alianza) : L('Ninguna', 'None')) : '…') + '</b></span><span>' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</span></div>' +
+        '<div class="pj-botones">' + (uid === yo ? '<button class="comprar rojo" data-pj="borrar">' + T('chat_borrar') + '</button>' :
+          '<button data-pj="susurrar">' + L('Susurrar', 'Whisper') + '</button><button data-pj="mensaje">' + L('Enviar mensaje', 'Send message') + '</button>' +
+          '<button data-pj="ignorar">' + (bloqueados().indexOf(uid) < 0 ? L('Ignorar', 'Ignore') : L('Dejar de ignorar', 'Unignore')) + '</button><button data-pj="denunciar">' + L('Denunciar', 'Report') + '</button>' +
+          '<button data-pj="invitar"' + (inv ? '' : ' disabled') + '>' + L('Invitar', 'Invite') + '</button>') + '</div></div>';
+    }
+    pintar(null); document.body.appendChild(d);
+    Cuentas.leerAldea(uid).then(function (al) { if (!al || !document.body.contains(d)) return; pintar(al, ''); if (al.alianza) Cuentas.alianza(al.alianza).then(function (x) { if (x && x.nombre && document.body.contains(d)) pintar(al, x.nombre); }).catch(function () {}); }).catch(function () {});
+    d.addEventListener('click', function (ev) {
+      var o = ev.target.closest('[data-pj]');
+      if (ev.target === d || (o && o.getAttribute('data-pj') === 'cerrar')) { d.remove(); return; }
+      if (!o || o.disabled) return;
+      var que = o.getAttribute('data-pj'); d.remove(); sonar('click');
+      var msg = (chat.msgs[chat.canal] || []).filter(function (m) { return m.id === idMsg; })[0];
+      if (que === 'borrar') { if (idMsg) Cuentas.borrarChat(chat.canal, idMsg).catch(function () {}); return; }
+      if (que === 'susurrar') { abrirPanelChat('global'); var it = $('chat-texto'); if (it) { it.value = '@' + nombre + ' '; it.focus(); } return; }
+      if (que === 'mensaje') { abrirPrivado(uid, nombre); setTimeout(function () { var it2 = $('chat-texto'); if (it2) it2.focus(); }, 50); return; }
+      if (que === 'ignorar') { var bi = bloqueados().indexOf(uid); if (bi < 0) { bloqueados().push(uid); consejoTemporal(T('chat_bloqueado', { n: escaparHTML(nombre) })); } else { bloqueados().splice(bi, 1); consejoTemporal(L('Ya no ignoras a ', 'You no longer ignore ') + escaparHTML(nombre)); } guardar(true); if (panelActual && panelActual.tipo === 'chat') abrirPanelChat(); actualizarBadgeChat(); return; }
+      if (que === 'denunciar') {
+        Cuentas.reportar({ de: yo, contra: uid, contraNombre: String(nombre).slice(0, 30), texto: String(msg ? msg.texto : '').slice(0, 200), canal: String(chat.canal).slice(0, 10), mensaje: String(idMsg || '').slice(0, 40), fecha: Date.now() })
+          .then(function () { consejoTemporal(T('chat_reportado', { n: escaparHTML(nombre) })); }).catch(function () { consejoTemporal(T('chat_error')); });
+        return;
+      }
+      if (que === 'invitar') {
+        var tx = L('¡Te invito a mi alianza [' + estado.alianza + ']! Búscala en Alianza › Buscar y pide entrar.', 'I invite you to my alliance [' + estado.alianza + ']! Find it in Alliance › Search and ask to join.');
+        var cpv = Cuentas.canalPrivado(uid);
+        Cuentas.enviarChat(cpv, { uid: yo, nombre: Cuentas.nombrePublico(), texto: tx, fecha: Date.now() }).then(function () { return Cuentas.avisarPrivado(uid, nombre, Cuentas.nombrePublico(), tx); })
+          .then(function () { consejoTemporal(L('Invitación enviada a ', 'Invitation sent to ') + escaparHTML(nombre)); }).catch(function () { consejoTemporal(T('chat_error')); });
+      }
+    });
+  }
   function opcionesChat(b) {
     var uid = b.getAttribute('data-uid'), id = b.getAttribute('data-id'), nombre = b.getAttribute('data-n'), yo = Cuentas.usuario().uid;
+    if (uid) { perfilJugador(uid, nombre, id); return; }
     var v = $('chat-opciones'); if (v) v.remove();
     var d = document.createElement('div'); d.id = 'chat-opciones';
     var msg = (chat.msgs[chat.canal] || []).filter(function (m) { return m.id === id; })[0];
