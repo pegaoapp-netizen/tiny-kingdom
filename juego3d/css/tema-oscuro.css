@@ -943,3 +943,36 @@ body.tema-oscuro #panel.tg-panel .ft-ico { background: linear-gradient(180deg, #
 body.tema-oscuro #panel.tg-panel .tienda-tabs button { background: linear-gradient(180deg, #3a2414, #24150a) !important; border: 1px solid #120b05 !important; color: #e8d6b0 !important; }
 body.tema-oscuro #panel.tg-panel .tienda-tabs button.activo { background: linear-gradient(180deg, #7a4f2c, #5a3518) !important; color: #fff !important; }
 #panel.tg-panel .tienda-top { display: none !important; } /* v6.62: ya están las pestañas de arriba */
+
+/* ---------------- v6.63: BARRAS OSCURAS CON DORADO e ICONOS CON MARCO DE ORO (pedido del dueño) ---------------- */
+:root { --bo-1: #3a2614; --bo-2: #1c1209; --bo-oro: #c8a764; --bo-letra: #f3e3bd; }
+/* barra de arriba */
+body.barra-oro #tk-arriba { background: linear-gradient(180deg, #2a1a0c, #140c05) !important; border-bottom: 2px solid var(--bo-oro) !important; box-shadow: 0 2px 10px rgba(0,0,0,.6) !important; }
+body.barra-oro #tk-arriba button { background: linear-gradient(180deg, #b0702a 0%, #7a4416 55%, #4a2608 100%) !important; border: 1px solid #e0b060 !important; box-shadow: inset 0 1px 0 rgba(255,230,160,.45), 0 1px 3px rgba(0,0,0,.6) !important; }
+body.barra-oro #tk-arriba #tk-gemas { background: linear-gradient(180deg, #5cc24a, #2e8a22) !important; border-color: #c8e6a0 !important; }
+body.barra-oro #tk-arriba .tk-fila2 { background: rgba(0,0,0,.35) !important; border: 1px solid rgba(200,167,100,.45) !important; }
+body.barra-oro #tk-arriba, body.barra-oro #tk-arriba * { color: var(--bo-letra) !important; text-shadow: 0 1px 2px #000 !important; }
+body.barra-oro #tk-arriba .tk-dat small { color: #ffd98a !important; }
+body.barra-oro #tk-arriba .tk-nv, body.barra-oro #tk-arriba .tk-nv * { color: #fff !important; }
+/* barra del chat */
+body.barra-oro #chat-barra { background: linear-gradient(180deg, rgba(30,20,10,.92), rgba(15,10,5,.92)) !important; border-top: 1px solid rgba(200,167,100,.5) !important; border-bottom: 0 !important; }
+body.barra-oro #chat-barra, body.barra-oro #chat-barra * { color: var(--bo-letra) !important; text-shadow: none !important; }
+body.barra-oro #chat-barra input { background: #2a1a0c !important; border: 1px solid #6a4a2a !important; color: var(--bo-letra) !important; }
+body.barra-oro #chat-barra input::placeholder { color: #a08a60 !important; }
+/* barra de abajo: baja y compacta, botones rectangulares café con icono chico de marco dorado y letra crema */
+body.barra-oro #abajo { background: linear-gradient(180deg, #2e1d0e, #120a04) !important; border-top: 2px solid var(--bo-oro) !important; box-shadow: 0 -2px 10px rgba(0,0,0,.6) !important; padding: 4px 4px calc(4px + env(safe-area-inset-bottom)) !important; gap: 3px !important; height: auto !important; display: flex !important; align-items: stretch !important; }
+body.barra-oro #abajo > button { flex: 1 1 0 !important; min-width: 0 !important; height: auto !important; margin: 0 !important; padding: 4px 2px 3px !important; border-radius: 6px !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 2px !important;
+  background: linear-gradient(180deg, #5a3a1e, #2e1a0a) !important; border: 1px solid #120a04 !important; box-shadow: inset 0 1px 0 rgba(255,220,150,.25) !important; translate: none !important; transform: none !important; }
+body.barra-oro #abajo > button.activo { background: linear-gradient(180deg, #8a5a2a, #4a2c12) !important; border-color: #e0b060 !important; }
+body.barra-oro #abajo .bot-io { display: block; width: 38px; height: 38px; }
+body.barra-oro #abajo .bot-io svg { width: 100%; height: 100%; display: block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+body.barra-oro #abajo .bot-img { display: none !important; }
+body.barra-oro #abajo > button, body.barra-oro #abajo > button span, body.barra-oro #abajo > button small { color: var(--bo-letra) !important; -webkit-text-fill-color: var(--bo-letra) !important; text-shadow: 0 1px 2px #000 !important; font: 600 11px/1.1 Georgia, "Times New Roman", serif !important; letter-spacing: 0 !important; }
+body.barra-oro #abajo > button .icono { display: none !important; }
+body.barra-oro #abajo #btn-vista { width: auto !important; height: auto !important; border-radius: 6px !important; background: linear-gradient(180deg, #8a5a2a, #3a2410) !important; border: 1px solid #e0b060 !important; }
+body.barra-oro #abajo #btn-vista .bv-ico { font-size: 26px !important; line-height: 1 !important; }
+body.barra-oro #abajo #btn-vista::after { top: 1px !important; right: 1px !important; width: 15px !important; height: 15px !important; font-size: 10px !important; }
+/* menú grande: iconos con marco dorado */
+#menu-grande .mg-ico svg.io { width: 56px; height: 56px; display: block; filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)); }
+#menu-grande .mg-ico:has(svg.io) { background: none !important; border: 0 !important; box-shadow: none !important; }
+@media (max-width: 520px) { body.barra-oro #abajo .bot-io { width: 32px; height: 32px; } body.barra-oro #abajo > button, body.barra-oro #abajo > button span { font-size: 10px !important; } #menu-grande .mg-ico svg.io { width: 50px; height: 50px; } }

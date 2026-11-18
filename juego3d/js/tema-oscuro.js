@@ -102,6 +102,10 @@
   // v6.57: en cada ventana, arriba a la derecha, el botón verde de gemas con "Más"
   var pcab = document.querySelector('#panel .panel-cab');
   if (pcab) { var bg = document.createElement('button'); bg.id = 'panel-gemas'; bg.innerHTML = '<span class="pg-dat"><b id="pg-n">0</b><small id="pg-mas">Más</small></span>' + GEMA_SVG.replace('tk-gema', 'tk-gema pg-gema').replace(/tkg1/g, 'pgg1').replace(/tkg2/g, 'pgg2'); var cx = pcab.querySelector('.cerrar, button'); pcab.insertBefore(bg, cx || null); bg.addEventListener('click', function () { if (window.TK_gemas) window.TK_gemas(); }); }
+  // v6.63: barra de abajo compacta con iconos propios de marco dorado
+  var ICONO_ABAJO = { 'btn-conquista': 'campana', 'btn-heroes': 'tropas', 'btn-mochila': 'inventario', 'btn-construir': 'edificios', 'btn-tienda': 'tienda', 'btn-alianza': 'alianza', 'btn-mundo': 'mundo' };
+  if (window.ICONOS_ORO) Object.keys(ICONO_ABAJO).forEach(function (id) { var b = $(id); if (!b) return; var im = b.querySelector('.bot-img'); var sp = document.createElement('span'); sp.className = 'bot-io'; sp.innerHTML = ICONOS_ORO[ICONO_ABAJO[id]]; if (im) im.replaceWith(sp); else b.insertBefore(sp, b.firstChild); });
+  document.body.classList.add('barra-oro');
   function copiar(de, a) { var x = $(de), y = $(a); if (x && y && y.textContent !== x.textContent) y.textContent = x.textContent; }
 
   // ---------- cosas que cambian: textos, poder, nivel y la posición del panel ----------

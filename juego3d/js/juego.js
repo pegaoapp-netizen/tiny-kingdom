@@ -2078,12 +2078,14 @@
     var m = $('menu-grande'); if (!m) return;
     if (!m.classList.contains('oculto')) { cerrarMenuGrande(); return; }
     cerrarPanel(); if (menuAbierto()) cerrarMenuEdif();
+    // v6.63: iconos propios con marco dorado
+    var ICONO_MENU = { 'btn-mochila': 'inventario', 'btn-misiones': 'misiones', 'btn-alianza': 'alianza', 'btn-buzon': 'correo', 'mg-azar': 'azar', 'btn-conquista': 'campana', 'mg-reliquia': 'reliquia', 'mg-entrenar': 'entrenar', 'mg-investigar': 'investigar', 'btn-ranking': 'ranking', 'btn-ajustes': 'ajustes', 'mg-publicar': 'publicar', 'mg-equipo': 'equipo' };
     // v6.48: el menú con sus 13 botones fijos, en cuadrícula
     var items = [];
     [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
       ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')]]
-      .forEach(function (q) { var bd = q[3] ? $(q[3]) : null; items.push({ id: q[0], ico: q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
+      .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]; items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span>' + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
