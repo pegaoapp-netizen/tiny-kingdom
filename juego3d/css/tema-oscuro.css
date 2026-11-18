@@ -663,3 +663,16 @@ body.tema-oscuro #abajo button, body.tema-oscuro #abajo button span, body.tema-o
 /* el letrero de ayuda también en crema */
 body.tema-oscuro #consejo { background: linear-gradient(180deg, #faf1d6, #e8d6aa) !important; border: 2px solid #c8a764 !important; color: #2b1d0e !important; text-shadow: none !important; box-shadow: 0 3px 10px rgba(0,0,0,.35) !important; }
 body.tema-oscuro #consejo * { color: #2b1d0e !important; text-shadow: none !important; }
+
+/* ---------------- v6.56: cuadrito de obras (crema) ---------------- */
+#colas-obras { position: fixed; left: 8px; z-index: 30; display: flex; flex-direction: column; gap: 5px; width: min(250px, 60vw); pointer-events: auto; }
+#colas-obras .co-fila { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 10px; background: linear-gradient(180deg, #faf1d6, #e8d6aa); border: 2px solid #c8a764; box-shadow: 0 2px 6px rgba(0,0,0,.35); font-family: Georgia, "Times New Roman", serif; }
+#colas-obras .co-ico { font-size: 18px; flex: none; width: 22px; text-align: center; }
+#colas-obras .co-dat { flex: 1; min-width: 0; }
+#colas-obras .co-dat b { display: block; font-size: 12px; color: #2b1d0e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#colas-obras .co-barra { position: relative; height: 14px; margin-top: 2px; border-radius: 7px; background: rgba(90,70,38,.25); overflow: hidden; border: 1px solid rgba(120,90,40,.45); }
+#colas-obras .co-barra i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(180deg, #7fd36a, #3c9a2e); transition: width .3s linear; }
+#colas-obras .co-barra span { position: relative; display: block; text-align: center; font: 700 10px/14px system-ui, sans-serif; color: #1c1408; }
+#colas-obras .co-acel { flex: none; padding: 5px 8px; border-radius: 8px; border: 1px solid #1f5e17; background: linear-gradient(180deg, #6fd25a, #2f8a22); color: #fff; font: 700 12px Georgia, serif; text-shadow: 0 1px 1px rgba(0,0,0,.5); cursor: pointer; }
+#colas-obras .co-acel:active { transform: scale(.96); }
+@media (max-width: 520px) { #colas-obras { width: min(220px, 58vw); } #colas-obras .co-acel { padding: 4px 6px; font-size: 11px; } }

@@ -607,6 +607,7 @@ var M = (function () {
   // v6.52: edificios con 2 versiones: la grande y más detallada sale desde el nivel 15
   var TRIPO_ETAPAS = { cuartel: 3, almacen: 2, embajada: 2, academia: 2, mercado: 2, herreria: 2, establo: 2, enfermeria: 2, galeria: 2, relevo: 2, cabana: 2, vigia: 2, granja: 2 };
   function etapaEdificio(nivel) { return nivel >= 20 ? 3 : nivel >= 10 ? 2 : 1; }
+  var CON_HUMO = { herreria: 1, cabana: 1, granja: 1, enfermeria: 1, almacen: 1, establo: 1 };
   function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
     var et = TRIPO_ETAPAS[tipo] === 2 ? ((nivel || 1) >= 15 ? 2 : 1) : Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
@@ -614,6 +615,8 @@ var M = (function () {
     if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior
     if (!t) return null;
     var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(esc); gT.add(mT); gT.userData.noFusionar = true; gT.userData.tripo = true; gT.userData.alturaDisparo = 3;
+    // v6.56: humo en los edificios que tienen fogón (sale de lo alto del techo)
+    if (CON_HUMO[tipo]) { mT.updateMatrixWorld(true); var bh = new THREE.Box3().setFromObject(mT); gT.userData.chimenea = new THREE.Vector3(bh.min.x + (bh.max.x - bh.min.x) * 0.68, bh.max.y * 0.9, bh.min.z + (bh.max.z - bh.min.z) * 0.32); }
     return gT;
   }
   function adornoTripo(nombre, esc) {
@@ -1012,6 +1015,23 @@ var M = (function () {
       var nn = Math.max(1, Math.min(30, n || 1));
       g.scale.setScalar(15 * (0.38 + 0.70 * Math.pow((nn - 1) / 29, 0.85)));
       g.userData.banderas = []; g.userData.etapa = e;
+      // v6.56: banderas que ondean en lo alto de las torres (la más alta y la de cada esquina)
+      try {
+        if (!CAST_GLB.userData.puntas) {
+          var pts = [null, null, null, null, null], bb = new THREE.Box3().setFromObject(CAST_GLB), c = bb.getCenter(new THREE.Vector3()), v = new THREE.Vector3();
+          CAST_GLB.updateMatrixWorld(true);
+          CAST_GLB.traverse(function (o) { if (!o.isMesh || !o.geometry.attributes.position) return; var pa = o.geometry.attributes.position;
+            for (var i = 0; i < pa.count; i += 3) { v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld); var q = (v.x < c.x ? 0 : 1) + (v.z < c.z ? 0 : 2) + 1;
+              if (!pts[0] || v.y > pts[0].y) pts[0] = v.clone();
+              if (Math.abs(v.x - c.x) > (bb.max.x - bb.min.x) * 0.22 && Math.abs(v.z - c.z) > (bb.max.z - bb.min.z) * 0.22 && (!pts[q] || v.y > pts[q].y)) pts[q] = v.clone(); } });
+          CAST_GLB.userData.puntas = pts.filter(Boolean);
+        }
+        var esc = 1.35 / 15;
+        CAST_GLB.userData.puntas.forEach(function (p, i) {
+          var b = bandera(i === 0 ? 0xc0302a : 0x2a5aa8, i === 0 ? 2.2 : 1.6); b.scale.setScalar(esc * (i === 0 ? 1.15 : 1)); b.position.copy(p); b.position.y -= 0.004;
+          g.add(b); g.userData.banderas.push(b.userData.tela);
+        });
+      } catch (err) {}
       return g;
     }
     if (!CAST_GLB_CARGANDO) {
@@ -1290,6 +1310,19 @@ var M = (function () {
     mas.userData.noFusionar = true;
     g.add(mas);
     g.userData.mas = mas;
+    // v6.56: cerca de madera alrededor de la parcela libre de la ciudad (con entrada hacia el camino)
+    if (!campo) {
+      var cerca = new THREE.Group(), L2 = 3.55, MP = 0x7a4a24, MR = 0x9c6a38;
+      for (var k = -L2; k <= L2 + 0.01; k += L2 / 3) {
+        [[k, -L2], [k, L2], [-L2, k], [L2, k]].forEach(function (q) { if (q[1] === L2 && Math.abs(q[0]) < 1.1) return; cerca.add(caja(0.24, 0.95, 0.24, MP, q[0], 0.62, q[1])); });
+      }
+      [0.5, 0.82].forEach(function (y) {
+        cerca.add(caja(L2 * 2, 0.11, 0.1, MR, 0, y, -L2)); cerca.add(caja(0.1, 0.11, L2 * 2, MR, -L2, y, 0)); cerca.add(caja(0.1, 0.11, L2 * 2, MR, L2, y, 0));
+        var tr = L2 - 1.1; cerca.add(caja(tr, 0.11, 0.1, MR, -(1.1 + tr / 2), y, L2)); cerca.add(caja(tr, 0.11, 0.1, MR, 1.1 + tr / 2, y, L2));
+      });
+      cerca.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+      cerca.userData.noFusionar = true; g.add(cerca); g.userData.cerca = cerca;
+    }
     var brillo = new THREE.Mesh(
       geo('brilloParcela', function () { return new THREE.PlaneGeometry(7.4, 7.4); }),
       new THREE.MeshBasicMaterial({ color: 0xfff27a, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide })

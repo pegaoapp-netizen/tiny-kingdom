@@ -1225,6 +1225,7 @@
   // ---- DEMOLER ----
   function vaciarParcela(s) {
     if (s.modelo) { s.grupo.remove(s.modelo); s.modelo = null; } if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
+    if (s.baseSombra) { s.grupo.remove(s.baseSombra); s.baseSombra = null; }
     if (s.andamio) { s.grupo.remove(s.andamio); s.andamio = null; }
     if (s.insignia) { s.grupo.remove(s.insignia); s.insignia = null; }
     if (s.barra) { escena.remove(s.barra); s.barra = null; }
@@ -3494,7 +3495,25 @@
     s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
     s.grupo.add(s.insignia);
     s.grupo.add(s.modelo);
+    // v6.56: sombra suave y tierra apisonada debajo, para que el edificio se vea asentado en el suelo
+    if (s.baseSombra) { s.grupo.remove(s.baseSombra); s.baseSombra = null; }
+    if (!s.campo) {
+      s.grupo.updateMatrixWorld(true); var bxs = new THREE.Box3().setFromObject(s.modelo), tam = Math.min(4.3, Math.max(bxs.max.x - bxs.min.x, bxs.max.z - bxs.min.z) * 0.95 + 0.6);
+      var bs = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), matBaseSombra()); bs.rotation.x = -Math.PI / 2; bs.scale.set(tam, tam, 1); bs.position.y = 0.125; bs.renderOrder = 1;
+      s.baseSombra = bs; s.grupo.add(bs);
+    }
     s.cd = 0;
+  }
+  var MAT_BASE_SOMBRA = null;
+  function matBaseSombra() {
+    if (MAT_BASE_SOMBRA) return MAT_BASE_SOMBRA;
+    var c = document.createElement('canvas'); c.width = c.height = 128; var x = c.getContext('2d');
+    x.filter = 'blur(5px)'; x.fillStyle = 'rgba(146,112,66,0.9)'; x.beginPath(); if (x.roundRect) x.roundRect(12, 12, 104, 104, 20); else x.rect(12, 12, 104, 104); x.fill(); x.filter = 'none';
+    var gr = x.createRadialGradient(64, 64, 6, 64, 64, 62); gr.addColorStop(0, 'rgba(30,20,8,0.55)'); gr.addColorStop(0.55, 'rgba(40,28,12,0.32)'); gr.addColorStop(1, 'rgba(40,28,12,0)');
+    x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
+    var t = new THREE.CanvasTexture(c);
+    MAT_BASE_SOMBRA = new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 });
+    return MAT_BASE_SOMBRA;
   }
   // ---------- ACELERADORES CON TIEMPO ----------
   var ACELERADORES = ['acel_1m', 'acel_5m', 'acel_15m', 'acel_1h', 'acel_2h5', 'acel_8h', 'acel_12h', 'acel_15h', 'acel_24h', 'inv_1m', 'inv_15m', 'inv_1h', 'inv_2h5', 'inv_8h', 'inv_15h', 'inv_24h', 'inv_3d'];
@@ -3571,6 +3590,31 @@
   }
   // ---------- PANEL ACELERAR: cuenta atrás, gemas, Finalizar ahora y lista con Compra y usa ----------
   var relojAcel = null, nombreAcel = '';
+  // v6.56: cuadrito de obras arriba a la izquierda: qué se construye o entrena, barra, tiempo y botón Acelerar
+  var maxFalta = {}, colasHTML = '';
+  function pintarColas() {
+    var box = $('colas-obras');
+    if (!box) { box = document.createElement('div'); box.id = 'colas-obras'; document.body.appendChild(box);
+      box.addEventListener('click', function (ev) { var b = ev.target.closest('[data-acel]'); if (!b) return; sonar('click'); abrirAcelerar(b.getAttribute('data-acel')); }); }
+    var ocultar = enMundo || enMenu || panelActual || document.body.classList.contains('panel-abierto');
+    var lista = ocultar ? [] : cosasConTiempo(false);
+    var vivos = {}, datos = [];
+    // la caja se arma solo cuando cambia lo que hay; el tiempo y la barra se actualizan sin rehacerla (así el botón responde)
+    var h = lista.slice(0, 4).map(function (c) {
+      var f = faltaDe(c.que); vivos[c.que] = 1; if (!maxFalta[c.que] || f > maxFalta[c.que]) maxFalta[c.que] = f;
+      datos.push({ pct: Math.max(2, Math.min(100, Math.round((1 - f / maxFalta[c.que]) * 100))), t: fmtTiempo(Math.ceil(f)) });
+      return '<div class="co-fila"><span class="co-ico">' + c.ico + '</span><div class="co-dat"><b>' + escaparHTML(c.nom) + '</b><div class="co-barra"><i></i><span></span></div></div><button class="co-acel" data-acel="' + c.que + '">' + L('Acelerar', 'Speed up') + '</button></div>';
+    }).join('');
+    Object.keys(maxFalta).forEach(function (k) { if (!vivos[k] && !ocultar) delete maxFalta[k]; });
+    if (h !== colasHTML) { colasHTML = h; box.innerHTML = h; }
+    box.querySelectorAll('.co-fila').forEach(function (fi, i) { var d = datos[i]; if (!d) return; var bi = fi.querySelector('.co-barra i'), bs = fi.querySelector('.co-barra span'); bi.style.width = d.pct + '%'; if (bs.textContent !== d.t) bs.textContent = d.t; });
+    box.style.display = h ? '' : 'none';
+    var mi = $('mision'), top = 0;
+    var mr = mi ? mi.getBoundingClientRect() : null;
+    if (mr && mr.height > 0 && getComputedStyle(mi).display !== 'none' && !mi.classList.contains('oculto')) top = mr.bottom + 6;
+    else { var tk = $('tk-arriba'); top = (tk ? tk.getBoundingClientRect().bottom : 60) + 8; }
+    box.style.top = Math.round(top) + 'px';
+  }
   function abrirAcelerar(que, resultado) {
     var v = $('acelerar-elegir'); if (v) v.remove();
     if (relojAcel) { clearInterval(relojAcel); relojAcel = null; }
@@ -8119,6 +8163,7 @@
     else { y = abajo('perfil') + 4; poner('ciudad-nombre', y); y = (abajo('ciudad-nombre') || y) + 4;
     poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6; }
     poner('mision', y); y = (abajo('mision') || y) + 6;
+    var yc = abajo('colas-obras'); if (yc) y = yc + 6; // v6.56: el letrero va debajo del cuadrito de obras
     poner('consejo', y);
     poner('lateral', (abajo('tk-arriba') || abajo('recursos')) + 6);
   }
@@ -8350,7 +8395,7 @@
     if (obraMuralla) { escena.remove(murallaBarra); murallaAndamios.forEach(function (a) { escena.remove(a); }); murallaAndamios = []; murallaBarra = null; obraMuralla = null; }
     slots.forEach(function (s) {
       if (s.modelo) s.grupo.remove(s.modelo); if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
-      if (s.andamio) s.grupo.remove(s.andamio);
+      if (s.andamio) s.grupo.remove(s.andamio); if (s.baseSombra) { s.grupo.remove(s.baseSombra); s.baseSombra = null; }
       if (s.insignia) { s.grupo.remove(s.insignia); s.insignia = null; }
       if (s.barra) escena.remove(s.barra);
       s.modelo = s.andamio = s.barra = null; s.edificio = s.obra = null; s.rebote = 1; s.guardado = 0;
@@ -8740,6 +8785,7 @@
       // v6.38: el letrero de nivel solo se ve en el edificio que tocaste
       if (s.insignia) s.insignia.visible = menuEdif.slot === i || (slotElegido === i && !!panelActual);
       if (s.terreno.userData.mas) s.terreno.userData.mas.visible = libre && !cerrada(s);
+      if (s.terreno.userData.cerca) s.terreno.userData.cerca.visible = libre && !cerrada(s);
       // estacas y cuerda: solo en modo construcción
       if (s.terreno.userData.marcas) s.terreno.userData.marcas.visible = !!on;
     });
@@ -8753,7 +8799,7 @@
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); procesarRegresos(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; pintarColas(); actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); procesarRegresos(); }
     render.render(escena, camara);
   }
 
