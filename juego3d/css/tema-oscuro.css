@@ -976,3 +976,18 @@ body.barra-oro #abajo #btn-vista::after { top: 1px !important; right: 1px !impor
 #menu-grande .mg-ico svg.io { width: 56px; height: 56px; display: block; filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)); }
 #menu-grande .mg-ico:has(svg.io) { background: none !important; border: 0 !important; box-shadow: none !important; }
 @media (max-width: 520px) { body.barra-oro #abajo .bot-io { width: 32px; height: 32px; } body.barra-oro #abajo > button, body.barra-oro #abajo > button span { font-size: 10px !important; } #menu-grande .mg-ico svg.io { width: 50px; height: 50px; } }
+
+/* ---------------- v6.64: DETALLES DE EDIFICIO como las fotos ---------------- */
+body.tema-oscuro #panel.cafe .panel-cab { display: flex !important; align-items: center !important; gap: 8px !important; }
+body.tema-oscuro #panel.cafe #panel-titulo { flex: 1 1 auto !important; min-width: 0 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; text-align: center !important; font: 700 19px Georgia, "Times New Roman", serif !important; color: #f3e3bd !important; }
+body.tema-oscuro #panel.cafe #panel-titulo::before { content: '★ '; color: #f2c45a; }
+body.tema-oscuro #panel.cafe .cafe-mas { flex: none !important; }
+.ve-max { margin: 12px 0 12px 22%; padding: 14px 12px; border-radius: 8px; background: rgba(0,0,0,.35); border: 1px solid #5a3d22; color: #e8d6b0; font: 14px Georgia, serif; }
+.ve-rojos { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 6px; }
+.ve-rojo { min-height: 48px; border-radius: 6px; border: 1px solid #2a0806; background: linear-gradient(180deg, #c8402e 0%, #8a1e14 55%, #5a0e08 100%); color: #fff; font: 700 17px Georgia, "Times New Roman", serif; box-shadow: inset 0 1px 0 rgba(255,200,180,.4), 0 2px 5px rgba(0,0,0,.5); cursor: pointer; }
+.ve-rojo:active { transform: scale(.97); }
+@media (max-width: 520px) { body.tema-oscuro #panel.cafe #panel-titulo { font-size: 16px !important; } }
+body.tema-oscuro #panel.cafe .cafe-mas { padding: 4px 8px !important; font-size: 13px !important; min-width: 0 !important; }
+body.tema-oscuro #panel.cafe .ve-icono img { width: 34px !important; height: 34px !important; }
+@media (max-width: 760px) { body.tema-oscuro #panel.cafe { min-height: calc(100dvh - 190px) !important; } }
+@media (max-width: 520px) { body.tema-oscuro #panel.cafe #panel-titulo { white-space: normal !important; font-size: 15px !important; line-height: 1.15 !important; } }

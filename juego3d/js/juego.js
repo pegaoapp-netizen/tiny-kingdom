@@ -5876,9 +5876,10 @@
               : '<button class="comprar verde" data-accion="mejorar-ya" data-slot="' + i + '">' + L('Construir ya', 'Build now') + '</button>') + '</div>';
         html += '<div class="ve-tiempo"><span>⏱ ' + L('Tiempo de construcción: ', 'Build time: ') + fmtTiempo(segE / velObras()) + '</span><span class="ve-gemas"><span class="ico gema"></span>' + gYa + '</span></div>';
         html += tablaVentana(costoE, requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)));
-      } else html += '<div class="ve-sig"><div class="ve-sig-n">' + L('Nivel', 'Level') + '<b>' + nivel + '</b></div><div class="ve-sig-t">⭐ ' + T('nivel_max') + ' ★★★</div></div>';
+      } else html += '<div class="ve-max">' + L('Has alcanzado el máximo nivel', 'You have reached the max level') + '</div>'; // v6.64: como las fotos del dueño
     }
-    if (s.edificio && !oleadaActiva) html += '<button class="comprar ve-demoler" data-accion="demoler-panel" data-slot="' + i + '">' + T('mb_demoler') + '</button>';
+    // v6.64: dos botones rojos lado a lado: Demoler (quita el edificio) y Derribar (le baja un nivel)
+    if (s.edificio && !oleadaActiva) html += '<div class="ve-rojos"><button class="ve-rojo" data-accion="demoler-panel" data-slot="' + i + '">' + L('Demoler', 'Demolish') + '</button><button class="ve-rojo" data-accion="derribar-panel" data-slot="' + i + '">' + L('Derribar', 'Downgrade') + '</button></div>';
     html += '</div>';
     abrirPanel(N(tipo) + ' (' + L('Nvl.', 'Lvl.') + nivel + ')', pestanasVentana(i, tipo) + html, { tipo: 'edificio', slot: i });
     ponerCafe();
@@ -8131,6 +8132,16 @@
     else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
+    else if (a === 'derribar-panel') {
+      var dj = +b.getAttribute('data-slot'), sd3 = slots[dj]; if (!sd3 || !sd3.edificio) return;
+      if (sd3.edificio.nivel <= 1) { cerrarPanel(); confirmarJuego('🧨 ' + T('demoler_titulo', { n: N(sd3.edificio.tipo) }), T('demoler_txt', { v: 1 }), T('demoler_si'), function () { demoler(dj); }); return; }
+      cerrarPanel();
+      confirmarJuego(L('Derribar', 'Downgrade') + ' ' + N(sd3.edificio.tipo), L('El edificio baja del nivel ' + sd3.edificio.nivel + ' al ' + (sd3.edificio.nivel - 1) + '. No se devuelven recursos.', 'The building goes from level ' + sd3.edificio.nivel + ' to ' + (sd3.edificio.nivel - 1) + '. No resources are returned.'), L('Derribar', 'Downgrade'), function () {
+        if (oleadaActiva) { consejoTemporal(T('demoler_oleada')); return; }
+        ponerEdificio(sd3, sd3.edificio.tipo, sd3.edificio.nivel - 1); sonar('golpe'); chispas(sd3.pos.clone().setY(1), 0x9a8a70, 18, 4); actualizarHUD(); guardar(true);
+        consejoTemporal(N(sd3.edificio.tipo) + ' · ' + L('Nv ', 'Lv ') + sd3.edificio.nivel);
+      });
+    }
     else if (a === 'demoler-panel') { var di = +b.getAttribute('data-slot'), sd2 = slots[di]; if (!sd2 || !sd2.edificio) return; cerrarPanel(); confirmarJuego('🧨 ' + T('demoler_titulo', { n: N(sd2.edificio.tipo) }), T('demoler_txt', { v: sd2.edificio.nivel }), T('demoler_si'), function () { demoler(di); }); }
     else if (a === 'muralla') construirMuralla();
     else if (a === 'mejorar-castillo') mejorarCastillo();
