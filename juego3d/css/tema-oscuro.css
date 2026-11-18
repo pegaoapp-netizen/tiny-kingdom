@@ -917,3 +917,29 @@ body.tema-oscuro #panel.al-panel .al-post-t, body.tema-oscuro #panel.al-panel .a
 .mc-botin { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 10px; }
 .mc-botin div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 8px; background: rgba(0,0,0,.25); border: 1px solid #5a3d22; }
 .mc-botin span { font-size: 22px; } .mc-botin b { color: #f2c45a; font: 700 14px Georgia, serif; } .mc-botin small { color: #cdb88e; font: 11px Georgia, serif; }
+
+/* ---------------- v6.62: TIENDA (Paquetes, Gemas, Objetos) ---------------- */
+.tg-tabs button { font-size: 15px !important; }
+.tg-paq { margin-bottom: 10px; padding: 10px; border-radius: 10px; background: linear-gradient(180deg, #4a2c16, #2a170a); border: 2px solid #d4a94a; box-shadow: 0 0 10px rgba(212,169,74,.25); }
+.tg-paq-cab { display: flex; align-items: center; gap: 10px; }
+.tg-paq-ico { flex: none; width: 52px; height: 52px; border-radius: 10px; display: grid; place-items: center; font-size: 30px; background: radial-gradient(circle at 50% 40%, #ffe9a8, #d08a2a 70%); border: 2px solid #f2c45a; }
+.tg-paq-cab div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+body.tema-oscuro #panel.tg-panel .tg-paq-cab b { color: #f6e6c0 !important; font: 700 16px Georgia, serif; }
+body.tema-oscuro #panel.tg-panel .tg-paq-cab small { color: #ff9a5a !important; font: 12px Georgia, serif; }
+.tg-valor { font-style: normal; flex: none; padding: 3px 8px; border-radius: 12px; background: #c0281e; color: #fff; font: 700 12px Georgia, serif; transform: rotate(4deg); }
+.tg-paq-cosas { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.tg-paq-cosas > span { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 64px; padding: 6px 4px; border-radius: 8px; background: rgba(0,0,0,.3); border: 1px solid #6a4a2a; font-size: 22px; }
+body.tema-oscuro #panel.tg-panel .tg-paq-cosas b { color: #f2c45a !important; font: 700 13px Georgia, serif; } body.tema-oscuro #panel.tg-panel .tg-paq-cosas small { color: #cdb88e !important; font: 10px/1.1 Georgia, serif; text-align: center; max-width: 76px; }
+.tg-comprar { width: 100%; }
+body.tema-oscuro #panel.tg-panel .tienda-saldo { background: rgba(0,0,0,.3) !important; border: 1px solid #6a4a2a !important; }
+body.tema-oscuro #panel.tg-panel .tienda-saldo, body.tema-oscuro #panel.tg-panel .tienda-saldo * { color: #f6e6c0 !important; }
+body.tema-oscuro #panel.tg-panel .nota { color: #cdb88e !important; }
+body.tema-oscuro #panel.tg-panel .gema-paq { background: linear-gradient(180deg, #3a2716, #24180c) !important; border: 1px solid #6a4a2a !important; }
+body.tema-oscuro #panel.tg-panel .gema-paq b, body.tema-oscuro #panel.tg-panel .gema-paq .gp-n { color: #f6e6c0 !important; }
+body.tema-oscuro #panel.tg-panel .gema-paq .gp-extra { color: #7fd36a !important; }
+body.tema-oscuro #panel.tg-panel .fila-tienda { background: none !important; border: 0 !important; border-bottom: 1px solid #120b05 !important; border-radius: 0 !important; }
+body.tema-oscuro #panel.tg-panel .fila-tienda b { color: #f1e6d0 !important; } body.tema-oscuro #panel.tg-panel .fila-tienda .ft-tienes { color: #e8842e !important; } body.tema-oscuro #panel.tg-panel .fila-tienda small { color: #b8a27a !important; }
+body.tema-oscuro #panel.tg-panel .ft-ico { background: linear-gradient(180deg, #8fd0f0, #4a96c8) !important; border: 2px solid #d4a94a !important; }
+body.tema-oscuro #panel.tg-panel .tienda-tabs button { background: linear-gradient(180deg, #3a2414, #24150a) !important; border: 1px solid #120b05 !important; color: #e8d6b0 !important; }
+body.tema-oscuro #panel.tg-panel .tienda-tabs button.activo { background: linear-gradient(180deg, #7a4f2c, #5a3518) !important; color: #fff !important; }
+#panel.tg-panel .tienda-top { display: none !important; } /* v6.62: ya están las pestañas de arriba */

@@ -5304,7 +5304,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
-    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -7671,11 +7671,30 @@
     return '<div class="tienda-arriba"><div class="subtabs tienda-top"><button data-accion="tienda-arriba" data-p="tienda" class="' + (pestTiendaArriba === 'tienda' ? 'activo' : '') + '">🛒 ' + L('Tienda', 'Shop') + '</button><button data-accion="tienda-arriba" data-p="mios" class="' + (pestTiendaArriba === 'mios' ? 'activo' : '') + '">🎒 ' + L('Mis objetos', 'My items') + '</button></div>' +
       '<div class="tienda-saldo"><span><span class="ico gema"></span> <b>' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></span><button class="comprar verde mini" data-accion="abrir-gemas">💎 ' + L('Más', 'More') + '</button></div></div>';
   }
+  // v6.62: TIENDA con tres pestañas: Paquetes, Gemas y Objetos (todo en español, café oscuro como las fotos)
+  function tabsTienda(act) {
+    return '<div class="iv-modos tg-tabs">' + [['paquetes', L('Paquetes', 'Bundles')], ['gemas', L('Gemas', 'Gems')], ['objetos', L('Objetos', 'Items')]].map(function (t) { return '<button data-accion="tienda-tab" data-t="' + t[0] + '" class="' + (act === t[0] ? 'activo' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
+  }
+  var PAQUETES_OFERTA = [
+    { id: 'constructor', ico: '🔨', nombre: ['Paquete del Constructor', "Builder's bundle"], gemas: 600, cosas: [['acel_1h', 3], ['madera_500k', 1], ['piedra_500k', 1]], precio: '4,99', valor: 5 },
+    { id: 'guerrero', ico: '⚔️', nombre: ['Paquete del Guerrero', "Warrior's bundle"], gemas: 1200, cosas: [['reclutas', 3], ['cofre_plata', 2], ['escudo_8h', 1]], precio: '9,99', valor: 6 },
+    { id: 'pirata', ico: '🏴‍☠️', nombre: ['Tesoro del Pirata', "Pirate's treasure"], gemas: 2600, cosas: [['cofre_oro', 2], ['libro_gra', 2], ['acel_8h', 2], ['portal_elegir', 1]], precio: '19,99', valor: 8 }
+  ];
+  function abrirPaquetes() {
+    var fin = finDeSemana(), h = tabsTienda('paquetes') + '<p class="pr-nota">' + L('Ofertas de la semana. Cada paquete trae gemas y objetos.', 'This week\'s offers. Each bundle brings gems and items.') + '</p>';
+    PAQUETES_OFERTA.forEach(function (p, i) {
+      h += '<div class="tg-paq"><div class="tg-paq-cab"><span class="tg-paq-ico">' + p.ico + '</span><div><b>' + p.nombre[estado.idioma === 'en' ? 1 : 0] + '</b><small>⏱ ' + L('La oferta termina en ', 'Offer ends in ') + fmtLargo((fin - Date.now()) / 1000) + '</small></div><i class="tg-valor">' + L('Valor ', 'Value ') + p.valor + 'x</i></div>' +
+        '<div class="tg-paq-cosas"><span><span class="ico gema"></span><b>' + formatoNumero(p.gemas) + '</b></span>' + p.cosas.map(function (c) { return '<span>' + OBJETOS[c[0]].icono + '<b>×' + c[1] + '</b><small>' + N(c[0]) + '</small></span>'; }).join('') + '</div>' +
+        '<button class="az-b verde tg-comprar" data-accion="paquete-oferta" data-i="' + i + '">US$ ' + p.precio + '</button></div>';
+    });
+    h += '<p class="nota" style="opacity:.8">💳 ' + L('Las compras con dinero real todavía no están activas: no se cobra nada.', 'Real-money purchases are not active yet: nothing is charged.') + '</p>';
+    abrirPanel(L('Tienda', 'Shop'), h, { tipo: 'tienda' }); $('panel').classList.add('iv-panel', 'tg-panel');
+  }
   function abrirPanelTienda() {
     if (pestTiendaArriba === 'mios') return abrirMisObjetos();
     var cats = [['varios', L('Varios', 'Misc.')], ['acelerar', L('Acelerar', 'Speed up')], ['combate', L('Combate', 'Combat')], ['recursos', L('Recursos', 'Resources')], ['cofres', L('Cofres', 'Chests')]];
     var arriba = panelActual && panelActual.tipo === 'tienda' ? $('panel').scrollTop : 0;
-    var html = barraGemasTienda() + '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var oferta = c[0] === 'cofres' && TIENDA.some(function (it) { return it.antes; }); return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (oferta ? ' <span class="mail-n">%</span>' : '') + '</button>'; }).join('') + '</div><div class="tienda-lista">';
+    var html = tabsTienda('objetos') + barraGemasTienda() + '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var oferta = c[0] === 'cofres' && TIENDA.some(function (it) { return it.antes; }); return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (oferta ? ' <span class="mail-n">%</span>' : '') + '</button>'; }).join('') + '</div><div class="tienda-lista">';
     TIENDA.forEach(function (it, i) {
       if ((it.cat || 'varios') !== pestTienda) return;
       var o = OBJETOS[it.id], tiene = (estado.mochila && estado.mochila[it.id]) || 0;
@@ -7684,7 +7703,7 @@
         '<button class="comprar verde" data-accion="comprar" data-i="' + i + '" data-gemas="' + it.gemas + '">' + L('Comprar', 'Buy') + '</button></div>';
     });
     html += '</div>';
-    if (pestTienda !== 'combate') { abrirPanel(T('p_tienda'), html, { tipo: 'tienda' }); $('panel').scrollTop = arriba; return; }
+    if (pestTienda !== 'combate') { abrirPanel(T('p_tienda'), html, { tipo: 'tienda' }); $('panel').classList.add('iv-panel', 'tg-panel'); $('panel').scrollTop = arriba; return; }
     html += '<h3 style="margin:12px 0 4px">' + T('armaduras_tienda') + '</h3><p class="nota">' + T('armaduras_tienda_txt') + '</p><div class="lista">';
     ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
       var na = nivelArmadura(t);
@@ -7693,7 +7712,7 @@
           : '<div class="stats"><span class="nivel-arm">' + T('armadura_max') + '</span></div>') + '</div>';
     });
     html += '</div><p class="nota" style="opacity:.75">💳 ' + T('tienda_real') + '</p>';
-    abrirPanel(T('p_tienda'), html, { tipo: 'tienda' }); $('panel').scrollTop = arriba;
+    abrirPanel(T('p_tienda'), html, { tipo: 'tienda' }); $('panel').classList.add('iv-panel', 'tg-panel'); $('panel').scrollTop = arriba;
   }
   function abrirMisObjetos() {
     var cats = CATS_TIENDA, mios = Object.keys(estado.mochila || {}).filter(function (k) { return OBJETOS[k] && estado.mochila[k] > 0; });
@@ -7718,7 +7737,7 @@
     { id: 'p6', nombre: ['Tesoro real', 'Royal treasure'], gemas: 15000, extra: 50, precio: '99,99' }
   ];
   function abrirTiendaGemas() {
-    var h = '<div class="tienda-saldo grande"><span>' + L('Tus gemas', 'Your gems') + '</span><b><span class="ico gema"></span> ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></div>' +
+    var h = tabsTienda('gemas') + '<div class="tienda-saldo grande"><span>' + L('Tus gemas', 'Your gems') + '</span><b><span class="ico gema"></span> ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></div>' +
       '<p class="nota">' + L('Las gemas sirven para Construir ya, Terminar ahora, acelerar y comprar cofres y objetos. Siempre ves el costo antes de gastar.', 'Gems are used to Build now, Finish now, speed up and buy chests and items. You always see the cost before spending.') + '</p><div class="gemas-rejilla">';
     PAQUETES_GEMAS.forEach(function (p, i) {
       h += '<div class="gema-paq"><div class="gp-ico">' + ['💎', '💎', '💰', '🧰', '🏆', '👑'][i] + '</div><b>' + p.nombre[estado.idioma === 'en' ? 1 : 0] + '</b><div class="gp-n"><span class="ico gema"></span>' + formatoNumero(p.gemas) + '</div>' +
@@ -7726,7 +7745,7 @@
         '<button class="comprar verde" data-accion="gemas-paq" data-i="' + i + '">US$ ' + p.precio + '</button></div>';
     });
     h += '</div><p class="nota" style="opacity:.8">💳 ' + L('Las compras con dinero real todavía no están activas: no se cobra nada.', 'Real-money purchases are not active yet: nothing is charged.') + '</p>';
-    abrirPanel('💎 ' + L('Gemas', 'Gems'), h, { tipo: 'gemas' });
+    abrirPanel(L('Tienda', 'Shop'), h, { tipo: 'gemas' }); $('panel').classList.add('iv-panel', 'tg-panel');
   }
   function comprarPaquete(i) {
     var p = PAQUETES_GEMAS[i]; if (!p) return;
@@ -8201,6 +8220,8 @@
     else if (a === 'inv-modo') { sonar('click'); abrirPanelMochila(b.getAttribute('data-m')); }
     else if (a === 'azar-modo') { sonar('click'); abrirAzar(b.getAttribute('data-m')); }
     else if (a === 'promo-reclamar') reclamarPromo(b.getAttribute('data-id'));
+    else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
+    else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
     else if (a === 'reunion-ver') { sonar('click'); var rx = +b.getAttribute('data-x'), ry = +b.getAttribute('data-y'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(rx, ry)); elegirCelda(rx, ry); } }, 400); }
     else if (a === 'al-tab') { sonar('click'); alTab = b.getAttribute('data-t'); alSeccion = ''; pintarHubAlianza(); }
