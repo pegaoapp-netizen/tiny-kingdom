@@ -643,3 +643,23 @@ body.tema-oscuro #lateral .redondo svg path[fill="none"] { fill: none !important
   body.tema-oscuro #abajo #btn-vista { width: 50px !important; height: 50px !important; margin: 0 2px 0 0 !important; }
   body.tema-oscuro #abajo #btn-vista .bv-ico { font-size: 20px !important; }
 }
+
+/* ---------------- v6.55: pantalla más limpia en el celular ---------------- */
+/* cajón de botones de la derecha */
+#cajon-lateral { display: none; flex-direction: column; align-items: flex-end; gap: inherit; }
+#cajon-lateral.abierto { display: flex; animation: cajonAbre .18s ease-out; }
+@keyframes cajonAbre { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+body.tema-oscuro #btn-cajon.activo { background: linear-gradient(180deg, #2f5d9a, #10264a) !important; border-color: #0b1a33 !important; }
+body.tema-oscuro #btn-cajon.activo path { stroke: #fff !important; }
+/* recuadro de tropas: se ve que se puede tocar */
+body.tema-oscuro #pill-tropas { cursor: pointer; }
+/* el letrero de ayuda se desvanece suave */
+#consejo { transition: opacity .35s ease; }
+#consejo:empty { opacity: 0; }
+/* letras de la barra de abajo: blancas con borde negro, se leen en cualquier fondo */
+body.tema-oscuro #abajo button, body.tema-oscuro #abajo button span, body.tema-oscuro #abajo button small {
+  color: #fff !important; -webkit-text-fill-color: #fff !important;
+  text-shadow: 0 1px 2px #000, 0 0 3px #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000 !important; }
+/* el letrero de ayuda también en crema */
+body.tema-oscuro #consejo { background: linear-gradient(180deg, #faf1d6, #e8d6aa) !important; border: 2px solid #c8a764 !important; color: #2b1d0e !important; text-shadow: none !important; box-shadow: 0 3px 10px rgba(0,0,0,.35) !important; }
+body.tema-oscuro #consejo * { color: #2b1d0e !important; text-shadow: none !important; }

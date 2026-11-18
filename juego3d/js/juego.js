@@ -8051,7 +8051,7 @@
     if (performance.now() < consejoHasta) txt = consejoFijo;
     else if (enMenu || panelActual) txt = ''; // v6.34: los consejos fijos no tapan las ventanas abiertas
     else if (modoColocar) txt = modoColocar === 'barricada' ? T('colocando_barr') : T('c_elegir');
-    else if (tiempoJuego < 5) txt = T('c_mover');
+    else if (tiempoJuego < 5 && !yaMovioCam) txt = T('c_mover'); // v6.55: se quita al primer toque
     else if (!oleadaActiva && estado.oleada <= 2) {
       if (!contarEdificios('granja')) txt = T('c_granja');
       else if (!contarEdificios('aserradero')) txt = T('c_aserradero');
@@ -8093,6 +8093,8 @@
   $('mundo-volver').addEventListener('click', function () { sonar('click'); entrarCiudad(); });
   $('btn-vista').addEventListener('click', function () { siguienteVista(); });
   $('btn-menu-mas').addEventListener('click', function () { if (!enMenu) abrirMenuGrande(); });
+  // v6.55: tocar el recuadro de tropas abre el Cuartel para entrenar
+  $('pill-tropas').addEventListener('click', function () { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); });
   $('menu-grande').addEventListener('click', function (ev) {
     if (ev.target.closest('#mg-cerrar')) { sonar('click'); cerrarMenuGrande(); return; }
     var b = ev.target.closest('[data-mg]'); if (!b) return; var id = b.getAttribute('data-mg'); cerrarMenuGrande();
@@ -8335,6 +8337,9 @@
   }
 
   var tiempoJuego = 0;
+  // v6.55: el letrero de mover la cámara se va en cuanto el jugador toca o arrastra
+  var yaMovioCam = false;
+  ['pointerdown', 'wheel', 'touchstart'].forEach(function (ev) { window.addEventListener(ev, function () { if (!yaMovioCam) { yaMovioCam = true; mostrarConsejo(); } }, { capture: true, passive: true }); });
   function empezarPartida(g) {
     // limpiar todo
     limpiarEnemigos();

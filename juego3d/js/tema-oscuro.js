@@ -85,12 +85,26 @@
   var vidaC = $('vida-castillo'); document.body.appendChild(vidaC); vidaC.classList.add('tk-vida');
   // v6.54: el botón redondo de Ciudad / Campos / Mundo va dentro de la barra de abajo, a la izquierda (el Castillo se abre tocándolo en la ciudad)
   var bVista = $('btn-vista'); if (bVista) abajo.insertBefore(bVista, abajo.firstChild);
+  // v6.55: botones de la derecha: quedan a la vista Misiones, Chat y Correo; el resto va en un cajón que se abre con el engranaje
+  var lat = $('lateral');
+  if (lat) {
+    var cajon = document.createElement('div'); cajon.id = 'cajon-lateral';
+    ['btn-defensa', 'btn-velocidad', 'btn-ranking', 'btn-centrar', 'btn-pausa', 'btn-sonido', 'btn-ajustes'].forEach(function (id) { var b = $(id); if (b) cajon.appendChild(b); });
+    var bCaj = document.createElement('button'); bCaj.className = 'redondo'; bCaj.id = 'btn-cajon'; bCaj.title = 'Más';
+    bCaj.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 7h16M4 12h16M4 17h16" stroke="#4a2a00" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>';
+    lat.appendChild(bCaj); lat.appendChild(cajon);
+    bCaj.addEventListener('click', function (ev) { ev.stopPropagation(); var ab = cajon.classList.toggle('abierto'); bCaj.classList.toggle('activo', ab); });
+    document.addEventListener('pointerdown', function (ev) { if (cajon.classList.contains('abierto') && !cajon.contains(ev.target) && ev.target !== bCaj && !bCaj.contains(ev.target)) { cajon.classList.remove('abierto'); bCaj.classList.remove('activo'); } });
+    var pt = $('pill-tropas'); if (pt) pt.title = 'Tropas · toca para entrenar';
+  }
+  // v6.55: el poder arriba va corto (16,3M) para que no se corte con puntos
+  function cortoNum(txt) { var n = parseInt(String(txt).replace(/[^0-9]/g, ''), 10) || 0; var c = ingles() ? '.' : ','; function f(v) { return (Math.floor(v * 10) / 10).toString().replace('.', c); } return n >= 1e9 ? f(n / 1e9) + 'B' : n >= 1e6 ? f(n / 1e6) + 'M' : n >= 1e4 ? f(n / 1e3) + 'k' : String(txt); }
   function copiar(de, a) { var x = $(de), y = $(a); if (x && y && y.textContent !== x.textContent) y.textContent = x.textContent; }
 
   // ---------- cosas que cambian: textos, poder, nivel y la posición del panel ----------
   function refrescar() {
     var t = ingles() ? EN : ES;
-    copiar('nivel-rey', 'tk-nv'); copiar('poder', 'tk-poder'); copiar('gemas', 'tk-gemas-n');
+    copiar('nivel-rey', 'tk-nv'); var pdr = $('poder'), tp = $('tk-poder'); if (pdr && tp) { var cp = cortoNum(pdr.textContent); if (tp.textContent !== cp) tp.textContent = cp; } copiar('gemas', 'tk-gemas-n');
     var pnm = $('perfil-nombre'), nom = pnm ? pnm.textContent.split(' · ')[0] : ''; if ($('tk-nombre').textContent !== nom) $('tk-nombre').textContent = nom;
     ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (k) { copiar(k, 'tk-' + k); });
     var cn = $('ciudad-nombre'); if (cn) { var cb = cn.querySelector('b'), cs = cn.querySelector('small'); var cnom = cb ? cb.textContent.replace(/^Reino de /, '').replace(/'s kingdom$/, '') : ''; if (cb && $('tk-ciudad-n').textContent !== cnom) $('tk-ciudad-n').textContent = cnom; if (cs && $('tk-ciudad-xy').textContent !== cs.textContent) $('tk-ciudad-xy').textContent = cs.textContent; }
