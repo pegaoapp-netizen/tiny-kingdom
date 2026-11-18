@@ -6791,7 +6791,7 @@
     tiposDisponibles().forEach(function (k) { var n = (f0.tropas || {})[k]; if (n) sel.tropas[k] = Math.min(n, cuentaTipo(k)); });
     if (!f0.tropas) tiposDisponibles().forEach(function (k) { sel.tropas[k] = Math.min(cuentaTipo(k), 100); }); // primera vez: una propuesta
     if (!sel.heroe && !f0.tropas) sel.heroe = (estado.equipo || []).filter(function (k) { return estado.heroes[k]; })[0] || null;
-    var vista = 'marcha', d = document.createElement('div'); d.id = 'marcha';
+    var vista = 'objetivo', d = document.createElement('div'); d.id = 'marcha';
     document.body.appendChild(d);
     function total() { var t = 0; for (var k in sel.tropas) t += sel.tropas[k] || 0; return t; }
     function fuerza() { var f = valorHeroe(sel.heroe); for (var k in sel.tropas) if (sel.tropas[k] > 0) f += valorUnidadTipo(k) * sel.tropas[k]; return Math.round(f); }
@@ -6836,8 +6836,40 @@
       h += '<button class="mc-heroe opcion vacio" data-mc="heroe" data-id="">' + '<div class="mc-foto">✖</div><div class="mc-hd"><b>' + L('Sin héroe', 'No hero') + '</b></div></button></div>';
       return h;
     }
+    // v6.61: la marcha va en 5 pasos: Objetivo, Favoritos, Tropas, Recursos y Marchar
+    var PASOS = [['objetivo', L('Objetivo', 'Target')], ['favoritos', L('Favoritos', 'Favorites')], ['escoger', L('Tropas', 'Troops')], ['recursos', L('Recursos', 'Resources')], ['marcha', L('Marchar', 'March')]];
+    function htmlPasos() {
+      var i = PASOS.map(function (p) { return p[0]; }).indexOf(vista === 'heroes' ? 'marcha' : vista);
+      return '<div class="mc-pasos">' + PASOS.map(function (p, k) { return '<button data-mc="paso" data-p="' + p[0] + '" class="' + (k === i ? 'activo' : k < i ? 'hecho' : '') + '"><i>' + (k + 1) + '</i><span>' + p[1] + '</span></button>'; }).join('') + '</div>';
+    }
+    function htmlObjetivo() {
+      var ali = estado.alianza && a.alianza === estado.alianza;
+      return '<div class="mc-cab"><b>' + L('1. Objetivo y tipo', '1. Target and type') + '</b><button class="mc-x" data-mc="cerrar">✕</button></div>' +
+        '<div class="mc-obj"><div class="mc-obj-c"><b>' + escaparHTML(a.nombre) + '</b><span>X <i>' + (a.x !== undefined ? a.x : '?') + '</i> · Y <i>' + (a.y !== undefined ? a.y : '?') + '</i></span><small>⏱ ' + L('Viaje: ', 'Travel: ') + fmtTiempo(tiempoMarcha(a) / 1000) + '</small></div></div>' +
+        '<p class="mc-sub">' + L('¿Qué quieres hacer?', 'What do you want to do?') + '</p><div class="mc-tipos">' +
+        '<button class="mc-tipo activo" data-mc="tipo" data-t="atacar">⚔️<b>' + L('Atacar', 'Attack') + '</b><small>' + L('Gana su botín', 'Win their loot') + '</small></button>' +
+        '<button class="mc-tipo" data-mc="tipo" data-t="explorar">🔍<b>' + L('Explorar', 'Scout') + '</b><small>' + L('Mira qué tiene', 'See what they have') + '</small></button>' +
+        '<button class="mc-tipo" data-mc="tipo" data-t="reforzar"' + (ali ? '' : ' disabled') + '>🛡️<b>' + L('Reforzar', 'Reinforce') + '</b><small>' + (ali ? L('Ayuda a tu aliado', 'Help your ally') : L('Solo tu alianza', 'Alliance only')) + '</small></button></div>' +
+        '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
+    }
+    function htmlFavoritos() {
+      var fav = estado.favoritos || [], ya = fav.some(function (q) { return q.x === a.x && q.y === a.y; });
+      return '<div class="mc-cab"><b>' + L('2. Favoritos', '2. Favorites') + '</b><button class="mc-x" data-mc="cerrar">✕</button></div>' +
+        '<button class="comprar ' + (ya ? '' : 'naranja') + ' mc-fav-add" data-mc="fav-guardar"' + (ya || a.x === undefined ? ' disabled' : '') + '>⭐ ' + (ya ? L('Ya está en tus favoritos', 'Already in favorites') : L('Guardar este lugar', 'Save this place')) + '</button>' +
+        '<div class="mc-lista">' + (fav.length ? fav.map(function (q, i) { return '<div class="mc-fav"><span>⭐</span><b>' + escaparHTML(q.n) + '</b><small>X ' + q.x + ' · Y ' + q.y + '</small><button class="comprar mini" data-mc="fav-ir" data-i="' + i + '">' + L('Ir', 'Go') + '</button><button class="comprar mini rojo" data-mc="fav-borrar" data-i="' + i + '">✕</button></div>'; }).join('')
+          : '<p class="nota">' + L('Guarda aquí los lugares a los que vas seguido.', 'Save the places you visit often here.') + '</p>') + '</div>' +
+        '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
+    }
+    function htmlRecursos() {
+      var bm = botinMaximo(a.nivel || 1), lc = carretasLibres();
+      return '<div class="mc-cab"><b>' + L('4. Recursos', '4. Resources') + '</b><button class="mc-x" data-mc="cerrar">✕</button></div>' +
+        '<p class="mc-sub">' + L('Si ganas, tus tropas traen este botín (como máximo):', 'If you win, your troops bring back this loot (at most):') + '</p>' +
+        '<div class="mc-botin">' + ['oro', 'comida', 'madera', 'piedra'].map(function (k) { return '<div><span>' + ICONO_RECURSO[k] + '</span><b>' + formatoNumero(bm[k] || 0) + '</b><small>' + T('r_' + k) + '</small></div>'; }).join('') + '</div>' +
+        '<p class="nota">' + iconoCarreta() + ' ' + L('Carretas libres: ', 'Free carts: ') + '<b>' + lc + '</b> · ' + L('Más carretas = más botín.', 'More carts = more loot.') + '</p>' +
+        '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
+    }
     function pintar() {
-      d.innerHTML = '<div class="mc-caja">' + (vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha()) + '</div>';
+      d.innerHTML = '<div class="mc-caja">' + htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha()) + '</div>';
       if (vista === 'escoger') {
         d.querySelectorAll('[data-k]').forEach(function (inp) {
           inp.addEventListener('input', function () {
@@ -6856,12 +6888,22 @@
       var q = b.dataset.mc; sonar('click');
       if (q === 'cerrar') return cerrar();
       if (q === 'guia-ok') { estado.vistoGuiaMarcha = true; guardar(); }
+      else if (q === 'paso') vista = b.dataset.p;
+      else if (q === 'sig') { var orden = PASOS.map(function (p) { return p[0]; }), ix = orden.indexOf(vista); vista = orden[Math.min(orden.length - 1, ix + 1)]; }
+      else if (q === 'tipo') {
+        if (b.dataset.t === 'explorar') { cerrar(); espiarCiudad(a, b); return; }
+        if (b.dataset.t === 'reforzar') { cerrar(); if (typeof cerrarMundo === 'function' && enMundo) cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); return; }
+        vista = 'favoritos';
+      }
+      else if (q === 'fav-guardar') { estado.favoritos = estado.favoritos || []; if (estado.favoritos.length >= 20) estado.favoritos.shift(); estado.favoritos.push({ n: String(a.nombre || '').slice(0, 30), x: a.x, y: a.y }); guardar(true); }
+      else if (q === 'fav-borrar') { (estado.favoritos || []).splice(+b.dataset.i, 1); guardar(true); }
+      else if (q === 'fav-ir') { var fv = (estado.favoritos || [])[+b.dataset.i]; cerrar(); if (fv) { if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(fv.x, fv.y)); elegirCelda(fv.x, fv.y); } }, 400); } return; }
       else if (q === 'cambiar') vista = 'heroes';
       else if (q === 'editar') vista = 'escoger';
       else if (q === 'volver') vista = 'marcha';
       else if (q === 'heroe') { sel.heroe = b.dataset.id || null; vista = 'marcha'; }
       else if (q === 'guardar') { guardarFormacion(); return; }
-      else if (q === 'siguiente') { if (total() <= 0) { $('mc-aviso').textContent = L('Elige al menos una tropa.', 'Choose at least one troop.'); sonar('error'); return; } vista = 'marcha'; }
+      else if (q === 'siguiente') { if (total() <= 0) { $('mc-aviso').textContent = L('Elige al menos una tropa.', 'Choose at least one troop.'); sonar('error'); return; } vista = 'recursos'; }
       else if (q === 'marchar') {
         if (total() <= 0) { consejoTemporal(L('Elige al menos una tropa.', 'Choose at least one troop.')); sonar('error'); return; }
         var f = fuerza(); b.disabled = true;

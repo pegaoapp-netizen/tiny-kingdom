@@ -896,3 +896,24 @@ body.tema-oscuro #panel.al-panel .al-post-t, body.tema-oscuro #panel.al-panel .a
 .ru-dat b { color: #f1e6d0 !important; font: 600 14px Georgia, serif; } .ru-dat small { color: #e8842e !important; font: 13px Georgia, serif; }
 .ru-t { color: #ff9a5a !important; font: 600 13px Georgia, serif; flex: none; }
 #panel:has(.cafe-mas) #panel-gemas { display: none !important; } /* v6.60: las ventanas de edificio ya traen su botón de gemas */
+
+/* ---------------- v6.61: MARCHA EN 5 PASOS ---------------- */
+.mc-pasos { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; margin: -2px 0 10px; }
+.mc-pasos button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px; border-radius: 6px; border: 1px solid #120b05; background: linear-gradient(180deg, #3a2414, #24150a); color: #cdb88e; font: 11px Georgia, serif; cursor: pointer; }
+.mc-pasos i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #1a110a; border: 1px solid #6a4a2a; color: #e8d6b0; font: 700 12px Georgia, serif; }
+.mc-pasos button.activo { background: linear-gradient(180deg, #c06a2a, #8a4416); color: #fff; } .mc-pasos button.activo i { background: #fff; color: #8a4416; }
+.mc-pasos button.hecho i { background: #3c9a2e; color: #fff; border-color: #2a6a20; }
+.mc-obj { display: flex; justify-content: center; margin: 6px 0 10px; }
+.mc-obj-c { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 18px; border-radius: 10px; background: linear-gradient(180deg, #faf1d6, #e8d6aa); border: 2px solid #c8a764; }
+.mc-obj-c b { color: #1f6fb8; font: 700 17px Georgia, serif; } .mc-obj-c span { color: #2b1d0e; font: 14px Georgia, serif; } .mc-obj-c i { font-style: normal; display: inline-block; min-width: 36px; padding: 1px 6px; border-radius: 4px; background: #fff; border: 1px solid #c8a764; } .mc-obj-c small { color: #5a4626; }
+.mc-sub { text-align: center; color: #e8d6b0; font: 14px Georgia, serif; margin: 6px 0; }
+.mc-tipos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mc-tipo { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; border-radius: 8px; border: 2px solid #0b1a33; background: linear-gradient(180deg, #2f5d9a 0%, #1b3d6e 55%, #10264a 100%); color: #fff; font-size: 24px; cursor: pointer; }
+.mc-tipo b { font: 700 14px Georgia, serif; } .mc-tipo small { font: 11px Georgia, serif; color: #cfe0ff; }
+.mc-tipo:disabled { filter: grayscale(.8) brightness(.7); cursor: default; }
+.mc-fav-add { width: 100%; margin-bottom: 8px; }
+.mc-fav { display: flex; align-items: center; gap: 8px; padding: 8px 4px; border-bottom: 1px solid rgba(0,0,0,.3); }
+.mc-fav b { flex: 1; color: #f1e6d0; font: 14px Georgia, serif; } .mc-fav small { color: #e8842e; font: 12px Georgia, serif; }
+.mc-botin { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 10px; }
+.mc-botin div { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 8px; background: rgba(0,0,0,.25); border: 1px solid #5a3d22; }
+.mc-botin span { font-size: 22px; } .mc-botin b { color: #f2c45a; font: 700 14px Georgia, serif; } .mc-botin small { color: #cdb88e; font: 11px Georgia, serif; }
