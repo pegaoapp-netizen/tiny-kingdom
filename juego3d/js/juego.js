@@ -1692,6 +1692,8 @@
     M3.verde.visible = false;
     if (q && q.aldea !== undefined) { M3.sel.material.color.setHex(0x3fd45a); M3.verde.position.set(p.x, 0.09, p.z); M3.verde.visible = true; M3.obj.copy(posCelda(x, y)); var bajarT = window.innerWidth < window.innerHeight ? 1.8 : 2.4; M3.obj.x -= bajarT; M3.obj.z -= bajarT; /* v6.54: el castillo queda más abajo y la tarjeta cabe encima */ $('mundo-info').innerHTML = ''; var b = $('mundo-aldeas').querySelector('[data-aldea="' + q.aldea + '"]'); if (b) b.click(); return; }
     if (q && q.campamento !== undefined) { mostrarCampamento(q.campamento); return; }
+    // v6.58: igual que con un reino: la casilla queda abajo del centro y su tarjeta cabe encima
+    M3.obj.copy(posCelda(x, y)); var bajarC = window.innerWidth < window.innerHeight ? 2.3 : 2.4; M3.obj.x -= bajarC; M3.obj.z -= bajarC; M3.vel = null;
     mostrarCasilla(casillaMundo(x, y));
   }
   function dibujarMundo3D() {
@@ -1741,7 +1743,8 @@
     var w = card.offsetWidth, h = card.offsetHeight;
     // v6.54: la tarjeta va siempre arriba del castillo: si no cabe, el mapa baja poco a poco hasta que quepa
     var falta = 64 - (sy - h - 44), techo = window.innerHeight - 170 - sy;
-    if (falta > 3 && techo > 0 && (card._ajuste || 0) < 120) { card._ajuste = (card._ajuste || 0) + 1; var dd = Math.min(0.5, Math.min(falta, techo) * 0.006); M3.obj.x -= dd; M3.obj.z -= dd; }
+    var enPantalla = vAncla.z < 1 && sx > 0 && sx < window.innerWidth && sy > 0 && sy < window.innerHeight;
+    if (enPantalla && falta > 3 && techo > 0 && (card._ajuste || 0) < 120) { card._ajuste = (card._ajuste || 0) + 1; var dd = Math.min(0.5, Math.min(falta, techo) * 0.006); M3.obj.x -= dd; M3.obj.z -= dd; }
     var ab = sy - h - 30 < 40 && (card._ajuste || 0) >= 120;
     var x = Math.max(8, Math.min(window.innerWidth - w - 8, sx - w / 2)), y = ab ? sy + 34 : sy - h - 44;
     y = Math.max(60, Math.min(window.innerHeight - h - 8, y));
@@ -1861,24 +1864,7 @@
         bo.position.copy(f); M3.cosas.add(bo); M3.humo.push({ m: bo, base: f, fase: hashM(i, h) + h * 0.5 });
       }
     });
-    lugaresLibres().forEach(function (q) {
-      if (!cerca(q.x, q.y)) return;
-      var pl = posCelda(q.x, q.y), gl = new THREE.Group();
-      if (M3.camelot) {
-        gl.add(CAMELOT.sprite('libre', 1));
-        if (q.cerca) { var aroL = new THREE.Mesh(new THREE.RingGeometry(0.8, 0.95, 4), new THREE.MeshBasicMaterial({ color: 0x3fd45a, depthWrite: false, transparent: true, opacity: 0.8 })); aroL.rotation.x = -Math.PI / 2; aroL.position.y = 0.04; gl.add(aroL); }
-        var etc2 = M.etiquetaEdificio(L('Libre', 'Free'), '🏳'); etc2.position.set(0, 1.35, 0); etc2.scale.multiplyScalar(0.42); gl.add(etc2);
-        gl.position.copy(pl); M3.cosas.add(gl);
-        ocupadasMundo[q.x + '_' + q.y] = { libre: true };
-        return;
-      }
-      gl.add(M.caja(1.3, 0.06, 1.3, 0xdcc89a, 0, 0.03, 0));
-      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { gl.add(M.cil(0.05, 0.05, 0.32, 5, 0x6a4424, s[0] * 0.6, 0.16, s[1] * 0.6)); });
-      gl.add(M.cil(0.025, 0.025, 0.9, 5, 0x6a4424, 0, 0.45, 0)); gl.add(M.caja(0.36, 0.22, 0.02, q.cerca ? 0x3fd45a : 0xf4f0e6, 0.18, 0.78, 0));
-      var etl = M.etiquetaEdificio(L('Libre', 'Free'), '🏳'); etl.position.set(0, 1.35, 0); etl.scale.multiplyScalar(0.42); gl.add(etl);
-      gl.position.copy(pl); M3.cosas.add(gl);
-      ocupadasMundo[q.x + '_' + q.y] = { libre: true };
-    });
+    // v6.58: los lugares libres ya no se marcan en el mapa (ni letrero «Libre»): al tocar la casilla sale su tarjeta, con el botón para mudar tu reino ahí
     // banderas en las casillas conquistadas (mías doradas, de mi hermandad azules, de otros rojas)
     var todas = {};
     for (var k in casillasNube) todas[k] = casillasNube[k];
@@ -1905,17 +1891,18 @@
     var deOtro = nube && nube.dueno !== yo && !mia;
     var libreTel = celdaLibre(c.x, c.y), ocupante = mia ? T('cas_tuya') : deOtro ? escaparHTML(nube.nombre || '?') : (libreTel ? T('cas_libre_corto') : '—');
     var np = (estado.mochila && estado.mochila.portal_elegir) || 0, pt = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0];
-    var html = '<div class="carta casilla-info pergamino"><h3 class="perg-tit">' + t.icono + ' ' + T('cas_' + c.tipo) + ' (' + L('Nv ', 'Lv ') + c.nivel + ')</h3><p class="perg-sub">X ' + c.x + ' · Y ' + c.y + ' · ' + ocupante + ' · ⚔️ ' + formatoNumero(defensaCasilla(c)) + '</p>' +
-      '<div class="casilla-tabla"><span>' + T('cas_terreno') + '</span><b>' + t.icono + ' ' + T('cas_' + c.tipo) + '</b>' +
-      '<span>' + T('cas_coord') + '</span><b>X ' + c.x + ' · Y ' + c.y + '</b>' +
-      '<span>' + T('cas_ocupada_por') + '</span><b>' + ocupante + '</b>' +
-      '<span>' + ICONO_RECURSO[t.r] + '</span><b>+' + Math.round(2 * c.nivel) + '% ' + T('r_' + t.r) + ' · 🛡️ ' + formatoNumero(defensaCasilla(c)) + '</b>' +
-      '<span>' + L('Edificio', 'Building') + '</span><b>' + edificioCasilla(c.tipo) + '</b><span>' + L('Capacidad', 'Capacity') + '</span><b>' + formatoNumero(guardadoCasilla(c).max) + ' ' + ICONO_RECURSO[t.r] + '</b><span>' + L('Recolección', 'Gathering') + '</span><b>+' + formatoNumero(guardadoCasilla(c).hora) + ' ' + L('por hora', 'per hour') + '</b></div>' +
-      (deOtro && estado.alianza && nube.alianza === estado.alianza ? '<p class="nota">🛡️ ' + L('Es de tu alianza: produce +' + formatoNumero(guardadoCasilla(c).hora) + ' ' + T('r_' + t.r) + ' por hora para ' + escaparHTML(nube.nombre || '?') + '.', 'It belongs to your alliance: it makes +' + formatoNumero(guardadoCasilla(c).hora) + ' ' + T('r_' + t.r) + ' per hour for ' + escaparHTML(nube.nombre || '?') + '.') + '</p>' : '') +
-      '<div class="perg-botones"><button class="comprar azul" id="cas-espiar">🔍 ' + L('Espiar', 'Spy') + '</button>' + (mia ? '<button class="comprar" id="cas-soltar">' + T('cas_abandonar') + '</button>' : '<button class="comprar azul" id="cas-conquistar">⚔️ ' + L('Atacar', 'Attack') + '</button>') + '</div><div class="casilla-botones"><button class="comprar morado" id="cas-portal"' + (libreTel ? '' : ' disabled') + '>' + T('cas_reubicar') + (libreTel ? ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) : '') + '</button>' +
-      '</div>';
+    // v6.58: tarjeta de terreno como la del reino: nombre y nivel, coordenadas, quién la ocupa, poder, alianza y diplomacia, y Espiar / Ataque
+    var alT = deOtro ? (nube.alianza || '') : mia ? (estado.alianza || '') : '';
+    var dipT = mia ? L('Tuya', 'Yours') : !deOtro ? L('Neutral', 'Neutral') : (estado.alianza && nube.alianza === estado.alianza) ? L('Aliada', 'Allied') : (estado.enemigos || {})[nube.dueno] ? L('Hostil', 'Hostile') : L('Neutral', 'Neutral');
+    var html = '<div class="carta casilla-info pergamino tarjeta-terreno"><h3 class="perg-tit">' + T('cas_' + c.tipo) + ' (' + L('Nv. ', 'Lv. ') + c.nivel + ')</h3><p class="perg-sub">' + c.x + ', ' + c.y + '</p>' +
+      '<div class="tt-datos">' + (mia ? '<div class="tt-dueno">' + T('cas_tuya') + '</div>' : deOtro ? '<div class="tt-dueno">' + escaparHTML(nube.nombre || '?') + '</div>' : '<div>' + L('Desocupado', 'Unoccupied') + '</div>') +
+      '<div>' + L('Poder', 'Power') + ': ' + formatoNumero(defensaCasilla(c)) + '</div>' +
+      '<div>' + (mia ? L('Produce', 'Produces') + ': +' + formatoNumero(guardadoCasilla(c).hora) + ' ' + T('r_' + t.r) + ' ' + L('por hora', 'per hour') : L('Conquístala para recolectar', 'Conquer it to gather')) + '</div>' +
+      '<div>' + L('Alianza', 'Alliance') + ': ' + (alT ? escaparHTML(alT) : L('Ninguna', 'None')) + '</div>' +
+      '<div>' + L('Diplomacia', 'Diplomacy') + ': ' + dipT + '</div></div>' +
+      '<div class="perg-botones"><button class="comprar azul" id="cas-espiar">' + L('Espiar', 'Scout') + '</button>' + (mia ? '<button class="comprar azul" id="cas-soltar">' + T('cas_abandonar') + '</button>' : '<button class="comprar azul" id="cas-conquistar">' + L('Ataque', 'Attack') + '</button>') + '</div>' +
+      (libreTel ? '<div class="casilla-botones"><button class="comprar morado" id="cas-portal">' + T('cas_reubicar') + ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) + '</button></div>' : '');
     if (mia) { var gd = guardadoCasilla(c), rr = TIPOS_CASILLA[c.tipo].r; html += '<p class="nota">' + ICONO_RECURSO[rr] + ' ' + T('cas_guardado', { a: formatoNumero(gd.n), m: formatoNumero(gd.max), r: T('r_' + rr), h: formatoNumero(gd.hora) }) + '</p><button class="comprar naranja" id="cas-recoger"' + (gd.n >= 1 ? '' : ' disabled') + '>' + T('cas_recolectar') + ' · ' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + '</button>'; }
-    if (!mia) html += '<p class="nota">' + (deOtro ? T('cas_de', { n: escaparHTML(nube.nombre || '?') }) : T('cas_libre', { n: misCasillas().length, m: maxCasillas() })) + '</p>';
     $('mundo-info').innerHTML = html + '</div>';
     var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { this.disabled = true; conquistarCasilla(c, deOtro ? nube : null); });
     var bs = $('cas-soltar'); if (bs) bs.addEventListener('click', function () { soltarCasilla(c); });
@@ -5252,7 +5239,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
-    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); // v6.57: el chat va en pergamino crema
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -7260,35 +7247,151 @@
       : '<button class="comprar mini" data-accion="usar" data-obj="' + k + '">' + (o.cofre || o.equipo || o.paquete || o.mejora ? T('abrir') : T('usar')) + '</button>';
     return '<div class="inv-celda" title="' + escaparHTML(D(k)) + '"><span class="inv-ico">' + o.icono + '</span><b class="inv-n">×' + corto(estado.mochila[k]) + '</b><span class="inv-nom">' + N(k) + '</span>' + boton + '</div>';
   }
+  // v6.58: INVENTARIO como en las fotos del dueño: arriba Tienda / Mis objetos, debajo categorías que se deslizan,
+  // y una fila por objeto con su icono, su nombre, «Tienes: X» y el botón Usa (o Reciclar en el equipo). Todo en español.
+  var SUBCAT_INV = ['equipo', 'heroe', 'intercambia', 'ciudad', 'misc', 'reliquia', 'acelerar', 'combate', 'recursos', 'cofre', 'potenciador'];
+  var NOM_SUBCAT = { equipo: ['Equipo', 'Gear'], heroe: ['Héroe', 'Hero'], intercambia: ['Intercambia', 'Trade'], ciudad: ['Ciudad', 'City'], misc: ['Misc.', 'Misc.'], reliquia: ['Reliquia', 'Relic'], acelerar: ['Acelerar', 'Speed-ups'], combate: ['Combate', 'Combat'], recursos: ['Recursos', 'Resources'], cofre: ['Cofre', 'Chests'], potenciador: ['Potenciador', 'Boosts'] };
+  var modoInv = 'mios', subInv = 'recursos';
+  function subcatObjeto(k) {
+    var o = OBJETOS[k] || {};
+    if (o.equipo) return 'equipo'; if (o.exp !== undefined || o.pergamino) return 'heroe'; if (o.escudo || o.portal) return 'ciudad';
+    if (o.segundos || o.acelera) return 'acelerar'; if (o.tropas) return 'combate'; if (o.da) return 'recursos'; if (o.mejora) return 'potenciador';
+    if (o.cofre || o.paquete) return 'cofre'; if (o.reliquia) return 'reliquia'; if (o.intercambio) return 'intercambia'; return 'misc';
+  }
+  function filaInv(icono, nombre, sub, boton, info) {
+    return '<div class="iv-fila"><span class="iv-ico" title="' + escaparHTML(info || '') + '">' + icono + '<i class="iv-i">i</i></span><span class="iv-dat"><b>' + nombre + '</b><small>' + sub + '</small></span>' + boton + '</div>';
+  }
   function abrirPanelMochila(tab) {
-    if (tab) pestanaInv = tab;
+    if (tab === 'tienda' || tab === 'mios') modoInv = tab; else if (tab && SUBCAT_INV.indexOf(tab) >= 0) subInv = tab; else if (tab === 'ingresos') subInv = 'cofre';
     var v = vistos();
     // al entrar al inventario todo cuenta como visto (el número de abajo se borra)
     v.mochila = copiaMochila(); v.eq = idsPiezas(); if (diarioDisponible()) v.diario = hoyTexto();
-    var puntos = {}; CAT_INV.forEach(function (c) { puntos[c] = c !== pestanaInv && puntoTab(c); });
-    marcarTab(pestanaInv);
-    var html = '<div class="subtabs inv-tabs">' + CAT_INV.map(function (c) {
-      return '<button data-accion="inv-tab" data-tab="' + c + '" class="' + (c === pestanaInv ? 'activo' : '') + '">' + ICONO_CAT_INV[c] + ' ' + T('inv_tab_' + c) + (puntos[c] ? '<span class="punto-rojo"></span>' : '') + '</button>';
-    }).join('') + '</div>';
-    var objs = Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0 && categoriaObjeto(k) === pestanaInv; });
-    var celdas = '';
-    if (pestanaInv === 'recursos') {
-      html += '<p class="nota">' + T('inv_recurso_txt') + '</p>';
-      [['oro', 'monedas', '🪙'], ['comida', 'comida', '🍞'], ['madera', 'madera', '🪵'], ['piedra', 'piedra', '🪨'], ['gemas', 'gemas', '💎']].forEach(function (r) {
-        celdas += '<div class="inv-celda recurso"><span class="inv-ico">' + r[2] + '</span><b class="inv-n">' + corto(estado[r[1]]) + '</b><span class="inv-nom">' + T('r_' + r[0]) + '</span></div>';
+    var html = '<div class="iv-modos"><button data-accion="inv-modo" data-m="tienda" class="' + (modoInv === 'tienda' ? 'activo' : '') + '">' + L('Tienda', 'Shop') + '</button><button data-accion="inv-modo" data-m="mios" class="' + (modoInv === 'mios' ? 'activo' : '') + '">' + L('Mis objetos', 'My items') + '</button></div>';
+    html += '<div class="iv-cats"><button class="iv-flecha" data-accion="inv-mover" data-d="-1">‹</button><div class="iv-carril" id="iv-carril">' + SUBCAT_INV.map(function (c) {
+      return '<button data-accion="inv-tab" data-tab="' + c + '" class="' + (c === subInv ? 'activo' : '') + '">' + L(NOM_SUBCAT[c][0], NOM_SUBCAT[c][1]) + '</button>';
+    }).join('') + '</div><button class="iv-flecha" data-accion="inv-mover" data-d="1">›</button></div>';
+    var filas = '';
+    if (modoInv === 'tienda') {
+      TIENDA.forEach(function (it, i) {
+        if (!OBJETOS[it.id] || subcatObjeto(it.id) !== subInv) return;
+        filas += filaInv(OBJETOS[it.id].icono, N(it.id), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[it.id] || 0), '<button class="iv-boton" data-accion="comprar" data-i="' + i + '"><span class="ico gema"></span>' + it.gemas + '</button>', D(it.id));
       });
-    }
-    if (pestanaInv === 'ingresos') html += htmlDiario();
-    if (pestanaInv === 'equipo') {
-      piezas().slice().sort(function (a, b) { return MULT_RAREZA_EQ[b.r] - MULT_RAREZA_EQ[a.r] || b.n - a.n; }).forEach(function (p) {
-        celdas += '<div class="inv-celda rz-' + p.r + '" title="' + escaparHTML(textoPieza(p)) + '"><span class="inv-ico">' + EQ[p.t].icono + '</span><b class="inv-n">' + T('nivel_corto') + ' ' + p.n + '</b><span class="inv-nom">' + nombrePieza(p) + '</span><span class="inv-sub">' + (p.h && HEROE[p.h] ? T('inv_equipada', { n: NH(p.h) }) : T('inv_libre')) + '</span>' +
-          (p.n < EQ_NIVEL_MAX ? '<span class="inv-sub poder-mas">' + T('poder_sube', { n: Math.round(PODER_PIEZA * MULT_RAREZA_EQ[p.r]) }) + '</span>' + botonCosto(costoMejoraPieza(p), 'inv-mejorar', 'data-i="' + p.i + '"', '⬆️ ').replace('class="comprar"', 'class="comprar mini"') : '<span class="inv-sub">MAX</span>') + '</div>';
+      if (!filas) filas = '<p class="iv-vacio">' + (subInv === 'equipo' || subInv === 'heroe' ? L('El equipo y los libros se ganan jugando: oleadas, campamentos, bestias, torneos y cofres.', 'Gear and books are earned by playing: waves, camps, beasts, tournaments and chests.') : L('No hay nada para comprar aquí por ahora.', 'Nothing to buy here for now.')) + '</p>';
+    } else {
+      if (subInv === 'recursos') [['oro', 'monedas', '🪙'], ['comida', 'comida', '🍞'], ['madera', 'madera', '🪵'], ['piedra', 'piedra', '🪨'], ['hierro', 'hierro', '🔩'], ['gemas', 'gemas', '💎']].forEach(function (r) {
+        if (estado[r[1]] === undefined) return;
+        filas += filaInv(r[2], T('r_' + r[0]) === 'r_' + r[0] ? r[0] : T('r_' + r[0]), L('Tienes: ', 'Owned: ') + formatoNumero(estado[r[1]] || 0), '', '');
       });
+      if (subInv === 'cofre' && diarioDisponible()) filas += '<div class="iv-diario">' + htmlDiario() + '</div>';
+      if (subInv === 'equipo') piezas().slice().sort(function (a, b) { return MULT_RAREZA_EQ[b.r] - MULT_RAREZA_EQ[a.r] || b.n - a.n; }).forEach(function (p) {
+        filas += filaInv(EQ[p.t].icono, nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n, (p.h && HEROE[p.h] ? L('Lo lleva ', 'Worn by ') + NH(p.h) : L('Tienes: 1', 'Owned: 1')),
+          p.h ? '<button class="iv-boton" disabled>' + L('Puesto', 'Worn') + '</button>' : '<button class="iv-boton" data-accion="inv-reciclar" data-i="' + p.i + '">' + L('Reciclar', 'Recycle') + '</button>', textoPieza(p));
+      });
+      Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0 && subcatObjeto(k) === subInv; }).forEach(function (k) {
+        var o = OBJETOS[k], bt = o.escudo && protegido() ? '<button class="iv-boton" disabled>' + fmtTiempo((estado.escudoHasta - Date.now()) / 1000) + '</button>' : '<button class="iv-boton" data-accion="usar" data-obj="' + k + '">' + L('Usa', 'Use') + '</button>';
+        filas += filaInv(o.icono, N(k), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[k]), bt, D(k));
+      });
+      if (!filas) filas = '<p class="iv-vacio">' + L('No tienes objetos de este tipo. Mira en la Tienda o gánalos jugando.', 'You have no items of this kind. Check the Shop or earn them by playing.') + '</p>';
     }
-    objs.forEach(function (k) { celdas += celdaObjeto(k); });
-    html += celdas ? '<div class="inv-grid">' + celdas + '</div>' : (pestanaInv === 'ingresos' ? '' : '<p class="nota">' + T('inv_vacio_tab') + '</p>');
-    abrirPanel(T('p_mochila'), html, { tipo: 'mochila' });
+    html += '<div class="iv-lista">' + filas + '</div>';
+    abrirPanel(L('Inventario', 'Inventory'), html, { tipo: 'mochila' });
+    $('panel').classList.add('iv-panel');
+    var car = $('iv-carril'), act = car && car.querySelector('.activo'); if (act) car.scrollLeft = act.offsetLeft - car.clientWidth / 2 + act.offsetWidth / 2;
     guardar();
+  }
+  // ---------- v6.58: AZAR (9 cofres) con guía propia: la Capitana Coral ----------
+  var COFRE_SVG = '<svg viewBox="0 0 64 56" class="az-cofre"><defs><linearGradient id="azc1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8432e"/><stop offset="1" stop-color="#6a1a12"/></linearGradient></defs>' +
+    '<path d="M6 22 Q32 2 58 22 L58 26 L6 26 Z" fill="url(#azc1)" stroke="#2a0c06" stroke-width="2"/><rect x="6" y="26" width="52" height="26" rx="3" fill="url(#azc1)" stroke="#2a0c06" stroke-width="2"/>' +
+    '<rect x="14" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="44" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="6" y="24" width="52" height="5" fill="#d9a13a" stroke="#6a4a10"/>' +
+    '<rect x="27" y="27" width="10" height="12" rx="2" fill="#f2c45a" stroke="#6a4a10"/><circle cx="32" cy="33" r="2" fill="#3a2410"/></svg>';
+  var PREMIOS_AZAR = [['bolsa_oro', 20], ['saco_comida', 18], ['saco_madera', 18], ['saco_piedra', 14], ['acel_5m', 14], ['acel_15m', 8], ['libro_peq', 6], ['cofre_madera', 6], ['acel_1h', 3], ['cofre_plata', 2]];
+  var PREMIOS_AZAR_PREMIUM = [['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4]];
+  var RAROS_AZAR = ['cofre_oro', 'libro_gra', 'acel_8h'];
+  var modoAzar = 'normal', azarGrid = null;
+  function fichasAzar() {
+    // cada día te regalan 2 fichas de la suerte (se ganan jugando, no se pierden)
+    var hoy = hoyTexto(); if (estado.fichaDia !== hoy) { estado.fichaDia = hoy; estado.fichas = (estado.fichas || 0) + 2; }
+    return estado.fichas || 0;
+  }
+  function sortearAzar(lista) { var t = lista.reduce(function (a, x) { return a + x[1]; }, 0), n = Math.random() * t; for (var i = 0; i < lista.length; i++) { n -= lista[i][1]; if (n <= 0) return lista[i][0]; } return lista[0][0]; }
+  function abrirAzar(modo) {
+    if (modo) { modoAzar = modo; azarGrid = null; }
+    var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 2 : 1;
+    if (!azarGrid) azarGrid = [null, null, null, null, null, null, null, null, null];
+    var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button><button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + '</button></div>' +
+      '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
+      '<div class="az-tablero">' + azarGrid.map(function (k, i) {
+        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '">' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
+      }).join('') +
+      (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
+        L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + n + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
+      '<p class="az-tienes">🪙 ' + L('Fichas: ', 'Tokens: ') + '<b>' + n + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
+      '<div class="az-botones"><button class="az-b verde" data-accion="azar-sacar" data-n="1"' + (n >= costo ? '' : ' disabled') + '>' + L('Sacar 1', 'Draw 1') + '</button>' +
+      (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : '<button class="az-b azul" data-accion="azar-sacar" data-n="9"' + (n >= 9 ? '' : ' disabled') + '>' + L('Sacar 9', 'Draw 9') + '</button>') + '</div>';
+    abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
+    $('panel').classList.add('iv-panel', 'az-panel');
+  }
+  function sacarAzar(cuantos) {
+    var prem = modoAzar === 'premium', costo = (prem ? 2 : 1) * cuantos;
+    if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
+    estado.fichas -= costo;
+    azarGrid = [null, null, null, null, null, null, null, null, null];
+    var libres = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(function () { return Math.random() - 0.5; }).slice(0, cuantos), ganado = {};
+    libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; estado.mochila[k] = (estado.mochila[k] || 0) + 1; ganado[k] = (ganado[k] || 0) + 1; });
+    sonar('magia'); guardar(true); abrirAzar();
+    // los cofres se abren uno por uno
+    var celdas = document.querySelectorAll('.az-celda.abierta'); celdas.forEach(function (c, i) { c.style.animationDelay = (i * 0.12) + 's'; });
+    consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k) + (ganado[k] > 1 ? ' ×' + ganado[k] : ''); }).join(', '));
+  }
+  function comprarFichas() {
+    if (!pagar(0, 20)) return;
+    estado.fichas = fichasAzar() + 10; sonar('moneda'); guardar(true); abrirAzar();
+  }
+  // ---------- v6.58: CENTRO DE PROMOCIONES (cada una con su tiempo, su premio y su punto rojo) ----------
+  function finDeHoy() { var d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
+  function finDeSemana() { var d = new Date(); d.setHours(24, 0, 0, 0); d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); return d.getTime(); }
+  function semanaTexto() { var f = new Date(finDeSemana() - 1); return f.getFullYear() + '-' + (f.getMonth() + 1) + '-' + f.getDate(); }
+  var PROMOS = [
+    { id: 'regalo', ico: '👑', dia: true, es: ['Regalo del Rey', 'Entra cada día y llévate tu regalo.'], en: ['King\'s gift', 'Come back every day for your gift.'], need: 0, premio: { fichas: 2, oro: 300 } },
+    { id: 'cosecha', ico: '🌾', k: 'recolectas', es: ['Fiebre de la cosecha', 'Recolecta tus campos 30 veces esta semana.'], en: ['Harvest fever', 'Collect your fields 30 times this week.'], need: 30, premio: { objeto: 'cofre_plata', madera: 2000 } },
+    { id: 'reclutas', ico: '🛡️', k: 'tropas', es: ['Reclutamiento real', 'Entrena 100 tropas esta semana.'], en: ['Royal recruitment', 'Train 100 troops this week.'], need: 100, premio: { objeto: 'acel_1h', comida: 3000 } },
+    { id: 'defensa', ico: '⚔️', k: 'oleadas', es: ['Defensores del Caribe', 'Gana 5 oleadas esta semana.'], en: ['Caribbean defenders', 'Win 5 waves this week.'], need: 5, premio: { objeto: 'cofre_oro', gemas: 10 } },
+    { id: 'rapido', ico: '⏩', k: 'acel', es: ['Manos a la obra', 'Usa 10 aceleradores esta semana.'], en: ['Get to work', 'Use 10 speed-ups this week.'], need: 10, premio: { objeto: 'libro_peq', fichas: 3 } }
+  ];
+  function promoEstado() {
+    var p = estado.promo, sem = semanaTexto();
+    if (!p || p.semana !== sem) { p = estado.promo = { semana: sem, base: {}, hechas: {} }; PROMOS.forEach(function (x) { if (x.k) p.base[x.k] = valorLogro(x.k); }); }
+    return p;
+  }
+  function progresoPromo(x) { if (x.dia) return 0; var p = promoEstado(); return Math.max(0, valorLogro(x.k) - (p.base[x.k] || 0)); }
+  function promoLista(x) { var p = promoEstado(); if (x.dia) return estado.promoRegalo !== hoyTexto(); return !p.hechas[x.id] && progresoPromo(x) >= x.need; }
+  function promoHecha(x) { return x.dia ? estado.promoRegalo === hoyTexto() : !!promoEstado().hechas[x.id]; }
+  function hayPromoLista() { return PROMOS.some(promoLista); }
+  function textoPremioPromo(p) { var t = textoPremio(p); if (p.fichas) t = (t ? t + ', ' : '') + '🪙 ' + p.fichas + ' ' + L('fichas de la suerte', 'lucky tokens'); return t; }
+  function abrirPromos() {
+    var ahora = Date.now();
+    var html = '<p class="pr-nota">' + L('Completa las promociones antes de que se acabe el tiempo y reclama tu premio.', 'Finish promotions before time runs out and claim your prize.') + '</p><div class="pr-lista">' + PROMOS.map(function (x) {
+      var lista = promoLista(x), hecha = promoHecha(x), prog = Math.min(progresoPromo(x), x.need), fin = x.dia ? finDeHoy() : finDeSemana(), t = L(x.es[0], x.en[0]), d = L(x.es[1], x.en[1]);
+      return '<div class="pr-fila' + (lista ? ' lista' : '') + '"><span class="pr-ico">' + x.ico + (lista ? '<i class="punto-rojo"></i>' : '') + '</span><div class="pr-dat"><div class="pr-top"><b>' + t + '</b><span class="pr-reloj">⏱ ' + fmtLargo((fin - ahora) / 1000) + '</span></div><small>' + d + '</small>' +
+        (x.need ? '<div class="pr-barra"><i style="width:' + Math.round(prog / x.need * 100) + '%"></i><span>' + prog + ' / ' + x.need + '</span></div>' : '') +
+        '<div class="pr-premio">🎁 ' + textoPremioPromo(x.premio) + '</div></div>' +
+        (hecha ? '<button class="iv-boton" disabled>' + L('Listo', 'Done') + '</button>' : lista ? '<button class="az-b verde pr-b" data-accion="promo-reclamar" data-id="' + x.id + '">' + L('Reclamar', 'Claim') + '</button>' : '<button class="iv-boton" disabled>' + L('En curso', 'In progress') + '</button>') + '</div>';
+    }).join('') + '</div>';
+    abrirPanel(L('Promociones', 'Promotions'), html, { tipo: 'promos' });
+    $('panel').classList.add('iv-panel', 'pr-panel');
+  }
+  function reclamarPromo(id) {
+    var x = PROMOS.filter(function (q) { return q.id === id; })[0]; if (!x || !promoLista(x)) return;
+    if (x.dia) estado.promoRegalo = hoyTexto(); else promoEstado().hechas[x.id] = true;
+    darPremio(x.premio); if (x.premio.fichas) estado.fichas = fichasAzar() + x.premio.fichas;
+    sonar('listo'); consejoTemporal('🎁 ' + textoPremioPromo(x.premio)); guardar(true); abrirPromos(); actualizarBadges();
+  }
+  function reciclarPiezaInv(i) {
+    var p = piezas().filter(function (x) { return x.i === i; })[0]; if (!p || p.h) return;
+    var oro = oroAlFundir(p);
+    confirmarJuego(L('Reciclar', 'Recycle'), T('eq_fundir_txt', { n: nombrePieza(p), o: oro }), L('Reciclar', 'Recycle'), function () {
+      piezas().splice(piezas().indexOf(p), 1); sumarRecurso('oro', oro); sonar('moneda'); consejoTemporal(T('eq_fundida', { n: nombrePieza(p), o: oro })); guardar(true); abrirPanelMochila();
+    });
   }
   function mejorarPiezaInv(i) {
     var p = piezas().filter(function (x) { return x.i === i; })[0];
@@ -7509,6 +7612,7 @@
   // ---------- AVISOS (numeritos) del menú ----------
   function ponerBadge(id, txt) { var e = $(id); if (e && e.textContent !== String(txt)) e.textContent = txt; }
   function actualizarBadges() {
+    var bp = $('badge-promos'); if (bp) { var hp = hayPromoLista(); if (bp.textContent !== (hp ? '!' : '')) bp.textContent = hp ? '!' : ''; }
     // cada número solo cuenta lo NUEVO desde la última vez que entraste (y se borra al entrar)
     var v = vistos();
     ponerBadge('badge-conquista', !oleadaActiva && !enMenu && estado.oleada > (v.campana || 0) ? '1' : '');
@@ -7960,6 +8064,13 @@
     else if (a === 'usar') usarObjeto(b.getAttribute('data-obj'));
     else if (a.indexOf('mail-') === 0) accionCorreo(a, b);
     else if (a === 'inv-tab') { sonar('click'); abrirPanelMochila(b.getAttribute('data-tab')); }
+    else if (a === 'inv-modo') { sonar('click'); abrirPanelMochila(b.getAttribute('data-m')); }
+    else if (a === 'azar-modo') { sonar('click'); abrirAzar(b.getAttribute('data-m')); }
+    else if (a === 'promo-reclamar') reclamarPromo(b.getAttribute('data-id'));
+    else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
+    else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
+    else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth * 0.7, behavior: 'smooth' }); }
+    else if (a === 'inv-reciclar') reciclarPiezaInv(b.getAttribute('data-i'));
     else if (a === 'inv-mejorar') mejorarPiezaInv(b.getAttribute('data-i'));
     else if (a === 'inv-tropa') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas'); }
     else if (a === 'inv-filtro') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas'); }
@@ -8155,7 +8266,7 @@
   $('menu-grande').addEventListener('click', function (ev) {
     if (ev.target.closest('#mg-cerrar')) { sonar('click'); cerrarMenuGrande(); return; }
     var b = ev.target.closest('[data-mg]'); if (!b) return; var id = b.getAttribute('data-mg'); cerrarMenuGrande();
-    if (id === 'mg-azar') { sonar('click'); abrirPanelHeroes(); return; }
+    if (id === 'mg-azar') { sonar('click'); abrirAzar('normal'); return; }
     if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
     if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
     if (id === 'mg-equipo') { sonar('click'); var hq = (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || 'sol'; pestanaHeroe = 'equipo'; abrirPanelHeroe(hq); return; }
@@ -8183,6 +8294,7 @@
   setInterval(acomodarHUD, 400); window.addEventListener('resize', acomodarHUD); setTimeout(acomodarHUD, 50);
   $('mision').addEventListener('click', function () { if (!enMenu) tocarMision(); });
   $('btn-misiones').addEventListener('click', function () { if (!enMenu) { sonar('click'); abrirPanelMisiones(); } });
+  $('btn-promos').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'promos') cerrarPanel(); else abrirPromos(); });
   $('bo-acelerar').addEventListener('click', function () { var q = $('barra-obra').dataset.que; if (q && !enMenu) { sonar('click'); abrirAcelerar(q); } });
   $('bo-txt').addEventListener('click', function () { var q = $('barra-obra').dataset.que || ''; if (enMenu) return; sonar('click'); if (q === 'castillo') { enfocar(castillo.position); abrirPanelCastillo(); } else if (q.indexOf('obra:') === 0) { var si = +q.split(':')[1]; enfocar(slots[si].pos); abrirPanelEdificio(si); } });
   $('btn-alianza').addEventListener('click', function () {
