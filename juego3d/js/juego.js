@@ -2546,7 +2546,8 @@
     var al = alCache.al, mi = alCache.miembros, a = alLoc(), total = mi.reduce(function (s, m) { return s + (m.poder || 0); }, 0);
     var h = '<div class="carta al-cab"><div class="al-escudo">' + escaparHTML(al.tag) + '</div><div class="al-datos"><h3>' + escaparHTML(al.nombre) + '</h3>' +
       '<p>👑 ' + escaparHTML(al.liderNombre) + ' · 💪 ' + formatoNumero(total) + '</p><p>👥 ' + mi.length + '/100 · 🌐 ' + (IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es) + ' · 🛡️ ' + formatoNumero(a.puntos) + ' ' + L('pts', 'pts') + '</p></div></div>';
-    if (!alSeccion) {
+    if (!alSeccion) { $('panel-cuerpo').innerHTML = htmlAlianzaPestanas(); return; }
+    if (false) {
       h += '<div class="al-rejilla">' + SECCIONES_AL.map(function (s) { var n = avisoSeccionAl(s[0]); return '<button class="al-boton" data-accion="al-sec" data-sec="' + s[0] + '"><span class="al-ic">' + s[1] + '</span><span>' + (estado.idioma === 'en' ? s[3] : s[2]) + '</span>' + (n ? '<i class="al-n">' + (n > 99 ? '99+' : n) + '</i>' : '') + '</button>'; }).join('') + '</div>';
       if (al.descripcion) h += '<p class="nota" style="margin-top:8px">📢 ' + escaparHTML(al.descripcion) + '</p>';
     } else {
@@ -2554,6 +2555,69 @@
       h += '<div class="al-sec-cab"><button class="comprar mini" data-accion="al-sec" data-sec="">◀ ' + L('Volver', 'Back') + '</button><b>' + s[1] + ' ' + (estado.idioma === 'en' ? s[3] : s[2]) + '</b></div>' + htmlSeccionAl(alSeccion);
     }
     $('panel-cuerpo').innerHTML = h;
+  }
+  // ---------- v6.59: ALIANZA en 4 pestañas como las fotos del dueño: Info, Miembros, Alianzas y Muro ----------
+  var alTab = 'info', alSubMi = 'miembros', alPag = 0, alListaTodas = null;
+  function hace(ms) { var d = Math.floor((Date.now() - ms) / 86400000); if (!ms) return '—'; if (d <= 0) return L('Hoy', 'Today'); if (d === 1) return L('Ayer', 'Yesterday'); return L('Hace ' + d + ' días', d + ' days ago'); }
+  function nivelAlianza(p) { var n = 1, need = 500, resto = p; while (resto >= need && n < 50) { resto -= need; n++; need = Math.round(need * 1.35); } return { n: n, act: resto, need: need }; }
+  function htmlAlianzaPestanas() {
+    var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
+    var total = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0);
+    var h = '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
+    if (alTab === 'info') {
+      var nv = nivelAlianza(a.puntos || 0), soyLider = al.lider === yoU;
+      var filas = [['🌿', L('Nombre', 'Name'), escaparHTML(al.nombre)], ['👑', L('Líder', 'Leader'), escaparHTML(al.liderNombre)], ['🛡️', L('Liga', 'League'), ligaDe(total).replace(/^[^A-Za-z]+/, '')],
+        ['✴️', L('Poder', 'Power'), formatoNumero(total)], ['🌐', L('Idioma', 'Language'), IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es], ['👥', L('Miembros', 'Members'), mi.length + ' (' + L('Tu puesto: ', 'Your rank: ') + '<span class="al-azul">' + (soyLider ? L('Líder', 'Leader') : L('Miembro', 'Member')) + '</span>)']];
+      h += '<div class="al-info"><div class="al-info-dat">' + filas.map(function (q) { return '<div class="al-if"><span class="al-if-i">' + q[0] + '</span><b>' + q[1] + ':</b><span>' + q[2] + '</span></div>'; }).join('') + '</div>' +
+        '<div class="al-bandera"><span>' + escaparHTML(al.tag) + '</span></div></div>' +
+        (al.descripcion ? '<p class="al-desc">📢 ' + escaparHTML(al.descripcion) + '</p>' : '') +
+        '<div class="al-nivel"><div class="al-nv-ic">🤝<b>' + L('Nv', 'Lv') + nv.n + '</b></div><div class="pr-barra al-nv-barra"><i style="width:' + Math.round(nv.act / nv.need * 100) + '%"></i><span>' + formatoNumero(nv.act) + ' / ' + formatoNumero(nv.need) + '</span></div></div>' +
+        '<div class="al-3b"><button data-accion="al-sec" data-sec="poder">' + L('Mi mérito', 'My merit') + '</button><button data-accion="al-sec" data-sec="cajas">' + L('Regalos', 'Gifts') + (alLoc().regalos.length ? ' (' + alLoc().regalos.length + ')' : '') + '</button><button data-accion="al-sec" data-sec="ayuda">' + L('Ayudar', 'Help') + '</button></div>' +
+        '<div class="al-filas">' + [['tecnologia', L('Ver bonificaciones de alianza', 'See alliance bonuses'), L('Mejóralas con los puntos de alianza.', 'Upgrade them with alliance points.')], ['tienda', L('Ver tienda de alianza', 'See alliance shop'), L('Compra objetos con tus puntos.', 'Buy items with your points.')],
+          ['incentivo', L('Incentivo diario', 'Daily incentive'), L('Entra cada día y cobra tu racha.', 'Log in daily and claim your streak.')], ['guerra', L('Guerras de la alianza', 'Alliance wars'), L('Ataques y defensas recientes.', 'Recent attacks and defenses.')],
+          ['territorio', L('Territorio', 'Territory'), L('Las casillas de tu alianza en el mundo.', 'Your alliance tiles on the world map.')], ['batalla', L('Batalla de alianza', 'Alliance battle'), L('Compite con otras alianzas.', 'Compete with other alliances.')], ['ajustes', L('Ajustes de la alianza', 'Alliance settings'), L('Idioma, anuncio y salir.', 'Language, notice and leave.')]].map(function (q) {
+          var av = avisoSeccionAl(q[0]); return '<button class="al-fila" data-accion="al-sec" data-sec="' + q[0] + '"><span><b>' + q[1] + (av ? ' <i class="al-new">' + av + '</i>' : '') + '</b><small>' + q[2] + '</small></span><i class="al-chev">›</i></button>';
+        }).join('') + '</div>';
+    }
+    if (alTab === 'miembros') {
+      h += '<div class="al-sub">' + [['miembros', 'Miembros', 'Members'], ['lider', 'Líder', 'Leader'], ['hazanas', 'Hazañas', 'Feats']].map(function (t) { return '<button data-accion="al-submi" data-t="' + t[0] + '" class="' + (alSubMi === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
+      if (alSubMi === 'miembros') {
+        var porPag = 7, pags = Math.max(1, Math.ceil(mi.length / porPag)); alPag = Math.min(alPag, pags - 1);
+        h += '<div class="al-tabla"><div class="al-th"><span></span><span>' + L('Nombre / Puesto', 'Name / Rank') + '</span><span>' + L('Poder', 'Power') + '</span><span>' + L('Última conexión', 'Last seen') + '</span></div>' +
+          mi.slice(alPag * porPag, alPag * porPag + porPag).map(function (m) {
+            return '<div class="al-tr"><span class="al-chk">' + (m.uid === al.lider ? '⭐' : '▪') + '</span><span><button class="al-nom" data-accion="al-perfil" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">' + escaparHTML(m.nombre) + '</button><small>' + (m.uid === al.lider ? L('Líder', 'Leader') : L('Miembro', 'Member')) + '</small></span><span>' + corto(m.poder || 0) + '</span><span>' + hace(m.actualizado) + '</span></div>';
+          }).join('') + '</div>' +
+          '<div class="al-pag"><button data-accion="al-pag" data-p="0">⏮</button><button data-accion="al-pag" data-p="' + Math.max(0, alPag - 1) + '">‹</button><span>' + (alPag + 1) + ' ' + L('de', 'of') + ' ' + pags + '</span><button data-accion="al-pag" data-p="' + Math.min(pags - 1, alPag + 1) + '">›</button><button data-accion="al-pag" data-p="' + (pags - 1) + '">⏭</button></div>';
+      } else if (alSubMi === 'lider') {
+        var lid = mi.filter(function (m) { return m.uid === al.lider; });
+        h += '<div class="al-tabla"><div class="al-th al-th3"><span>' + L('Nombre', 'Name') + '</span><span>' + L('Nivel', 'Level') + '</span><span>' + L('Poder', 'Power') + '</span><span></span></div>' + lid.map(function (m) {
+          return '<div class="al-tr al-th3"><span><button class="al-nom" data-accion="al-perfil" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">' + escaparHTML(m.nombre) + '</button></span><span>' + (m.nivel || 1) + '</span><span>' + formatoNumero(m.poder || 0) + '</span><span>' + (m.uid !== yoU ? '<button class="al-carta" data-accion="al-escribir" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '" title="' + L('Enviar mensaje', 'Send message') + '">📜</button>' : '') + '</span></div>';
+        }).join('') + '</div>';
+      } else {
+        var gs = correoLista().filter(function (m) { return m.cat === 'guerras'; }).slice(0, 12);
+        h += '<div class="al-tabla">' + (gs.length ? gs.map(function (m) { return '<div class="al-tr al-haz"><span>⚔️</span><span>' + escaparHTML(m.titulo || '') + '</span></div>'; }).join('') : '<p class="iv-vacio">' + L('Todavía no hay hazañas. ¡Ataquen juntos y defiéndanse!', 'No feats yet. Attack together and defend each other!') + '</p>') + '</div>';
+      }
+    }
+    if (alTab === 'alianzas') {
+      var lista = alListaTodas, q = (pintarListaAlianzas.busqueda || '').toLowerCase();
+      h += '<div class="al-busca"><input class="campo" id="al-buscar" maxlength="24" placeholder="' + L('Nombre o etiqueta', 'Name or tag') + '" value="' + escaparHTML(pintarListaAlianzas.busqueda || '') + '"><button class="al-x" data-accion="al-buscar-limpiar">✕</button><button class="iv-boton" data-accion="al-buscar">' + L('Buscar', 'Search') + '</button></div>';
+      if (!lista) { h += '<p class="iv-vacio">' + T('cargando') + '</p>'; Cuentas.alianzas().then(function (l) { alListaTodas = l || []; if (panelActual && panelActual.tipo === 'alianza' && alTab === 'alianzas') pintarHubAlianza(); }).catch(function () { alListaTodas = []; }); }
+      else {
+        var lf = lista.filter(function (x) { return !q || String(x.nombre).toLowerCase().indexOf(q) >= 0 || String(x.tag).toLowerCase() === q; });
+        h += '<div class="al-tabla"><div class="al-th al-th3"><span>' + L('Puesto', 'Rank') + '</span><span>' + L('Alianza / Líder', 'Alliance / Leader') + '</span><span>' + L('Idioma', 'Language') + '</span><span></span></div>' + (lf.length ? lf.map(function (x, i) {
+          return '<div class="al-tr al-th3"><span><i class="al-ok">✓</i> ' + (i + 1) + '</span><span class="al-al"><b class="al-ban">' + escaparHTML(x.tag) + '</b><span>' + escaparHTML(x.nombre) + '<small>' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + escaparHTML((IDIOMAS_AL[x.idioma] || IDIOMAS_AL.es).slice(0, 3)) + '</span><span><button class="al-chev" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '">›</button></span></div>';
+        }).join('') : '<p class="iv-vacio">' + L('No hay alianzas con ese nombre.', 'No alliances with that name.') + '</p>') + '</div>';
+      }
+    }
+    if (alTab === 'muro') {
+      var c = canalAlianza(), ms = (chat.msgs[c] || []).slice().reverse();
+      if (hayCuenta()) iniciarChat();
+      h += '<div class="al-muro">' + (al.descripcion ? '<div class="al-aviso"><span>👑</span><div><b>' + L('Aviso de la alianza', 'Alliance notice') + '</b><p>' + escaparHTML(al.descripcion) + '</p></div></div>' : '') +
+        (ms.length ? ms.map(function (m) { var f = new Date(m.fecha); return '<div class="al-post"><div class="al-post-c"><span>🛡️ ' + escaparHTML(m.nombre) + '</span><small>' + f.toLocaleDateString(estado.idioma === 'en' ? 'en' : 'es', { day: 'numeric', month: 'short' }) + ', ' + ('0' + f.getHours()).slice(-2) + ':' + ('0' + f.getMinutes()).slice(-2) + '</small></div><div class="al-post-t">' + escaparHTML(filtrarTexto(m.texto)) + '</div></div>'; }).join('')
+          : '<p class="iv-vacio">' + L('El muro está vacío. ¡Escribe el primer mensaje!', 'The wall is empty. Write the first message!') + '</p>') + '</div>' +
+        '<div class="al-escribe"><input id="al-muro-txt" maxlength="140" placeholder="' + L('Máx. 140 caracteres', 'Max. 140 characters') + '"><button class="iv-boton" data-accion="al-muro-enviar">' + L('Enviar', 'Send') + '</button></div>';
+    }
+    return h;
   }
   function htmlSeccionAl(k) {
     var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
@@ -2891,6 +2955,7 @@
   function buscarAlianza(texto) {
     var t = texto !== undefined ? texto : (($('al-buscar') || {}).value || '').trim();
     pintarListaAlianzas.busqueda = t;
+    if (estado.alianza && alCache) { pintarHubAlianza(); return; } // v6.59: dentro de tu alianza se filtra la lista de la pestaña Alianzas
     (t ? Cuentas.buscarAlianzas(t) : Cuentas.alianzas()).then(function (lista) { if (panelActual && panelActual.tipo === 'alianza' && !estado.alianza) pintarListaAlianzas(lista); })
       .catch(function () { consejoTemporal(T('mundo_error')); });
   }
@@ -5239,7 +5304,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
-    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel'); // v6.57: el chat va en pergamino crema
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -8067,6 +8132,13 @@
     else if (a === 'inv-modo') { sonar('click'); abrirPanelMochila(b.getAttribute('data-m')); }
     else if (a === 'azar-modo') { sonar('click'); abrirAzar(b.getAttribute('data-m')); }
     else if (a === 'promo-reclamar') reclamarPromo(b.getAttribute('data-id'));
+    else if (a === 'al-tab') { sonar('click'); alTab = b.getAttribute('data-t'); alSeccion = ''; pintarHubAlianza(); }
+    else if (a === 'al-submi') { sonar('click'); alSubMi = b.getAttribute('data-t'); alPag = 0; pintarHubAlianza(); }
+    else if (a === 'al-pag') { sonar('click'); alPag = +b.getAttribute('data-p'); pintarHubAlianza(); }
+    else if (a === 'al-perfil') { sonar('click'); perfilJugador(b.getAttribute('data-uid'), b.getAttribute('data-n'), ''); }
+    else if (a === 'al-escribir') { sonar('click'); abrirPrivado(b.getAttribute('data-uid'), b.getAttribute('data-n')); }
+    else if (a === 'al-ver') { sonar('click'); var tv = b.getAttribute('data-tag'), xv = (alListaTodas || []).filter(function (x) { return x.tag === tv; })[0]; if (xv) consejoTemporal('[' + xv.tag + '] ' + xv.nombre + ' · 👑 ' + (xv.liderNombre || '')); }
+    else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
     else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth * 0.7, behavior: 'smooth' }); }
@@ -8762,6 +8834,7 @@
         chat.msgs[c] = lista;
         if (panelActual && panelActual.tipo === 'chat' && chat.canal === c) pintarMensajes(true);
         actualizarBadgeChat(); if (c === 'global') pintarBarraChat();
+        if (c !== 'global' && panelActual && panelActual.tipo === 'alianza' && alTab === 'muro' && !alSeccion) pintarHubAlianza();
       });
     });
     // v6.57: lista de conversaciones privadas (para el numerito de nuevos)

@@ -825,3 +825,58 @@ body.tema-oscuro #panel.pr-panel .pr-premio { color: #f2c45a !important; font: 1
 #btn-promos .badge:empty { display: none; }
 .pr-top { flex-direction: column; align-items: flex-start; gap: 1px; }
 @media (max-width: 520px) { .pr-ico { width: 46px; height: 46px; font-size: 26px; } .pr-b, .pr-fila .iv-boton { min-width: 80px !important; } }
+
+/* ---------------- v6.59: ALIANZA (Info, Miembros, Alianzas, Muro) café oscuro como las fotos ---------------- */
+.al-tabs button { font-size: 15px !important; padding: 9px 4px !important; }
+body.tema-oscuro #panel.al-panel, body.tema-oscuro #panel.al-panel #panel-cuerpo { color: #f1e2c0 !important; }
+.al-info { display: flex; gap: 10px; padding: 10px; border-radius: 8px; border: 1px solid #5a3d22; background: rgba(0,0,0,.18); }
+.al-info-dat { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.al-if { display: grid; grid-template-columns: 22px 92px 1fr; align-items: center; gap: 4px; font: 14px Georgia, serif; }
+body.tema-oscuro #panel.al-panel .al-if b { color: #f6e6c0 !important; font-weight: 600; } body.tema-oscuro #panel.al-panel .al-if span { color: #e8d6b0 !important; }
+body.tema-oscuro #panel.al-panel .al-azul, body.tema-oscuro #panel.al-panel .al-nom { color: #4aa8ff !important; }
+.al-bandera { flex: none; width: 74px; height: 96px; display: grid; place-items: center; background: linear-gradient(135deg, #f4f4f4 0 40%, #1d4fa0 40% 60%, #f4f4f4 60%); border: 2px solid #d4a94a; clip-path: polygon(0 0, 100% 0, 100% 86%, 50% 100%, 0 86%); }
+.al-bandera span { font: 700 18px Georgia, serif; color: #10264a; background: rgba(255,255,255,.85); padding: 2px 6px; border-radius: 4px; }
+.al-desc { margin: 8px 2px; font: 13px Georgia, serif; color: #f2c45a; }
+.al-nivel { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.al-nv-ic { flex: none; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; position: relative; background: radial-gradient(circle, #6a4a2a, #2a1a0c); border: 2px solid #d4a94a; }
+.al-nv-ic b { position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); font: 700 11px Georgia, serif; color: #f6e6c0; background: #2a1a0c; border: 1px solid #d4a94a; padding: 0 5px; border-radius: 6px; }
+.al-nv-barra { flex: 1; height: 20px !important; } .al-nv-barra i { background: linear-gradient(180deg, #ffb74a, #e07a1a) !important; } .al-nv-barra span { line-height: 20px !important; font-size: 12px !important; }
+.al-3b { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px; }
+.al-3b button { min-height: 48px; border-radius: 8px; border: 2px solid #0b1a33; background: linear-gradient(180deg, #2f5d9a 0%, #1b3d6e 55%, #10264a 100%); color: #fff; font: 700 15px Georgia, serif; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,.3); }
+.al-filas { display: flex; flex-direction: column; }
+.al-fila { display: flex; align-items: center; gap: 8px; padding: 10px 4px; border: 0; border-bottom: 1px solid #120b05; background: none; text-align: left; cursor: pointer; }
+.al-fila span { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+body.tema-oscuro #panel.al-panel .al-fila b { color: #e8d6b0 !important; font: 500 14px Georgia, serif; } body.tema-oscuro #panel.al-panel .al-fila small { color: #b8a27a !important; font: 13px Georgia, serif; }
+.al-new { font-style: normal; color: #fff; background: #c0281e; border-radius: 8px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
+.al-chev { font-style: normal; color: #e0a23c; font: 700 30px/1 Georgia, serif; background: none; border: 0; cursor: pointer; }
+.al-sub { display: flex; gap: 8px; margin-bottom: 10px; }
+.al-sub button { flex: 1; padding: 9px 4px; border-radius: 6px; border: 1px solid #120b05; background: linear-gradient(180deg, #3a2414, #24150a); color: #e8d6b0; font: 500 14px Georgia, serif; cursor: pointer; }
+.al-sub button.activo { background: linear-gradient(180deg, #7a4f2c, #5a3518); color: #fff; border-color: #a77a4a; }
+.al-tabla { border: 1px solid #5a3d22; border-radius: 8px; overflow: hidden; }
+.al-th, .al-tr { display: grid; grid-template-columns: 26px 1.4fr .7fr 1fr; align-items: center; gap: 6px; padding: 8px 6px; text-align: center; font: 13px Georgia, serif; }
+.al-th3 { grid-template-columns: .8fr 1.6fr .8fr 34px !important; }
+.al-th { background: linear-gradient(180deg, #4a2c16, #2e1a0c); } body.tema-oscuro #panel.al-panel .al-th span { color: #f1e2c0 !important; font-weight: 600; }
+.al-tr { border-top: 1px solid #120b05; } body.tema-oscuro #panel.al-panel .al-tr span, body.tema-oscuro #panel.al-panel .al-tr small { color: #e8d6b0 !important; }
+.al-tr small { display: block; }
+.al-nom { background: none; border: 0; padding: 0; cursor: pointer; font: 14px Georgia, serif; }
+.al-chk { width: 18px; height: 18px; display: inline-grid; place-items: center; }
+.al-haz { grid-template-columns: 26px 1fr !important; text-align: left; }
+.al-carta { background: none; border: 0; font-size: 22px; cursor: pointer; }
+.al-pag { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 10px; }
+.al-pag button { background: none; border: 0; color: #e0a23c; font: 700 24px Georgia, serif; cursor: pointer; }
+.al-pag span { padding: 6px 18px; border-radius: 8px; border: 1px solid #6a4a2a; background: #1a110a; color: #f1e2c0; font: 15px Georgia, serif; }
+.al-busca { display: flex; gap: 6px; margin-bottom: 10px; }
+.al-busca input { flex: 1; background: #f6ead0 !important; color: #2b1d0e !important; border: 1px solid #c8a764 !important; }
+.al-x { width: 40px; border-radius: 6px; border: 1px solid #6a4a2a; background: #3a2414; color: #f2c45a; font-size: 18px; cursor: pointer; }
+.al-ok { font-style: normal; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #3c9a2e; color: #fff; font-size: 12px; }
+.al-al { display: flex !important; align-items: center; gap: 8px; text-align: left; }
+.al-ban { flex: none; width: 30px; height: 40px; display: grid; place-items: center; font: 700 9px Georgia, serif; color: #fff; background: linear-gradient(135deg, #1d4fa0, #c0281e); border: 1px solid #d4a94a; clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%); }
+.al-al small { color: #e0a23c !important; }
+.al-muro { display: flex; flex-direction: column; gap: 10px; padding: 10px; border-radius: 8px; background: linear-gradient(180deg, #f3e3bd, #e2c996); min-height: 220px; }
+.al-aviso { display: flex; gap: 8px; padding-bottom: 8px; border-bottom: 2px solid rgba(120,90,40,.4); }
+body.tema-oscuro #panel.al-panel .al-aviso b { color: #c0281e !important; font: 600 14px Georgia, serif; } body.tema-oscuro #panel.al-panel .al-aviso p { color: #8a1c10 !important; margin: 2px 0 0; font: 14px Georgia, serif; }
+.al-post-c { display: flex; justify-content: space-between; } body.tema-oscuro #panel.al-panel .al-post-c span, body.tema-oscuro #panel.al-panel .al-post-c small { color: #6a5434 !important; font: 13px Georgia, serif; }
+.al-post-t { margin-top: 3px; padding: 8px 10px; border-radius: 8px; background: #fff8dc; border: 2px solid #b8862e; font: 14px Georgia, serif; }
+body.tema-oscuro #panel.al-panel .al-post-t, body.tema-oscuro #panel.al-panel .al-muro .iv-vacio { color: #2b1d0e !important; }
+.al-escribe { display: flex; gap: 8px; margin-top: 8px; padding: 8px; border-radius: 8px; background: linear-gradient(180deg, #8a5a30, #5e3a1c); }
+.al-escribe input { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #2a1a0c; background: #3a2414; color: #f1e2c0; font: 14px Georgia, serif; }
