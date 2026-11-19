@@ -156,9 +156,10 @@
   // v6.48: al entrar se ve la ciudad entera de una mirada, todo más chico (antes 68: el castillo llenaba la pantalla)
   // v6.54: zoom corto, como en los juegos de reinos: se acerca y se aleja solo un poco desde la vista normal
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
-  function zoomMin() { return zoomBase() * 0.58; }
-  function zoomMax() { return zoomBase() * 1.05; }
-  function distInicial() { return window.innerWidth < window.innerHeight ? 120 : 90; } // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
+  // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
+  function zoomMin() { return zoomBase() * 0.5; }
+  function zoomMax() { return zoomBase() * 1.45; }
+  function distInicial() { return window.innerWidth < window.innerHeight ? 122 : 90; } // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
   function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 175 : 125; }
@@ -597,7 +598,9 @@
       losa(p, p, -46, -16, 0.075, 1.35);
       losa(p, p, 16, 46, 0.075, 1.35);
     });
-    var plaza = new THREE.Mesh(new THREE.CircleGeometry(10.5, 40), matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.position.y = 0.085; plaza.receiveShadow = true; G.add(plaza);
+    // v6.83: plaza cuadrada, alineada con las calles, con un borde de piedra más oscura (como las ciudades de los grandes juegos de castillos)
+    var borde = new THREE.Mesh(new THREE.PlaneGeometry(23, 23), new THREE.MeshLambertMaterial({ color: 0x8a7f6e })); borde.rotation.x = -Math.PI / 2; borde.position.y = 0.08; borde.receiveShadow = true; G.add(borde);
+    var plaza = new THREE.Mesh(new THREE.PlaneGeometry(21, 21), matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.position.y = 0.088; plaza.receiveShadow = true; G.add(plaza);
     // rejilla de caminitos de piedra entre las parcelas de los campos
     for (var cb = -30; cb <= 30; cb += 10) losa(CA - 20, CA + HA - 1, cb, cb, 0.1, 1.6);
     for (var ca2 = -20; ca2 <= 20; ca2 += 10) losa(CA + ca2, CA + ca2, -30, 30, 0.1, 1.6);
@@ -676,25 +679,25 @@
   (function crearFoso() {
     var f = MURALLA_FORMA, n = 160, v = [], id = [], vb = [];
     for (var i = 0; i <= n; i++) {
-      var t = i / n * Math.PI * 2, c = Math.cos(t), s = Math.sin(t);
+      var t = i / n * Math.PI * 2, c = formaX(t), s = formaZ(t);
       v.push(f.cx + c * (f.rx + 1.1), 0.06, f.cz + s * (f.rz + 1.1), f.cx + c * (f.rx + 2.5), 0.06, f.cz + s * (f.rz + 2.5));
       vb.push(f.cx + c * (f.rx + 0.75), 0.045, f.cz + s * (f.rz + 0.75), f.cx + c * (f.rx + 2.85), 0.045, f.cz + s * (f.rz + 2.85));
       if (i < n) { var a = i * 2; id.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     }
     var bi = [], bo = [];
-    for (var ii = 0; ii <= n; ii++) { var tt = ii / n * Math.PI * 2, cc2 = Math.cos(tt), ss2 = Math.sin(tt); bi.push(f.cx + cc2 * (f.rx + 1.1), 0.075, f.cz + ss2 * (f.rz + 1.1), f.cx + cc2 * (f.rx + 1.5), 0.075, f.cz + ss2 * (f.rz + 1.5)); bo.push(f.cx + cc2 * (f.rx + 2.1), 0.075, f.cz + ss2 * (f.rz + 2.1), f.cx + cc2 * (f.rx + 2.5), 0.075, f.cz + ss2 * (f.rz + 2.5)); }
+    for (var ii = 0; ii <= n; ii++) { var tt = ii / n * Math.PI * 2, cc2 = formaX(tt), ss2 = formaZ(tt); bi.push(f.cx + cc2 * (f.rx + 1.1), 0.075, f.cz + ss2 * (f.rz + 1.1), f.cx + cc2 * (f.rx + 1.5), 0.075, f.cz + ss2 * (f.rz + 1.5)); bo.push(f.cx + cc2 * (f.rx + 2.1), 0.075, f.cz + ss2 * (f.rz + 2.1), f.cx + cc2 * (f.rx + 2.5), 0.075, f.cz + ss2 * (f.rz + 2.5)); }
     [[vb, 0x7a7466, 1], [v, 0x3f8fb0, 0.92, true], [bi, 0xd2f0ff, 0.5], [bo, 0xd2f0ff, 0.5]].forEach(function (q) {
       var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(q[0], 3)); g.setIndex(id.slice()); g.computeVertexNormals();
       var m = new THREE.Mesh(g, q[3] ? materialAgua(0.9) : new THREE.MeshLambertMaterial({ color: q[1], side: THREE.DoubleSide, transparent: q[2] < 1, opacity: q[2], depthWrite: q[2] >= 1 })); m.receiveShadow = true; escena.add(m);
     });
     var fm = formaMuralla();
     fm.puertas.forEach(function (tp) {
-    var cx = Math.cos(tp), cz = Math.sin(tp);
+    var cx = formaX(tp), cz = formaZ(tp);
     var px = f.cx + cx * (f.rx + 1.8), pz = f.cz + cz * (f.rz + 1.8);
     var pu = new THREE.Group();
     pu.add(M.caja(4.6, 0.3, 3.8, 0xa7a196, 0, 0.32, 0));
     [-1, 1].forEach(function (s2) { pu.add(M.caja(4.6, 0.45, 0.3, 0x948e84, 0, 0.62, s2 * 1.75)); [-1.9, 1.9].forEach(function (x2) { pu.add(M.caja(0.5, 0.75, 0.5, 0x8a847a, x2, 0.75, s2 * 1.75)); }); });
-    pu.position.set(px, 0, pz); pu.rotation.y = -Math.atan2(cz * f.rz, cx * f.rx); escena.add(pu);
+    pu.position.set(px, 0, pz); pu.rotation.y = -Math.atan2(Math.sin(tp), Math.cos(tp)); escena.add(pu);
     });
   })();
   (function crearNaturaleza() {
@@ -703,7 +706,7 @@
       if (Math.hypot(x, z) < 18) return false;
       if (distRio(x, z) < 5 + extra) return false;
       var mfx = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mfz = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
-      if (Math.abs(Math.sqrt(mfx * mfx + mfz * mfz) - 1) < 0.1) return false;
+      if (Math.abs(Math.sqrt(formaD2(mfx, mfz)) - 1) < 0.1) return false;
       if (distCamino(x, z) < 3.4 + extra) return false;
       for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (i < PARCELAS.nCiudad ? 3.6 : 7) + extra) return false;
       var lc = aLocal(x, z), callesB = [-24, -12, 12, 24], callesA = [-26, -14, 14, 26];
@@ -726,7 +729,7 @@
       if (rnd() > Math.max(bosqueDensidad, borde)) continue;
       if (!libre(x, z, 0)) continue;
       var mex = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mez = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
-      if (mex * mex + mez * mez < 1.02) continue;
+      if (formaD2(mex, mez) < 1.02) continue;
       // mezcla de especies: pinos en el bosque oscuro, palmeras cerca del pueblo y del estanque
       var cerca = Math.hypot(x, z) < 68 || Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < 22;
       var enBosque = bosqueDensidad > 0.2 || (x < -32 && z < 0);
@@ -871,7 +874,7 @@
   }
   // ---------- TRABAJOS: además de pagar, para subir de nivel hay que haber jugado ----------
   function logro(k) { return (estado.logros && estado.logros[k]) || 0; }
-  function sumarLogro(k, n) { estado.logros = estado.logros || {}; estado.logros[k] = (estado.logros[k] || 0) + (n || 1); var pt = PUNTOS_TORNEO[k]; if (pt) sumarTorneo(pt * (n || 1)); }
+  function sumarLogro(k, n) { estado.logros = estado.logros || {}; estado.logros[k] = (estado.logros[k] || 0) + (n || 1); var pt = PUNTOS_TORNEO[k]; if (pt) { sumarTorneo(pt * (n || 1)); sumarFinde(k, pt * (n || 1)); } }
   function trabajosPara(que, L) {
     var tabla = que === 'castillo' ? TRABAJOS_CASTILLO : TRABAJOS_EDIFICIO, lista = [];
     for (var k in tabla) {
@@ -1105,8 +1108,10 @@
   var murallaModelo = null, obraMuralla = null, murallaBarra = null, murallaAndamios = [], murallaRebote = 1;
   function bono(id) {
     var lv = (estado.invest && estado.invest[id]) || 0;
-    for (var r in INVESTIGACION) for (var k = 0; k < INVESTIGACION[r].length; k++) if (INVESTIGACION[r][k].id === id) return lv * INVESTIGACION[r][k].cada;
-    return 0;
+    var base = 0;
+    for (var r in INVESTIGACION) for (var k = 0; k < INVESTIGACION[r].length; k++) if (INVESTIGACION[r][k].id === id) { base = lv * INVESTIGACION[r][k].cada; r = null; break; }
+    var tot = base + bonoExtra(id); // v6.80: cargos de caballeros y VIP
+    return id === 'obras' ? Math.min(0.6, tot) : tot;
   }
   function vidaMaxCastillo() { return INICIO.vidaCastillo + ((estado.castillo || 1) - 1) * MEJORA_CASTILLO.vida + (estado.muralla ? Math.round(MURALLA.vida[estado.muralla - 1] * (1 + bono('muros'))) : 0); }
   function formaMuralla() {
@@ -1116,7 +1121,7 @@
       var tPuerta = Math.PI;
       for (var i = 0; i < muestras.length; i++) {
         var q = muestras[i], ux = (q.x - f.cx) / f.rx, uz = (q.z - f.cz) / f.rz;
-        if (ux * ux + uz * uz < 1) { tPuerta = Math.atan2(uz, ux); break; }
+        if (formaD2(ux, uz) < 1) { tPuerta = Math.atan2(uz, ux); break; }
       }
       f.puerta = tPuerta; f.hueco = 0.1;
       f.puertas = [tPuerta, tPuerta + Math.PI / 2, tPuerta + Math.PI, tPuerta - Math.PI / 2];
@@ -1130,7 +1135,7 @@
     var f = formaMuralla();
     [-1, 1].forEach(function (s) {
       var t = f.puerta + s * (f.hueco + 0.13);
-      var x = f.cx + Math.cos(t) * f.rx * 1.1, z = f.cz + Math.sin(t) * f.rz * 1.1;
+      var x = f.cx + formaX(t) * f.rx * 1.1, z = f.cz + formaZ(t) * f.rz * 1.1;
       var g = new THREE.Group(); g.position.set(x, 0, z);
       // mira hacia afuera (hacia el bosque)
       g.rotation.y = Math.atan2(Math.cos(t), Math.sin(t));
@@ -1168,7 +1173,7 @@
     var fm = formaMuralla();
     [0.6, 1.7, 2.8, 3.9, 5.0, 6.0].forEach(function (a) {
       var an = M.andamio(); an.scale.setScalar(0.8);
-      an.position.set(fm.cx + Math.cos(a) * fm.rx, 0, fm.cz + Math.sin(a) * fm.rz);
+      an.position.set(fm.cx + formaX(a) * fm.rx, 0, fm.cz + formaZ(a) * fm.rz);
       escena.add(an); murallaAndamios.push(an);
     });
   }
@@ -1181,7 +1186,7 @@
     estado.vidaCastillo = Math.min(vidaMaxCastillo(), estado.vidaCastillo + (vidaMaxCastillo() - antes));
     ponerMuralla(o.nivel);
     murallaRebote = 0;
-    var fc = formaMuralla(); [0, 1.6, 3.1, 4.7].forEach(function (ta) { chispas(new V3(fc.cx + Math.cos(ta) * fc.rx, 1.5, fc.cz + Math.sin(ta) * fc.rz), 0xd8c49a, 12, 4); });
+    var fc = formaMuralla(); [0, 1.6, 3.1, 4.7].forEach(function (ta) { chispas(new V3(fc.cx + formaX(ta) * fc.rx, 1.5, fc.cz + formaZ(ta) * fc.rz), 0xd8c49a, 12, 4); });
     sonar('listo');
     consejoTemporal(T('muralla_lista', { n: o.nivel })); sumarXP(25 * o.nivel);
     actualizarHUD();
@@ -3133,7 +3138,7 @@
       var a = Math.random() * Math.PI * 2, r = 7 + Math.random() * 10, x = Math.cos(a) * r, z = Math.sin(a) * r;
       if (tipo !== 'gallina') {
         // caballos y cabras pastan fuera de la muralla, entre el foso y los campos
-        var f = MURALLA_FORMA, m = 1.1 + Math.random() * 0.55; x = f.cx + Math.cos(a) * f.rx * m; z = f.cz + Math.sin(a) * f.rz * m;
+        var f = MURALLA_FORMA, m = 1.1 + Math.random() * 0.55; x = f.cx + formaX(a) * f.rx * m; z = f.cz + formaZ(a) * f.rz * m;
         if (slots.some(function (s) { return s.campo && Math.hypot(s.pos.x - x, s.pos.z - z) < 6.5; }) || distRio(x, z) < 5) continue;
       }
       if (distCamino(x, z) > 3 && Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) > ESTANQUE.r + 1.5) return new V3(x, 0, z);
@@ -3166,7 +3171,7 @@
           g.rotation.y += dif * Math.min(1, dt * 6);
           camina = true;
           if (Math.hypot(g.position.x, g.position.z) < 6) { o.meta = puntoAnimal(o.a.tipo); }
-          if (o.a.tipo !== 'gallina') { var fm2 = MURALLA_FORMA, ex = (g.position.x - fm2.cx) / fm2.rx, ez = (g.position.z - fm2.cz) / fm2.rz; if (ex * ex + ez * ez < 1.12) { o.meta = puntoAnimal(o.a.tipo); } }
+          if (o.a.tipo !== 'gallina') { var fm2 = MURALLA_FORMA, ex = (g.position.x - fm2.cx) / fm2.rx, ez = (g.position.z - fm2.cz) / fm2.rz; if (formaD2(ex, ez) < 1.12) { o.meta = puntoAnimal(o.a.tipo); } }
         }
       }
       M.animarAnimal(o.a, t + i * 1.7, camina);
@@ -3566,7 +3571,8 @@
   // y cada edificio crece un poco EN CADA NIVEL, del 1 al 30
   var TAM_TIPO = { cuartel: 5.6, almacen: 5.6, embajada: 5.6, academia: 5.4, relevo: 5.2, mercado: 5.2, herreria: 5.0, establo: 5.2, enfermeria: 5.0, galeria: 5.0,
     cabana: 2.6, granja: 3.2, aserradero: 3.2, mina: 3.2, cantera: 3.2 };
-  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 4.2) * (0.62 + 0.38 * (n - 1) / 29); }
+  // v6.82: empiezan chiquitos (45% al nivel 1) y crecen en cada nivel hasta su tamaño completo en el 30; el más grande (5,6) sigue siendo más chico que el castillo de nivel 1 (7)
+  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 4.2) * (0.45 + 0.55 * Math.pow((n - 1) / 29, 0.6)); }
   function encajarEnParcela(m, tr, tipo, nivel) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
     var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6);
@@ -3574,6 +3580,19 @@
     var c = caja.getCenter(new V3());
     m.position.x -= c.x; m.position.z -= c.z;
     m.position.y = 0.2;
+  }
+  var cacheChapa = {};
+  function chapaEdificio(tipo, nivel) {
+    var k = tipo + '|' + nivel;
+    if (!cacheChapa[k]) {
+      var c = document.createElement('canvas'); c.width = 192; c.height = 96; var x = c.getContext('2d');
+      x.fillStyle = 'rgba(28, 18, 9, 0.88)'; x.strokeStyle = '#e8b84a'; x.lineWidth = 5;
+      x.beginPath(); x.moveTo(48, 8); x.lineTo(144, 8); x.arc(144, 48, 40, -Math.PI / 2, Math.PI / 2); x.lineTo(48, 88); x.arc(48, 48, 40, Math.PI / 2, Math.PI * 1.5); x.closePath(); x.fill(); x.stroke();
+      x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '50px sans-serif'; x.fillText((EDIFICIOS[tipo] && EDIFICIOS[tipo].icono) || '🏠', 56, 52);
+      x.fillStyle = nivel >= 20 ? '#ffd75a' : nivel >= 10 ? '#ffe9b0' : '#ffffff'; x.font = 'bold 44px sans-serif'; x.fillText(String(nivel), 132, 51);
+      cacheChapa[k] = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true });
+    }
+    var sp = new THREE.Sprite(cacheChapa[k]); sp.scale.set(3.8, 1.9, 1); sp.renderOrder = 11; return sp;
   }
   function ponerEdificio(s, tipo, nivel) {
     if (s.modelo) s.grupo.remove(s.modelo);
@@ -3588,6 +3607,9 @@
     // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
     if (tipo !== 'torre' && !s.modelo.userData.tripo) { s.adornos = M.adornosNivel(nivel, new THREE.Box3().setFromObject(s.modelo)); s.grupo.add(s.adornos); }
     if (s.insignia) s.grupo.remove(s.insignia);
+    // v6.82: chapa siempre visible con el icono del edificio y su nivel, para saber cuál es cuál de un vistazo
+    if (s.chapa) { s.grupo.remove(s.chapa); s.chapa = null; }
+    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, Math.max(1.6, bxc.max.y - s.grupo.position.y) + 0.9, 0); s.grupo.add(s.chapa); }
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
     s.grupo.add(s.insignia);
@@ -4091,7 +4113,7 @@
   // ---- CAMPOS DE RECURSOS ----
   function ritmoCampo(s) {
     var d = EDIFICIOS[s.edificio.tipo];
-    return d.produce[s.edificio.nivel - 1] * (1 + bono({ comida: 'cosecha', madera: 'lenadores', piedra: 'canteros' }[d.recurso] || '') + bonoCasillas(d.recurso)) / d.cada;
+    return d.produce[s.edificio.nivel - 1] * (1 + bono({ comida: 'cosecha', madera: 'lenadores', piedra: 'canteros' }[d.recurso] || '') + bonoCasillas(d.recurso)) * factorFelicidad() / d.cada;
   }
   function capacidadCampo(s) { return s.edificio && esCampo(s.edificio.tipo) ? ritmoCampo(s) * HORAS_ALMACEN * 3600 : 0; }
   function recolectarCampo(s) {
@@ -4589,7 +4611,7 @@
     if (obraMuralla) {
       obraMuralla.t += dt * velObras() / velReal();
       M.ponerVida(murallaBarra, obraMuralla.t / obraMuralla.total);
-      if (Math.random() < dt * 6) { var ta = Math.random() * Math.PI * 2, fz = formaMuralla(); chispas(new V3(fz.cx + Math.cos(ta) * fz.rx, 1.5, fz.cz + Math.sin(ta) * fz.rz), 0xc9a66a, 1, 1.5); }
+      if (Math.random() < dt * 6) { var ta = Math.random() * Math.PI * 2, fz = formaMuralla(); chispas(new V3(fz.cx + formaX(ta) * fz.rx, 1.5, fz.cz + formaZ(ta) * fz.rz), 0xc9a66a, 1, 1.5); }
       if (obraMuralla.t >= obraMuralla.total) terminarMuralla();
     }
     if (murallaModelo) {
@@ -4961,7 +4983,7 @@
       while (o && o.userData.slot === undefined && !o.userData.castillo && o.userData.barricada === undefined) o = o.parent;
       if (!o) continue;
       if (o.userData.barricada !== undefined) { tocarBarricada(o.userData.barricada); return; }
-      if (o.userData.castillo) { if (modoColocar) continue; sonar('click'); enfocar(castillo.position); abrirMenuEdif('castillo'); return; }
+      if (o.userData.castillo) { if (modoColocar) continue; sonar('click'); abrirPanelCastillo(); return; } // v6.82: como en los grandes juegos de castillos, abre directo su ventana con pestañas
       tocarSlot(o.userData.slot);
       return;
     }
@@ -5304,8 +5326,12 @@
   // fotos de las tropas con las figuras de archivo (cuando ya cargaron)
   function fotosTropas(tipos) {
     try {
-      var r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(128, 128);
-      var e = new THREE.Scene(); e.add(new THREE.HemisphereLight(0xffffff, 0x8a9a7a, 0.75)); var l = new THREE.DirectionalLight(0xffffff, 0.65); l.position.set(3, 5, 4); e.add(l);
+      // v6.81: fotos más grandes, con colores de verdad (sRGB) y luz de estudio: luz principal cálida, relleno frío y contraluz dorado
+      var r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(192, 192);
+      var e = new THREE.Scene(); e.add(new THREE.HemisphereLight(0xfff4e0, 0x5a6a80, 0.85));
+      var l = new THREE.DirectionalLight(0xffe2b8, 0.95); l.position.set(3, 5, 4); e.add(l);
+      var l2 = new THREE.DirectionalLight(0x9ec4ff, 0.35); l2.position.set(-4, 2, 2); e.add(l2);
+      var l3 = new THREE.DirectionalLight(0xffc860, 0.7); l3.position.set(-1, 3, -5); e.add(l3);
       var c = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
       tipos.forEach(function (t) {
         var u = M.unidad(t); u.grupo.rotation.y = 0.35; u.grupo.updateMatrixWorld(true);
@@ -5319,6 +5345,39 @@
       r.dispose();
     } catch (er) { }
   }
+  // v6.82: fotos bonitas de los edificios y del castillo (con el modelo de verdad, buena luz, cielo y pasto detrás)
+  function fotosEdificios() {
+    try {
+      var W = 256, r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setSize(W, W);
+      var e = new THREE.Scene(); e.add(new THREE.HemisphereLight(0xfff4e0, 0x6a7a60, 0.95));
+      var l = new THREE.DirectionalLight(0xffe6c4, 1.0); l.position.set(4, 7, 5); e.add(l);
+      var l2 = new THREE.DirectionalLight(0xa8c8ff, 0.35); l2.position.set(-5, 3, 2); e.add(l2);
+      var c = new THREE.PerspectiveCamera(28, 1, 0.1, 400);
+      function foto(obj) {
+        obj.updateMatrixWorld(true); var bx = new THREE.Box3().setFromObject(obj); if (bx.isEmpty()) return null;
+        var cen = bx.getCenter(new V3()), tam = bx.getSize(new V3()), d = Math.max(tam.x, tam.y, tam.z) * 2.05;
+        e.add(obj); c.position.set(cen.x + d * 0.62, cen.y + d * 0.42, cen.z + d * 0.78); c.lookAt(cen.x, cen.y - tam.y * 0.04, cen.z);
+        r.render(e, c); e.remove(obj);
+        var k = document.createElement('canvas'); k.width = W; k.height = W; var x = k.getContext('2d');
+        var g = x.createLinearGradient(0, 0, 0, W); g.addColorStop(0, '#7fb8ee'); g.addColorStop(0.55, '#d9ecff'); g.addColorStop(0.56, '#9ccf6a'); g.addColorStop(1, '#5e9a3a'); x.fillStyle = g; x.fillRect(0, 0, W, W);
+        x.fillStyle = 'rgba(255,255,255,.55)'; [[50, 40, 26], [74, 34, 20], [190, 52, 22], [212, 46, 16]].forEach(function (n) { x.beginPath(); x.arc(n[0], n[1], n[2], 0, Math.PI * 2); x.fill(); });
+        x.fillStyle = 'rgba(0,0,0,.22)'; x.beginPath(); x.ellipse(W / 2, W * 0.8, W * 0.36, W * 0.09, 0, 0, Math.PI * 2); x.fill();
+        x.drawImage(r.domElement, 0, 0);
+        return k.toDataURL('image/jpeg', 0.88);
+      }
+      Object.keys(EDIFICIOS).forEach(function (t) {
+        try { crearModeloBase.nivel = 12; var m = crearModelo(t, tramoNivel(12)); crearModeloBase.nivel = 0; m.rotation.y = 0.55; var u = foto(m); if (u) retratos[t] = u; } catch (er) { crearModeloBase.nivel = 0; }
+      });
+      try { var cm = M.castilloEtapa(Math.max(10, estado.castillo || 1)); cm.rotation.y = 0.5; var uc = foto(cm); if (uc) retratos.castillo = uc; } catch (er) {}
+      r.dispose();
+      if (panelActual && /edificio|castillo|construir/.test(panelActual.tipo || '')) reabrirPanel();
+    } catch (er) { }
+  }
+  var timerFotosEd = null;
+  function pedirFotosEdificios() { clearTimeout(timerFotosEd); timerFotosEd = setTimeout(fotosEdificios, 1800); }
+  window.addEventListener('tripo-glb', pedirFotosEdificios);
+  window.addEventListener('castillo-glb', pedirFotosEdificios);
+  setTimeout(pedirFotosEdificios, 6000);
   function iconoCarreta() { return retratos.carreta ? '<img class="ico-carreta" src="' + retratos.carreta + '" alt="">' : '🛒'; }
   function fotoHTML(clave, emoji) {
     return retratos[clave] ? '<img src="' + retratos[clave] + '" alt="">' : emoji;
@@ -5340,6 +5399,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
+    $('panel').classList.toggle('sin-x', !!cual && (cual.tipo === 'perfil' || cual.tipo === 'cargos')); // v6.82: sin la cruz de cerrar: se cierra tocando fuera
     $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel', 'hi-panel', 'fo-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
@@ -7366,6 +7426,7 @@
       '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
       '<button data-accion="sub-invocar" class="' + (cual === 'invocar' ? 'activo' : '') + '">✨ ' + T('sub_invocar') + '</button>' +
       '<button data-accion="sub-salon" class="' + (cual === 'salon' ? 'activo' : '') + '">🛡️ ' + L('Caballeros', 'Knights') + '</button>' +
+      '<button data-accion="sub-cargos" class="' + (cual === 'cargos' ? 'activo' : '') + '">🎖️ ' + L('Cargos', 'Posts') + '</button>' +
       '<button data-accion="sub-fortaleza" class="' + (cual === 'fortaleza' ? 'activo' : '') + '">🏯 ' + L('Fortaleza', 'Fortress') + '</button></div>';
   }
   // v6.54: Salón de Caballeros: tus caballeros con nivel, ataque, salud y experiencia, y los botones +EXP y Equipar
@@ -7408,6 +7469,267 @@
       }).join('') : '<p class="nota">' + L('Todavía no tienes caballeros: recluta en la pestaña Héroes.', 'You have no knights yet: recruit in the Heroes tab.') + '</p>') + '</div>';
     abrirPanel(L('Salón de Caballeros', 'Knights Hall'), html, { tipo: 'salon' });
   }
+  // ==================================================================
+  //  v6.80: CARGOS DE CABALLEROS · FELICIDAD · VIP · EVENTO DE FIN DE SEMANA · LOGROS · PERFIL
+  // ==================================================================
+  // ---------- cargos: un caballero en cada puesto da un bonus que crece con su nivel y estrellas ----------
+  var CARGOS = [
+    { id: 'capataz', ico: '🔨', es: ['Capataz', 'Obras más rápidas'], en: ['Foreman', 'Faster construction'], bonos: ['obras'] },
+    { id: 'alquimista', ico: '⚗️', es: ['Alquimista', 'Más comida, madera y piedra'], en: ['Alchemist', 'More food, wood and stone'], bonos: ['cosecha', 'lenadores', 'canteros'] },
+    { id: 'instructor', ico: '🎯', es: ['Instructor', 'Entrenamiento más rápido'], en: ['Drillmaster', 'Faster training'], bonos: ['entreno'] },
+    { id: 'mariscal', ico: '⚔️', es: ['Mariscal', 'Más daño de tus tropas'], en: ['Marshal', 'More troop damage'], bonos: ['espadas', 'flechas'] }
+  ];
+  function cargos() { if (!estado.cargos) estado.cargos = {}; return estado.cargos; }
+  function bonoCargoDe(heroeId) { var e = heroeId && estado.heroes[heroeId]; return e ? Math.min(0.25, 0.02 * (e.estrellas || 1) + 0.002 * (e.nivel || 1)) : 0; }
+  function cargoDeHeroe(heroeId) { var c = cargos(); for (var k in c) if (c[k] === heroeId) return k; return ''; }
+  function bonoExtra(id) {
+    var b = 0, c = cargos();
+    CARGOS.forEach(function (x) { if (x.bonos.indexOf(id) >= 0 && c[x.id] && estado.heroes[c[x.id]]) b += bonoCargoDe(c[x.id]); });
+    if (id === 'obras' || id === 'cosecha' || id === 'lenadores' || id === 'canteros') b += vipNivel() * 0.01;
+    return b;
+  }
+  function abrirCargos() {
+    var c = cargos(), mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });
+    var html = subtabsHeroes('cargos') + '<p class="nota">' + L('Pon un caballero en cada cargo. Cuanto más nivel y estrellas tenga, más bonus da. Un caballero solo puede tener un cargo.', 'Put a knight in each post. The higher their level and stars, the bigger the bonus. Each knight can hold one post.') + '</p><div class="cg-lista">' +
+      CARGOS.map(function (x) {
+        var hid = c[x.id] && estado.heroes[c[x.id]] ? c[x.id] : '', pct = Math.round(bonoCargoDe(hid) * 100);
+        var opciones = '<option value="">' + L('— Vacío —', '— Empty —') + '</option>' + mios.map(function (h) {
+          var otro = cargoDeHeroe(h.id), e = estado.heroes[h.id];
+          return '<option value="' + h.id + '"' + (h.id === hid ? ' selected' : '') + '>' + NH(h.id) + ' · ' + T('nivel_corto') + ' ' + e.nivel + ' · ' + (e.estrellas || 1) + '★' + (otro && otro !== x.id ? ' (' + L('ya es ', 'already ') + L(cargoX(otro).es[0], cargoX(otro).en[0]) + ')' : '') + '</option>';
+        }).join('');
+        return '<div class="carta cg-fila"><div class="cg-ico">' + x.ico + '</div><div class="cg-dat"><b>' + L(x.es[0], x.en[0]) + '</b><small>' + L(x.es[1], x.en[1]) + (hid ? ': <b class="cg-pct">+' + pct + '%</b>' : '') + '</small>' +
+          '<select class="campo cg-sel" data-cargo="' + x.id + '">' + opciones + '</select></div></div>';
+      }).join('') + '</div>';
+    abrirPanel(L('Cargos de caballeros', 'Knight posts'), html, { tipo: 'cargos' });
+  }
+  function cargoX(id) { return CARGOS.filter(function (x) { return x.id === id; })[0]; }
+  function ponerCargo(cargo, heroeId) {
+    var c = cargos();
+    if (heroeId) Object.keys(c).forEach(function (k) { if (c[k] === heroeId) delete c[k]; });
+    if (heroeId) c[cargo] = heroeId; else delete c[cargo];
+    sonar('listo'); guardar(true); abrirCargos();
+  }
+  document.addEventListener('change', function (ev) { var s = ev.target; if (s && s.classList && s.classList.contains('cg-sel')) ponerCargo(s.getAttribute('data-cargo'), s.value); });
+
+  // ---------- felicidad: con impuestos de más de 30% la gente está menos contenta y los campos producen menos ----------
+  function felicidad() { return Math.max(40, Math.min(100, 100 - Math.max(0, impuestoPct() - 30) * 3)); }
+  function factorFelicidad() { return 0.5 + felicidad() / 200; }
+  function caraFelicidad() { var f = felicidad(); return f >= 90 ? '😊' : f >= 70 ? '🙂' : f >= 55 ? '😐' : '😟'; }
+
+  // ---------- VIP: sube entrando cada día; cada nivel da +1% de obras y de recursos (máximo VIP 10) ----------
+  var VIP_PUNTOS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5500];
+  function vip() { if (!estado.vip) estado.vip = { pts: 0, ultimo: '', racha: 0 }; return estado.vip; }
+  function vipNivel() { var p = vip().pts, n = 1; for (var i = 0; i < VIP_PUNTOS.length; i++) if (p >= VIP_PUNTOS[i]) n = i + 1; return n; }
+  function vipDia() {
+    var v = vip(), hoy = hoyTexto(); if (v.ultimo === hoy) return;
+    var ayer = new Date(); ayer.setDate(ayer.getDate() - 1); var ayerT = ayer.getFullYear() + '-' + (ayer.getMonth() + 1) + '-' + ayer.getDate();
+    v.racha = v.ultimo === ayerT ? Math.min(7, (v.racha || 0) + 1) : 1; v.ultimo = hoy;
+    var antes = vipNivel(), gana = 40 + v.racha * 10; v.pts += gana; guardar();
+    consejoTemporal('👑 VIP +' + gana + ' ' + L('puntos (racha de ', 'points (streak of ') + v.racha + L(' días)', ' days)'));
+    if (vipNivel() > antes) setTimeout(function () { consejoTemporal('👑 ' + L('¡Subiste a VIP ', 'You reached VIP ') + vipNivel() + '!'); sonar('victoria'); }, 2800);
+  }
+
+  // ---------- evento de fin de semana (sábado y domingo): puntos por jugar, 3 premios por escalón ----------
+  var EVENTOS_FINDE = [
+    { id: 'trasgos', ico: '👹', es: ['Caza de trasgos', 'Los campamentos dan el doble de puntos.'], en: ['Goblin hunt', 'Camps give double points.'], doble: 'campamentos' },
+    { id: 'cosecha', ico: '🌾', es: ['Gran cosecha', 'Recolectar tus campos da el doble de puntos.'], en: ['Great harvest', 'Collecting your fields gives double points.'], doble: 'recolectas' },
+    { id: 'defensa', ico: '🛡️', es: ['Asedio del rey', 'Ganar oleadas da el doble de puntos.'], en: ['King\'s siege', 'Winning waves gives double points.'], doble: 'oleada' }
+  ];
+  var ESCALONES_FINDE = [{ pts: 300, premio: { oro: 3000, objeto: 'acel_15m' } }, { pts: 1000, premio: { oro: 10000, objeto: 'cofre_plata' } }, { pts: 2500, premio: { oro: 25000, objeto: 'cofre_oro' } }];
+  function esFinde() { var d = new Date().getDay(); return d === 0 || d === 6; }
+  function claveFinde() { var d = new Date(); d.setHours(0, 0, 0, 0); if (d.getDay() === 0) d.setDate(d.getDate() - 1); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function eventoFinde() { var n = Math.floor(Date.now() / (7 * 86400000)); return EVENTOS_FINDE[n % EVENTOS_FINDE.length]; }
+  function finde() { var k = claveFinde(); if (!estado.finde || estado.finde.k !== k) estado.finde = { k: k, pts: 0, cobrados: {} }; return estado.finde; }
+  function sumarFinde(tipo, n) { if (!esFinde() || !n) return; var ev = eventoFinde(); finde().pts += ev.doble === tipo ? n * 2 : n; }
+  function findeListo() { if (!esFinde()) return false; var f = finde(); return ESCALONES_FINDE.some(function (e, i) { return f.pts >= e.pts && !f.cobrados[i]; }); }
+  function htmlFinde() {
+    if (!esFinde()) { var d = new Date(), falta = (6 - d.getDay() + 7) % 7 || 7; var ev0 = eventoFinde(); return '<div class="pr-fila fd-prox"><span class="pr-ico">' + ev0.ico + '</span><div class="pr-dat"><div class="pr-top"><b>' + L('Evento de fin de semana', 'Weekend event') + '</b></div><div class="pr-premio">' + L('Empieza el sábado', 'Starts on Saturday') + (falta ? ' (' + L('en ', 'in ') + falta + L(' días', ' days') + ')' : '') + '</div></div></div>'; }
+    var ev = eventoFinde(), f = finde(), fin = new Date(); fin.setHours(24, 0, 0, 0); if (fin.getDay() === 0) fin.setDate(fin.getDate() + 1);
+    return '<div class="pr-fila fd-evento' + (findeListo() ? ' lista' : '') + '"><span class="pr-ico">' + ev.ico + (findeListo() ? '<i class="punto-rojo"></i>' : '') + '</span><div class="pr-dat"><div class="pr-top"><b>' + L(ev.es[0], ev.en[0]) + '</b><span class="pr-reloj">⏱ ' + fmtLargo((fin.getTime() - Date.now()) / 1000) + '</span></div>' +
+      '<div class="pr-premio">' + L(ev.es[1], ev.en[1]) + ' ' + L('Tus puntos: ', 'Your points: ') + '<b>' + formatoNumero(f.pts) + '</b></div>' +
+      ESCALONES_FINDE.map(function (e, i) {
+        var hecho = !!f.cobrados[i], listo = !hecho && f.pts >= e.pts;
+        return '<div class="fd-esc"><div class="pr-barra"><i style="width:' + Math.min(100, Math.round(f.pts / e.pts * 100)) + '%"></i><span>' + formatoNumero(Math.min(f.pts, e.pts)) + ' / ' + formatoNumero(e.pts) + '</span></div><small>🎁 ' + textoPremio(e.premio) + '</small>' +
+          (hecho ? '<button class="iv-boton" disabled>' + L('Listo', 'Done') + '</button>' : listo ? '<button class="az-b verde pr-b" data-accion="finde-reclamar" data-i="' + i + '">' + L('Reclamar', 'Claim') + '</button>' : '') + '</div>';
+      }).join('') + '</div></div>';
+  }
+  function reclamarFinde(i) {
+    var f = finde(), e = ESCALONES_FINDE[i]; if (!e || f.cobrados[i] || f.pts < e.pts || !esFinde()) return;
+    f.cobrados[i] = true; darPremio(e.premio); sonar('victoria'); guardar(true);
+    mostrarRecompensas(L('Evento de fin de semana', 'Weekend event'), premioAItems(e.premio)); abrirPromos();
+  }
+
+  // ---------- logros con medallas (bronce, plata, oro), cada medalla da su premio una vez ----------
+  var LOGROS = [
+    { id: 'oleadas', ico: '⚔️', es: 'Defensor', en: 'Defender', txt: ['Gana oleadas', 'Win waves'], v: function () { return oleadasGanadas(); }, n: [5, 25, 100] },
+    { id: 'tropas', ico: '🛡️', es: 'General', en: 'General', txt: ['Entrena tropas', 'Train troops'], v: function () { return logro('tropas'); }, n: [50, 500, 5000] },
+    { id: 'recolectas', ico: '🌾', es: 'Granjero', en: 'Farmer', txt: ['Recolecta tus campos', 'Collect your fields'], v: function () { return logro('recolectas'); }, n: [20, 200, 1000] },
+    { id: 'campamentos', ico: '👹', es: 'Cazador', en: 'Hunter', txt: ['Vence campamentos', 'Beat camps'], v: function () { return logro('campamentos'); }, n: [1, 20, 100] },
+    { id: 'castillo', ico: '🏰', es: 'Constructor', en: 'Builder', txt: ['Sube el Castillo', 'Upgrade the Castle'], v: function () { return estado.castillo || 1; }, n: [5, 15, 30] },
+    { id: 'muralla', ico: '🧱', es: 'Fortaleza', en: 'Fortress', txt: ['Sube la Muralla', 'Upgrade the Wall'], v: function () { return estado.muralla || 0; }, n: [1, 5, 10] },
+    { id: 'heroes', ico: '🦸', es: 'Coleccionista', en: 'Collector', txt: ['Consigue héroes', 'Get heroes'], v: function () { return Object.keys(estado.heroes || {}).length; }, n: [2, 5, 10] },
+    { id: 'nivel', ico: '👑', es: 'Leyenda', en: 'Legend', txt: ['Sube tu nivel de rey', 'Raise your king level'], v: function () { return nivelJugador(); }, n: [5, 20, 50] }
+  ];
+  var MEDALLAS = [{ ico: '🥉', es: 'Bronce', en: 'Bronze', p: { oro: 2000 } }, { ico: '🥈', es: 'Plata', en: 'Silver', p: { oro: 8000, objeto: 'cofre_plata' } }, { ico: '🥇', es: 'Oro', en: 'Gold', p: { oro: 25000, objeto: 'cofre_oro' } }];
+  function logrosCobrados() { if (!estado.medallas) estado.medallas = {}; return estado.medallas; }
+  function medallaLista(lg, i) { return lg.v() >= lg.n[i] && !logrosCobrados()[lg.id + i]; }
+  function logrosPorCobrar() { var n = 0; LOGROS.forEach(function (lg) { for (var i = 0; i < 3; i++) if (medallaLista(lg, i)) n++; }); return n; }
+  function cobrarMedalla(id, i) {
+    var lg = LOGROS.filter(function (x) { return x.id === id; })[0]; if (!lg || !medallaLista(lg, i)) return;
+    logrosCobrados()[id + i] = true; darPremio(MEDALLAS[i].p); sonar('victoria'); guardar(true);
+    mostrarRecompensas(MEDALLAS[i].ico + ' ' + L(lg.es, lg.en) + ' · ' + L(MEDALLAS[i].es, MEDALLAS[i].en), premioAItems(MEDALLAS[i].p)); abrirPanelPerfil('logros');
+  }
+
+  // ---------- Info del jugador con pestañas: Detalles · Reino · Logros ----------
+  var pestPerfil = 'detalles';
+  function abrirPanelPerfil(tab) {
+    if (tab) pestPerfil = tab;
+    var nj = nivelJugador(), x0 = xpParaNivel(nj), x1 = xpParaNivel(nj + 1), xp = (estado.xp || 0) - x0, xpT = Math.max(1, x1 - x0);
+    var conCuenta = hayCuenta(), nom = conCuenta ? Cuentas.nombrePublico() : L('Rey', 'King');
+    var uid = conCuenta ? String(Cuentas.usuario().uid || '').slice(0, 8) : '';
+    var vn = vipNivel(), vp = vip().pts, vSig = VIP_PUNTOS[vn] || 0, vAnt = VIP_PUNTOS[vn - 1] || 0, nLog = logrosPorCobrar();
+    var fila = function (a, b) { return '<div class="pf-fila"><span>' + a + '</span><b>' + b + '</b></div>'; };
+    var tabs = '<div class="subtabs pf-tabs">' + [['detalles', L('Detalles', 'Details')], ['reino', L('Reino', 'Kingdom')], ['logros', L('Logros', 'Achievements') + (nLog ? ' <i class="pf-n">' + nLog + '</i>' : '')]].map(function (t) {
+      return '<button data-accion="pf-tab" data-tab="' + t[0] + '" class="' + (pestPerfil === t[0] ? 'activo' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
+    var cuerpo = '';
+    if (pestPerfil === 'detalles') {
+      var pt = 0, pe = 0;
+      tropas.forEach(function (u) { pt += Math.round(u.d.vida * 2 + u.d.dano * 25); });
+      slots.forEach(function (s) { if (s.edificio) pe += s.edificio.nivel * 450; });
+      pe += estado.muralla * 600;
+      cuerpo = '<div class="carta"><div class="pf-fila"><span>' + L('Nivel', 'Level') + ': <b>' + nj + '</b></span><small>' + formatoNumero(xp) + ' / ' + formatoNumero(xpT) + '</small></div>' +
+          '<div class="pf-barra"><div style="width:' + Math.round(Math.min(1, xp / xpT) * 100) + '%"></div></div>' +
+          '<p class="nota">' + L('Construye, entrena y gana oleadas para subir de nivel.', 'Build, train and win waves to level up.') + '</p></div>' +
+        '<div class="carta"><div class="pf-fila"><span>👑 VIP <b>' + vn + '</b></span><small>' + (vn < VIP_PUNTOS.length ? formatoNumero(vp - vAnt) + ' / ' + formatoNumero(vSig - vAnt) : L('Máximo', 'Max')) + '</small></div>' +
+          '<div class="pf-barra"><div style="width:' + (vn < VIP_PUNTOS.length ? Math.round((vp - vAnt) / Math.max(1, vSig - vAnt) * 100) : 100) + '%"></div></div>' +
+          '<p class="nota">' + L('Entra cada día para subir de VIP. Cada nivel: +1% obras y +1% recursos. Racha: ', 'Log in every day to raise your VIP. Each level: +1% building and +1% resources. Streak: ') + (vip().racha || 0) + ((vip().racha || 0) === 1 ? L(' día', ' day') : L(' días', ' days')) + '</p></div>' +
+        '<div class="carta">' + fila(L('Poder', 'Power'), formatoNumero(calcularPoder())) + fila('🛡️ ' + T('poder_tropas'), formatoNumero(pt)) + fila('🏠 ' + T('poder_edificios'), formatoNumero(pe)) + fila('⚔️ ' + T('poder_oleadas'), formatoNumero((estado.oleada - 1) * 1000)) + '</div>';
+    } else if (pestPerfil === 'reino') {
+      var lg = miLugar(), cn = $('tk-ciudad-n'), ciudad = cn && cn.textContent ? cn.textContent : L('Mi reino', 'My kingdom'), c = cargos();
+      cuerpo = '<div class="carta">' + fila(L('Reino', 'Kingdom'), escaparHTML(ciudad) + ' (' + lg.x + ', ' + lg.y + ')') + fila(L('Castillo', 'Castle'), L('Nivel ', 'Level ') + (estado.castillo || 1)) +
+          fila(L('Alianza', 'Alliance'), estado.alianza ? escaparHTML(estado.alianza) : L('Sin alianza', 'No alliance')) + fila(L('Oleada', 'Wave'), estado.oleada) + '</div>' +
+        '<div class="carta">' + fila(caraFelicidad() + ' ' + L('Felicidad', 'Happiness'), felicidad() + '%') + '<p class="nota">' + L('Con impuestos de más de 30% la gente se pone triste y los campos producen menos (ahora: ', 'With taxes above 30% people get unhappy and fields produce less (now: ') + Math.round(factorFelicidad() * 100) + '%). ' + L('Cámbialo en el Castillo.', 'Change it in the Castle.') + '</p></div>' +
+        '<div class="carta"><h3>' + L('Cargos', 'Posts') + '</h3>' + CARGOS.map(function (x) { var h = c[x.id] && estado.heroes[c[x.id]] ? c[x.id] : ''; return fila(x.ico + ' ' + L(x.es[0], x.en[0]), h ? NH(h) + ' +' + Math.round(bonoCargoDe(h) * 100) + '%' : L('Vacío', 'Empty')); }).join('') +
+          '<button class="comprar mini" data-accion="pf-cargos">' + L('Cambiar cargos', 'Change posts') + '</button></div>';
+    } else {
+      cuerpo = '<div class="lg-lista">' + LOGROS.map(function (lg) {
+        var v = lg.v(), meta = lg.n.filter(function (n) { return v < n; })[0] || lg.n[2];
+        return '<div class="carta lg-fila"><div class="lg-ico">' + lg.ico + '</div><div class="lg-dat"><b>' + L(lg.es, lg.en) + '</b><small>' + L(lg.txt[0], lg.txt[1]) + ': ' + formatoNumero(Math.min(v, meta)) + ' / ' + formatoNumero(meta) + '</small>' +
+          '<div class="pf-barra"><div style="width:' + Math.min(100, Math.round(v / meta * 100)) + '%"></div></div><div class="lg-med">' + MEDALLAS.map(function (m, i) {
+            var hecho = !!logrosCobrados()[lg.id + i], listo = medallaLista(lg, i);
+            return listo ? '<button class="comprar mini verde" data-accion="logro-cobrar" data-id="' + lg.id + '" data-i="' + i + '">' + m.ico + ' ' + L('Cobrar', 'Claim') + '</button>' : '<span class="lg-m' + (hecho ? ' si' : '') + '" title="' + L(m.es, m.en) + ': ' + lg.n[i] + '">' + m.ico + '</span>';
+          }).join('') + '</div></div></div>';
+      }).join('') + '</div>';
+    }
+    var html = '<div class="pf"><div class="pf-arriba"><button class="pf-boton" data-accion="pf-ajustes" title="' + L('Ajustes', 'Settings') + '">⚙️</button></div>' +
+      '<div class="pf-cabeza"><div class="pf-avatar">👑<i class="pf-vip">VIP ' + vn + '</i></div><div class="pf-nombre"><b>' + escaparHTML(nom) + '</b><small>' + (uid ? 'UID: ' + escaparHTML(uid) : L('Invitado', 'Guest')) + '</small></div></div>' +
+      tabs + cuerpo +
+      '<div class="pf-abajo">' + (!(window.Cuentas && Cuentas.disponible()) ? '' : conCuenta ? '<button class="comprar rojo" data-accion="cerrar-sesion">⏻ ' + T('cerrar_sesion') + '</button>' : '<button class="comprar naranja" data-accion="ir-cuenta">👤 ' + T('entrar_o_crear') + '</button>') +
+      '<button class="comprar azul" data-accion="pf-ajustes">⚙️ ' + L('Ajustes', 'Settings') + '</button></div></div>';
+    abrirPanel(L('Info del jugador', 'Player info'), html, { tipo: 'perfil' });
+  }
+
+  // ---------- misión recomendada: una flecha que salta encima del botón que hay que tocar ----------
+  var BOTON_MISION = ['btn-construir', 'btn-construir', 'btn-construir', 'btn-construir', 'btn-heroes', 'btn-oleada', 'btn-construir', 'btn-vista', '', 'btn-construir', 'btn-construir', '', 'btn-vista', '', 'btn-alianza'];
+  function actualizarFlechaMision() {
+    var fl = $('flecha-mision');
+    if (!fl) { fl = document.createElement('div'); fl.id = 'flecha-mision'; fl.textContent = '▼'; document.body.appendChild(fl); }
+    var i = estado.mision || 0, m = MISIONES[i], id = BOTON_MISION[i], b = id && $(id);
+    var ver = !!(m && b && !m.ok() && !enMenu && !enMundo && !panelActual && !oleadaActiva && !modoColocar && b.offsetParent);
+    fl.style.display = ver ? '' : 'none';
+    if (!ver) return;
+    var r = b.getBoundingClientRect(), x = Math.round(r.left + r.width / 2) + 'px', y = Math.round(r.top - 30) + 'px';
+    if (fl.style.left !== x) fl.style.left = x; if (fl.style.top !== y) fl.style.top = y;
+  }
+  setInterval(function () { try { actualizarFlechaMision(); } catch (e) {} }, 300);
+  setInterval(function () { try { if (!enMenu) vipDia(); } catch (e) {} }, 60000);
+  // ---------- v6.84: REGALOS DEL DUEÑO (MaikelR) A CUALQUIER JUGADOR ----------
+  // Solo la cuenta del dueño puede enviarlos (lo comprueban también las reglas de la nube).
+  var rgElegido = null, rgLista = [];
+  var RG_TIPOS_TROPA = TROPAS_ORDEN.filter(function (t) { return TROPAS[t] && t !== 'heroe'; });
+  function htmlRegalar() {
+    var en = estado.idioma === 'en';
+    var h = '<div class="carta rg-carta"><h3>🎁 ' + L('Regalar a un jugador', 'Gift a player') + '</h3>' +
+      '<p class="nota">' + L('Busca al jugador por su nombre, elige qué darle y toca Enviar. Le llega a su reino en menos de un minuto.', 'Find the player by name, choose what to give and tap Send. It reaches their kingdom within a minute.') + '</p>' +
+      '<div class="rg-busca"><input class="campo" id="rg-busca" placeholder="' + L('Nombre del jugador', 'Player name') + '" autocomplete="off"><button class="comprar" data-accion="rg-buscar">🔍</button></div>' +
+      '<div id="rg-res">' + htmlResultadosRegalo() + '</div></div>';
+    h += '<div class="carta rg-carta" id="rg-form"' + (rgElegido ? '' : ' style="opacity:.45;pointer-events:none"') + '>' +
+      '<h3>' + (rgElegido ? '👤 ' + escaparHTML(rgElegido.nombre) : L('Elige primero un jugador', 'Choose a player first')) + '</h3>' +
+      '<h4>⚔️ ' + L('Tropas', 'Troops') + '</h4><div class="rg-rejilla">' +
+      RG_TIPOS_TROPA.map(function (t) { return '<label class="rg-celda"><span>' + (TROPAS[t].icono || '') + ' ' + N(t) + '</span><input class="campo rg-t" data-t="' + t + '" type="number" min="0" max="100000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
+      '<h4>🧰 ' + L('Equipo de héroe', 'Hero gear') + '</h4><div class="rg-rejilla">' +
+      '<label class="rg-celda"><span>' + L('Pieza', 'Piece') + '</span><select class="campo" id="rg-eq-t"><option value="">' + L('Al azar', 'Random') + '</option>' + TIPOS_EQ.map(function (t) { return '<option value="' + t + '">' + EQ[t].icono + ' ' + T('eq_' + t) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="rg-celda"><span>' + L('Rareza', 'Rarity') + '</span><select class="campo" id="rg-eq-r">' + ['comun', 'raro', 'legendario', 'mitico'].map(function (r) { return '<option value="' + r + '"' + (r === 'legendario' ? ' selected' : '') + '>' + T('rareza_' + r) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="rg-celda"><span>' + L('Cantidad', 'Amount') + '</span><input class="campo" id="rg-eq-n" type="number" min="0" max="30" inputmode="numeric" placeholder="0"></label></div>' +
+      '<h4>💰 ' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="rg-rejilla">' +
+      ['gemas', 'oro', 'comida', 'madera', 'piedra'].map(function (r) { return '<label class="rg-celda"><span>' + ICONO_RECURSO[r] + ' ' + (r === 'gemas' ? L('Gemas', 'Gems') : T('r_' + r) || r) + '</span><input class="campo rg-r" data-r="' + r + '" type="number" min="0" max="10000000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
+      '<input class="campo" id="rg-nota" maxlength="120" placeholder="' + L('Mensaje (opcional)', 'Message (optional)') + '">' +
+      '<button class="comprar oro rg-enviar" data-accion="rg-enviar">🎁 ' + L('Enviar regalo', 'Send gift') + '</button></div>';
+    return h;
+  }
+  function htmlResultadosRegalo() {
+    if (!rgLista.length) return '';
+    return '<div class="rg-lista">' + rgLista.slice(0, 12).map(function (a) {
+      var sel = rgElegido && rgElegido.uid === a.uid;
+      return '<button class="rg-jug' + (sel ? ' sel' : '') + '" data-accion="rg-elegir" data-uid="' + escaparHTML(a.uid) + '" data-nombre="' + escaparHTML(a.nombre || '?') + '"><b>' + escaparHTML(a.nombre || '?') + '</b><small>' + (a.alianza ? '[' + escaparHTML(a.alianza) + '] ' : '') + '⚡ ' + formatoNumero(a.poder || 0) + '</small></button>';
+    }).join('') + '</div>';
+  }
+  function abrirRegalar() {
+    if (!esCuentaDueno()) { consejoTemporal(L('Solo la cuenta del dueño puede regalar.', 'Only the owner account can give gifts.')); sonar('error'); return; }
+    abrirPanel('🎁 ' + L('Regalos del dueño', 'Owner gifts'), htmlRegalar(), { tipo: 'regalo' });
+  }
+  function buscarParaRegalo() {
+    var q = ($('rg-busca') && $('rg-busca').value || '').trim();
+    var limpio = function (t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
+    $('rg-res').innerHTML = '<p class="nota">' + L('Buscando…', 'Searching…') + '</p>';
+    Promise.all([Cuentas.aldeas().catch(function () { return []; }), q ? Cuentas.buscarJugador(q).catch(function () { return []; }) : Promise.resolve([])]).then(function (r) {
+      var vistos = {}, yo = Cuentas.usuario() && Cuentas.usuario().uid;
+      rgLista = r[1].concat(r[0].filter(function (a) { return !q || limpio(a.nombre).indexOf(limpio(q)) >= 0; }))
+        .filter(function (a) { if (!a || !a.uid || vistos[a.uid] || a.uid === yo) return false; vistos[a.uid] = 1; return true; });
+      if (!$('rg-res')) return;
+      $('rg-res').innerHTML = rgLista.length ? htmlResultadosRegalo() : '<p class="nota">' + L('No encontré a nadie con ese nombre.', 'Nobody found with that name.') + '</p>';
+    });
+  }
+  function enviarRegalo() {
+    if (!rgElegido || !esCuentaDueno()) return;
+    var tropasR = {}, nt = 0;
+    document.querySelectorAll('#panel .rg-t').forEach(function (i) { var n = Math.min(100000, Math.max(0, Math.floor(+i.value || 0))); if (n) { tropasR[i.getAttribute('data-t')] = n; nt += n; } });
+    var rec = {}, gemas = 0;
+    document.querySelectorAll('#panel .rg-r').forEach(function (i) { var n = Math.min(10000000, Math.max(0, Math.floor(+i.value || 0))); if (!n) return; if (i.getAttribute('data-r') === 'gemas') gemas = Math.min(100000, n); else rec[i.getAttribute('data-r')] = n; });
+    var pz = [], ne = Math.min(30, Math.max(0, Math.floor(+$('rg-eq-n').value || 0)));
+    for (var k = 0; k < ne; k++) pz.push({ t: $('rg-eq-t').value || TIPOS_EQ[Math.floor(Math.random() * TIPOS_EQ.length)], r: $('rg-eq-r').value || 'comun' });
+    if (!nt && !gemas && !pz.length && !Object.keys(rec).length) { consejoTemporal(L('Elige al menos una cosa para regalar.', 'Choose at least one thing to give.')); sonar('error'); return; }
+    var b = document.querySelector('#panel .rg-enviar'); if (b) b.disabled = true;
+    Cuentas.enviarRegalo({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: rgElegido.uid, paraNombre: String(rgElegido.nombre).slice(0, 30),
+      tropas: tropasR, piezas: pz, gemas: gemas, recursos: rec, nota: String(($('rg-nota') && $('rg-nota').value) || '').slice(0, 120), fecha: Date.now() })
+      .then(function () { sonar('magia'); consejoTemporal('🎁 ' + L('¡Regalo enviado a ', 'Gift sent to ') + escaparHTML(rgElegido.nombre) + '!'); abrirRegalar(); })
+      .catch(function () { if (b) b.disabled = false; consejoTemporal(L('No se pudo enviar. Revisa tu internet (y que las reglas nuevas de la nube estén publicadas).', 'Could not send. Check your internet (and that the new cloud rules are published).')); sonar('error'); });
+  }
+  var regalosRecibiendo = false;
+  function recibirRegalos() {
+    if (!hayCuenta() || !Cuentas.regalosRecibidos || regalosRecibiendo) return;
+    regalosRecibiendo = true;
+    Cuentas.regalosRecibidos().then(function (lista) {
+      regalosRecibiendo = false;
+      lista.forEach(function (g) {
+        Cuentas.borrarRegalo(g.id).then(function () {
+          var partes = [], t = g.tropas || {}, nt = 0;
+          Object.keys(t).forEach(function (k) { var n = Math.min(100000, Math.floor(+t[k] || 0)); if (!TROPAS[k] || n <= 0) return; reserva()[k] = (reserva()[k] || 0) + n; nt += n; partes.push(n + ' ' + (TROPAS[k].icono || '') + ' ' + N(k)); });
+          (g.piezas || []).slice(0, 30).forEach(function (p) { if (EQ[p.t] && MULT_RAREZA_EQ[p.r]) darPieza(p.t, p.r); });
+          if ((g.piezas || []).length) partes.push((g.piezas || []).length + ' 🧰 ' + L('piezas de equipo', 'gear pieces'));
+          var gm = Math.min(100000, Math.floor(+g.gemas || 0)); if (gm > 0) { estado.gemas = (estado.gemas || 0) + gm; partes.push(gm + ' 💎'); }
+          var r = g.recursos || {}; ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { var n = Math.min(10000000, Math.floor(+r[k] || 0)); if (n > 0) { sumarRecurso(k, n); partes.push(n + ' ' + ICONO_RECURSO[k]); } });
+          var de = g.deNombre || 'MaikelR';
+          sonar('magia'); chispas(new V3(0, 6, 0), 0xffd24a, 30, 5);
+          consejoTemporal('🎁 ' + L('¡Regalo del dueño ', 'Gift from the owner ') + escaparHTML(de) + '!');
+          nuevoCorreo('sistema', '🎁 ' + L('Regalo de ', 'Gift from ') + de + ' 👑', de, '<p>' + (g.nota ? '“' + escaparHTML(g.nota) + '”</p><p>' : '') + escaparHTML(partes.join(' · ') || '—') + '</p>');
+          actualizarHUD(); guardar(true);
+        }).catch(function () {});
+      });
+    }).catch(function () { regalosRecibiendo = false; });
+  }
+  setInterval(function () { if (!enMenu) recibirRegalos(); }, 45000);
+  setTimeout(recibirRegalos, 8000);
   // +EXP: usa un libro (primero el grande) en ese caballero
   function unLibroCaballero(id) {
     var e = estado.heroes[id]; if (!e) return;
@@ -7681,11 +8003,11 @@
   function progresoPromo(x) { if (x.dia) return 0; var p = promoEstado(); return Math.max(0, valorLogro(x.k) - (p.base[x.k] || 0)); }
   function promoLista(x) { var p = promoEstado(); if (x.dia) return estado.promoRegalo !== hoyTexto(); return !p.hechas[x.id] && progresoPromo(x) >= x.need; }
   function promoHecha(x) { return x.dia ? estado.promoRegalo === hoyTexto() : !!promoEstado().hechas[x.id]; }
-  function hayPromoLista() { return PROMOS.some(promoLista); }
+  function hayPromoLista() { return PROMOS.some(promoLista) || findeListo(); }
   function textoPremioPromo(p) { var t = textoPremio(p); if (p.fichas) t = (t ? t + ', ' : '') + '🪙 ' + p.fichas + ' ' + L('fichas de la suerte', 'lucky tokens'); return t; }
   function abrirPromos() {
     var ahora = Date.now();
-    var html = '<p class="pr-nota">' + L('Completa las promociones antes de que se acabe el tiempo y reclama tu premio.', 'Finish promotions before time runs out and claim your prize.') + '</p><div class="pr-lista">' + PROMOS.map(function (x) {
+    var html = '<p class="pr-nota">' + L('Completa las promociones antes de que se acabe el tiempo y reclama tu premio.', 'Finish promotions before time runs out and claim your prize.') + '</p><div class="pr-lista">' + htmlFinde() + PROMOS.map(function (x) {
       var lista = promoLista(x), hecha = promoHecha(x), prog = Math.min(progresoPromo(x), x.need), fin = x.dia ? finDeHoy() : finDeSemana(), t = L(x.es[0], x.en[0]), d = L(x.es[1], x.en[1]);
       return '<div class="pr-fila' + (lista ? ' lista' : '') + '"><span class="pr-ico">' + x.ico + (lista ? '<i class="punto-rojo"></i>' : '') + '</span><div class="pr-dat"><div class="pr-top"><b>' + t + '</b><span class="pr-reloj">⏱ ' + fmtLargo((fin - ahora) / 1000) + '</span></div><small>' + d + '</small>' +
         (x.need ? '<div class="pr-barra"><i style="width:' + Math.round(prog / x.need * 100) + '%"></i><span>' + prog + ' / ' + x.need + '</span></div>' : '') +
@@ -7971,7 +8293,7 @@
       '</div><p class="nota">' + T('nivel_txt') + '</p></div>';
     abrirPanel(T('poder_titulo') + ' — ' + formatoNumero(calcularPoder()), html, { tipo: 'poder' });
   }
-  $('perfil').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'poder') cerrarPanel(); else abrirPanelPoder(); });
+  $('perfil').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'perfil') cerrarPanel(); else abrirPanelPerfil(); });
   function abrirPanelCastillo() {
     var nc = estado.castillo || 1, oc = estado.obraCastillo, mej = '';
     if (oc) mej = '<p class="nota"><b>' + T('castillo_subiendo', { n: oc.nivel }) + '</b></p><div class="cola"><div class="barra"><div id="castillo-barra" style="width:' + Math.round(oc.t / oc.total * 100) + '%"></div></div></div><p class="reloj-panel" id="reloj-castillo">⏱ ' + fmtTiempo((oc.total - oc.t) / velObras()) + '</p><div class="obra-botones"><button class="comprar azul" data-accion="acelerar-que" data-que="castillo">⏩ ' + T('mb_acelerar') + '</button>' + botonGemas(gemasParaTerminar((oc.total - oc.t) / velObras()), 'terminar-gemas', 'data-que="castillo"', '⚡ ' + T('terminar_ya')).replace('comprar morado', 'comprar verde') + '</div>';
@@ -7995,9 +8317,10 @@
       '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>';
     if (t === 'general') {
       var imp = impuestoPct(), oroH = Math.round(IMPUESTO.oro * (imp / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada);
-      cuerpo = '<div class="cs-caja"><h4>' + L('Impuestos', 'Taxes') + '</h4><p class="cs-txt">' + L('Mueve la barra: más impuesto da más oro cada hora, pero la gente trabaja más despacio en las obras.', 'Move the bar: higher tax gives more gold per hour, but people build more slowly.') + '</p>' +
+      cuerpo = '<div class="cs-caja"><h4>' + L('Impuestos', 'Taxes') + '</h4><p class="cs-txt">' + L('Mueve la barra: más impuesto da más oro cada hora, pero la gente trabaja más despacio en las obras. Con más de 30% la gente se pone triste y los campos producen menos.', 'Move the bar: higher tax gives more gold per hour, but people build more slowly. Above 30% people get unhappy and fields produce less.') + '</p>' +
         '<div class="cs-imp"><input type="range" min="0" max="50" step="5" value="' + imp + '" id="cs-impuesto"><b id="cs-imp-n">' + imp + '%</b></div>' +
         '<div class="cs-filas"><div><span>🪙 ' + L('Oro por hora', 'Gold per hour') + '</span><b id="cs-oro-h">' + formatoNumero(oroH) + '</b></div><div><span>🔨 ' + L('Velocidad de obras', 'Build speed') + '</span><b id="cs-obra-v">' + Math.round(factorImpuestoObras() * 100) + '%</b></div>' +
+        '<div><span id="cs-fel-et">' + caraFelicidad() + ' ' + L('Felicidad', 'Happiness') + '</span><b id="cs-fel">' + felicidad() + '%</b></div>' +
         '<div><span>👥 ' + L('Población', 'Population') + '</span><b>' + formatoNumero(poblacionMax()) + '</b></div><div><span>🏰 ' + L('Nivel del castillo', 'Castle level') + '</span><b>' + nc + ' / ' + CASTILLO_MAX + '</b></div></div></div>';
     }
     if (t === 'conquistas') {
@@ -8020,7 +8343,7 @@
     }
     abrirPanel(L('Castillo', 'Castle') + ' (' + L('Nvl.', 'Lvl.') + nc + ')', tabs + cuerpo, { tipo: 'castillo' });
     ponerCafe();
-    var ri = $('cs-impuesto'); if (ri) ri.addEventListener('input', function () { estado.impuesto = +this.value; $('cs-imp-n').textContent = this.value + '%'; $('cs-oro-h').textContent = formatoNumero(Math.round(IMPUESTO.oro * (estado.impuesto / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada)); $('cs-obra-v').textContent = Math.round(factorImpuestoObras() * 100) + '%'; guardar(); });
+    var ri = $('cs-impuesto'); if (ri) ri.addEventListener('input', function () { estado.impuesto = +this.value; $('cs-imp-n').textContent = this.value + '%'; $('cs-oro-h').textContent = formatoNumero(Math.round(IMPUESTO.oro * (estado.impuesto / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada)); $('cs-obra-v').textContent = Math.round(factorImpuestoObras() * 100) + '%'; if ($('cs-fel')) { $('cs-fel').textContent = felicidad() + '%'; $('cs-fel-et').textContent = caraFelicidad() + ' ' + L('Felicidad', 'Happiness'); } guardar(); });
   }
   var castTab = 'detalles';
   function impuestoPct() { return estado.impuesto === undefined ? 30 : estado.impuesto; }
@@ -8300,6 +8623,7 @@
         '<button class="comprar" data-accion="dueno-oleada">⚔️ ' + T('saltar_oleada') + '</button>' +
         '<button class="comprar morado" data-accion="dueno-max">' + T('todo_max') + '</button>' +
         '<button class="comprar naranja" data-accion="dueno-obras">🔨 ' + (estado.idioma === 'en' ? 'Finish all builds' : 'Terminar todas las obras') + '</button>' +
+        (esCuentaDueno() ? '<button class="comprar oro" data-accion="dueno-regalar">🎁 ' + L('Regalar a un jugador', 'Gift a player') + '</button>' : '') +
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
@@ -8313,6 +8637,10 @@
     if (!b || b.disabled) return;
     var a = b.getAttribute('data-accion');
     if (a === 'cerrar-panel') { cerrarPanel(); return; }
+    if (a === 'dueno-regalar') { sonar('click'); rgElegido = null; rgLista = []; abrirRegalar(); return; }
+    if (a === 'rg-buscar') { sonar('click'); buscarParaRegalo(); return; }
+    if (a === 'rg-elegir') { sonar('click'); rgElegido = { uid: b.getAttribute('data-uid'), nombre: b.getAttribute('data-nombre') }; var bq = $('rg-busca') ? $('rg-busca').value : ''; abrirRegalar(); if ($('rg-busca')) $('rg-busca').value = bq; return; }
+    if (a === 'rg-enviar') { enviarRegalo(); return; }
     if (a === 'construir') {
       var tipo = b.getAttribute('data-tipo');
       if (slotElegido !== null && !slots[slotElegido].edificio && !slots[slotElegido].obra) construir(slotElegido, tipo);
@@ -8434,6 +8762,11 @@
     else if (a === 'investigar') empezarInvestigacion(b.getAttribute('data-id'));
     else if (a === 'sub-invocar') abrirPanelInvocar();
     else if (a === 'sub-heroes') abrirPanelHeroes();
+    else if (a === 'sub-cargos' || a === 'pf-cargos') { sonar('click'); abrirCargos(); }
+    else if (a === 'pf-tab') { sonar('click'); abrirPanelPerfil(b.getAttribute('data-tab')); }
+    else if (a === 'pf-ajustes') { sonar('click'); abrirPanelAjustes(); }
+    else if (a === 'logro-cobrar') cobrarMedalla(b.getAttribute('data-id'), +b.getAttribute('data-i'));
+    else if (a === 'finde-reclamar') reclamarFinde(+b.getAttribute('data-i'));
     else if (a === 'heroe-ver') { if (!panelActual || panelActual.tipo !== 'obtener') pestanaHeroe = 'atrib'; abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'heroe-nivel') subirNivelHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
@@ -8693,7 +9026,10 @@
     else if (document.getElementById('panel-rey')) y = abajo('panel-rey') + 6; // tema oscuro: perfil, reino y vida van dentro del panel del rey
     else { y = abajo('perfil') + 4; poner('ciudad-nombre', y); y = (abajo('ciudad-nombre') || y) + 4;
     poner('vida-castillo', y); y = (abajo('vida-castillo') || y) + 6; }
-    poner('mision', y); y = (abajo('mision') || y) + 6;
+    // v6.84: la misión va ABAJO, justo encima del chat (o de la barra de abajo)
+    var em = $('mision');
+    if (em) { var rc = null; ['chat-barra', 'abajo'].some(function (k) { var e2 = $(k); if (!e2) return false; var r2 = e2.getBoundingClientRect(); if (r2.height && getComputedStyle(e2).display !== 'none') { rc = r2; return true; } return false; });
+      em.style.setProperty('top', 'auto', 'important'); em.style.setProperty('bottom', Math.max(60, Math.round(window.innerHeight - (rc ? rc.top : window.innerHeight - 110) + 10)) + 'px', 'important'); }
     var yc = abajo('colas-obras'); if (yc) y = yc + 6; // v6.56: el letrero va debajo del cuadrito de obras
     poner('consejo', y);
     poner('lateral', (abajo('tk-arriba') || abajo('recursos')) + 6);
@@ -8803,6 +9139,7 @@
     empezarPartida(hayPartida ? g : null);
     if (nube && Cuentas.usuario()) consejoTemporal(T('hola', { n: Cuentas.nombre() }) + (esCuentaDueno() ? ' 👑' : ''));
     actualizarBotonSalir();
+    setTimeout(function () { try { vipDia(); } catch (e) {} }, 4000); // v6.80: punto VIP del día
   }
   function actualizarBotonSalir() {
     var b = $('btn-salir'); if (!b) return;
@@ -9004,6 +9341,7 @@
       estado.reserva = g.reserva || {};
       estado.formacion = g.formacion || null; estado.vistoGuiaMarcha = !!g.vistoGuiaMarcha;
       estado.torneo = g.torneo || null;
+      estado.cargos = g.cargos || {}; estado.vip = g.vip || null; estado.finde = g.finde || null; estado.medallas = g.medallas || {}; // v6.80
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
       estado.heridos = g.heridos || {};
@@ -9384,6 +9722,7 @@
       s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
       // v6.38: el letrero de nivel solo se ve en el edificio que tocaste
       if (s.insignia) s.insignia.visible = menuEdif.slot === i || (slotElegido === i && !!panelActual);
+      if (s.chapa) s.chapa.visible = !!s.edificio && !(s.insignia && s.insignia.visible);
       if (s.terreno.userData.mas) s.terreno.userData.mas.visible = libre && !cerrada(s);
       if (s.terreno.userData.cerca) s.terreno.userData.cerca.visible = libre && !cerrada(s);
       // estacas y cuerda: solo en modo construcción

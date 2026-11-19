@@ -266,6 +266,32 @@ service cloud.firestore {
       allow delete: if request.auth != null && (id == request.auth.uid || id == request.auth.uid + '_t' || id == request.auth.uid + '_r');
     }
 
+    // v6.84: regalos del dueño. Solo las cuentas del dueño (huellas SHA-256 de su correo, igual que HUELLAS_DUENO en datos.js)
+    // pueden crearlos. El que lo recibe lo lee y lo borra al cobrarlo.
+    function esDueno() {
+      return request.auth != null && request.auth.token.email is string
+        && hashing.sha256(request.auth.token.email.lower()).toHexString().lower() in [
+          '04ffb008e35525eb03d5dea75e79bb0d8217c5aab3a3a8953ed15953563508c4',
+          'fd78fd09b2cd76c82a80675a4c758b65306b2309aaff68e598a4e344e7024bad',
+          'bc81ce5c754b6d193233a82763f34d3c63953a8f9f05d9060e46d2a9111790e2'];
+    }
+    match /regalos/{id} {
+      allow read: if request.auth != null && (resource.data.para == request.auth.uid || resource.data.de == request.auth.uid);
+      allow create: if esDueno()
+        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'paraNombre', 'tropas', 'piezas', 'gemas', 'recursos', 'nota', 'fecha'])
+        && request.resource.data.de == request.auth.uid
+        && request.resource.data.para is string && request.resource.data.para != request.auth.uid
+        && request.resource.data.deNombre is string && request.resource.data.deNombre.size() <= 30
+        && request.resource.data.paraNombre is string && request.resource.data.paraNombre.size() <= 30
+        && request.resource.data.tropas is map && request.resource.data.tropas.size() <= 20
+        && request.resource.data.piezas is list && request.resource.data.piezas.size() <= 30
+        && request.resource.data.gemas is int && request.resource.data.gemas >= 0 && request.resource.data.gemas <= 100000
+        && request.resource.data.recursos is map && request.resource.data.recursos.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
+        && request.resource.data.nota is string && request.resource.data.nota.size() <= 120
+        && request.resource.data.fecha is int;
+      allow delete: if request.auth != null && (resource.data.para == request.auth.uid || esDueno());
+    }
+
     // Todo lo demás está cerrado.
     match /{document=**} {
       allow read, write: if false;

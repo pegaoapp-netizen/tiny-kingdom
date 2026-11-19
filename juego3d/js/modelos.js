@@ -104,7 +104,7 @@ var M = (function () {
     techoNoble: 0x7e2f22, tejaOsc: 0x7a3420, telaRoja: 0xa8322a, telaMar: 0x2e7a76, cobre: 0x5f9a88,
     piel: 0xffd3b0, metal: 0xd6dde5, metalOsc: 0x8d99a6, negro: 0x2a2320, blanco: 0xffffff,
     azul: 0x3d6fc0, azulOsc: 0x234a8a, verde: 0x5a9a48, rojo: 0xd2463a,
-    trasgo: 0x8fcf4a, trasgoOsc: 0x5f9a2a, cuero: 0x8a5a33, bruto: 0x6f8f5a, ogro: 0x9b7bc0
+    trasgo: 0x77a83c, trasgoOsc: 0x4a7424, cuero: 0x8a5a33, bruto: 0x6f8f5a, ogro: 0x9b7bc0
   };
 
   // =================================================================
@@ -1006,6 +1006,25 @@ var M = (function () {
   }
   // v6.35 prueba: castillo 3D hecho en Tripo por el dueño (se carga una vez; mientras tanto se ve el dibujado)
   var CAST_GLB = null, CAST_GLB_CARGANDO = false;
+  function recolorCastillo(tex) {
+    var im = tex.image, w = im.width, h = im.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+    var x = c.getContext('2d'); x.drawImage(im, 0, 0); var d = x.getImageData(0, 0, w, h), p = d.data;
+    for (var i = 0; i < p.length; i += 4) {
+      var r = p[i] / 255, g = p[i + 1] / 255, b = p[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
+      if (dd < 0.04) continue;
+      var sat = dd / (1 - Math.abs(2 * l - 1)), hue = mx === r ? ((g - b) / dd + 6) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4; hue *= 60;
+      var nh, ns, nl;
+      if ((hue < 26 || hue > 340) && sat > 0.42) { nh = 218; ns = Math.min(1, sat * 0.95); nl = l * 0.92; } // tejas rojas/naranjas -> azul real
+      else if (hue < 62 && hue >= 20) { nh = 215; ns = sat * 0.12; nl = Math.min(0.94, l * 1.08 + 0.04); } // arenisca -> piedra blanca
+      else continue;
+      var C = (1 - Math.abs(2 * nl - 1)) * ns, X = C * (1 - Math.abs((nh / 60) % 2 - 1)), m = nl - C / 2, rr = 0, gg = 0, bb = 0, k = Math.floor(nh / 60);
+      if (k === 0) { rr = C; gg = X; } else if (k === 1) { rr = X; gg = C; } else if (k === 2) { gg = C; bb = X; } else if (k === 3) { gg = X; bb = C; } else if (k === 4) { rr = X; bb = C; } else { rr = C; bb = X; }
+      p[i] = (rr + m) * 255; p[i + 1] = (gg + m) * 255; p[i + 2] = (bb + m) * 255;
+    }
+    x.putImageData(d, 0, 0);
+    var t = new THREE.CanvasTexture(c); t.flipY = tex.flipY; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.encoding = tex.encoding; t.anisotropy = tex.anisotropy; t.userData.recolor = true;
+    return t;
+  }
   function castilloTripo(n, e) {
     if (CAST_GLB) {
       var g = new THREE.Group(), m = CAST_GLB.clone(true);
@@ -1013,7 +1032,8 @@ var M = (function () {
       g.add(m);
       // v6.43: chico al empezar (nivel 1) y crece parejo hasta el nivel 30
       var nn = Math.max(1, Math.min(30, n || 1));
-      g.scale.setScalar(15 * (0.38 + 0.70 * Math.pow((nn - 1) / 29, 0.85)));
+      // v6.82: el castillo siempre es lo más grande: al nivel 1 ya es más grande que cualquier edificio y en el 30 llena la plaza
+      g.scale.setScalar(15 * (0.55 + 0.53 * Math.pow((nn - 1) / 29, 0.85)));
       g.userData.banderas = []; g.userData.etapa = e;
       // v6.56: banderas que ondean en lo alto de las torres (la más alta y la de cada esquina)
       try {
@@ -1040,6 +1060,8 @@ var M = (function () {
       new THREE.GLTFLoader().load('modelos/castillo_tripo.glb' + v, function (gl) {
         // mismos colores y luz que el resto del juego
         gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? 0x4a4a4a : 0x000000, emissiveMap: mp || null }); } });
+        // v6.82: castillo con otro color: muros de piedra blanca y techos azul real (los demás edificios tienen techo naranja)
+        try { gl.scene.traverse(function (o) { if (o.isMesh && o.material && o.material.map && o.material.map.image && !o.material.map.userData.recolor) o.material.map = recolorCastillo(o.material.map); }); } catch (e) {}
         CAST_GLB = gl.scene; window.dispatchEvent(new Event('castillo-glb'));
       }, undefined, function () {});
     }
@@ -1878,9 +1900,10 @@ var M = (function () {
     var f = forma;
     var alto = nivel === 0 ? 1.05 : nivel === 1 ? 1.9 : nivel === 2 ? 2.6 : 3.3;
     var color = C.piedra;
-    var per = 2 * Math.PI * Math.sqrt((f.rx * f.rx + f.rz * f.rz) / 2);
+    // v6.83: muralla cuadrada (formaX/formaZ en datos.js); el perímetro se mide de verdad para que los tramos queden parejos
+    function punto(t) { return { x: f.cx + formaX(t) * f.rx, z: f.cz + formaZ(t) * f.rz }; }
+    var per = 0; for (var pi = 0; pi < 720; pi++) { var p0 = punto(pi / 720 * Math.PI * 2), p1 = punto((pi + 1) / 720 * Math.PI * 2); per += Math.hypot(p1.x - p0.x, p1.z - p0.z); }
     var N = Math.round(per / 2.6);
-    function punto(t) { return { x: f.cx + Math.cos(t) * f.rx, z: f.cz + Math.sin(t) * f.rz }; }
     var puertas = f.puertas || [f.puerta];
     function enPuerta(t) { return puertas.some(function (pp) { var d = Math.abs(((t - pp) + Math.PI * 3) % (Math.PI * 2) - Math.PI); return d < f.hueco; }); }
     var torres = [];
@@ -2062,6 +2085,61 @@ var M = (function () {
   }
   var FAMILIA_TROPA = { explorador: ['arquero', 0.88, 0x9fd46a], miliciano: ['espadachin', 0.9, 0xc9a06a], jinete: ['caballeria', 0.92, 0x7fd0ff], caballeria_pesada: ['caballeria', 1.1, 0xb0302a] };
   var ASEDIO = { balista: 1, ariete: 1, catapulta: 1, torre_asedio: 1 };
+  // v6.84: los enemigos de las oleadas: guerreros trasgos con casco de hierro, escudo pintado,
+  // armas oxidadas y pinturas de guerra (antes eran bolas verdes con un palo)
+  function detallesEnemigo(tipo, cuerpo, cabeza, arma, izq, piel) {
+    var hierro = 0x4a4a52, oxido = 0x7a4a2a, rojo = 0x9a1f1a, cueroO = 0x3e2a18;
+    while (arma.children.length) arma.remove(arma.children[0]);
+    // pinturas de guerra en la cara
+    [-1, 1].forEach(function (s) { cabeza.add(caja(0.04, 0.16, 0.02, rojo, s * 0.2, -0.02, 0.33)); });
+    // cinturón con hebilla de calavera y taparrabos
+    cuerpo.add(cil(0.345, 0.345, 0.09, 8, cueroO, 0, 0.42, 0));
+    cuerpo.add(esfera(0.07, 0xe8dcc0, 0, 0.42, 0.34, 6, 5));
+    cuerpo.add(caja(0.3, 0.26, 0.04, 0x5a3a22, 0, 0.26, 0.28));
+    // hombrera de hierro con pinchos (un solo hombro, como los orcos)
+    var hb = esfera(0.19, hierro, 0.34, 0.8, 0, 8, 6); hb.scale.set(1.1, 0.65, 1.1); cuerpo.add(hb);
+    [0, 1, 2].forEach(function (k) { cuerpo.add(cono(0.04, 0.16, 4, 0xc8c8c8, 0.3 + k * 0.06, 0.92, -0.06 + k * 0.06)); });
+    if (tipo === 'trasgo') {
+      // casco de cuero y hierro con nasal
+      cabeza.add(malla(geo('cascoT', function () { return new THREE.SphereGeometry(0.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.3); }), mat(hierro), 0, 0.06, 0));
+      cabeza.add(caja(0.05, 0.22, 0.05, hierro, 0, 0.06, 0.38));
+      cabeza.add(cono(0.05, 0.22, 5, 0xc8c8c8, 0, 0.47, 0));
+      // cimitarra oxidada
+      arma.add(caja(0.05, 0.12, 0.05, cueroO, 0, 0.02, 0));
+      arma.add(caja(0.2, 0.04, 0.06, hierro, 0, 0.09, 0));
+      var hoja = caja(0.1, 0.55, 0.025, 0x9a9aa2, 0.02, 0.38, 0); hoja.rotation.z = -0.12; arma.add(hoja);
+      arma.add(caja(0.06, 0.2, 0.03, oxido, 0.06, 0.55, 0));
+      arma.rotation.x = 1.3;
+      // escudo redondo de madera con calavera roja
+      var esc = cil(0.27, 0.27, 0.06, 10, 0x6a4424, -0.06, -0.15, 0.12); esc.rotation.z = Math.PI / 2; esc.rotation.y = Math.PI / 2; izq.add(esc);
+      var aro = cil(0.29, 0.29, 0.03, 10, hierro, -0.06, -0.15, 0.1); aro.rotation.z = Math.PI / 2; aro.rotation.y = Math.PI / 2; izq.add(aro);
+      izq.add(esfera(0.09, rojo, -0.06, -0.12, 0.17, 6, 4));
+      izq.rotation.y = -0.5;
+    } else if (tipo === 'bruto') {
+      // pechera de hierro, hacha de dos filos y escudo cuadrado
+      cuerpo.add(cil(0.29, 0.31, 0.32, 8, hierro, 0, 0.6, 0.02));
+      cuerpo.add(caja(0.08, 0.3, 0.02, rojo, 0, 0.6, 0.32));
+      arma.add(cil(0.035, 0.04, 0.9, 5, cueroO, 0, 0.4, 0));
+      [-1, 1].forEach(function (s) { var hf = caja(0.04, 0.3, 0.24, 0x8a8a92, 0, 0.78, s * 0.14); hf.rotation.x = s * 0.15; arma.add(hf); });
+      arma.add(cono(0.04, 0.14, 4, 0xc8c8c8, 0, 0.98, 0));
+      arma.rotation.x = 1.2;
+      izq.add(caja(0.06, 0.5, 0.42, 0x5a3a22, -0.06, -0.15, 0.12));
+      izq.add(caja(0.07, 0.08, 0.44, hierro, -0.06, 0.06, 0.12));
+      izq.add(caja(0.07, 0.08, 0.44, hierro, -0.06, -0.36, 0.12));
+      izq.add(esfera(0.07, rojo, -0.1, -0.15, 0.12, 6, 4));
+    } else if (tipo === 'ogro') {
+      // garrote enorme con pinchos y una barriga grande
+      cuerpo.add(esfera(0.3, piel, 0, 0.55, 0.12, 10, 8));
+      arma.add(cil(0.06, 0.14, 0.9, 7, 0x5a3a22, 0, 0.45, 0));
+      arma.add(esfera(0.18, 0x4a3018, 0, 0.9, 0, 8, 6));
+      for (var k = 0; k < 6; k++) { var a = k / 6 * Math.PI * 2; var pc = cono(0.035, 0.14, 4, 0xc8c8c8, Math.cos(a) * 0.17, 0.9, Math.sin(a) * 0.17); pc.rotation.z = -Math.cos(a) * 1.5; pc.rotation.x = Math.sin(a) * 1.5; arma.add(pc); }
+      arma.rotation.x = 1.2;
+      [-1, 1].forEach(function (s) { izq.add(cil(0.1, 0.1, 0.06, 8, hierro, 0, -0.2, 0)); });
+    }
+    // aro rojo bajo los pies: se ve de un vistazo quién es enemigo
+    var aroE = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.56, 24), new THREE.MeshBasicMaterial({ color: 0xd8281e, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+    aroE.rotation.x = -Math.PI / 2; aroE.position.y = 0.035; cuerpo.parent ? cuerpo.parent.add(aroE) : cuerpo.add(aroE);
+  }
   function unidad(tipo, tam, armadura, look) {
     if (tipo === 'heroe' && look) return heroeModelo(look, tam);
     if (FAMILIA_TROPA[tipo]) {
@@ -2115,9 +2193,20 @@ var M = (function () {
     var cabeza = new THREE.Group();
     cabeza.position.y = 1.08;
     cabeza.add(esfera(0.38, piel, 0, 0, 0, 14, 10));
-    ojos(cabeza, 0, 0.34, 0.13, (tipo === 'trasgo' || tipo === 'bruto' || tipo === 'ogro') ? 0x8a1010 : C.negro);
-    cabeza.add(esfera(0.06, 0xffa090, -0.22, -0.1, 0.28, 5, 4));
-    cabeza.add(esfera(0.06, 0xffa090, 0.22, -0.1, 0.28, 5, 4));
+    var esEnem = tipo === 'trasgo' || tipo === 'bruto' || tipo === 'ogro';
+    if (esEnem) {
+      // v6.84: cara de enemigo: ojos amarillos que brillan, ceño fruncido y mandíbula ancha
+      [-1, 1].forEach(function (s) {
+        cabeza.add(malla(geo('ojoE', function () { return new THREE.SphereGeometry(0.06, 6, 5); }), mat(0xffd21a, { emissive: 0xffb000, emissiveIntensity: 0.9 }), s * 0.13, 0.02, 0.34));
+        var ce = caja(0.16, 0.05, 0.06, C.trasgoOsc, s * 0.13, 0.11, 0.33); ce.rotation.z = s * 0.45; cabeza.add(ce);
+      });
+      var mand = caja(0.42, 0.16, 0.22, piel, 0, -0.2, 0.2); cabeza.add(mand);
+      cabeza.scale.set(1, 0.92, 0.95);
+    } else {
+      ojos(cabeza, 0, 0.34, 0.13, C.negro);
+      cabeza.add(esfera(0.06, 0xffa090, -0.22, -0.1, 0.28, 5, 4));
+      cabeza.add(esfera(0.06, 0xffa090, 0.22, -0.1, 0.28, 5, 4));
+    }
     if (tipo !== 'trasgo' && tipo !== 'bruto' && tipo !== 'ogro') {
       var narizT = cono(0.035, 0.08, 6, 0xe8a882, 0, -0.02, 0.36); narizT.rotation.x = Math.PI / 2; cabeza.add(narizT);
       cabeza.add(caja(0.09, 0.016, 0.012, 0xa84848, 0, -0.16, 0.34));
@@ -2230,6 +2319,7 @@ var M = (function () {
     }
     cuerpo.add(izq);
     p.izq = izq;
+    if (esEnem) detallesEnemigo(tipo, cuerpo, cabeza, arma, izq, piel);
     if (TROPA_RANGO[tipo] && !look) { detallesRango(tipo, armadura, cuerpo, cabeza, arma, izq, esCaballero ? (tipo === 'guardian' ? 0.42 : 0.28) : 0); p.respira = true; if (armadura >= 3) escala *= 1.07; }
 
     // capa del héroe

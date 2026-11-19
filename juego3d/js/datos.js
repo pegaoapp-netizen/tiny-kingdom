@@ -3,17 +3,18 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '6.76';
+var VERSION_JUEGO = '6.84';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
 // Pon false antes de subir el juego a la App Store / Google Play.
 var MODO_DUENO_ACTIVO = true;
-// Huellas (SHA-256) de las cuentas del dueño: su correo y su usuario "maikelramirez55".
+// Huellas (SHA-256) de las cuentas del dueño: su correo y su usuario "maikelramirez55" y "MaikelR".
 // No se guardan escritos en el código.
 var HUELLAS_DUENO = [
   '04ffb008e35525eb03d5dea75e79bb0d8217c5aab3a3a8953ed15953563508c4',
-  'fd78fd09b2cd76c82a80675a4c758b65306b2309aaff68e598a4e344e7024bad'
+  'fd78fd09b2cd76c82a80675a4c758b65306b2309aaff68e598a4e344e7024bad',
+  'bc81ce5c754b6d193233a82763f34d3c63953a8f9f05d9060e46d2a9111790e2'  // v6.84: usuario "MaikelR"
 ];
 var GEMAS_DUENO = 99999;
 // Dentro de la app de la App Store (Capacitor) se apagan los 5 toques al oro.
@@ -510,7 +511,8 @@ function limiteRefuerzos(nivel) { return 20 + 10 * Math.max(1, nivel); }
 var CRECE_COSTO = 1.6;
 var TIEMPO_NIVEL = [60, 180, 420, 900, 1800, 3600, 5400, 9000, 14400, 21600, 32400, 43200, 57600, 72000, 86400, 108000, 129600]; // segundos: 1 min ... 36 h
 // del 18 al 30 cada nivel tarda un 17% más
-while (TIEMPO_NIVEL.length < 30) TIEMPO_NIVEL.push(Math.round(TIEMPO_NIVEL[TIEMPO_NIVEL.length - 1] * 1.17 / 600) * 600);
+// v6.81: del nivel 18 al 30 cada nivel tarda un 10% más (antes 17%): el nivel 30 baja de unos 7-14 días a 3-7 días
+while (TIEMPO_NIVEL.length < 30) TIEMPO_NIVEL.push(Math.round(TIEMPO_NIVEL[TIEMPO_NIVEL.length - 1] * 1.10 / 600) * 600);
 var BASE_EDIFICIO = {
   //            oro, madera, piedra, tiempo (x TIEMPO_NIVEL)
   granja:     [60, 40, 0, 0.6],   aserradero: [60, 20, 0, 0.6],   mina:      [90, 70, 0, 0.7],   cantera:  [90, 80, 0, 0.7],
@@ -579,7 +581,7 @@ var MEJORA_CASTILLO = (function () {
   // el castillo es lo más caro y lento: de 5 minutos (nivel 2) a 24 horas (nivel 12)
   var TC = [0, 300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 64800, 86400, 108000, 129600, 151200, 172800, 216000];
   // del 18 al 30 cada nivel tarda un 17% más (el 30 tarda unos 13 días) y cuesta un 28% más
-  while (TC.length < CASTILLO_MAX) TC.push(Math.round(TC[TC.length - 1] * 1.17 / 600) * 600);
+  while (TC.length < CASTILLO_MAX) TC.push(Math.round(TC[TC.length - 1] * 1.10 / 600) * 600); // v6.81: antes 17% (castillo 30 en ~19 días, ahora ~9)
   for (var L = 2; L <= CASTILLO_MAX; L++) {
     if (L <= NIVEL_VIEJO) { m.costo.push(r5(300 * Math.pow(1.62, L - 2))); m.madera.push(r5(360 * Math.pow(1.62, L - 2))); m.piedra.push(r5(120 * Math.pow(1.65, L - 2))); }
     else { var k = m.costo.length - 1; m.costo.push(r5(m.costo[k] * 1.28)); m.madera.push(r5(m.madera[k] * 1.28)); m.piedra.push(r5(m.piedra[k] * 1.28)); }
@@ -601,6 +603,14 @@ var ESCALA_REINO = 1.35;
 // (v5.0: la muralla es un 20% más grande para que las parcelas tengan caminitos entre ellas)
 // v6.31: muralla redonda centrada en el castillo, con 4 puertas y caminos de piedra en cruz
 var MURALLA_FORMA = { cx: 0, cz: 0, rx: 56, rz: 56 };
+// v6.83: la muralla es CUADRADA (con las esquinas apenas redondeadas), como las ciudades de los grandes juegos de castillos.
+// Cada ángulo t cae en el mismo rayo que antes; solo cambia la distancia: formaX/formaZ dan el punto del borde (radio 1).
+var FORMA_N = 8;
+function formaK(t) { var c = Math.abs(Math.cos(t)), s = Math.abs(Math.sin(t)); return Math.pow(Math.pow(c, FORMA_N) + Math.pow(s, FORMA_N), -1 / FORMA_N); }
+function formaX(t) { return Math.cos(t) * formaK(t); }
+function formaZ(t) { return Math.sin(t) * formaK(t); }
+// "distancia al cuadrado" a la muralla: 1 justo en el muro, menos de 1 dentro (sirve donde antes se usaba ux*ux + uz*uz)
+function formaD2(ux, uz) { return Math.pow(Math.pow(Math.abs(ux), FORMA_N) + Math.pow(Math.abs(uz), FORMA_N), 2 / FORMA_N); }
 
 // Barricada: se pone en los puntos marcados del camino. Los enemigos se paran a romperla.
 // Nivel 1 de madera, nivel 2 de piedra. Se arregla sola al terminar cada oleada.
@@ -756,6 +766,8 @@ var TROPAS = {
   torre_asedio: { costo: 400, comida: 100, tiempo: 1440, vida: 1400, dano: 25, alcance: 1.8, vel: 1.0, ritmo: 1.6, icono: '🗼' }
 };
 // Qué hace falta para entrenar cada tropa: edificio y su nivel, y a veces otro edificio o el nivel del jugador
+// v6.81: entrenar es un 35% más rápido (un espadachín pasa de 2:00 a 1:18)
+Object.keys(TROPAS).forEach(function (k) { if (TROPAS[k].tiempo) TROPAS[k].tiempo = Math.max(10, Math.round(TROPAS[k].tiempo * 0.65)); });
 var TROPA_REQ = {
   explorador: { ed: 'cuartel', n: 1 }, espadachin: { ed: 'cuartel', n: 1 }, guardian: { ed: 'cuartel', n: 1 }, miliciano: { ed: 'cuartel', n: 2 },
   arquero: { ed: 'galeria', n: 1 }, caballeria: { ed: 'establo', n: 1 }, jinete: { ed: 'establo', n: 1 }, caballeria_pesada: { ed: 'establo', n: 3, jugador: 6 },

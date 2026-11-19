@@ -296,6 +296,16 @@ var Cuentas = (function () {
     vaciarPrivados: function () { return db.collection('privados').doc(usuario.uid).collection('conv').get().then(function (q) { return Promise.all(q.docs.map(function (d) { return d.ref.delete(); })); }); },
     enviarChat: function (canal, m) { return db.collection('canales').doc(canal).collection('mensajes').add(m); },
     borrarChat: function (canal, id) { return db.collection('canales').doc(canal).collection('mensajes').doc(id).delete(); },
+    // v6.84: regalos del dueño (solo la cuenta del dueño puede crearlos; ver nube/firestore.rules)
+    enviarRegalo: function (g) { return db.collection('regalos').add(g); },
+    regalosRecibidos: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('regalos').where('para', '==', usuario.uid).limit(20).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    borrarRegalo: function (id) { return db.collection('regalos').doc(id).delete(); },
+    buscarJugador: function (nombre) {
+      return db.collection('aldeas').where('nombre', '==', String(nombre).trim()).limit(5).get().then(function (q) { return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; }); });
+    },
     reportar: function (r) { return db.collection('reportes').add(r); },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }
   };
