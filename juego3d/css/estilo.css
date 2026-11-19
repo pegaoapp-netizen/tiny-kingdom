@@ -1798,3 +1798,6 @@ img.ico-obj { width: 1.5em; height: 1.5em; object-fit: contain; vertical-align: 
 .al-dp.activo.hostil { background: linear-gradient(#d8362a, #7a1410); border-color: #ffb0a0; color: #fff; }
 .al-dp.activo.amiga { background: linear-gradient(#3a7ae0, #173f8a); border-color: #a8ccff; color: #fff; }
 .al-dp.activo.neutral { background: linear-gradient(#9a8a70, #5a4a30); color: #fff; }
+
+/* v6.86: imagen limpia: el contador de tropas no sale en la ciudad (las tropas se ven dentro del Cuartel) */
+#pill-tropas, body.tema-oscuro #pill-tropas { display: none !important; }

@@ -143,7 +143,7 @@
   // Cámara inicial: se ve el castillo entero con sus alrededores (más lejos en teléfono vertical)
   // de lejos: se ve el reino entero con el castillo en el centro
   // muralla completa y los campos de fuera (en teléfono vertical: la muralla entera y el borde de los campos)
-  function radioReino() { return window.innerWidth < window.innerHeight ? 55 : 66; }
+  function radioReino() { return window.innerWidth < window.innerHeight ? 46 : 56; } // v6.86: ciudad más compacta
   function distEncuadre() {
     var asp = window.innerWidth / window.innerHeight, fv = fovBase() * Math.PI / 180;
     var RADIO_REINO = radioReino();
@@ -159,7 +159,7 @@
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.5; }
   function zoomMax() { return zoomBase() * 1.45; }
-  function distInicial() { return window.innerWidth < window.innerHeight ? 122 : 90; } // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
+  function distInicial() { return window.innerWidth < window.innerHeight ? 104 : 80; } // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
   function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 175 : 125; }
@@ -591,12 +591,12 @@
     losa(0, 0, -8, -(R_CIUDAD + 5), 0.09, AN);
     // caminitos entre las 30 parcelas, sin meterse en la plaza del castillo
     [-24, -12, 12, 24].forEach(function (p) {
-      losa(-46, -16, p, p, 0.075, 1.35);
-      losa(16, 46, p, p, 0.075, 1.35);
+      losa(-(R_CIUDAD - 8), -16, p, p, 0.075, 1.35);
+      losa(16, R_CIUDAD - 8, p, p, 0.075, 1.35);
     });
     [-26, -14, 14, 26].forEach(function (p) {
-      losa(p, p, -46, -16, 0.075, 1.35);
-      losa(p, p, 16, 46, 0.075, 1.35);
+      losa(p, p, -(R_CIUDAD - 8), -16, 0.075, 1.35);
+      losa(p, p, 16, R_CIUDAD - 8, 0.075, 1.35);
     });
     // v6.83: plaza cuadrada, alineada con las calles, con un borde de piedra más oscura (como las ciudades de los grandes juegos de castillos)
     var borde = new THREE.Mesh(new THREE.PlaneGeometry(23, 23), new THREE.MeshLambertMaterial({ color: 0x8a7f6e })); borde.rotation.x = -Math.PI / 2; borde.position.y = 0.08; borde.receiveShadow = true; G.add(borde);
@@ -711,8 +711,8 @@
       for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (i < PARCELAS.nCiudad ? 3.6 : 7) + extra) return false;
       var lc = aLocal(x, z), callesB = [-24, -12, 12, 24], callesA = [-26, -14, 14, 26];
       for (var ci = 0; ci < callesB.length; ci++) {
-        if (Math.abs(lc.a) > 15 && Math.abs(lc.a) < 48 && Math.abs(lc.b - callesB[ci]) < 1.4) return false;
-        if (Math.abs(lc.b) > 15 && Math.abs(lc.b) < 48 && Math.abs(lc.a - callesA[ci]) < 1.4) return false;
+        if (Math.abs(lc.a) > 15 && Math.abs(lc.a) < R_CIUDAD - 8 && Math.abs(lc.b - callesB[ci]) < 1.4) return false;
+        if (Math.abs(lc.b) > 15 && Math.abs(lc.b) < R_CIUDAD - 8 && Math.abs(lc.a - callesA[ci]) < 1.4) return false;
       }
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 1.5) return false;
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
