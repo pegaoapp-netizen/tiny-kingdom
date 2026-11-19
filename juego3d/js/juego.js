@@ -1406,7 +1406,12 @@
     $('mundo-transicion').classList.add('on');
     setTimeout(function () { abrirMundo(); setTimeout(function () { var t = $('mundo-transicion'); if (t) t.classList.remove('on'); }, 60); }, 850);
   }
+  function cargarDiplomacia() {
+    if (!estado.alianza || !hayCuenta() || !Cuentas.alianza) return;
+    Cuentas.alianza(estado.alianza).then(function (al) { var nd = (al && al.diplo) || {}; if (JSON.stringify(nd) !== JSON.stringify(estado.diplo || {})) { estado.diplo = nd; if (M3 && M3.ultimaLista) ponerCosasMundo(M3.ultimaLista, M3.ultimoYo); } }).catch(function () {});
+  }
   function abrirMundo() {
+    cargarDiplomacia();
     $('mundo').classList.remove('oculto');
     enMundo = true; vistaActual = 'mundo'; pintarVista(); cerrarMenuGrande();
     $('mundo-info').innerHTML = ''; // v6.70: el mundo entra limpio, sin carteles
@@ -1785,7 +1790,7 @@
   function estandarteMundo(tipo, nivel) {
     var k = tipo + '_' + nivel; if (cacheEstandarte[k]) return cacheEstandarte[k];
     var W = 96, H = 144, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
-    var azul = tipo === 'yo' || tipo === 'aliado';
+    var azul = tipo === 'aliado' || tipo === 'amiga', oro = tipo === 'yo';
     // barra y palo
     x.fillStyle = '#5e3d24'; x.fillRect(W / 2 - 3, 0, 6, 12);
     var gb = x.createLinearGradient(0, 8, 0, 18); gb.addColorStop(0, '#ffe9a0'); gb.addColorStop(1, '#a8701a'); x.fillStyle = gb; x.fillRect(6, 8, W - 12, 9);
@@ -1793,14 +1798,20 @@
     // tela con cola de golondrina
     function tela() { x.beginPath(); x.moveTo(14, 17); x.lineTo(W - 14, 17); x.lineTo(W - 14, H - 8); x.lineTo(W / 2, H - 30); x.lineTo(14, H - 8); x.closePath(); }
     var gt = x.createLinearGradient(14, 0, W - 14, 0);
-    if (azul) { gt.addColorStop(0, '#173f8a'); gt.addColorStop(0.5, '#3a7ae0'); gt.addColorStop(1, '#173f8a'); }
+    if (oro) { gt.addColorStop(0, '#b8801e'); gt.addColorStop(0.5, '#ffe066'); gt.addColorStop(1, '#b8801e'); }
+    else if (azul) { gt.addColorStop(0, '#173f8a'); gt.addColorStop(0.5, '#3a7ae0'); gt.addColorStop(1, '#173f8a'); }
     else { gt.addColorStop(0, '#7a1410'); gt.addColorStop(0.5, '#d8362a'); gt.addColorStop(1, '#7a1410'); }
-    tela(); x.fillStyle = gt; x.fill(); x.lineWidth = 4; x.strokeStyle = '#f2c45a'; x.stroke();
+    tela(); x.fillStyle = gt; x.fill(); x.lineWidth = 4; x.strokeStyle = oro ? '#6a4410' : '#f2c45a'; x.stroke();
     x.lineWidth = 1.5; x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke();
     // emblema
     x.textAlign = 'center'; x.textBaseline = 'middle';
-    if (tipo === 'yo') { x.fillStyle = '#ffe27a'; x.font = '900 40px Georgia, serif'; x.lineWidth = 4; x.strokeStyle = '#3a2410'; x.strokeText(String(nivel), W / 2, 62); x.fillText(String(nivel), W / 2, 62); x.font = '26px serif'; x.fillText('👑', W / 2, 30); }
-    else { x.font = '38px serif'; x.fillStyle = '#ffe27a'; x.fillText(tipo === 'aliado' ? '🛡️' : tipo === 'hostil' ? '💀' : '⚔️', W / 2, 60); }
+    if (tipo === 'yo') { x.fillStyle = '#7a1410'; x.font = '900 46px Georgia, serif'; x.lineWidth = 3; x.strokeStyle = '#ffe9a0'; x.strokeText(String(nivel), W / 2, 62); x.fillText(String(nivel), W / 2, 62); }
+    else {
+      x.strokeStyle = '#ffd86a'; x.fillStyle = '#ffd86a'; x.lineWidth = 6; x.lineCap = 'round';
+      if (tipo === 'hostil' || tipo === 'enemigo') { x.beginPath(); x.moveTo(28, 40); x.lineTo(68, 80); x.moveTo(68, 40); x.lineTo(28, 80); x.stroke(); x.lineWidth = 4; x.beginPath(); x.moveTo(22, 70); x.lineTo(36, 84); x.moveTo(74, 70); x.lineTo(60, 84); x.stroke(); }
+      else if (tipo === 'aliado') { x.lineWidth = 5; x.beginPath(); x.moveTo(48, 84); x.quadraticCurveTo(44, 62, 50, 46); x.stroke(); [[-1, 0], [1, 0], [-1, 1], [1, 1]].forEach(function (q) { x.beginPath(); x.moveTo(50, 46); x.quadraticCurveTo(50 + q[0] * 14, 34 + q[1] * 6, 50 + q[0] * 26, 48 + q[1] * 10); x.stroke(); }); }
+      else { x.beginPath(); for (var a2 = 0; a2 < 5; a2++) { var an = -Math.PI / 2 + a2 * Math.PI * 2 / 5, an2 = an + Math.PI / 5; x.lineTo(W / 2 + Math.cos(an) * 20, 60 + Math.sin(an) * 20); x.lineTo(W / 2 + Math.cos(an2) * 8, 60 + Math.sin(an2) * 8); } x.closePath(); x.fill(); }
+    }
     var t = new THREE.CanvasTexture(c); cacheEstandarte[k] = t; return t;
   }
   var CERCA_COSAS = 20;
@@ -1838,7 +1849,8 @@
         var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cs, depthTest: false, transparent: true }));
         sp.renderOrder = 7; sp.scale.set(0.9, 1.35, 1); sp.center.set(0.5, 0); sp.position.set(-0.75, 0.25, 0.2); return sp;
       }
-      g.add(banderaReino(esYo ? 'yo' : aliada ? 'aliado' : hostil ? 'hostil' : 'enemigo'));
+      var dk = esYo ? 'yo' : diplomacia(a).k;
+      if (dk !== 'neutral') g.add(banderaReino(dk === 'yo' ? 'yo' : dk === 'aliada' ? 'aliado' : dk === 'amiga' ? 'amiga' : dk === 'hostil' ? 'hostil' : 'enemigo'));
       if (esYo) { var brillo = new THREE.Mesh(new THREE.CircleGeometry(1.25, 28), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.38, depthWrite: false })); brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.03; g.add(brillo); M3.brilloYo = brillo; }
       if (prot) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.3, depthWrite: false })); g.add(cup); }
       g.position.copy(p); M3.cosas.add(g);
@@ -2618,7 +2630,12 @@
     $('panel-cuerpo').innerHTML = h;
   }
   // ---------- v6.59: ALIANZA en 4 pestañas como las fotos del dueño: Info, Miembros, Alianzas y Muro ----------
-  var alTab = 'info', alSubMi = 'miembros', alPag = 0, alListaTodas = null;
+  var alTab = 'info', alSubMi = 'miembros', alPag = 0, alListaTodas = null, alRangoAbierto = null;
+  // v6.86: RANGOS de la alianza: Canciller (el líder), Vicecanciller, Mariscal, Oficial y Miembro
+  var RANGOS_AL = { canciller: ['👑', 'Canciller', 'Chancellor'], vice: ['🎖️', 'Vicecanciller', 'Vice-chancellor'], mariscal: ['⚔️', 'Mariscal', 'Marshal'], oficial: ['🛡️', 'Oficial', 'Officer'], miembro: ['▪', 'Miembro', 'Member'] };
+  function rangoAl(al, uid) { return uid === al.lider ? 'canciller' : ((al.rangos || {})[uid] || 'miembro'); }
+  function nomRangoAl(r) { var q = RANGOS_AL[r] || RANGOS_AL.miembro; return q[0] + ' ' + L(q[1], q[2]); }
+  function puedeDiploAl(al, uid) { var r = rangoAl(al, uid); return r === 'canciller' || r === 'vice'; }
   function hace(ms) { var d = Math.floor((Date.now() - ms) / 86400000); if (!ms) return '—'; if (d <= 0) return L('Hoy', 'Today'); if (d === 1) return L('Ayer', 'Yesterday'); return L('Hace ' + d + ' días', d + ' days ago'); }
   function nivelAlianza(p) { var n = 1, need = 500, resto = p; while (resto >= need && n < 50) { resto -= need; n++; need = Math.round(need * 1.35); } return { n: n, act: resto, need: need }; }
   function htmlAlianzaPestanas() {
@@ -2646,7 +2663,9 @@
         var porPag = 7, pags = Math.max(1, Math.ceil(mi.length / porPag)); alPag = Math.min(alPag, pags - 1);
         h += '<div class="al-tabla"><div class="al-th"><span></span><span>' + L('Nombre / Puesto', 'Name / Rank') + '</span><span>' + L('Poder', 'Power') + '</span><span>' + L('Última conexión', 'Last seen') + '</span></div>' +
           mi.slice(alPag * porPag, alPag * porPag + porPag).map(function (m) {
-            return '<div class="al-tr"><span class="al-chk">' + (m.uid === al.lider ? '⭐' : '▪') + '</span><span><button class="al-nom" data-accion="al-perfil" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">' + escaparHTML(m.nombre) + '</button><small>' + (m.uid === al.lider ? L('Líder', 'Leader') : L('Miembro', 'Member')) + '</small></span><span>' + corto(m.poder || 0) + '</span><span>' + hace(m.actualizado) + '</span></div>';
+            var rm = rangoAl(al, m.uid), yoCanc = al.lider === yoU && m.uid !== yoU;
+            return '<div class="al-tr"><span class="al-chk">' + RANGOS_AL[rm][0] + '</span><span><button class="al-nom" data-accion="al-perfil" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">' + escaparHTML(m.nombre) + '</button><small>' + L(RANGOS_AL[rm][1], RANGOS_AL[rm][2]) + (yoCanc ? ' <button class="al-dp" data-accion="al-rango-abrir" data-uid="' + m.uid + '">' + L('Cambiar', 'Change') + ' ›</button>' : '') + '</small></span><span>' + corto(m.poder || 0) + '</span><span>' + hace(m.actualizado) + '</span></div>' +
+              (yoCanc && alRangoAbierto === m.uid ? '<div class="al-diplo">' + ['vice', 'mariscal', 'oficial', 'miembro'].map(function (r) { return '<button class="al-dp' + (rm === r ? ' activo amiga' : '') + '" data-accion="al-rango" data-uid="' + m.uid + '" data-r="' + r + '">' + nomRangoAl(r) + '</button>'; }).join('') + '<button class="al-dp activo hostil" data-accion="al-ceder" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">👑 ' + L('Ceder cancillería', 'Hand over chancellery') + '</button></div>' : '');
           }).join('') + '</div>' +
           '<div class="al-pag"><button data-accion="al-pag" data-p="0">⏮</button><button data-accion="al-pag" data-p="' + Math.max(0, alPag - 1) + '">‹</button><span>' + (alPag + 1) + ' ' + L('de', 'of') + ' ' + pags + '</span><button data-accion="al-pag" data-p="' + Math.min(pags - 1, alPag + 1) + '">›</button><button data-accion="al-pag" data-p="' + (pags - 1) + '">⏭</button></div>';
       } else if (alSubMi === 'lider') {
@@ -2666,7 +2685,7 @@
       else {
         var lf = lista.filter(function (x) { return !q || String(x.nombre).toLowerCase().indexOf(q) >= 0 || String(x.tag).toLowerCase() === q; });
         h += '<div class="al-tabla"><div class="al-th al-th3"><span>' + L('Puesto', 'Rank') + '</span><span>' + L('Alianza / Líder', 'Alliance / Leader') + '</span><span>' + L('Idioma', 'Language') + '</span><span></span></div>' + (lf.length ? lf.map(function (x, i) {
-          return '<div class="al-tr al-th3"><span><i class="al-ok">✓</i> ' + (i + 1) + '</span><span class="al-al"><b class="al-ban">' + escaparHTML(x.tag) + '</b><span>' + escaparHTML(x.nombre) + '<small>' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + escaparHTML((IDIOMAS_AL[x.idioma] || IDIOMAS_AL.es).slice(0, 3)) + '</span><span><button class="al-chev" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '">›</button></span></div>';
+          return '<div class="al-tr al-th3"><span><i class="al-ok">✓</i> ' + (i + 1) + '</span><span class="al-al"><b class="al-ban">' + escaparHTML(x.tag) + '</b><span>' + escaparHTML(x.nombre) + '<small>' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + escaparHTML((IDIOMAS_AL[x.idioma] || IDIOMAS_AL.es).slice(0, 3)) + '</span><span><button class="al-chev" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '">›</button></span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
         }).join('') : '<p class="iv-vacio">' + L('No hay alianzas con ese nombre.', 'No alliances with that name.') + '</p>') + '</div>';
       }
     }
@@ -6917,6 +6936,9 @@
   }
   function diplomacia(a) {
     if (estado.alianza && a.alianza === estado.alianza) return { k: 'aliada', t: L('Aliada', 'Allied'), c: '#2f7a22' };
+    var dpl = (estado.alianza && a.alianza && (estado.diplo || {})[a.alianza]) || '';
+    if (dpl === 'hostil') return { k: 'hostil', t: L('Hostil', 'Hostile'), c: '#c0281e' };
+    if (dpl === 'amiga') return { k: 'amiga', t: L('Amiga', 'Friendly'), c: '#2a6ad0' };
     if ((estado.enemigos || {})[a.uid]) return { k: 'enemiga', t: L('Enemiga', 'Enemy'), c: '#c0281e' };
     return { k: 'neutral', t: L('Neutral', 'Neutral'), c: '#6b4422' };
   }
@@ -8829,6 +8851,27 @@
     else if (a === 'al-pag') { sonar('click'); alPag = +b.getAttribute('data-p'); pintarHubAlianza(); }
     else if (a === 'al-perfil') { sonar('click'); perfilJugador(b.getAttribute('data-uid'), b.getAttribute('data-n'), ''); }
     else if (a === 'al-escribir') { sonar('click'); abrirPrivado(b.getAttribute('data-uid'), b.getAttribute('data-n')); }
+    else if (a === 'al-rango-abrir') { sonar('click'); var ur = b.getAttribute('data-uid'); alRangoAbierto = alRangoAbierto === ur ? null : ur; pintarHubAlianza(); }
+    else if (a === 'al-rango') {
+      sonar('click'); if (!alCache || !alCache.al || alCache.al.lider !== Cuentas.usuario().uid) return;
+      var ru = b.getAttribute('data-uid'), rr = b.getAttribute('data-r'), rg = Object.assign({}, alCache.al.rangos || {});
+      if (rr === 'miembro') delete rg[ru]; else rg[ru] = rr;
+      Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
+    }
+    else if (a === 'al-ceder') {
+      sonar('click'); if (!alCache || !alCache.al || alCache.al.lider !== Cuentas.usuario().uid) return;
+      var cu = b.getAttribute('data-uid'), cn = b.getAttribute('data-n'), yoC2 = Cuentas.usuario().uid;
+      confirmarJuego('👑 ' + L('Ceder la cancillería', 'Hand over the chancellery'), L('¿Hacer a <b>' + cn + '</b> el nuevo Canciller? Tú pasarás a Vicecanciller y ya no podrás deshacerlo tú solo.', 'Make <b>' + cn + '</b> the new Chancellor? You will become Vice-chancellor and cannot undo this yourself.'), L('Ceder', 'Hand over'), function () {
+        var rg2 = Object.assign({}, alCache.al.rangos || {}); delete rg2[cu]; rg2[yoC2] = 'vice';
+        Cuentas.ajustesAlianza(alCache.al.tag, { lider: cu, liderNombre: cn, rangos: rg2 }).then(function () { alCache.al.lider = cu; alCache.al.liderNombre = cn; alCache.al.rangos = rg2; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal('👑 ' + cn + ' · ' + L('Canciller', 'Chancellor')); }).catch(function () { consejoTemporal(L('No se pudo ceder la cancillería.', 'Could not hand over the chancellery.')); sonar('error'); });
+      });
+    }
+    else if (a === 'al-diplo') {
+      sonar('click'); var tg = b.getAttribute('data-tag'), vv = b.getAttribute('data-v');
+      if (!alCache || !alCache.al || !puedeDiploAl(alCache.al, Cuentas.usuario().uid)) return;
+      var nd = Object.assign({}, alCache.al.diplo || {}); if (vv === 'neutral') delete nd[tg]; else nd[tg] = vv;
+      Cuentas.ajustesAlianza(alCache.al.tag, { diplo: nd }).then(function () { alCache.al.diplo = nd; estado.diplo = nd; guardar(true); pintarHubAlianza(); if (M3 && M3.ultimaLista) ponerCosasMundo(M3.ultimaLista, M3.ultimoYo); consejoTemporal('[' + tg + '] → ' + (vv === 'hostil' ? L('Hostil', 'Hostile') : vv === 'amiga' ? L('Amiga', 'Friendly') : L('Neutral', 'Neutral'))); }).catch(function () { consejoTemporal(L('No se pudo cambiar la diplomacia.', 'Could not change diplomacy.')); sonar('error'); });
+    }
     else if (a === 'al-ver') { sonar('click'); var tv = b.getAttribute('data-tag'), xv = (alListaTodas || []).filter(function (x) { return x.tag === tv; })[0]; if (xv) consejoTemporal('[' + xv.tag + '] ' + xv.nombre + ' · 👑 ' + (xv.liderNombre || '')); }
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
