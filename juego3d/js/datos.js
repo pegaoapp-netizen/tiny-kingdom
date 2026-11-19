@@ -407,6 +407,9 @@ var NOMBRES = {
   corona_coral: { es: 'Corona de Coral', en: 'Coral Crown', des_es: 'Hace falta para subir el Castillo al nivel 12.', des_en: 'Needed to upgrade the Castle to level 12.' },
   caracola: { es: 'Caracola', en: 'Conch', des_es: 'Hace falta para subir un edificio o la muralla a los niveles 10 y 11.', des_en: 'Needed to upgrade a building or the wall to levels 10 and 11.' },
   flor_coral: { es: 'Flor de Coral', en: 'Coral Flower', des_es: 'Hace falta para subir un edificio o la muralla al nivel 12.', des_en: 'Needed to upgrade a building or the wall to level 12.' },
+  elevacion_sol: { es: 'Elevación del Sol', en: 'Sun Elevation', des_es: 'La ELEVACIÓN: sube el Castillo del 12 al 13★ y abre los niveles con estrella.', des_en: 'The ELEVATION: takes the Castle from 12 to 13★ and opens the star levels.' },
+  estrella_rey: { es: 'Estrella del Rey', en: 'King\'s Star', des_es: 'Hace falta para subir el Castillo a los niveles 14★, 15★ y 16★.', des_en: 'Needed to upgrade the Castle to levels 14★, 15★ and 16★.' },
+  estrella_mar: { es: 'Estrella de Mar', en: 'Starfish', des_es: 'Hace falta para subir un edificio o la muralla a los niveles con estrella (13★ al 16★).', des_en: 'Needed to upgrade a building or the wall to star levels (13★ to 16★).' },
   lingote: { es: 'Lingote real', en: 'Royal ingot', des_es: 'Un lingote que vale 1.000.000 de oro.', des_en: 'An ingot worth 1,000,000 gold.' },
   cofre_tesoro: { es: 'Cofre del Tesoro', en: 'Treasure chest', des_es: 'Muchos recursos y gemas al abrirlo.', des_en: 'Lots of resources and gems when opened.' },
   pack_tesoro7: { es: '7 Cofres del Tesoro', en: '7 Treasure chests', des_es: 'Paquete de 7 cofres del tesoro.', des_en: 'Pack of 7 treasure chests.' },
@@ -462,10 +465,10 @@ var HORAS_ALMACEN = 2;
 // Parcelas de la ciudad: con el Castillo nivel 1 hay 4; cada nivel del Castillo abre 3 más (37 en el nivel 12)
 var PARCELAS_INICIO = 6, PARCELAS_POR_NIVEL = 3; // v6.87: la ciudad (30 parcelas) se abre entera al nivel 9
 // v6.87: parcelas de los campos que abre cada nivel del castillo (como en los grandes juegos de reinos)
-var CAMPOS_POR_NIVEL = [0, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 41, 42];
+var CAMPOS_POR_NIVEL = [0, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 41, 42, 43, 44, 45, 46];
 // v6.87: objetos especiales para los niveles 10, 11 y 12
-var ESPECIAL_CASTILLO = { 10: 'caracola_real', 11: 'perla_rey', 12: 'corona_coral' };
-var ESPECIAL_EDIFICIO = { 10: 'caracola', 11: 'caracola', 12: 'flor_coral' }; // un campo lleno guarda 2 horas de producción
+var ESPECIAL_CASTILLO = { 10: 'caracola_real', 11: 'perla_rey', 12: 'corona_coral', 13: 'elevacion_sol', 14: 'estrella_rey', 15: 'estrella_rey', 16: 'estrella_rey' };
+var ESPECIAL_EDIFICIO = { 10: 'caracola', 11: 'caracola', 12: 'flor_coral', 13: 'estrella_mar', 14: 'estrella_mar', 15: 'estrella_mar', 16: 'estrella_mar' }; // un campo lleno guarda 2 horas de producción
 function esCampo(tipo) { return TIPOS_CAMPO.indexOf(tipo) >= 0; }
 // El castillo cobra impuestos: da oro cada cierto tiempo
 var IMPUESTO = { oro: 3, cada: 4 };
@@ -505,7 +508,8 @@ var MURALLA = { costo: [80, 140, 220], madera: [100, 0, 0], piedra: [0, 150, 260
 // ---------------- NIVELES HASTA EL 17 ----------------
 // Los valores de los niveles 1-3 están escritos arriba; del 4 al 17 se calculan solos.
 // v6.39: los edificios y la muralla suben hasta el nivel del castillo (30). NIVEL_VIEJO marca dónde empiezan los niveles nuevos.
-var NIVEL_MAX = 12, NIVEL_VIEJO = 12; // v6.87: todo llega al nivel 12 (del 10 al 12 piden objetos especiales)
+var NIVEL_MAX = 16, NIVEL_VIEJO = 12; // v6.87: hasta el 12 normal; después de la ELEVACIÓN se sube del 13 al 16 (niveles con estrella)
+var NIVEL_ESTRELLA = 12;
 // Burbuja de protección para los que empiezan: 7 días o hasta el Castillo nivel 5 (lo primero que llegue)
 var BURBUJA = { dias: 7, castillo: 5 };
 // Carretas: se entrenan en el Mercado como las tropas; cada nivel carga más (nivel 1..4)
@@ -584,14 +588,14 @@ while (TRABAJOS_EDIFICIO.oleadas.length <= 30) TRABAJOS_EDIFICIO.oleadas.push(TR
 // Mejorar el castillo (nivel destino 2..12): cuesta más y tarda más cada vez.
 // Ningún edificio ni la muralla pueden pasar el nivel del castillo.
 // v6.32: el castillo sube hasta el nivel 30; v6.39: los demás edificios y la muralla también (sin pasar al castillo)
-var CASTILLO_MAX = 12;
+var CASTILLO_MAX = 16;
 var MEJORA_CASTILLO = (function () {
   var m = { costo: [0], madera: [0], piedra: [0], tiempo: [0], vida: 300, dano: 3 };
   function r5(v) { return Math.round(v / 5) * 5; }
   // el castillo es lo más caro y lento: de 5 minutos (nivel 2) a 24 horas (nivel 12)
   var TC = [0, 300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 64800, 86400, 108000, 129600, 151200, 172800, 216000];
   // del 18 al 30 cada nivel tarda un 17% más (el 30 tarda unos 13 días) y cuesta un 28% más
-  TC = TC.slice(0, 9).concat([86400, 172800, 259200]); // v6.87: nivel 10 = 1 día, 11 = 2 días, 12 = 3 días
+  TC = TC.slice(0, 9).concat([86400, 172800, 259200, 345600, 432000, 518400, 604800]); // v6.87: 10 = 1 día ... 12 = 3 días; 13★ = 4 días ... 16★ = 7 días
   for (var L = 2; L <= CASTILLO_MAX; L++) {
     if (L <= 9) { m.costo.push(r5(300 * Math.pow(1.62, L - 2))); m.madera.push(r5(360 * Math.pow(1.62, L - 2))); m.piedra.push(r5(120 * Math.pow(1.65, L - 2))); }
     else if (L <= NIVEL_VIEJO) { var k0 = m.costo.length - 1; m.costo.push(r5(m.costo[k0] * 2)); m.madera.push(r5(m.madera[k0] * 2)); m.piedra.push(r5(m.piedra[k0] * 2)); }
@@ -685,6 +689,7 @@ var OBJETOS = {
   lingote:      { icono: '🥇', da: { oro: 1000000 } },
   caracola_real: { icono: '🐚', especial: true }, perla_rey: { icono: '🫧', especial: true }, corona_coral: { icono: '👑', especial: true },
   caracola:     { icono: '🐚', especial: true }, flor_coral: { icono: '🌺', especial: true },
+  elevacion_sol: { icono: '☀️', especial: true }, estrella_rey: { icono: '🌟', especial: true }, estrella_mar: { icono: '⭐', especial: true },
   cofre_tesoro: { icono: '🎁', cofre: { oro: [20000, 50000], comida: [20000, 50000], madera: [20000, 50000], piedra: [10000, 30000] } },
   pack_tesoro7: { icono: '🎁', paquete: { cofre_tesoro: 7 } },
   pack_tesoro15: { icono: '🎁', paquete: { cofre_tesoro: 15 } },
@@ -713,6 +718,7 @@ var TIENDA = [
   // Varios
   { id: 'lingote', gemas: 100, cat: 'varios' },
   { id: 'caracola', gemas: 45, cat: 'varios' }, { id: 'flor_coral', gemas: 55, cat: 'varios' }, { id: 'caracola_real', gemas: 150, cat: 'varios' }, { id: 'perla_rey', gemas: 200, cat: 'varios' }, { id: 'corona_coral', gemas: 220, cat: 'varios' },
+  { id: 'estrella_mar', gemas: 70, cat: 'varios' }, { id: 'elevacion_sol', gemas: 300, cat: 'varios' }, { id: 'estrella_rey', gemas: 250, cat: 'varios' },
   { id: 'acelerador', gemas: 20, cat: 'acelerar' }, /* v6.54: el cofre de equipo ya no se vende: el equipo se gana jugando */ { id: 'cofre_plata', gemas: 15, cat: 'cofres' }, { id: 'cofre_oro', cat: 'cofres', gemas: 40 },
   { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' }
 ];

@@ -855,7 +855,7 @@
     // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
-    var metaC = 11 + 11 * Math.pow((Math.min(12, nvC) - 1) / 11, 0.8);
+    var metaC = 11 + 11 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8);
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
@@ -1221,8 +1221,8 @@
   function parcelasAbiertas() { return PARCELAS_INICIO + PARCELAS_POR_NIVEL * ((estado.castillo || 1) - 1); }
   function nivelParaParcela(s) { return Math.max(1, Math.ceil((s.orden + 1 - PARCELAS_INICIO) / PARCELAS_POR_NIVEL) + 1); }
   // una parcela de la ciudad está cerrada si el castillo no la abrió todavía (si ya tiene edificio, se queda)
-  function camposAbiertos(n) { n = Math.max(1, Math.min(12, n || estado.castillo || 1)); return CAMPOS_POR_NIVEL[n]; }
-  function nivelParaCampo(s) { for (var n = 1; n <= 12; n++) if (CAMPOS_POR_NIVEL[n] > s.oc) return n; return 13; }
+  function camposAbiertos(n) { n = Math.max(1, Math.min(16, n || estado.castillo || 1)); return CAMPOS_POR_NIVEL[n]; }
+  function nivelParaCampo(s) { for (var n = 1; n <= 16; n++) if (CAMPOS_POR_NIVEL[n] > s.oc) return n; return 17; }
   function cerrada(s) { if (s.edificio || s.obra) return false; return s.campo ? s.oc >= camposAbiertos() : s.orden >= parcelasAbiertas(); }
   function actualizarParcelas() {
     slots.forEach(function (s) {
@@ -2809,7 +2809,7 @@
     if (que === 'castillo') {
       // v6.32: cada nivel del castillo pide tu nivel, la muralla y subir los demás edificios (del 18 al 30, todos al 17)
       // v6.87: castillo hasta el 12 (muralla como en los juegos de reinos: 10 pide muralla 8, 11 pide 10 y 12 pide 11)
-      if (L2 >= 2) l.push(filaReq('jugador', [0, 0, 2, 4, 6, 9, 12, 16, 20, 26, 34, 45, 60][L2]));
+      if (L2 >= 2) l.push(filaReq('jugador', [0, 0, 2, 4, 6, 9, 12, 16, 20, 26, 34, 40, 46, 50, 54, 57, 60][L2]));
       if (L2 >= 3) l.push(filaReq('muralla', L2 <= 10 ? L2 - 2 : L2 - 1));
       [['cuartel', 3, 1], ['cabana', 3, 1], ['granja', 4, 1], ['academia', 4, 2], ['aserradero', 5, 2], ['mina', 5, 2], ['herreria', 6, 2], ['cantera', 6, 2], ['establo', 7, 3],
         ['galeria', 7, 3], ['enfermeria', 8, 3], ['torre', 8, 3], ['almacen', 9, 3], ['mercado', 10, 4], ['vigia', 11, 4]]
@@ -3630,7 +3630,7 @@
   var TAM_TIPO = { cuartel: 8.4, almacen: 8.2, embajada: 8.2, academia: 8.0, relevo: 7.6, mercado: 7.6, herreria: 7.4, establo: 7.6, enfermeria: 7.2, galeria: 7.4,
     cabana: 4.6, granja: 5.2, aserradero: 5.2, mina: 5.2, cantera: 5.2, torre: 6.4, vigia: 5.6 };
   // v6.82: empiezan chiquitos (45% al nivel 1) y crecen en cada nivel hasta su tamaño completo en el 30; el más grande (5,6) sigue siendo más chico que el castillo de nivel 1 (7)
-  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.4) * (0.6 + 0.4 * Math.pow((Math.min(12, n) - 1) / 11, 0.6)); }
+  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.4) * (0.6 + 0.4 * Math.pow((Math.min(16, n) - 1) / 15, 0.6)); }
   function encajarEnParcela(m, tr, tipo, nivel) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
     var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6);
@@ -3661,7 +3661,8 @@
         var fs = 30; x.font = '800 ' + fs + 'px system-ui, sans-serif'; while (x.measureText(nom).width > 150 && fs > 18) { fs -= 2; x.font = '800 ' + fs + 'px system-ui, sans-serif'; }
         x.fillText(nom, 100, 49);
         x.beginPath(); x.arc(W - 36, 48, 24, 0, Math.PI * 2); x.fillStyle = nivel >= 20 ? '#e0a23c' : nivel >= 10 ? '#7a5a2a' : '#4a3420'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#ffe9a0'; x.stroke();
-        x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '900 26px system-ui, sans-serif'; x.fillText(String(nivel), W - 36, 50);
+        x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '900 26px system-ui, sans-serif'; x.fillText(String(nivel), W - 36, nivel > NIVEL_ESTRELLA ? 56 : 50);
+        if (nivel > NIVEL_ESTRELLA) { x.fillStyle = '#ffe066'; x.font = '16px sans-serif'; x.fillText('★', W - 36, 34); }
         tex.needsUpdate = true;
       }
       pintar(null);

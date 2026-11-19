@@ -1031,9 +1031,9 @@ var M = (function () {
       m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       g.add(m);
       // v6.43: chico al empezar (nivel 1) y crece parejo hasta el nivel 30
-      var nn = Math.max(1, Math.min(12, n || 1));
+      var nn = Math.max(1, Math.min(16, n || 1));
       // v6.82: el castillo siempre es lo más grande: al nivel 1 ya es más grande que cualquier edificio y en el 30 llena la plaza
-      g.scale.setScalar(15 * (0.55 + 0.53 * Math.pow((nn - 1) / 11, 0.85)));
+      g.scale.setScalar(15 * (0.55 + 0.53 * Math.pow((nn - 1) / 15, 0.85)));
       g.userData.banderas = []; g.userData.etapa = e;
       // v6.56: banderas que ondean en lo alto de las torres (la más alta y la de cada esquina)
       try {
