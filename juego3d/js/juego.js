@@ -9017,6 +9017,16 @@
   $('barra-acciones').addEventListener('click', function (ev) { var b = ev.target.closest('[data-ba]'); if (b) accionBarra(b.getAttribute('data-ba')); });
   setTimeout(pintarVista, 60);
   $('mundo-lupa').addEventListener('click', function () { sonar('click'); abrirLupa(); });
+  // v6.86: botón 🏰 para volver a tu castillo en el mapa
+  function irAMiCastillo() {
+    if (!M3) return;
+    var v = $('lupa-flota'); if (v) v.remove();
+    var yo = celdaDe(miLugar().x, miLugar().y);
+    M3.obj.copy(posCelda(yo.x, yo.y)); M3.zoom = { de: M3.dist, a: 20, t0: performance.now() };
+    var p = posCelda(yo.x, yo.y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
+    elegirCelda(yo.x, yo.y);
+  }
+  $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-casa')) { ev.stopPropagation(); sonar('click'); irAMiCastillo(); return; } });
   $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-bestia')) { ev.stopPropagation(); sonar('click'); document.body.classList.toggle('mundo-buscando'); return; } sonar('click'); abrirLupa(); });
   // la barra de arriba se acomoda sola: nada queda tapado ni encimado
   function acomodarHUD() {
