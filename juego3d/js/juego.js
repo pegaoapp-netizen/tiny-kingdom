@@ -5754,17 +5754,16 @@
   // ---------- CUARTEL con diseño oscuro: cabecera, trabajo en curso, tarjetas y ficha ----------
   var ROMANO5 = ['', 'I', 'II', 'III', 'IV', 'V'];
   function rolTropa(t) { var f = FAMILIA[t]; return f === 'inf' ? L('Infantería', 'Infantry') : f === 'dist' ? L('Distancia', 'Ranged') : f === 'cab' ? L('Caballería', 'Cavalry') : L('Asedio', 'Siege'); }
+  // v6.65: el cuartel con las mismas pestañas de los demás edificios (Detalles / Entrenar tropas / Entrenando)
+  var subCuartel = 'basicas';
+  function esAvanzada(t) { return t !== 'carreta' && (TROPA_RANGO_ESTRELLAS[t] || 1) >= 2; }
   function htmlPestanasCuartel() {
-    var s = slots[slotElegido], tipo = s && s.edificio ? s.edificio.tipo : 'cuartel', nv = s && s.edificio ? s.edificio.nivel : 1;
-    var total = tropasNormales(), hay = colaEntreno.length;
-    var h = '<div class="cq-cab"><div class="cq-escudo">🛡️</div><div class="cq-tit"><small>' + L('MILITAR · NV ', 'MILITARY · LV ') + nv + '</small><b>' + N(tipo) + '</b></div>' +
-      '<div class="cq-stats"><div class="cq-stat"><span>👥</span><div><small>' + L('TROPAS', 'TROOPS') + '</small><b>' + formatoNumero(total) + '</b></div></div>' +
-      '<div class="cq-stat' + (hay ? ' activo' : '') + '"><span>🔨</span><div><small>' + L('COLA', 'QUEUE') + '</small><b class="cq-cola-t">' + (hay ? fmtTiempo(faltaEntreno()) : L('Libre', 'Idle')) + '</b></div></div></div></div>';
-    if (hay) h += '<button class="cq-trabajo" data-accion="cuartel-pest" data-p="cola"><span class="cq-martillo">🔨</span><span class="cq-tt">' + L('Entrenando ', 'Training ') + '<b>' + formatoNumero(hay) + ' ' + L('tropas', 'troops') + '</b></span><b class="cq-cola-t">' + fmtTiempo(faltaEntreno()) + '</b></button>';
-    return h + '<div class="subtabs cuartel-tabs">' + [['detalles', L('Detalles', 'Details')], ['entrenar', L('Entrenar tropas', 'Train troops')], ['cola', L('En entrenamiento', 'In training')]].map(function (q) {
-      var n = q[0] === 'cola' ? colaEntreno.length : 0;
-      return '<button data-accion="cuartel-pest" data-p="' + q[0] + '" class="' + (pestCuartel === q[0] ? 'activo' : '') + '">' + q[1] + (n ? ' <span class="mail-n">' + formatoNumero(n) + '</span>' : '') + '</button>';
+    var n = colaEntreno.length;
+    var h = '<div class="cafe-tabs ve-tabs">' + [['detalles', L('Detalles', 'Details')], ['entrenar', L('Entrenar tropas', 'Train troops')], ['cola', L('Entrenando', 'Training')]].map(function (q) {
+      return '<button data-accion="cuartel-pest" data-p="' + q[0] + '" class="' + (pestCuartel === q[0] ? 'activo' : '') + '">' + q[1] + (q[0] === 'cola' && n ? ' <span class="mail-n">' + formatoNumero(n) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
+    if (pestCuartel === 'entrenar' && !tropaDetalle) h += '<div class="al-sub cq2-sub"><button data-accion="cuartel-sub" data-s="basicas" class="' + (subCuartel === 'basicas' ? 'activo' : '') + '">' + L('Unidades básicas', 'Basic units') + '</button><button data-accion="cuartel-sub" data-s="avanzadas" class="' + (subCuartel === 'avanzadas' ? 'activo' : '') + '">' + L('Unidades avanzadas', 'Advanced units') + '</button></div>';
+    return h;
   }
   // ---------- FICHA DE TROPA dentro del cuartel: datos, Entrenar y Relevar ----------
   var tropaDetalle = null, pestDetalle = 'entrenar', cantDetalle = 1;
@@ -5820,13 +5819,12 @@
     if ($('det-btn')) { $('det-btn').innerHTML = '⚔️ ' + T('entrenar') + ' ×' + cantDetalle; $('det-btn').disabled = maxEntrenar(t) < 1; }
   }
   function htmlEntrenarLista() {
-    return '<div class="cq-rejilla">' + TROPAS_LISTA.map(function (t) {
-      if (t === 'carreta') { var cr = carretas(); return '<button class="cq-carta" data-accion="cuartel-carretas"><div class="cq-foto">' + fotoHTML('carreta', '<span class="cq-emoji">🛒</span>') + '<span class="cq-tier">T ' + ROMANO5[2] + '</span></div><div class="cq-info"><b>' + N('carreta') + '</b><div class="cq-fila"><span>' + L('Carga', 'Cargo') + '</span><span>' + formatoNumero(cr.n) + '</span></div></div></button>'; }
-      var na = nivelArmadura(t), ok = puedeEntrenarTipo(t), ent = infoCola().cuenta[t] || 0, est = TROPA_RANGO_ESTRELLAS[t] || 1, tier = Math.min(5, est + na), seg = '';
-      for (var k = 0; k < 4; k++) seg += '<i class="' + (k <= na ? 'si' : '') + '"></i>';
-      return '<button class="cq-carta' + (ok ? '' : ' bloq') + '" data-accion="cuartel-tropa" data-tipo="' + t + '"><div class="cq-foto">' + fotoHTML(t, '<span class="cq-emoji">' + TROPAS[t].icono + '</span>') + '<span class="cq-tier">T ' + ROMANO5[tier] + '</span>' +
-        (ent ? '<span class="cq-marca azul">🔨 ' + formatoNumero(ent) + '</span>' : ok ? '<span class="cq-marca">↑</span>' : '<span class="cq-marca gris">🔒</span>') + '</div>' +
-        '<div class="cq-info"><b>' + N(t) + '</b><div class="cq-fila"><span>' + rolTropa(t) + '</span><span>' + L('Tienes ', 'Owned ') + formatoNumero(cuentaTipo(t)) + '</span></div><small class="cq-frase">' + D(t) + '</small><span class="cq-flecha">›</span><div class="cq-nivel" title="' + T('rango') + ' ' + ROMANO[na] + '">' + seg + '</div>' + (ok ? '' : '<small class="cq-falta">' + avisoEdificioTropa(t) + '</small>') + '</div></button>';
+    return '<div class="cq2-lista">' + TROPAS_LISTA.filter(function (t) { return subCuartel === 'avanzadas' ? esAvanzada(t) : !esAvanzada(t); }).map(function (t) {
+      var esCar = t === 'carreta', ok = esCar || puedeEntrenarTipo(t), est = esCar ? 2 : (TROPA_RANGO_ESTRELLAS[t] || 1), ent = esCar ? 0 : (infoCola().cuenta[t] || 0), tiene = esCar ? carretas().n : cuentaTipo(t);
+      var estrellas = ''; for (var k = 0; k < est; k++) estrellas += '★';
+      return '<button class="cq2-fila' + (ok ? '' : ' bloq') + '" data-accion="' + (esCar ? 'cuartel-carretas' : 'cuartel-tropa') + '"' + (esCar ? '' : ' data-tipo="' + t + '"') + '>' +
+        '<span class="cq2-foto">' + fotoHTML(t, '<span class="cq-emoji">' + (esCar ? '🛒' : TROPAS[t].icono) + '</span>') + (ok ? '' : '<i class="cq2-candado">🔒</i>') + '<i class="cq2-est">' + estrellas + '</i>' + (ent ? '<i class="cq2-ent">🔨' + formatoNumero(ent) + '</i>' : '') + '</span>' +
+        '<span class="cq2-dat"><span class="cq2-top"><b>' + N(t) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(tiene) + '</small></span><span class="cq2-frase">' + D(t) + '</span></span><i class="cq2-flecha">›</i></button>';
     }).join('') + '</div>';
   }
   function htmlColaCuartel() {
@@ -5848,6 +5846,7 @@
     if (esCuartel && pestCuartel !== 'detalles') {
       var arribaP = panelActual && panelActual.tipo === 'edificio' && panelActual.slot === i && tropaDetalle ? $('panel').scrollTop : 0;
       abrirPanel(N(tipo) + ' (' + L('Nv ', 'Lv ') + nivel + ')', htmlPestanasCuartel() + (pestCuartel === 'entrenar' ? (tropaDetalle ? htmlFichaTropa(tropaDetalle) : htmlEntrenarLista()) : htmlColaCuartel()), { tipo: 'edificio', slot: i });
+      ponerCafe();
       if (tropaDetalle) { $('panel').scrollTop = arribaP; var sl = $('det-n'); if (sl) sl.addEventListener('input', function () { cantDetalle = +this.value; refrescarFicha(); }); refrescarFicha(); }
       return;
     }
@@ -8132,6 +8131,7 @@
     else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
+    else if (a === 'cuartel-sub') { sonar('click'); subCuartel = b.getAttribute('data-s'); abrirPanelEdificio(slotElegido); }
     else if (a === 'derribar-panel') {
       var dj = +b.getAttribute('data-slot'), sd3 = slots[dj]; if (!sd3 || !sd3.edificio) return;
       if (sd3.edificio.nivel <= 1) { cerrarPanel(); confirmarJuego('🧨 ' + T('demoler_titulo', { n: N(sd3.edificio.tipo) }), T('demoler_txt', { v: 1 }), T('demoler_si'), function () { demoler(dj); }); return; }
