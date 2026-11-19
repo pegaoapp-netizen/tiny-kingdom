@@ -853,6 +853,11 @@
     castillo = M.castilloEtapa(nvC);
     castillo.userData.castillo = true;
     castillo.rotation.y = Math.atan2(EJE_U.x, EJE_U.z) - GIRO_DIAG; // v6.49: la puerta mira de frente a la cámara en diagonal
+    // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
+    castillo.updateMatrixWorld(true);
+    var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
+    var metaC = 11 + 14 * Math.pow((Math.min(30, nvC) - 1) / 29, 0.8);
+    if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
@@ -3611,10 +3616,11 @@
   var MAX_EDIFICIO = [0, 2.35, 2.85, 3.25, 3.65];
   // v6.50: tamaño por importancia (el castillo manda; medianos llenan su parcela; cabaña y campos chiquitos)
   // y cada edificio crece un poco EN CADA NIVEL, del 1 al 30
-  var TAM_TIPO = { cuartel: 5.6, almacen: 5.6, embajada: 5.6, academia: 5.4, relevo: 5.2, mercado: 5.2, herreria: 5.0, establo: 5.2, enfermeria: 5.0, galeria: 5.0,
-    cabana: 2.6, granja: 3.2, aserradero: 3.2, mina: 3.2, cantera: 3.2 };
+  // v6.86: más grandes para que desde arriba se vean y se distingan (las parcelas miden 12)
+  var TAM_TIPO = { cuartel: 8.4, almacen: 8.2, embajada: 8.2, academia: 8.0, relevo: 7.6, mercado: 7.6, herreria: 7.4, establo: 7.6, enfermeria: 7.2, galeria: 7.4,
+    cabana: 4.6, granja: 5.2, aserradero: 5.2, mina: 5.2, cantera: 5.2, torre: 6.4, vigia: 5.6 };
   // v6.82: empiezan chiquitos (45% al nivel 1) y crecen en cada nivel hasta su tamaño completo en el 30; el más grande (5,6) sigue siendo más chico que el castillo de nivel 1 (7)
-  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 4.2) * (0.45 + 0.55 * Math.pow((n - 1) / 29, 0.6)); }
+  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.4) * (0.6 + 0.4 * Math.pow((n - 1) / 29, 0.6)); }
   function encajarEnParcela(m, tr, tipo, nivel) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
     var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6);
@@ -3624,17 +3630,36 @@
     m.position.y = 0.2;
   }
   var cacheChapa = {};
+  // v6.86: chapa con el DIBUJO del edificio, su NOMBRE y el nivel: desde arriba se sabe qué es cada cosa
   function chapaEdificio(tipo, nivel) {
-    var k = tipo + '|' + nivel;
+    var k = tipo + '|' + nivel + '|' + (estado.idioma || 'es');
     if (!cacheChapa[k]) {
-      var c = document.createElement('canvas'); c.width = 192; c.height = 96; var x = c.getContext('2d');
-      x.fillStyle = 'rgba(28, 18, 9, 0.88)'; x.strokeStyle = '#e8b84a'; x.lineWidth = 5;
-      x.beginPath(); x.moveTo(48, 8); x.lineTo(144, 8); x.arc(144, 48, 40, -Math.PI / 2, Math.PI / 2); x.lineTo(48, 88); x.arc(48, 48, 40, Math.PI / 2, Math.PI * 1.5); x.closePath(); x.fill(); x.stroke();
-      x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '50px sans-serif'; x.fillText((EDIFICIOS[tipo] && EDIFICIOS[tipo].icono) || '🏠', 56, 52);
-      x.fillStyle = nivel >= 20 ? '#ffd75a' : nivel >= 10 ? '#ffe9b0' : '#ffffff'; x.font = 'bold 44px sans-serif'; x.fillText(String(nivel), 132, 51);
-      cacheChapa[k] = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true });
+      var W = 320, H = 96, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
+      var tex = new THREE.CanvasTexture(c);
+      function pintar(img) {
+        x.clearRect(0, 0, W, H);
+        var gf = x.createLinearGradient(0, 14, 0, 82); gf.addColorStop(0, 'rgba(58,36,16,.94)'); gf.addColorStop(1, 'rgba(24,14,6,.94)');
+        x.fillStyle = gf; x.strokeStyle = '#e8b84a'; x.lineWidth = 4;
+        x.beginPath(); if (x.roundRect) x.roundRect(40, 18, W - 46, 60, 30); else x.rect(40, 18, W - 46, 60); x.fill(); x.stroke();
+        // medallón con el dibujo
+        x.beginPath(); x.arc(48, 48, 44, 0, Math.PI * 2); var gm = x.createRadialGradient(48, 40, 6, 48, 48, 44); gm.addColorStop(0, '#5a3a1e'); gm.addColorStop(1, '#1e1208'); x.fillStyle = gm; x.fill();
+        x.lineWidth = 5; x.strokeStyle = '#f2c45a'; x.stroke();
+        if (img) { x.save(); x.beginPath(); x.arc(48, 48, 40, 0, Math.PI * 2); x.clip(); x.drawImage(img, 6, 4, 84, 84); x.restore(); }
+        else { x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '44px sans-serif'; x.fillText((EDIFICIOS[tipo] && EDIFICIOS[tipo].icono) || '🏠', 48, 50); }
+        // nombre y nivel
+        var nom = N(tipo); x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = '#fff3d0';
+        var fs = 30; x.font = '800 ' + fs + 'px system-ui, sans-serif'; while (x.measureText(nom).width > 150 && fs > 18) { fs -= 2; x.font = '800 ' + fs + 'px system-ui, sans-serif'; }
+        x.fillText(nom, 100, 49);
+        x.beginPath(); x.arc(W - 36, 48, 24, 0, Math.PI * 2); x.fillStyle = nivel >= 20 ? '#e0a23c' : nivel >= 10 ? '#7a5a2a' : '#4a3420'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#ffe9a0'; x.stroke();
+        x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '900 26px system-ui, sans-serif'; x.fillText(String(nivel), W - 36, 50);
+        tex.needsUpdate = true;
+      }
+      pintar(null);
+      var arch = typeof RETRATOS_IMG !== 'undefined' && RETRATOS_IMG[tipo];
+      if (arch) { var im = new Image(); im.onload = function () { pintar(im); }; im.src = 'iconos/ui/' + arch + '.webp'; }
+      cacheChapa[k] = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
     }
-    var sp = new THREE.Sprite(cacheChapa[k]); sp.scale.set(3.8, 1.9, 1); sp.renderOrder = 11; return sp;
+    var sp = new THREE.Sprite(cacheChapa[k]); sp.scale.set(6.6, 2.0, 1); sp.renderOrder = 11; return sp;
   }
   function ponerEdificio(s, tipo, nivel) {
     if (s.modelo) s.grupo.remove(s.modelo);
