@@ -1780,6 +1780,29 @@
     g.add(M.cil(0.02, 0.02, 0.9, 5, 0x4a2c18, 0.15, 0.45, 0.15)); g.add(M.caja(0.24, 0.16, 0.02, 0xb0302a, 0.28, 0.82, 0.15));
     return g;
   }
+  // estandartes del mapa del mundo (se dibujan una vez y se reutilizan)
+  var cacheEstandarte = {};
+  function estandarteMundo(tipo, nivel) {
+    var k = tipo + '_' + nivel; if (cacheEstandarte[k]) return cacheEstandarte[k];
+    var W = 96, H = 144, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
+    var azul = tipo === 'yo' || tipo === 'aliado';
+    // barra y palo
+    x.fillStyle = '#5e3d24'; x.fillRect(W / 2 - 3, 0, 6, 12);
+    var gb = x.createLinearGradient(0, 8, 0, 18); gb.addColorStop(0, '#ffe9a0'); gb.addColorStop(1, '#a8701a'); x.fillStyle = gb; x.fillRect(6, 8, W - 12, 9);
+    x.beginPath(); x.arc(8, 12.5, 6, 0, Math.PI * 2); x.arc(W - 8, 12.5, 6, 0, Math.PI * 2); x.fill();
+    // tela con cola de golondrina
+    function tela() { x.beginPath(); x.moveTo(14, 17); x.lineTo(W - 14, 17); x.lineTo(W - 14, H - 8); x.lineTo(W / 2, H - 30); x.lineTo(14, H - 8); x.closePath(); }
+    var gt = x.createLinearGradient(14, 0, W - 14, 0);
+    if (azul) { gt.addColorStop(0, '#173f8a'); gt.addColorStop(0.5, '#3a7ae0'); gt.addColorStop(1, '#173f8a'); }
+    else { gt.addColorStop(0, '#7a1410'); gt.addColorStop(0.5, '#d8362a'); gt.addColorStop(1, '#7a1410'); }
+    tela(); x.fillStyle = gt; x.fill(); x.lineWidth = 4; x.strokeStyle = '#f2c45a'; x.stroke();
+    x.lineWidth = 1.5; x.strokeStyle = 'rgba(0,0,0,.55)'; x.stroke();
+    // emblema
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    if (tipo === 'yo') { x.fillStyle = '#ffe27a'; x.font = '900 40px Georgia, serif'; x.lineWidth = 4; x.strokeStyle = '#3a2410'; x.strokeText(String(nivel), W / 2, 62); x.fillText(String(nivel), W / 2, 62); x.font = '26px serif'; x.fillText('👑', W / 2, 30); }
+    else { x.font = '38px serif'; x.fillStyle = '#ffe27a'; x.fillText(tipo === 'aliado' ? '🛡️' : tipo === 'hostil' ? '💀' : '⚔️', W / 2, 60); }
+    var t = new THREE.CanvasTexture(c); cacheEstandarte[k] = t; return t;
+  }
   var CERCA_COSAS = 20;
   function ponerCosasMundo(lista, yo) {
     if (!M3) crearMundo3D();
@@ -1809,14 +1832,13 @@
       var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, M3.camelot ? 2.0 : 2.7, 0); et.scale.multiplyScalar(M3.camelot ? 0.52 : 0.62); g.add(et); et.visible = false;
       // v6.57: banderas al frente del dibujo del castillo: azul tu alianza, roja los hostiles (los que te atacaron)
       var hostil = !esYo && !aliada && (estado.enemigos || {})[a.uid];
-      function banderaReino(color, marca) {
-        var fb = new THREE.Group(); fb.add(M.cil(0.05, 0.05, 1.7, 6, 0x5e3d24, 0, 0.85, 0)); fb.add(M.caja(0.62, 0.42, 0.04, color, 0.34, 1.45, 0)); fb.add(M.caja(0.2, 0.2, 0.05, marca, 0.34, 1.45, 0.03));
-        fb.traverse(function (o) { if (o.isMesh) { o.material = o.material.clone(); o.material.depthTest = false; o.material.transparent = true; o.renderOrder = 6; } });
-        fb.scale.setScalar(1.8); fb.position.set(0.55, 0.3, -0.55); return fb;
+      // v6.86: estandarte colgante dibujado (siempre mira a la cámara): azul tú y tu alianza, rojo los demás
+      function banderaReino(tipo) {
+        var cs = estandarteMundo(tipo, esYo ? (estado.castillo || 1) : 0);
+        var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: cs, depthTest: false, transparent: true }));
+        sp.renderOrder = 7; sp.scale.set(0.9, 1.35, 1); sp.center.set(0.5, 0); sp.position.set(-0.75, 0.25, 0.2); return sp;
       }
-      // v6.86: azul = tú y tu alianza; roja = todos los demás reinos (enemigos)
-      if (esYo || aliada) g.add(banderaReino(0x2a6ad0, 0xf2c45a));
-      else g.add(banderaReino(0xc0281e, hostil ? 0x1a1a1a : 0xf2c45a));
+      g.add(banderaReino(esYo ? 'yo' : aliada ? 'aliado' : hostil ? 'hostil' : 'enemigo'));
       if (esYo) { var brillo = new THREE.Mesh(new THREE.CircleGeometry(1.25, 28), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.38, depthWrite: false })); brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.03; g.add(brillo); M3.brilloYo = brillo; }
       if (prot) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.3, depthWrite: false })); g.add(cup); }
       g.position.copy(p); M3.cosas.add(g);
@@ -9027,7 +9049,43 @@
     var p = posCelda(yo.x, yo.y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
     elegirCelda(yo.x, yo.y);
   }
-  $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-casa')) { ev.stopPropagation(); sonar('click'); irAMiCastillo(); return; } });
+  // v6.86: 🔖 LUGARES GUARDADOS: guarda el sitio que miras y vuelve a él con un toque
+  function irACeldaMundo(x, y) {
+    if (!M3) return;
+    x = Math.max(0, Math.min(TAM_MUNDO - 1, Math.round(x) || 0)); y = Math.max(0, Math.min(TAM_MUNDO - 1, Math.round(y) || 0));
+    M3.obj.copy(posCelda(x, y)); M3.zoom = { de: M3.dist, a: 20, t0: performance.now() };
+    var p = posCelda(x, y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
+    elegirCelda(x, y);
+  }
+  function abrirFavoritos() {
+    if (!M3) return;
+    var v = $('lupa-flota'); if (v) { var era = v.dataset.fav; v.remove(); if (era) return; }
+    estado.favoritos = estado.favoritos || [];
+    var cx = Math.floor(M3.obj.x / CELDA_M + TAM_MUNDO / 2), cy = Math.floor(M3.obj.z / CELDA_M + TAM_MUNDO / 2);
+    var d = document.createElement('div'); d.id = 'lupa-flota'; d.dataset.fav = '1';
+    function pintar() {
+      d.innerHTML = '<div class="lf-caja fav-caja"><input id="fav-nom" maxlength="20" placeholder="' + L('Nombre del lugar', 'Place name') + '" value=""><span class="fav-xy">X ' + cx + ' · Y ' + cy + '</span>' +
+        '<button class="lf-ok" id="fav-guardar" aria-label="' + L('Guardar', 'Save') + '">🔖</button><button class="lf-no" id="fav-cerrar" aria-label="Cerrar">✕</button></div>' +
+        '<div class="lf-pie">' + L('Guarda el lugar que estás mirando. Máximo 20.', 'Save the spot you are looking at. Up to 20.') + '</div>' +
+        (estado.favoritos.length ? '<div class="lf-reinos">' + estado.favoritos.map(function (f, i) {
+          return '<span class="fav-fila"><button class="lupa-reino" data-i="' + i + '">🔖 ' + escaparHTML(f.n) + ' <small>(' + f.x + ', ' + f.y + ')</small></button><button class="fav-borrar" data-b="' + i + '" aria-label="' + L('Borrar', 'Delete') + '">✕</button></span>';
+        }).join('') + '</div>' : '<div class="lf-pie">' + L('Todavía no tienes lugares guardados.', 'No saved places yet.') + '</div>');
+      $('fav-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); });
+      $('fav-guardar').addEventListener('click', function () {
+        if (estado.favoritos.length >= 20) { consejoTemporal(L('Ya tienes 20 lugares: borra uno primero.', 'You have 20 places: delete one first.')); sonar('error'); return; }
+        var n = ($('fav-nom').value || '').trim() || ('X ' + cx + ' · Y ' + cy);
+        estado.favoritos.push({ n: n.slice(0, 20), x: cx, y: cy }); sonar('moneda'); guardar(true); pintar();
+      });
+      $('fav-nom').addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); $('fav-guardar').click(); } });
+      Array.prototype.forEach.call(d.querySelectorAll('[data-i]'), function (bt) { bt.addEventListener('click', function () { var f = estado.favoritos[+bt.dataset.i]; if (!f) return; sonar('click'); d.remove(); irACeldaMundo(f.x, f.y); }); });
+      Array.prototype.forEach.call(d.querySelectorAll('[data-b]'), function (bt) { bt.addEventListener('click', function () { sonar('click'); estado.favoritos.splice(+bt.dataset.b, 1); guardar(true); pintar(); }); });
+    }
+    $('mundo').appendChild(d); pintar();
+  }
+  $('mundo-xy').addEventListener('click', function (ev) {
+    if (ev.target.closest('.mxy-casa')) { ev.stopPropagation(); sonar('click'); irAMiCastillo(); return; }
+    if (ev.target.closest('.mxy-fav')) { ev.stopPropagation(); sonar('click'); abrirFavoritos(); return; }
+  });
   $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-bestia')) { ev.stopPropagation(); sonar('click'); document.body.classList.toggle('mundo-buscando'); return; } sonar('click'); abrirLupa(); });
   // la barra de arriba se acomoda sola: nada queda tapado ni encimado
   function acomodarHUD() {
