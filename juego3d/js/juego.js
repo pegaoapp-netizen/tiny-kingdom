@@ -5317,6 +5317,18 @@
     $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel', 'hi-panel', 'fo-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
+  // v6.72: si tocas o deslizas el dedo sobre el mapa (fuera de la ventana), la ventana abierta se cierra sola
+  (function () {
+    var fuera = null;
+    function esMapa(t) { return t && t.tagName === 'CANVAS' && !!(t.closest('#juego') || t.closest('#mundo-mapa')); }
+    document.addEventListener('pointerdown', function (ev) {
+      var abierta = (panelActual && !$('panel').classList.contains('oculto')) || ($('menu-grande') && !$('menu-grande').classList.contains('oculto'));
+      fuera = abierta && esMapa(ev.target) ? { x: ev.clientX, y: ev.clientY } : null;
+    }, true);
+    function cerrarTodo() { if (panelActual) cerrarPanel(); if (typeof cerrarMenuGrande === 'function') cerrarMenuGrande(); }
+    document.addEventListener('pointermove', function (ev) { if (fuera && Math.hypot(ev.clientX - fuera.x, ev.clientY - fuera.y) > 8) { fuera = null; cerrarTodo(); } }, true);
+    document.addEventListener('pointerup', function () { if (fuera) { fuera = null; cerrarTodo(); } }, true);
+  })();
   function cerrarPanel() {
     $('panel').classList.add('oculto'); $('panel').classList.remove('oscuro'); $('panel').classList.remove('tropas-oscuro');
     document.body.classList.remove('panel-abierto');
