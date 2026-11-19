@@ -706,6 +706,7 @@ var TIENDA = [
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
 // Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
 var ICONOS_IMG = {
+  libro_peq: 'o_libro', libro_gra: 'o_tomo', pergamino: 'o_pergamino', portal_azar: 'o_portal_azar',
   lingote: 'o_lingote',
   acelerador: 'o_acel', acel_1m: 'o_acel', acel_5m: 'o_acel', acel_15m: 'o_acel', acel_1h: 'o_acel', acel_2h5: 'o_acel', acel_8h: 'o_acel', acel_12h: 'o_acel', acel_15h: 'o_acel', acel_24h: 'o_acel',
   inv_1m: 'o_arcano', inv_15m: 'o_arcano', inv_1h: 'o_arcano', inv_2h5: 'o_arcano', inv_8h: 'o_arcano', inv_15h: 'o_arcano', inv_24h: 'o_arcano', inv_3d: 'o_arcano',
