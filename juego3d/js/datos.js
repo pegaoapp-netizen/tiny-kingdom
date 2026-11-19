@@ -706,8 +706,14 @@ var TIENDA = [
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
 // Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
 var ICONOS_IMG = {
-  cofre_oro: 'o_cofre_oro'
+  cofre_oro: 'o_cofre_oro',
+  cofre_acel: 'o_cofre_acel',
+  cofre_equipo: 'o_cofre_equipo',
+  cofre_tesoro: 'o_cofre_tesoro', pack_tesoro7: 'o_cofre_tesoro', pack_tesoro15: 'o_cofre_tesoro',
+  cofre_mejora1: 'o_cofre_mejora', cofre_mejora2: 'o_cofre_mejora', cofre_mejora3: 'o_cofre_mejora', cofre_mejora4: 'o_cofre_mejora'
 };
+// la ficha de la suerte del Azar
+var ICONO_FICHA = '<img class="ico-obj" src="iconos/ui/o_ficha.webp" alt="🪙" draggable="false">';
 Object.keys(ICONOS_IMG).forEach(function (k) {
   if (!OBJETOS[k]) return;
   OBJETOS[k].emoji = OBJETOS[k].icono;

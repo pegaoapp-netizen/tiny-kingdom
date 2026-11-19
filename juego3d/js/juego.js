@@ -7962,7 +7962,7 @@
       }).join('') +
       (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta" data-accion="azar-sacar" data-n="1">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
         L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
-      '<p class="az-tienes">🪙 ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
+      '<p class="az-tienes">' + ICONO_FICHA + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
       '<div class="az-botones"><button class="az-b verde" data-accion="azar-sacar" data-n="1"' + (n >= costo ? '' : ' disabled') + '>' + L('Sacar 1', 'Draw 1') + '</button>' +
       (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : '<button class="az-b azul" data-accion="azar-sacar" data-n="9"' + (n >= 9 ? '' : ' disabled') + '>' + L('Sacar 9', 'Draw 9') + '</button>') + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
