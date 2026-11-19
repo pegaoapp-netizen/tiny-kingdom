@@ -703,6 +703,17 @@ var TIENDA = [
   { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' }
 ];
 // Investigación: 3 ramas. 'cada' = cuánto mejora cada nivel.
+// v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
+// Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
+var ICONOS_IMG = {
+  cofre_oro: 'o_cofre_oro'
+};
+Object.keys(ICONOS_IMG).forEach(function (k) {
+  if (!OBJETOS[k]) return;
+  OBJETOS[k].emoji = OBJETOS[k].icono;
+  OBJETOS[k].icono = '<img class="ico-obj" src="iconos/ui/' + ICONOS_IMG[k] + '.webp" alt="' + OBJETOS[k].emoji + '" draggable="false">';
+});
+
 var INVESTIGACION = {
   crecimiento: [
     { id: 'obras', icono: '🔨', max: 6, cada: 0.08 },     // obras más rápidas
