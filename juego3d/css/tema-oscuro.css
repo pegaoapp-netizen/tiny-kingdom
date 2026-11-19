@@ -1034,3 +1034,44 @@ body.tema-oscuro #panel .cq2-frase { color: #cdb88e !important; font: 13px/1.35 
 .cs-color.activo { border-color: #f2c45a; box-shadow: 0 0 8px rgba(242,196,90,.5); }
 .cs-color i { width: 40px; height: 28px; border-radius: 2px 8px 8px 2px; border: 1px solid #000; clip-path: polygon(0 0, 100% 0, 85% 50%, 100% 100%, 0 100%); }
 .cs-color span { color: #e8d6b0; font: 12px Georgia, serif; }
+
+/* ---------------- v6.67: LISTA DE HÉROES (pergamino, parrilla de retratos) ---------------- */
+body.tema-oscuro #panel.hl-panel { background: linear-gradient(180deg, #f1e2bf, #dcc596) !important; border: 2px solid #8a6a3a !important; }
+body.tema-oscuro #panel.hl-panel .panel-cab { background: linear-gradient(180deg, #3a2a1a, #23180d) !important; border-bottom: 2px solid #c8a764 !important; }
+body.tema-oscuro #panel.hl-panel #panel-titulo { color: #f3e3bd !important; text-align: center; flex: 1; font: 700 20px Georgia, serif !important; }
+body.tema-oscuro #panel.hl-panel .subtabs button { color: #2b1d0e !important; }
+.hl-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0; }
+.hl-tabs button { padding: 10px 6px; border-radius: 6px; border: 2px solid #2a1a0c; background: linear-gradient(180deg, #2e1d0e, #1a1006); color: #f2c45a; font: 600 15px Georgia, serif; cursor: pointer; }
+.hl-tabs button.activo { background: linear-gradient(180deg, #8a5a30, #5e3a1c); color: #fff; }
+.hl-txt { padding: 10px 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #b8955a; border-top: 6px solid #c8a46a; background: rgba(255,248,225,.55); color: #6a4a24; font: 13px/1.4 Georgia, serif; }
+body.tema-oscuro #panel.hl-panel .hl-txt b { color: #2b1d0e !important; }
+.hl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px 6px; }
+.hl-card { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 0; border: 0; background: none; cursor: pointer; }
+.hl-foto { position: relative; width: 100%; aspect-ratio: 3 / 4; border-radius: 8px; overflow: hidden; border: 3px solid #c8843a; box-shadow: 0 0 0 1px #6a3a10, 0 3px 6px rgba(0,0,0,.35); background: radial-gradient(circle at 50% 70%, #ffd06a, #e0702a 60%, #8a2a10); display: grid; place-items: center; font-size: 34px; }
+.hl-card.legendario .hl-foto { border-color: #f2c45a; } .hl-card.raro .hl-foto { border-color: #c8843a; } .hl-card.comun .hl-foto { border-color: #a8a8a8; background: radial-gradient(circle at 50% 70%, #cfe0f0, #5a8ab0 60%, #1a3a5a); }
+.hl-foto img, .hl-foto canvas { width: 100%; height: 100%; object-fit: cover; }
+.hl-card.bloq .hl-foto img, .hl-card.bloq .hl-foto canvas { filter: grayscale(.85) brightness(.7); }
+.hl-corona { position: absolute; top: 2px; right: 2px; font-style: normal; font-size: 16px; line-height: 1; }
+.hl-corona b { position: absolute; inset: 0; display: grid; place-items: center; font: 700 9px/1 Georgia, serif; color: #3a2408; padding-top: 3px; }
+.hl-torre { position: absolute; left: 2px; bottom: 2px; font-style: normal; font-size: 14px; display: flex; align-items: center; gap: 1px; background: rgba(0,0,0,.45); border-radius: 4px; padding: 0 3px; }
+.hl-torre b { color: #fff; font: 700 11px Georgia, serif; }
+.hl-candado { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-size: 26px; background: rgba(0,0,0,.25); }
+.hl-sube { position: absolute; top: 2px; left: 2px; font-style: normal; font-size: 12px; color: #fff; background: #3c9a2e; border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; }
+body.tema-oscuro #panel.hl-panel .hl-nv { color: #3a2a1a !important; font: 13px Georgia, serif; margin-top: 3px; }
+body.tema-oscuro #panel.hl-panel .hl-nom { color: #2b1d0e !important; font: 600 13px/1.1 Georgia, serif; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hl-arbol { display: flex; flex-direction: column; gap: 12px; }
+.hl-rama { border: 1px solid #b8955a; border-radius: 8px; padding: 8px; background: rgba(255,248,225,.45); }
+body.tema-oscuro #panel.hl-panel .hl-raiz { text-align: center; color: #fff !important; font: 700 15px Georgia, serif; background: linear-gradient(180deg, #8a5a30, #5e3a1c); border-radius: 6px; padding: 6px; margin: 0 auto 10px; width: 60%; position: relative; }
+.hl-hojas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; }
+.hl-hoja { display: flex; flex-direction: column; align-items: center; gap: 2px; border: 0; background: none; cursor: pointer; }
+.hl-hoja span { width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 2px solid #c8843a; background: #e0702a; display: grid; place-items: center; font-size: 28px; }
+.hl-hoja span img, .hl-hoja span canvas { width: 100%; height: 100%; object-fit: cover; }
+.hl-hoja.bloq span { filter: grayscale(.85); }
+body.tema-oscuro #panel.hl-panel .hl-hoja b { color: #2b1d0e !important; font: 600 12px Georgia, serif; } body.tema-oscuro #panel.hl-panel .hl-hoja small { color: #6a4a24 !important; font: 11px Georgia, serif; }
+body.tema-oscuro #panel.hl-panel .carta { background: rgba(255,248,225,.6) !important; border: 1px solid #b8955a !important; }
+body.tema-oscuro #panel.hl-panel .carta, body.tema-oscuro #panel.hl-panel .carta h3, body.tema-oscuro #panel.hl-panel .carta .nota { color: #2b1d0e !important; }
+.hl-grid { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+.hl-card { min-width: 0; width: 100%; }
+.hl-foto { width: 100% !important; height: auto !important; }
+.hl-foto > *:not(i) { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: grid; place-items: center; }
+.hl-nv, .hl-nom { width: 100%; text-align: center; }

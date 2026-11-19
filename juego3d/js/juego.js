@@ -5307,7 +5307,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
-    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -6105,16 +6105,31 @@
       fotoHTML('h_' + h.id, '🦸') + '<span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span>' + (e && estado.equipo.indexOf(h.id) >= 0 ? '<span class="eq">' + T('en_equipo') + '</span>' : '') +
       '<span class="nom">' + NH(h.id) + '</span><span class="nv">' + (e ? T('nivel_corto') + ' ' + e.nivel : '🔒') + '</span><span class="est">' + est + '</span></button>';
   }
+  var hlTab = 'lista';
+  function cartaHeroeLista(h) {
+    var e = estado.heroes[h.id], est = e ? e.estrellas : 0;
+    return '<button class="hl-card ' + h.rareza + (e ? '' : ' bloq') + '" data-accion="heroe-ver" data-id="' + h.id + '"><span class="hl-foto">' + fotoHTML('h_' + h.id, '🦸') + '<i class="hl-corona">👑<b>' + (est || '') + '</b></i>' +
+      (e ? '<i class="hl-torre">🏰<b>' + (estado.equipo.indexOf(h.id) >= 0 ? '★' : (e.estrellas || 1)) + '</b></i>' : '<i class="hl-candado">🔒</i>') + (e && heroeMejorable(h.id) ? '<i class="hl-sube">⬆</i>' : '') + '</span>' +
+      '<span class="hl-nv">' + (e ? L('Nvl.', 'Lvl.') + e.nivel : L('Bloqueado', 'Locked')) + '</span><span class="hl-nom">' + NH(h.id) + '</span></button>';
+  }
+  function htmlArbolHeroes() {
+    var clases = {}; HEROES.forEach(function (h) { (clases[h.clase] = clases[h.clase] || []).push(h); });
+    return '<div class="hl-arbol">' + Object.keys(clases).map(function (c) {
+      return '<div class="hl-rama"><div class="hl-raiz">' + CLASES_HEROE[c] + ' ' + ({ infanteria: L('Infantería', 'Infantry'), arquero: L('Arqueros', 'Archers'), magia: L('Magia', 'Magic'), guardian: L('Guardianes', 'Guardians') }[c] || c) + '</div><div class="hl-hojas">' + clases[c].map(function (h) { var e = estado.heroes[h.id]; return '<button class="hl-hoja' + (e ? '' : ' bloq') + '" data-accion="heroe-ver" data-id="' + h.id + '"><span>' + fotoHTML('h_' + h.id, '🦸') + '</span><b>' + NH(h.id) + '</b><small>' + (e ? L('Nvl.', 'Lvl.') + e.nivel + ' · ' + '★'.repeat(e.estrellas || 1) : '🔒') + '</small></button>'; }).join('') + '</div></div>';
+    }).join('') + '</div>';
+  }
   function abrirPanelHeroes() {
     vistos().tropasDia = hoyTexto();
     var orden = { legendario: 0, raro: 1, comun: 2 };
     var lista = HEROES.slice().sort(function (a, b) { return (estado.heroes[b.id] ? 1 : 0) - (estado.heroes[a.id] ? 1 : 0) || orden[a.rareza] - orden[b.rareza]; });
-    var html = subtabsHeroes('heroes') + '<p class="nota">' + T('heroes_txt') + ' <b>' + T('equipo_n', { n: estado.equipo.length }) + '</b></p>' +
-      '<div class="heroes-grid">' + lista.map(tarjetaHeroe).join('') + '</div>' +
+    // v6.67: LISTA DE HÉROES como la foto del dueño: pestañas Lista / Árbol de habilidades, texto, y parrilla con retrato, corona, nivel y nombre (también los que no tienes)
+    var html = subtabsHeroes('heroes') + '<div class="hl-tabs"><button data-accion="hl-tab" data-t="lista" class="' + (hlTab === 'lista' ? 'activo' : '') + '">' + L('Lista', 'List') + '</button><button data-accion="hl-tab" data-t="arbol" class="' + (hlTab === 'arbol' ? 'activo' : '') + '">' + L('Árbol de habilidades', 'Skill tree') + '</button></div>' +
+      '<div class="hl-txt">' + L('Aquí ves a todos los héroes del reino, también los que todavía no tienes. Consigue más héroes reclutando y avanzando en la campaña.', 'Here you see every hero of the kingdom, even the ones you do not have yet. Get more heroes by recruiting and advancing in the campaign.') + ' <b>' + T('equipo_n', { n: estado.equipo.length }) + '</b></div>' +
+      (hlTab === 'lista' ? '<div class="hl-grid">' + lista.map(cartaHeroeLista).join('') + '</div>' : htmlArbolHeroes()) +
       '<div class="carta" style="margin-top:10px"><h3>🦸 ' + T('reclutar') + '</h3><p class="nota">' + T('reclutar_txt') + '</p><div class="stats">' +
       (reclutaGratisHoy() ? '<button class="comprar naranja" data-accion="reclutar" data-n="gratis">' + T('reclutar_gratis') + '</button>' : botonGemas(RECLUTAR.uno, 'reclutar', 'data-n="1"', '×1')) +
       botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>';
-    abrirPanel(T('p_heroes'), html, { tipo: 'heroes' });
+    abrirPanel(L('Héroes', 'Heroes'), html, { tipo: 'heroes' }); $('panel').classList.add('hl-panel');
   }
   // ---------- EQUIPO DE LOS HÉROES: 6 espacios, cada pieza con rareza y nivel ----------
   var TIPOS_EQ = ['arma', 'casco', 'pechera', 'guantes', 'botas', 'amuleto'];
@@ -8174,6 +8189,7 @@
     else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
+    else if (a === 'hl-tab') { sonar('click'); hlTab = b.getAttribute('data-t'); abrirPanelHeroes(); }
     else if (a === 'cast-tab') { sonar('click'); castTab = b.getAttribute('data-t'); abrirPanelCastillo(); }
     else if (a === 'cast-defensa') { estado.tropasDefienden = estado.tropasDefienden === false; sonar('click'); actualizarBotonDefensa(); consejoTemporal(T(estado.tropasDefienden ? 'def_on_txt' : 'def_off_txt')); guardar(true); publicarAldea(true); abrirPanelCastillo(); }
     else if (a === 'cast-color') { sonar('click'); estado.colorBandera = b.getAttribute('data-c'); pintarBanderasCastillo(); guardar(true); abrirPanelCastillo(); }
