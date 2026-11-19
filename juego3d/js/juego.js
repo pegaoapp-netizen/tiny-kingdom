@@ -7958,9 +7958,9 @@
     var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button><button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + '</button></div>' +
       '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
-        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '">' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
+        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
-      (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
+      (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta" data-accion="azar-sacar" data-n="1">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
         L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
       '<p class="az-tienes">🪙 ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
       '<div class="az-botones"><button class="az-b verde" data-accion="azar-sacar" data-n="1"' + (n >= costo ? '' : ' disabled') + '>' + L('Sacar 1', 'Draw 1') + '</button>' +
@@ -9460,12 +9460,91 @@
   $('btn-pausa').addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarPausa(); });
   // cola de entrenamiento siempre a la vista
   function actualizarPillEntreno() {
+    try { actualizarDock(); } catch (e) {}
     var p = $('pill-entreno'); if (!p) return;
     if (!colaEntreno.length) { p.classList.add('oculto-pill'); return; }
     p.classList.remove('oculto-pill');
     $('entreno-t').textContent = '×' + colaEntreno.length + ' · ' + fmtTiempo(faltaEntreno());
   }
   $('pill-entreno').addEventListener('click', function () { if (enMenu) return; sonar('click'); abrirPanelTropas(); });
+  // ---------- v6.86: PANEL DE PROCESOS abajo a la derecha (pestañas Territorios / Marchar / Tropas / Procesos, se pliega con la flecha) ----------
+  var dockPest = 'tropas', dockAbierto = true;
+  try { var dp = JSON.parse(localStorage.getItem('tinykingdom_dock') || '{}'); if (dp.p) dockPest = dp.p; if (dp.a === false) dockAbierto = false; } catch (e) {}
+  function guardarDock() { try { localStorage.setItem('tinykingdom_dock', JSON.stringify({ p: dockPest, a: dockAbierto })); } catch (e) {} }
+  function slotRelevo() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'relevo'; })[0]; }
+  function crearDock() {
+    if ($('dock-procesos')) return $('dock-procesos');
+    var d = document.createElement('div'); d.id = 'dock-procesos';
+    d.innerHTML = '<div class="dk-tabs">' + [['territorios', L('Territorios', 'Territories')], ['marchar', L('Marchar', 'March')], ['tropas', L('Tropas', 'Troops')], ['procesos', L('Procesos', 'Activity')]].map(function (t) {
+      return '<button data-dk="' + t[0] + '">' + t[1] + '<span class="dk-punto"></span></button>';
+    }).join('') + '<button class="dk-flecha" data-dk="flecha" title="' + L('Mostrar / ocultar', 'Show / hide') + '"></button></div>' +
+      '<div class="dk-fila"><span class="dk-txt" id="dk-txt"></span><button class="dk-accion" id="dk-accion"></button></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-dk]'); if (!b || enMenu) return;
+      sonar('click');
+      var k = b.getAttribute('data-dk');
+      if (k === 'flecha') dockAbierto = !dockAbierto;
+      else if (k === dockPest && dockAbierto) dockAbierto = false;
+      else { dockPest = k; dockAbierto = true; }
+      guardarDock(); actualizarDock();
+    });
+    $('dk-accion').addEventListener('click', function () {
+      if (enMenu) return; sonar('click');
+      var a = this.getAttribute('data-a');
+      if (a === 'mundo') irAlMundo();
+      else if (a === 'tropas') abrirPanelTropas();
+      else if (a === 'marchas') { var r = slotRelevo(); if (r) abrirReunion(r.i, 'marchas'); else irAlMundo(); }
+      else if (a === 'invest') abrirArbolTalentos();
+    });
+    return d;
+  }
+  function actualizarDock() {
+    var d = crearDock();
+    var ocultar = enMenu || enMundo || !!panelActual || document.body.classList.contains('panel-abierto');
+    d.classList.toggle('oculto', ocultar);
+    if (ocultar) return;
+    // va justo encima de la barra del chat (o de la barra de abajo)
+    var ref = $('chat-barra') || $('abajo');
+    if (ref) { var y = Math.max(0, window.innerHeight - ref.getBoundingClientRect().top) + 4; if (d.dataset.y !== String(y)) { d.dataset.y = y; d.style.bottom = y + 'px'; } }
+    d.classList.toggle('cerrado', !dockAbierto);
+    var ahora = Date.now();
+    var nMarchas = marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).length;
+    var tMarcha = 0;
+    marchasPVE.forEach(function (m) { tMarcha = Math.max(tMarcha, (m.llega - ahora) / 1000); });
+    marchas.forEach(function (m) { if (!m.resuelto && m.llega > ahora) tMarcha = Math.max(tMarcha, (m.llega - ahora) / 1000); });
+    var activo = { territorios: misCasillas().length > 0, marchar: nMarchas > 0, tropas: colaEntreno.length > 0, procesos: !!estado.investigando };
+    d.querySelectorAll('.dk-tabs [data-dk]').forEach(function (b) {
+      var k = b.getAttribute('data-dk');
+      b.classList.toggle('activo', dockAbierto && k === dockPest);
+      b.classList.toggle('con-algo', !!activo[k]);
+    });
+    if (!dockAbierto) return;
+    var txt = '', btn = '', acc = '', lleno = false;
+    if (dockPest === 'territorios') {
+      lleno = activo.territorios;
+      txt = lleno ? '🚩 ' + L('Tus territorios: ', 'Your territories: ') + '<b>' + misCasillas().length + '/' + maxCasillas() + '</b>' : L('No tienes ningún territorio todavía.', 'You have no territories yet.');
+      btn = lleno ? L('Ver', 'View') : L('Conquistar', 'Conquer'); acc = 'mundo';
+    } else if (dockPest === 'marchar') {
+      lleno = activo.marchar;
+      txt = lleno ? '🏇 ' + L('Marchando', 'Marching') + ' ×' + nMarchas + ' · <b>⏱ ' + fmtTiempo(Math.ceil(tMarcha)) + '</b>' : L('No hay ninguna marcha activa.', 'No active marches.');
+      btn = lleno ? L('Ver', 'View') : L('Marchar', 'March'); acc = lleno ? 'marchas' : 'mundo';
+    } else if (dockPest === 'tropas') {
+      lleno = activo.tropas;
+      txt = lleno ? '⚔️ ' + L('Entrenando', 'Training') + ' ×' + colaEntreno.length + ' · <b>⏱ ' + fmtTiempo(faltaEntreno()) + '</b>' : L('No hay tropas entrenando.', 'No troops in training.');
+      btn = lleno ? L('Ver', 'View') : L('Entrenar', 'Train'); acc = 'tropas';
+    } else {
+      var inv = estado.investigando; lleno = !!inv;
+      var ti = inv ? buscarTec(inv.id) : null;
+      txt = lleno ? '📚 ' + (ti ? ti.icono + ' ' : '') + N('inv_' + inv.id) + ' → ' + L('Nv ', 'Lv ') + inv.nivel + ' · <b>⏱ ' + fmtTiempo(faltaInvestigacion()) + '</b>' : L('No hay ninguna investigación activa.', 'No research in progress.');
+      btn = lleno ? L('Ver', 'View') : L('Comenzar', 'Start'); acc = 'invest';
+    }
+    var t = $('dk-txt'), b = $('dk-accion');
+    if (t.dataset.h !== txt) { t.dataset.h = txt; t.innerHTML = txt; }
+    if (b.textContent !== btn) b.textContent = btn;
+    b.setAttribute('data-a', acc);
+    b.classList.toggle('ver', lleno);
+  }
   // ON: las tropas defienden cuando te atacan (y pueden morir). OFF: se quedan guardadas.
   function actualizarBotonDefensa() {
     var b = $('btn-defensa'); if (!b) return;
