@@ -5307,7 +5307,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
-    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel', 'hi-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel', 'hi-panel', 'fo-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -5424,7 +5424,7 @@
     else if (p.tipo === 'barricada') abrirPanelBarricada(p.i);
     else if (p.tipo === 'alianza') abrirPanelAlianza();
     else if (p.tipo === 'conquista') abrirPanelConquista();
-    else if (p.tipo === 'investigacion') abrirPanelInvestigacion(p.rama);
+    else if (p.tipo === 'investigacion') abrirPanelInvestigacion(p.rama, p.lista);
     else if (p.tipo === 'mochila') abrirPanelMochila();
     else if (p.tipo === 'tienda') abrirPanelTienda();
     else if (p.tipo === 'ajustes') abrirPanelAjustes();
@@ -6591,7 +6591,40 @@
   function academiaLista() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'academia'; }).sort(function (a, b) { return b.edificio.nivel - a.edificio.nivel; })[0]; }
   function buscarTec(id) { for (var r in INVESTIGACION) for (var k = 0; k < INVESTIGACION[r].length; k++) if (INVESTIGACION[r][k].id === id) return INVESTIGACION[r][k]; return null; }
   function textoTec(t, lv) { var v = t.cada * lv; return D('inv_' + t.id).replace('{v}', t.cada >= 1 ? v : Math.round(v * 100)); }
-  function abrirPanelInvestigacion(rama) {
+  // v6.69: ÁRBOL DE TALENTOS: pestañas Militar / Civil, el talento principal arriba y los demás unidos con líneas
+  var vistaInv = 'arbol', ramaArbol = 'militar', nodoArbol = null;
+  var ARBOL = {
+    militar: [['espadas'], ['t_espadachin_ataque', 't_caballeria_ataque', 't_arquero_ataque'], ['t_espadachin_vida', 't_caballeria_vida', 't_arquero_vida'], ['escudos', 'flechas', 'muros']],
+    civil: [['obras'], ['cosecha', 'lenadores', 'canteros'], ['impuestos', 'carga', 'entreno'], ['cuarteles']]
+  };
+  function abrirArbolTalentos() {
+    var aca = academiaLista(), tope = aca ? EDIFICIOS.academia.tope[aca.edificio.nivel - 1] : 0, inv = estado.investigando;
+    var html = '<div class="cafe-tabs ve-tabs"><button data-accion="cafe-det" data-slot="' + (aca ? aca.i : '') + '">' + L('Detalles', 'Details') + '</button><button class="activo">' + L('Dominar', 'Master') + '</button></div>' +
+      '<div class="al-sub ta-sub"><button data-accion="arbol-rama" data-r="militar" class="' + (ramaArbol === 'militar' ? 'activo' : '') + '">' + L('Militar', 'Military') + '</button><button data-accion="arbol-rama" data-r="civil" class="' + (ramaArbol === 'civil' ? 'activo' : '') + '">' + L('Civil', 'Civil') + '</button></div>';
+    if (!aca) html += '<p class="nota aviso-rojo">' + T('inv_necesitas') + '</p>';
+    if (inv) { var ti = buscarTec(inv.id); html += '<div class="ta-curso">' + ti.icono + ' ' + N('inv_' + inv.id) + ' → ' + L('Nv ', 'Lv ') + inv.nivel + ' · ⏱ <b id="inv-falta">' + fmtTiempo(faltaInvestigacion()) + '</b></div>'; }
+    html += '<div class="ta-arbol">' + ARBOL[ramaArbol].map(function (fila, fi) {
+      return (fi ? '<div class="ta-lineas n' + fila.length + ' p' + ARBOL[ramaArbol][fi - 1].length + '"></div>' : '') + '<div class="ta-fila n' + fila.length + '">' + fila.map(function (id) {
+        var t = buscarTec(id); if (!t) return ''; var lv = estado.invest[id] || 0;
+        return '<button class="ta-nodo' + (nodoArbol === id ? ' sel' : '') + (lv >= t.max ? ' lleno' : '') + '" data-accion="arbol-nodo" data-id="' + id + '"><span class="ta-ico">' + t.icono + '<i class="ta-lv"><b>Lv</b>' + lv + '/' + t.max + '</i></span><small>' + N('inv_' + id) + (t.tropa ? ' · ' + N(t.tropa) : '') + '</small></button>';
+      }).join('') + '</div>';
+    }).join('') + '</div>';
+    if (nodoArbol) {
+      var tn = buscarTec(nodoArbol), lvn = estado.invest[nodoArbol] || 0, sig = lvn + 1;
+      html += '<div class="ta-det"><b>' + tn.icono + ' ' + N('inv_' + tn.id) + (tn.tropa ? ' · ' + N(tn.tropa) : '') + ' (' + lvn + '/' + tn.max + ')</b>' +
+        (lvn ? '<p>' + T('inv_ahora') + ': ' + textoTec(tn, lvn) + '</p>' : '') + (lvn < tn.max ? '<p>' + T('inv_siguiente') + ': ' + textoTec(tn, sig) + '</p>' : '<p>' + L('Has alcanzado el máximo nivel', 'Max level reached') + '</p>');
+      if (lvn < tn.max) {
+        if (aca && sig > tope) html += '<p class="nota aviso-rojo">' + T('inv_tope', { n: tope }) + '</p>';
+        else html += botonCosto(costoInvestigacion(sig), 'investigar', 'data-id="' + tn.id + '"' + (!aca || inv ? ' disabled' : ''), T('investigar') + ' ⏱' + fmtTiempo(tiempoInvestigacion(sig)) + ' ');
+      }
+      html += '</div>';
+    } else html += '<p class="ta-ayuda">' + L('Toca un talento para ver qué da y aprenderlo.', 'Tap a talent to see what it gives and learn it.') + '</p>';
+    html += '<button class="ta-lista" data-accion="arbol-lista">' + L('Ver todas las investigaciones', 'See all research') + ' ›</button>';
+    abrirPanel(N('academia') + (aca ? ' (' + L('Nvl.', 'Lvl.') + aca.edificio.nivel + ')' : ''), html, { tipo: 'investigacion', rama: ramaInv });
+    ponerCafe();
+  }
+  function abrirPanelInvestigacion(rama, comoLista) {
+    if (!comoLista) return abrirArbolTalentos();
     ramaInv = rama || ramaInv;
     var aca = academiaLista();
     var html = '<div class="subtabs">' + ['crecimiento', 'economia', 'batalla', 'tropas'].map(function (r) {
@@ -6621,7 +6654,7 @@
       }
       html += '</div>';
     });
-    abrirPanel(T('p_investigar'), html + '</div>', { tipo: 'investigacion', rama: ramaInv });
+    abrirPanel(T('p_investigar'), html + '</div>', { tipo: 'investigacion', rama: ramaInv, lista: true });
   }
   function empezarInvestigacion(id) {
     if (estado.investigando) { consejoTemporal(T('inv_ocupada')); sonar('error'); return; }
@@ -7284,9 +7317,36 @@
     return '<div class="subtabs"><button data-accion="sub-tropas" class="' + (cual === 'tropas' ? 'activo' : '') + '">⚔️ ' + T('sub_tropas') + '</button>' +
       '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
       '<button data-accion="sub-invocar" class="' + (cual === 'invocar' ? 'activo' : '') + '">✨ ' + T('sub_invocar') + '</button>' +
-      '<button data-accion="sub-salon" class="' + (cual === 'salon' ? 'activo' : '') + '">🛡️ ' + L('Caballeros', 'Knights') + '</button></div>';
+      '<button data-accion="sub-salon" class="' + (cual === 'salon' ? 'activo' : '') + '">🛡️ ' + L('Caballeros', 'Knights') + '</button>' +
+      '<button data-accion="sub-fortaleza" class="' + (cual === 'fortaleza' ? 'activo' : '') + '">🏯 ' + L('Fortaleza', 'Fortress') + '</button></div>';
   }
   // v6.54: Salón de Caballeros: tus caballeros con nivel, ataque, salud y experiencia, y los botones +EXP y Equipar
+  // v6.69: FORTALEZA: asigna héroes para mejorar tu villa; cada héroe puede Explorar 4 veces al día
+  var EXPLORAR_DIA = 4;
+  function exploracionesHoy(id) { var x = estado.explora || (estado.explora = {}); if (x.dia !== hoyTexto()) { estado.explora = x = { dia: hoyTexto() }; } return EXPLORAR_DIA - (x[id] || 0); }
+  function abrirFortaleza() {
+    var mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });
+    var html = subtabsHeroes('fortaleza') + '<div class="fo-cab"><span class="fo-libro">📖</span><p>' + L('¡Asigna héroes para conseguir mejoras para tu villa! Mándalos a Explorar y vuelven con experiencia, fragmentos y recursos. Cada héroe puede explorar 4 veces al día.', 'Assign heroes to get upgrades for your village! Send them to Explore and they return with experience, fragments and resources. Each hero can explore 4 times a day.') + '</p></div>' +
+      '<div class="fo-grid">' + (mios.length ? mios.map(function (h) {
+        var e = estado.heroes[h.id], st = statsHeroe(h.id), need = expNivel(e.nivel), ex = Math.min(e.exp || 0, need), quedan = exploracionesHoy(h.id), hb = HB(h.hab);
+        return '<div class="fo-card ' + h.rareza + '"><button class="fo-foto" data-accion="heroe-ver" data-id="' + h.id + '">' + fotoHTML('h_' + h.id, '🦸') + '<i class="fo-i">i</i><span class="fo-nom">' + NH(h.id) + '</span></button>' +
+          '<div class="fo-nv"><i>' + e.nivel + '</i><div class="hi-barra"><i style="width:' + Math.round(ex / need * 100) + '%"></i></div><b>+</b></div>' +
+          '<div class="fo-st"><span>⚔️ ' + formatoNumero(st.dano) + '</span><span>❤️ ' + formatoNumero(st.vida) + '</span><span>★ ' + e.estrellas + '</span></div>' +
+          '<div class="fo-hab"><span>' + hb.nombre + '</span><span>' + L('Marchar', 'March') + '</span><span class="' + (nivelTal(h.id) ? '' : 'off') + '">' + L('Talento', 'Talent') + '</span></div>' +
+          '<button class="fo-explorar" data-accion="fortaleza-explorar" data-id="' + h.id + '"' + (quedan > 0 ? '' : ' disabled') + '>' + L('Explorar', 'Explore') + '</button><small class="fo-veces">' + L('Veces: ', 'Times: ') + quedan + '/' + EXPLORAR_DIA + '</small></div>';
+      }).join('') : '<p class="iv-vacio">' + L('Todavía no tienes héroes. Recluta uno en la pestaña Héroes.', 'You have no heroes yet. Recruit one in the Heroes tab.') + '</p>') + '</div>';
+    abrirPanel(L('Fortaleza', 'Fortress'), html, { tipo: 'fortaleza' }); $('panel').classList.add('iv-panel', 'fo-panel');
+  }
+  function explorarHeroe(id) {
+    var e = estado.heroes[id]; if (!e || exploracionesHoy(id) <= 0) return;
+    estado.explora[id] = (estado.explora[id] || 0) + 1;
+    var exG = Math.round(expNivel(e.nivel) * 0.35), premio = [];
+    darExp(id, exG); premio.push('+' + exG + ' EXP');
+    if (Math.random() < 0.35 && e.estrellas < 5) { e.frag = (e.frag || 0) + 1; premio.push('🧩 +1'); }
+    var rr = ['oro', 'comida', 'madera', 'piedra'][Math.floor(Math.random() * 4)], cant = 150 + Math.round(Math.random() * 250) * (estado.castillo || 1);
+    sumarRecurso(rr, cant); premio.push(ICONO_RECURSO[rr] + ' +' + formatoNumero(cant));
+    sonar('magia'); consejoTemporal('🧭 ' + NH(id) + ': ' + premio.join(' · ')); guardar(true); ponerEquipo && ponerEquipo(); abrirFortaleza();
+  }
   function abrirSalonCaballeros() {
     var mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });
     var libros = librosQueTienes();
@@ -8243,6 +8303,11 @@
     else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
+    else if (a === 'sub-fortaleza') { sonar('click'); abrirFortaleza(); }
+    else if (a === 'fortaleza-explorar') explorarHeroe(b.getAttribute('data-id'));
+    else if (a === 'arbol-rama') { sonar('click'); ramaArbol = b.getAttribute('data-r'); nodoArbol = null; abrirArbolTalentos(); }
+    else if (a === 'arbol-nodo') { sonar('click'); nodoArbol = b.getAttribute('data-id'); abrirArbolTalentos(); }
+    else if (a === 'arbol-lista') { sonar('click'); abrirPanelInvestigacion(ramaInv, true); }
     else if (a === 'hl-tab') { sonar('click'); hlTab = b.getAttribute('data-t'); abrirPanelHeroes(); }
     else if (a === 'cast-tab') { sonar('click'); castTab = b.getAttribute('data-t'); abrirPanelCastillo(); }
     else if (a === 'cast-defensa') { estado.tropasDefienden = estado.tropasDefienden === false; sonar('click'); actualizarBotonDefensa(); consejoTemporal(T(estado.tropasDefienden ? 'def_on_txt' : 'def_off_txt')); guardar(true); publicarAldea(true); abrirPanelCastillo(); }
@@ -8317,7 +8382,7 @@
     else if (a === 'tropa-mas') cambiarCantidad(1);
     else if (a === 'tropa-max') { vistaTropa.n = Math.max(1, maxEntrenar(vistaTropa.tipo)); refrescarCantidad(); }
     else if (a === 'tropa-ya') entrenarYa(vistaTropa.tipo, vistaTropa.n);
-    else if (a === 'investigacion') abrirPanelInvestigacion(b.getAttribute('data-rama') || ramaInv);
+    else if (a === 'investigacion') abrirPanelInvestigacion(b.getAttribute('data-rama') || ramaInv, !!b.getAttribute('data-rama'));
     else if (a === 'investigar') empezarInvestigacion(b.getAttribute('data-id'));
     else if (a === 'sub-invocar') abrirPanelInvocar();
     else if (a === 'sub-heroes') abrirPanelHeroes();
@@ -8366,8 +8431,8 @@
     else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth * 0.7, behavior: 'smooth' }); }
     else if (a === 'inv-reciclar') reciclarPiezaInv(b.getAttribute('data-i'));
     else if (a === 'inv-mejorar') mejorarPiezaInv(b.getAttribute('data-i'));
-    else if (a === 'inv-tropa') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas'); }
-    else if (a === 'inv-filtro') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas'); }
+    else if (a === 'inv-tropa') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas', true); }
+    else if (a === 'inv-filtro') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas', true); }
     else if (a === 'terminar-gemas') terminarConGemas(b.getAttribute('data-que'));
     else if (a === 'comprar') comprarTienda(+b.getAttribute('data-i'));
     else if (a === 'invocar3') invocarTres();
