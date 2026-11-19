@@ -727,7 +727,8 @@ var RETRATOS_IMG = {
   granja: 'e_granja', aserradero: 'e_aserradero', mina: 'e_mina', cantera: 'e_cantera',
   cuartel: 'e_cuartel', torre: 'e_torre', academia: 'e_academia', enfermeria: 'e_enfermeria',
   almacen: 'e_almacen', mercado: 'e_mercado', herreria: 'e_herreria', establo: 'e_establo',
-  galeria: 'e_galeria', vigia: 'e_vigia', cabana: 'e_cabana', embajada: 'e_embajada'
+  galeria: 'e_galeria', vigia: 'e_vigia', cabana: 'e_cabana', embajada: 'e_embajada',
+  relevo: 'e_relevo', muralla: 'e_muralla'
 };
 // la ficha de la suerte del Azar
 var ICONO_FICHA = '<img class="ico-obj" src="iconos/ui/o_ficha.webp" alt="🪙" draggable="false">';
