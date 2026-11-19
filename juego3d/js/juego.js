@@ -158,7 +158,7 @@
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.5; }
-  function zoomMax() { return zoomBase() * 1.45; }
+  function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? 1.12 : 1.45); } // v6.86: en la Ciudad no se aleja hasta ver los campos
   function distInicial() { return window.innerWidth < window.innerHeight ? 104 : 80; } // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
@@ -4947,6 +4947,12 @@
     // la cámara no se puede ir lejos del reino
     cam.meta.x = Math.max(CENTRO_REINO.x - LIMITE_CAM, Math.min(CENTRO_REINO.x + LIMITE_CAM, cam.meta.x));
     cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
+    // v6.86: en la Ciudad la cámara se queda sobre la villa (los campos solo se ven con el botón Campos)
+    if (vistaActual === 'ciudad' && !oleadaActiva) {
+      var rL = R_CIUDAD * 0.45, dxL = cam.meta.x - CENTRO_REINO.x, dzL = cam.meta.z - CENTRO_REINO.z, dL = Math.hypot(dxL, dzL);
+      if (dL > rL) { cam.meta.x = CENTRO_REINO.x + dxL * rL / dL; cam.meta.z = CENTRO_REINO.z + dzL * rL / dL; }
+      if (cam.distMeta > zoomMax()) cam.distMeta = zoomMax();
+    }
     cam.objetivo.lerp(cam.meta, kp);
     // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
     cam.polar = Math.PI / 3; // v6.48: isométrica clásica: la cámara mira 30 grados hacia abajo
