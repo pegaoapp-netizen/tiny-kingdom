@@ -1158,3 +1158,15 @@ body.tema-oscuro #panel.fo-panel .fo-hab span { color: #f6e6c0 !important; font:
 .fo-explorar { margin-top: 4px; min-height: 38px; border-radius: 6px; border: 2px solid #0b1a33; background: linear-gradient(180deg, #2f6fc8 0%, #1b3d6e 55%, #10264a 100%); color: #fff; font: 600 14px Georgia, serif; cursor: pointer; }
 .fo-explorar:disabled { filter: grayscale(.7) brightness(.75); }
 body.tema-oscuro #panel.fo-panel .fo-veces { text-align: center; color: #e8d6b0 !important; font: 11px Georgia, serif; }
+
+/* ---------------- v6.70: MUNDO LIMPIO ---------------- */
+#barra-acciones, #mundo-estado, #mundo-coord, #mundo-leyenda, #mundo-volver, #mundo-lupa { display: none !important; }
+#mundo-buscar { display: none !important; }
+body.mundo-buscando #mundo-buscar { display: flex !important; }
+/* coordenadas: franja fina y fija arriba, de lado a lado, que no se monta sobre las tarjetas */
+body #mundo #mundo-xy { position: fixed !important; left: 0 !important; right: 0 !important; top: calc(env(safe-area-inset-top) + 52px) !important; transform: none !important; width: 100% !important; height: 36px !important; border-radius: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; gap: 8px !important;
+  background: linear-gradient(180deg, #2a1a0c, #140c05) !important; border: 0 !important; border-top: 1px solid #6a4a2a !important; border-bottom: 2px solid #c8a764 !important; z-index: 70 !important; padding: 0 10px !important; }
+#mundo-xy .mxy-bestia { margin-left: 6px; width: 30px; height: 26px; display: grid; place-items: center; border-radius: 5px; background: linear-gradient(180deg, #8a5a2a, #4a2c12); border: 1px solid #e0b060; font-size: 16px; }
+body.mundo-buscando #mundo-xy .mxy-bestia { background: linear-gradient(180deg, #e0a23c, #a86a1a); }
+body:has(#mundo:not(.oculto)) #consejo { display: none !important; } /* los consejos de la ciudad no salen en el mundo */
+body.barra-oro #abajo #btn-mundo { display: none !important; } /* v6.70: «Mundo» salía dos veces: el botón de la izquierda ya cambia Ciudad / Campos / Mundo */

@@ -1404,7 +1404,7 @@
   function abrirMundo() {
     $('mundo').classList.remove('oculto');
     enMundo = true; vistaActual = 'mundo'; pintarVista(); cerrarMenuGrande();
-    $('mundo-info').innerHTML = '<div class="carta"><p class="nota">' + T('mundo_toca') + '</p></div>';
+    $('mundo-info').innerHTML = ''; // v6.70: el mundo entra limpio, sin carteles
     if (!M3) crearMundo3D();
     var yoC = celdaDe(miLugar().x, miLugar().y); M3.obj.copy(posCelda(yoC.x, yoC.y)); M3.zoom = { de: 74, a: M3.camelot ? 30 : 40, t0: performance.now() };
     $('mundo-coord').textContent = '📍 ' + L('Tu reino', 'Your kingdom') + ' · X ' + yoC.x + ' · Y ' + yoC.y;
@@ -1650,7 +1650,7 @@
       if (pell && ids.length === 2) { var a = dedos[ids[0]], b = dedos[ids[1]]; M3.dist = Math.max(20, Math.min(48, pell.dist * pell.d / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)))); return; }
       if (!inicio) return;
       var dx = ev.clientX - inicio.x, dy = ev.clientY - inicio.y; inicio.x = ev.clientX; inicio.y = ev.clientY;
-      if (Math.hypot(ev.clientX - inicio.sx, ev.clientY - inicio.sy) > 6) { inicio.movio = true; M3.seguir = null; }
+      if (Math.hypot(ev.clientX - inicio.sx, ev.clientY - inicio.sy) > 6) { if (!inicio.movio) cerrarTarjetasMundo(); inicio.movio = true; M3.seguir = null; }
       var kk = M3.dist / el.clientHeight * 1.3, lim = TAM_MUNDO * CELDA_M / 2;
       var Ar = 0.7071, mvx = -dx * kk, mvz = -dy * kk * 1.25;
       var ddx = Ar * (mvx + mvz), ddz = Ar * (mvz - mvx), ahoraI = performance.now(), dtI = Math.max(8, ahoraI - (inicio.tm || ahoraI - 16)); inicio.tm = ahoraI;
@@ -1730,6 +1730,13 @@
   }
   // v6.54: la tarjeta de lo que tocaste sale justo encima de esa casilla, con una flecha que la señala
   var vAncla = new V3();
+  // v6.70: el mundo queda limpio: al deslizar se quitan la tarjeta, el cuadro verde y el buscador
+  function cerrarTarjetasMundo() {
+    var mi = $('mundo-info'); if (mi) mi.innerHTML = '';
+    if (typeof cerrarFicha === 'function') cerrarFicha();
+    if (M3) { if (M3.sel) M3.sel.visible = false; if (M3.verde) M3.verde.visible = false; }
+    document.body.classList.remove('mundo-buscando');
+  }
   function anclarTarjetaMundo() {
     var fc = document.querySelector('#ficha-ciudad .fc-caja'), card = fc, punto = null;
     if (fc && M3.verde && M3.verde.visible) punto = M3.verde.position;
@@ -1742,12 +1749,13 @@
     card.classList.add('tarjeta-anclada');
     var w = card.offsetWidth, h = card.offsetHeight;
     // v6.54: la tarjeta va siempre arriba del castillo: si no cabe, el mapa baja poco a poco hasta que quepa
-    var falta = 64 - (sy - h - 44), techo = window.innerHeight - 170 - sy;
+    var tope0 = ($('mundo-xy') ? $('mundo-xy').getBoundingClientRect().bottom : 56) + 8; // v6.70: nunca encima de la franja de coordenadas
+    var falta = tope0 - (sy - h - 44), techo = window.innerHeight - 120 - sy;
     var enPantalla = vAncla.z < 1 && sx > 0 && sx < window.innerWidth && sy > 0 && sy < window.innerHeight;
     if (enPantalla && falta > 3 && techo > 0 && (card._ajuste || 0) < 120) { card._ajuste = (card._ajuste || 0) + 1; var dd = Math.min(0.5, Math.min(falta, techo) * 0.006); M3.obj.x -= dd; M3.obj.z -= dd; }
     var ab = sy - h - 30 < 40 && (card._ajuste || 0) >= 120;
     var x = Math.max(8, Math.min(window.innerWidth - w - 8, sx - w / 2)), y = ab ? sy + 34 : sy - h - 44;
-    y = Math.max(60, Math.min(window.innerHeight - h - 8, y));
+    y = Math.max(tope0, Math.min(window.innerHeight - h - 8, y));
     card.classList.toggle('abajo', ab);
     card.style.left = Math.round(x) + 'px'; card.style.top = Math.round(y) + 'px';
     card.style.setProperty('--flecha-x', Math.round(Math.max(18, Math.min(w - 18, sx - x))) + 'px');
@@ -1780,7 +1788,7 @@
       var p = posCelda(c.x, c.y), g = new THREE.Group();
       if (M3.camelot) g.add(CAMELOT.sprite('campamento', 0.9 + Math.min(12, cm.nivel) * 0.02));
       else { var ab = aldeaBarbara(cm.nivel); ab.scale.setScalar(1.35); g.add(ab); }
-      var et = M.etiquetaEdificio('🛖 ⚔️' + corto(defensaCampamento(cm.nivel)), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et);
+      var et = M.etiquetaEdificio('🛖 ⚔️' + corto(defensaCampamento(cm.nivel)), cm.nivel); et.position.set(0, 1.8, 0); et.scale.multiplyScalar(0.56); g.add(et); et.visible = false;
       g.position.copy(p); M3.cosas.add(g);
       ocupadasMundo[c.x + '_' + c.y] = { campamento: i };
     });
@@ -1792,7 +1800,7 @@
       var esYo = a.uid === yo, aliada = estado.alianza && a.alianza === estado.alianza;
       if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
       var prot = (a.escudo || 0) > Date.now();
-      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, M3.camelot ? 2.0 : 2.7, 0); et.scale.multiplyScalar(M3.camelot ? 0.52 : 0.62); g.add(et);
+      var et = M.etiquetaEdificio((esYo ? '👑 ' : aliada ? '🛡️ ' : '') + String(a.nombre).slice(0, 14) + (prot ? ' 🫧' + fmtLargo((a.escudo - Date.now()) / 1000) : ''), a.nivel || 1); et.position.set(0, M3.camelot ? 2.0 : 2.7, 0); et.scale.multiplyScalar(M3.camelot ? 0.52 : 0.62); g.add(et); et.visible = false;
       // v6.57: banderas al frente del dibujo del castillo: azul tu alianza, roja los hostiles (los que te atacaron)
       var hostil = !esYo && !aliada && (estado.enemigos || {})[a.uid];
       function banderaReino(color, marca) {
@@ -1901,7 +1909,7 @@
       '<div>' + L('Alianza', 'Alliance') + ': ' + (alT ? escaparHTML(alT) : L('Ninguna', 'None')) + '</div>' +
       '<div>' + L('Diplomacia', 'Diplomacy') + ': ' + dipT + '</div></div>' +
       '<div class="perg-botones"><button class="comprar azul" id="cas-espiar">' + L('Espiar', 'Scout') + '</button>' + (mia ? '<button class="comprar azul" id="cas-soltar">' + T('cas_abandonar') + '</button>' : '<button class="comprar azul" id="cas-conquistar">' + L('Ataque', 'Attack') + '</button>') + '</div>' +
-      (libreTel ? '<div class="casilla-botones"><button class="comprar morado" id="cas-portal">' + T('cas_reubicar') + ' · ' + (np ? T('tel_tienes', { n: np }) : '<span class="ico gema"></span>' + pt.gemas) + '</button></div>' : '');
+      ''; // v6.70: sin botón Reubicar: la villa se muda solo con un portal del Inventario y solo a llanuras desocupadas
     if (mia) { var gd = guardadoCasilla(c), rr = TIPOS_CASILLA[c.tipo].r; html += '<p class="nota">' + ICONO_RECURSO[rr] + ' ' + T('cas_guardado', { a: formatoNumero(gd.n), m: formatoNumero(gd.max), r: T('r_' + rr), h: formatoNumero(gd.hora) }) + '</p><button class="comprar naranja" id="cas-recoger"' + (gd.n >= 1 ? '' : ' disabled') + '>' + T('cas_recolectar') + ' · ' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + '</button>'; }
     $('mundo-info').innerHTML = html + '</div>';
     var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { this.disabled = true; conquistarCasilla(c, deOtro ? nube : null); });
@@ -1966,7 +1974,7 @@
     if (M3 && M3.camelot) {
     var tc = TIPOS_BESTIA[b.tipo], gc = new THREE.Group();
     gc.add(CAMELOT.sprite(b.tipo, 0.85 + b.nivel * 0.03));
-    var etc = M.etiquetaEdificio(tc.icono + ' ' + L('Nv', 'Lv') + ' ' + b.nivel, b.nivel); etc.position.set(0, 1.6, 0); etc.scale.multiplyScalar(0.48); gc.add(etc);
+    var etc = M.etiquetaEdificio(tc.icono + ' ' + L('Nv', 'Lv') + ' ' + b.nivel, b.nivel); etc.position.set(0, 1.6, 0); etc.scale.multiplyScalar(0.48); gc.add(etc); etc.visible = false;
     return gc;
     }
     var t = TIPOS_BESTIA[b.tipo], g = new THREE.Group(), s = 0.55 + b.nivel * 0.05, oso = b.tipo === 'oso';
@@ -1979,7 +1987,7 @@
     [[-0.22, -0.12], [-0.22, 0.12], [0.22, -0.12], [0.22, 0.12]].forEach(function (q) { g.add(M.caja(0.1 * s, (oso ? 0.32 : 0.26) * s, 0.1 * s, t.color, q[0] * s, 0.13 * s, q[1] * s)); });
     if (b.tipo !== 'oso') g.add(M.caja(0.18 * s, 0.06 * s, 0.06 * s, t.color, -0.42 * s, 0.42 * s, 0).rotateZ(0.5));
     g.rotation.y = hashM(b.x, b.y) * 6.28;
-    var et = M.etiquetaEdificio(t.icono + ' ' + L('Nv', 'Lv') + ' ' + b.nivel, b.nivel); et.position.set(0, 1.5, 0); et.scale.multiplyScalar(0.48); var gg = new THREE.Group(); gg.add(g); gg.add(et);
+    var et = M.etiquetaEdificio(t.icono + ' ' + L('Nv', 'Lv') + ' ' + b.nivel, b.nivel); et.position.set(0, 1.5, 0); et.scale.multiplyScalar(0.48); et.visible = false; var gg = new THREE.Group(); gg.add(g); gg.add(et);
     return gg;
   }
   function mostrarBestia(i) {
@@ -2402,8 +2410,7 @@
           return;
         }
         var a = lista[+el.dataset.aldea];
-        if (a.uid === yo) { entrarCiudad(); return; }
-        abrirFichaCiudad(a); return;
+        abrirFichaCiudad(a, a.uid === yo); return; // v6.70: tu reino también abre su tarjeta (ya no cierra el mapa)
         $('mundo-info').innerHTML = '<div class="carta"><h3>' + (a.uid === yo ? '👑 ' + T('tu_reino') : '🏰 ' + T('reino_de', { n: escaparHTML(a.nombre) })) + '</h3>' +
           '<div class="stats"><span>⭐ ' + T('nivel') + ' ' + a.nivel + '</span><span>💪 ' + T('poder') + ' ' + formatoNumero(a.poder) + '</span>' +
           '<span>🛡️ ' + (a.alianza ? '[' + escaparHTML(a.alianza) + ']' : T('sin_alianza')) + '</span><span>📍 ' + a.x + ', ' + a.y + '</span>' +
@@ -6795,7 +6802,7 @@
     return poder < 10000 ? '🥉 ' + L('Liga de Bronce', 'Bronze league') : poder < 50000 ? '🥈 ' + L('Liga de Plata', 'Silver league') : poder < 200000 ? '🥇 ' + L('Liga de Oro', 'Gold league') : '💎 ' + L('Liga de Diamante', 'Diamond league');
   }
   function cerrarFicha() { var f = $('ficha-ciudad'); if (f) f.remove(); if (M3 && M3.verde) M3.verde.visible = false; }
-  function abrirFichaCiudad(a) {
+  function abrirFichaCiudad(a, esMio) {
     cerrarFicha();
     var c = celdaDe(a.x, a.y); if (M3 && M3.verde) { var pv = posCelda(c.x, c.y); M3.verde.position.set(pv.x, 0.09, pv.z); M3.verde.visible = true; }
     var dp = diplomacia(a), nv = (a.espia && a.espia.nivelJ) || a.nivel || 1, mio = Math.round(calcularPoder()), prot = (a.escudo || 0) > Date.now();
@@ -6812,12 +6819,14 @@
       (dp.k === 'aliada' ? '<p class="fc-aviso verde">🛡️ ' + L('Es de tu alianza: no se puede atacar.', 'It is in your alliance: it cannot be attacked.') + '</p>' : '') +
       '<div class="fc-botones"><button class="comprar azul" id="fc-espiar">' + L('Espiar', 'Scout') + '</button>' +
       (dp.k === 'aliada' ? '<button class="comprar verde" id="fc-reforzar">' + T('ref_reforzar') + '</button>' : '<button class="comprar rojo" id="fc-atacar"' + (prot ? ' disabled' : '') + '>' + L('Atacar', 'Attack') + '</button>') + '</div></div>';
+    if (esMio) { var fb = d.querySelector('.fc-botones'); if (fb) fb.innerHTML = '<button class="comprar azul" id="fc-entrar">' + L('Entrar a mi ciudad', 'Enter my city') + '</button>'; d.querySelectorAll('.fc-aviso').forEach(function (x) { x.remove(); }); }
     $('mundo').appendChild(d);
+    var fe = $('fc-entrar'); if (fe) fe.addEventListener('click', function () { sonar('click'); cerrarFicha(); entrarCiudad(); });
     $('fc-x').addEventListener('click', function () { sonar('click'); cerrarFicha(); });
     // v6.54: si tiene alianza, se muestra su nombre completo (no solo la etiqueta)
     if (a.alianza && hayCuenta()) Cuentas.alianza(a.alianza).then(function (al) { var e = $('fc-alianza'); if (e && al && al.nombre) e.textContent = al.nombre; }).catch(function () {});
     d.addEventListener('click', function (ev) { if (ev.target === d) cerrarFicha(); });
-    $('fc-espiar').addEventListener('click', function () { espiarCiudad(a, this); });
+    var fsp = $('fc-espiar'); if (fsp) fsp.addEventListener('click', function () { espiarCiudad(a, this); });
     var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); abrirMarcha(a); });
     var rf = $('fc-reforzar'); if (rf) rf.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); });
   }
@@ -8635,7 +8644,7 @@
   $('barra-acciones').addEventListener('click', function (ev) { var b = ev.target.closest('[data-ba]'); if (b) accionBarra(b.getAttribute('data-ba')); });
   setTimeout(pintarVista, 60);
   $('mundo-lupa').addEventListener('click', function () { sonar('click'); abrirLupa(); });
-  $('mundo-xy').addEventListener('click', function () { sonar('click'); abrirLupa(); });
+  $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-bestia')) { ev.stopPropagation(); sonar('click'); document.body.classList.toggle('mundo-buscando'); return; } sonar('click'); abrirLupa(); });
   // la barra de arriba se acomoda sola: nada queda tapado ni encimado
   function acomodarHUD() {
     function abajo(id) { var e = $(id); if (!e) return 0; var cs = getComputedStyle(e); if (cs.display === 'none' || e.classList.contains('oculto')) return 0; var r = e.getBoundingClientRect(); return r.height ? r.bottom : 0; }
