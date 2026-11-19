@@ -5307,7 +5307,7 @@
     var sq = cual && cual.tipo === 'edificio' ? slots[cual.slot] : null, tq = sq && sq.edificio ? sq.edificio.tipo : '';
     $('panel').classList.toggle('oscuro', tq === 'cuartel' || tq === 'establo' || tq === 'galeria');
     $('panel').classList.toggle('tropas-oscuro', !!cual && cual.tipo === 'tropas');
-    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
+    $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel', 'hi-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
   }
   function cerrarPanel() {
@@ -6392,8 +6392,62 @@
     consejoTemporal(T('heroes_premio', { x: exp, f: fr, n: NH(suerte) }));
   }
   function estrellasHTML(n) { var s = ''; for (var i = 1; i <= 5; i++) s += '<span class="' + (i <= n ? 'si' : 'no') + '">★</span>'; return s; }
-  var pestanaHeroe = 'atrib';
+  var pestanaHeroe = 'hab';
+  // v6.68: FICHA DEL HÉROE (INFO) como la foto: retrato con nivel, números, poder y barra; a la derecha Retirar / Elevar / Equipo;
+  // abajo pestañas Habilidad / Destino / Leyenda
   function abrirPanelHeroe(id) {
+    if (pestanaHeroe !== 'equipo' && ['hab', 'atrib', 'leyenda'].indexOf(pestanaHeroe) < 0) pestanaHeroe = 'hab';
+    if (pestanaHeroe !== 'equipo') return abrirFichaHeroe(id);
+    return abrirPanelHeroeViejo(id);
+  }
+  function abrirFichaHeroe(id) {
+    var h = HEROE[id], e = estado.heroes[id], st = statsHeroe(id), hb = HB(h.hab), enEq = e && estado.equipo.indexOf(id) >= 0;
+    var need = e ? expNivel(e.nivel) : 1, ex = e ? Math.min(e.exp || 0, need) : 0, tope = e ? topeNivel(id) : 1, lleno = e && e.nivel >= tope;
+    var html = '<button class="volver-mini" data-accion="sub-heroes">‹ ' + L('Héroes', 'Heroes') + '</button>' +
+      '<div class="hi-cab"><div class="hi-foto ' + h.rareza + '">' + fotoHTML('h_' + id, '🦸') + '<i class="hi-nv">' + (e ? e.nivel : '🔒') + '</i></div>' +
+      '<div class="hi-dat"><div class="hi-nom">' + NH(id) + '</div><div class="hi-num"><span>⚔️ ' + formatoNumero(st.dano) + '</span><span>❤️ ' + formatoNumero(st.vida) + '</span><span>🎯 ' + st.alcance + '</span><span>✚ ' + st.cura + '/s</span></div>' +
+      '<div class="hi-pod"><span>' + L('Poder: ', 'Power: ') + '<b>' + formatoNumero(Math.round(valorHeroe(id))) + '</b></span><span>' + L('Estrellas: ', 'Stars: ') + '<b>' + '★'.repeat(e ? e.estrellas : 0) + '</b></span></div>' +
+      '<div class="hi-barra"><i style="width:' + (lleno ? 100 : Math.round(ex / need * 100)) + '%"></i><span>' + (!e ? L('Bloqueado', 'Locked') : lleno ? L('Máx', 'Max') : ex + ' / ' + need) + '</span></div></div>' +
+      '<div class="hi-bts">' + (e ? '<button data-accion="heroe-equipo" data-id="' + id + '">' + (enEq ? L('Retirar', 'Withdraw') : L('Asignar', 'Assign')) + '</button><button class="dorado" data-accion="heroe-elevar" data-id="' + id + '">' + L('Elevar', 'Raise') + '</button><button data-accion="heroe-tab" data-tab="equipo" data-id="' + id + '">' + L('Equipo', 'Gear') + '</button>'
+        : '<button data-accion="heroe-obtener" data-id="' + id + '">' + L('Conseguir', 'Get') + '</button>') + '</div></div>' +
+      '<div class="hi-tabs">' + [['hab', L('Habilidad', 'Skill')], ['atrib', L('Destino', 'Destiny')], ['leyenda', L('Leyenda', 'Legend')]].map(function (p) { return '<button data-accion="heroe-tab" data-tab="' + p[0] + '" data-id="' + id + '" class="' + (pestanaHeroe === p[0] ? 'activo' : '') + '">' + p[1] + '</button>'; }).join('') + '</div>';
+    if (pestanaHeroe === 'hab') {
+      var nh = nivelHab(id), th = topeHab(id), nt = nivelTal(id);
+      html += '<div class="hi-hab"><div class="hi-hab-c"><b>' + hb.nombre + ' (' + L('Niv. ', 'Lv. ') + nh + ')</b>' + (e && nh < th ? '<button class="hi-sube" data-accion="heroe-tab" data-tab="atrib" data-id="' + id + '">⬆</button>' : '') + '</div><p>' + hb.des + '</p><small>⏱ ' + T('cada_s', { s: recargaHab(id) }) + '</small></div>' +
+        '<div class="hi-hab"><div class="hi-hab-c"><b>' + L('Marchar', 'March') + ' (' + L('Niv. ', 'Lv. ') + (e ? Math.min(5, e.estrellas) : 1) + ')</b></div><p>' + L('Lidera marchas con tropas de ' + (e ? Math.min(5, e.estrellas) : 1) + ' categoría' + ((e && e.estrellas > 1) ? 's' : '') + '.', 'Leads marches with up to tier ' + (e ? Math.min(5, e.estrellas) : 1) + ' troops.') + '</p></div>' +
+        '<div class="hi-hab' + (nt ? '' : ' apagada') + '"><div class="hi-hab-c"><b>' + L('Talento', 'Talent') + ' (' + L('Niv. ', 'Lv. ') + nt + ')</b></div><p>' + (nt ? L('Mejora a las tropas de su clase en cada batalla.', 'Boosts troops of its class in every battle.') : L('Se abre con 2 estrellas.', 'Unlocks at 2 stars.')) + '</p></div>' +
+        htmlHabilidades(id);
+    } else if (pestanaHeroe === 'leyenda') {
+      html += '<div class="hi-hab"><p>' + L('Héroe ' + T('rareza_' + h.rareza).toLowerCase() + ' de la clase ' + T('clase_' + h.clase) + '. ', 'A ' + T('rareza_' + h.rareza).toLowerCase() + ' ' + T('clase_' + h.clase) + ' hero. ') + D('h_' + id) + '</p><p>' + hb.des + '</p></div>';
+    } else if (e) {
+      var libros = librosQueTienes(), nf2 = e.estrellas >= 5 ? 0 : fragParaEstrella(id);
+      html += '<div class="hi-hab"><div class="hi-hab-c"><b>' + L('Subir de nivel', 'Level up') + ' (' + L('Niv. ', 'Lv. ') + e.nivel + ' / ' + tope + ')</b></div><p>' + L('Usa libros de experiencia: ', 'Use experience books: ') + '📗 ' + ((estado.mochila && estado.mochila.libro_peq) || 0) + ' · 📘 ' + ((estado.mochila && estado.mochila.libro_gra) || 0) + '</p>' +
+        (e.nivel < tope ? '<button class="iv-boton" data-accion="heroe-libros" data-id="' + id + '"' + (libros ? '' : ' disabled') + '>' + L('Usar libros', 'Use books') + ' ×' + libros + '</button>' : '<p>' + L('Llegó a su nivel máximo: elévalo para seguir subiendo.', 'Max level reached: raise it to keep going.') + '</p>') + '</div>' +
+        '<div class="hi-hab"><div class="hi-hab-c"><b>' + L('Estrellas', 'Stars') + ' ' + '★'.repeat(e.estrellas) + '</b></div>' + (nf2 ? '<div class="hi-barra"><i style="width:' + Math.min(100, Math.round(e.frag / nf2 * 100)) + '%"></i><span>🧩 ' + e.frag + ' / ' + nf2 + '</span></div>' : '<p>' + T('estrellas_max') + '</p>') + '</div>';
+    } else {
+      html += '<div class="hi-hab"><p>' + T('bloqueado') + '</p></div>';
+    }
+    abrirPanel(L('Info', 'Info'), html, { tipo: 'heroe', id: id }); $('panel').classList.add('iv-panel', 'hi-panel');
+  }
+  // ventana Elevar: requisitos con check verde o en rojo lo que falta
+  function abrirElevar(id) {
+    var h = HEROE[id], e = estado.heroes[id]; if (!e) return;
+    var v = $('elevar-heroe'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'elevar-heroe';
+    var max = e.estrellas >= 5, nf = max ? 0 : fragParaEstrella(id), okF = !max && e.frag >= nf, tope = topeNivel(id), okN = e.nivel >= tope, nuevoTope = Math.min(HEROE_NIVEL_MAX, (e.estrellas + 1) * 10), ok = okF && okN;
+    d.innerHTML = '<div class="el-caja"><button class="el-x" data-el="x">✕</button><h3>' + L('Eleva a tu héroe', 'Raise your hero') + '</h3>' +
+      '<p class="el-txt">' + L('Puedes elevar a un héroe que llegó a su nivel máximo si cumples los requisitos. Así sube su nivel máximo y se hacen más fuertes sus habilidades.', 'You can raise a hero that reached its max level if you meet the requirements. Its max level goes up and its skills get stronger.') + '</p>' +
+      '<div class="el-sec"><div class="el-cinta">' + NH(id) + '</div>' + (max ? '<p class="el-fila">' + T('estrellas_max') + '</p>' :
+        '<div class="el-fila"><span class="el-ico">👑<small>' + L('Máximo', 'Max') + '</small></span><p>' + L('Sube el nivel máximo hasta el nivel ' + nuevoTope + '.', 'Raises the max level to ' + nuevoTope + '.') + '<br>' + L('Sube la habilidad máxima hasta el nivel ' + Math.min(HAB_MAX, e.estrellas + 1) + '.', 'Raises the max skill to level ' + Math.min(HAB_MAX, e.estrellas + 1) + '.') + '</p></div>' +
+        '<div class="el-fila"><span class="el-ico">⚡<small>' + L('Habilidades', 'Skills') + '</small></span><p>' + (e.estrellas === 1 ? L('Abre su Talento.', 'Unlocks its Talent.') : L('Su Talento sube un nivel.', 'Its Talent goes up a level.')) + '</p></div>') + '</div>' +
+      (max ? '' : '<div class="el-sec"><div class="el-cinta">' + L('Requisitos', 'Requirements') + '</div>' +
+        '<div class="el-req"><span class="el-med">' + fotoHTML('h_' + id, '🦸') + '<i>🧩</i>' + (okF ? '<b class="el-ok">✓</b>' : '') + '</span><div><small>' + L('Fragmentos de ', 'Fragments of ') + NH(id) + '</small><em class="' + (okF ? '' : 'falta') + '">' + L('Tienes: ', 'You have: ') + e.frag + '/' + nf + '</em><p>' + L('Se ganan jugando: campaña, cofres y Azar.', 'Earned by playing: campaign, chests and Lucky draw.') + '</p></div></div>' +
+        '<div class="el-req"><span class="el-med">⭐' + (okN ? '<b class="el-ok">✓</b>' : '') + '</span><div><small>' + L('Nivel del héroe', 'Hero level') + '</small><em class="' + (okN ? '' : 'falta') + '">' + L('Tienes: ', 'You have: ') + e.nivel + '/' + tope + '</em><p>' + L('Llévalo a su nivel máximo con libros de experiencia.', 'Take it to its max level with experience books.') + '</p></div></div></div>' +
+        (ok ? '<button class="el-boton" data-el="si">' + L('Elevar', 'Raise') + '</button>' : '<p class="el-no">' + L('Aún no puedes elevar a este héroe.', 'You cannot raise this hero yet.') + '</p>')) + '</div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) { var o = ev.target.closest('[data-el]'); if (ev.target === d || (o && o.getAttribute('data-el') === 'x')) { d.remove(); return; } if (o && o.getAttribute('data-el') === 'si') { d.remove(); subirEstrellaHeroe(id); } });
+  }
+  function abrirPanelHeroeViejo(id) {
     var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab);
     var html = '<button class="volver-mini" data-accion="sub-heroes">' + T('volver') + '</button>' +
       '<div class="hf ' + h.rareza + '"><div class="hf-foto"><div class="hf-visor" id="visor-heroe"></div>' + (pestanaHeroe === 'equipo' && e ? '<div class="hf-piezas">' + TIPOS_EQ.map(function (t) { var pz = piezasDe(id).filter(function (x) { return x.t === t; })[0]; return '<span class="hfp ' + (pz ? 'puesta ' + pz.r : '') + '" title="' + T('eq_' + t) + '">' + EQ[t].icono + '</span>'; }).join('') + '</div>' : '') + '<span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span></div>' +
@@ -8270,6 +8324,7 @@
     else if (a === 'heroe-ver') { if (!panelActual || panelActual.tipo !== 'obtener') pestanaHeroe = 'atrib'; abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'heroe-nivel') subirNivelHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-elevar') { sonar('click'); abrirElevar(b.getAttribute('data-id')); }
     else if (a === 'heroe-libros') usarLibrosHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-tab') { pestanaHeroe = b.getAttribute('data-tab'); sonar('click'); abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'hab-subir') subirHab(b.getAttribute('data-id'), false);
