@@ -706,7 +706,7 @@ var TIENDA = [
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
 // Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
 var ICONOS_IMG = {
-  cofre_oro: 'o_cofre_oro',
+  cofre_madera: 'o_cofre_madera', cofre_plata: 'o_cofre_plata', cofre_oro: 'o_cofre_oro',
   cofre_acel: 'o_cofre_acel',
   cofre_equipo: 'o_cofre_equipo',
   cofre_tesoro: 'o_cofre_tesoro', pack_tesoro7: 'o_cofre_tesoro', pack_tesoro15: 'o_cofre_tesoro',
