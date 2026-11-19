@@ -5380,6 +5380,7 @@
   setTimeout(pedirFotosEdificios, 6000);
   function iconoCarreta() { return retratos.carreta ? '<img class="ico-carreta" src="' + retratos.carreta + '" alt="">' : '🛒'; }
   function fotoHTML(clave, emoji) {
+    if (typeof RETRATOS_IMG !== 'undefined' && RETRATOS_IMG[clave]) return '<img src="iconos/ui/' + RETRATOS_IMG[clave] + '.webp" alt="">';
     return retratos[clave] ? '<img src="' + retratos[clave] + '" alt="">' : emoji;
   }
 

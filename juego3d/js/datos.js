@@ -706,6 +706,7 @@ var TIENDA = [
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
 // Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
 var ICONOS_IMG = {
+  portal_elegir: 'o_portal_elegir', reclutas: 'o_reclutas',
   libro_peq: 'o_libro', libro_gra: 'o_tomo', pergamino: 'o_pergamino', portal_azar: 'o_portal_azar',
   lingote: 'o_lingote',
   acelerador: 'o_acel', acel_1m: 'o_acel', acel_5m: 'o_acel', acel_15m: 'o_acel', acel_1h: 'o_acel', acel_2h5: 'o_acel', acel_8h: 'o_acel', acel_12h: 'o_acel', acel_15h: 'o_acel', acel_24h: 'o_acel',
@@ -718,6 +719,10 @@ var ICONOS_IMG = {
   cofre_equipo: 'o_cofre_equipo',
   cofre_tesoro: 'o_cofre_tesoro', pack_tesoro7: 'o_cofre_tesoro', pack_tesoro15: 'o_cofre_tesoro',
   cofre_mejora1: 'o_cofre_mejora', cofre_mejora2: 'o_cofre_mejora', cofre_mejora3: 'o_cofre_mejora', cofre_mejora4: 'o_cofre_mejora'
+};
+// retratos dibujados de las tropas (si no hay, se usa la foto del modelo 3D)
+var RETRATOS_IMG = {
+  espadachin: 't_espadachin', arquero: 't_arquero'
 };
 // la ficha de la suerte del Azar
 var ICONO_FICHA = '<img class="ico-obj" src="iconos/ui/o_ficha.webp" alt="🪙" draggable="false">';
