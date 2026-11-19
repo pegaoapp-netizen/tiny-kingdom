@@ -161,12 +161,12 @@
   function distInicial() { return window.innerWidth < window.innerHeight ? 120 : 90; } // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
-  function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 155 : 115; }
+  function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 175 : 125; }
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = 3.55;
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
   var GIRO_DIAG = Math.PI / 4;
-  function azVista() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? AZ_CAM + Math.PI : AZ_CAM + GIRO_DIAG; }
+  function azVista() { return AZ_CAM + GIRO_DIAG; } // v6.76: Ciudad, Campos y Mundo con el mismo ángulo: solo se aleja la cámara
   var CENTRO_REINO = new V3(0, 0, 0);
   // ---------- DISEÑO v6.31: ciudad redonda con 4 caminos de piedra en cruz, y los campos en un recinto amurallado ----------
   // El eje U mira hacia la cámara (abajo en la pantalla) y el eje V va de lado a lado.
@@ -1396,17 +1396,17 @@
   function irAlMundo() {
     if (enMundo) return;
     cerrarPanel(); cerrarMenuEdif && cerrarMenuEdif();
-    cam.distMeta = 170; sonar('magia');
+    cam.distMeta = 170; cam.suaveHasta = performance.now() + 1800; sonar('magia');
     $('mundo-transicion') || (function () { var d = document.createElement('div'); d.id = 'mundo-transicion'; document.body.appendChild(d); })();
     $('mundo-transicion').classList.add('on');
-    setTimeout(function () { abrirMundo(); setTimeout(function () { var t = $('mundo-transicion'); if (t) t.classList.remove('on'); }, 120); }, 520);
+    setTimeout(function () { abrirMundo(); setTimeout(function () { var t = $('mundo-transicion'); if (t) t.classList.remove('on'); }, 60); }, 850);
   }
   function abrirMundo() {
     $('mundo').classList.remove('oculto');
     enMundo = true; vistaActual = 'mundo'; pintarVista(); cerrarMenuGrande();
     $('mundo-info').innerHTML = ''; // v6.70: el mundo entra limpio, sin carteles
     if (!M3) crearMundo3D();
-    var yoC = celdaDe(miLugar().x, miLugar().y); M3.obj.copy(posCelda(yoC.x, yoC.y)); M3.zoom = { de: 74, a: M3.camelot ? 30 : 40, t0: performance.now() };
+    var yoC = celdaDe(miLugar().x, miLugar().y); M3.obj.copy(posCelda(yoC.x, yoC.y)); M3.zoom = { de: 14, a: M3.camelot ? 30 : 40, t0: performance.now(), dur: 1500 }; // v6.76: empieza cerca de tu reino y se aleja
     $('mundo-coord').textContent = '📍 ' + L('Tu reino', 'Your kingdom') + ' · X ' + yoC.x + ' · Y ' + yoC.y;
     $('mundo-volver').querySelector('span').textContent = L('Mi ciudad', 'My city');
     pintarBuscador();
@@ -1701,7 +1701,7 @@
     if (!M3 || !enMundo) { if (M3) M3.corriendo = false; return; }
     var cont = $('mundo-mapa'), w = cont.clientWidth, h = cont.clientHeight;
     if (M3.w !== w || M3.h !== h) { M3.r.setSize(w, h); M3.cam.aspect = w / h; M3.cam.updateProjectionMatrix(); M3.w = w; M3.h = h; }
-    if (M3.zoom) { var kz = Math.min(1, (performance.now() - M3.zoom.t0) / 750), ez = 1 - Math.pow(1 - kz, 3); M3.dist = M3.zoom.de + (M3.zoom.a - M3.zoom.de) * ez; if (kz >= 1) M3.zoom = null; }
+    if (M3.zoom) { var kz = Math.min(1, (performance.now() - M3.zoom.t0) / (M3.zoom.dur || 750)), ez = 1 - Math.pow(1 - kz, 3); M3.dist = M3.zoom.de + (M3.zoom.a - M3.zoom.de) * ez; if (kz >= 1) M3.zoom = null; }
     var d = M3.dist;
     if (M3.vel && M3.vel.suelto) { var limV = TAM_MUNDO * CELDA_M / 2; M3.obj.x = Math.max(-limV, Math.min(limV, M3.obj.x + M3.vel.x)); M3.obj.z = Math.max(-limV, Math.min(limV, M3.obj.z + M3.vel.z)); M3.vel.x *= 0.9; M3.vel.z *= 0.9; if (Math.abs(M3.vel.x) + Math.abs(M3.vel.z) < 0.01) M3.vel = null; }
     if (M3.centroCosas && M3.ultimaLista) { var cxr = Math.floor(M3.obj.x / CELDA_M + TAM_MUNDO / 2), cyr = Math.floor(M3.obj.z / CELDA_M + TAM_MUNDO / 2); if (Math.abs(cxr - M3.centroCosas.x) > CERCA_COSAS / 2 || Math.abs(cyr - M3.centroCosas.y) > CERCA_COSAS / 2) ponerCosasMundo(M3.ultimaLista, M3.ultimoYo); }
@@ -2091,8 +2091,8 @@
       if (enMundo) cerrarMundo();
       camVuelta = null;
       if (v === 'ciudad') { cam.meta.copy(CENTRO_REINO); cam.distMeta = distInicial(); }
-      else { cam.meta.copy(CAMPOS_CENTRO).multiplyScalar(0.6); cam.distMeta = DIST_CAMPOS(); }
-      cam.vel.set(0, 0, 0);
+      else { var cc = new THREE.Vector3(), nc = 0; slots.forEach(function (s) { if (s.campo) { cc.add(s.pos); nc++; } }); if (nc) cc.multiplyScalar(1 / nc); else cc.copy(CAMPOS_CENTRO).multiplyScalar(0.6); cam.meta.copy(cc); cam.distMeta = DIST_CAMPOS(); } // v6.76: centrada en los campos, mismo ángulo
+      cam.vel.set(0, 0, 0); cam.suaveHasta = performance.now() + 1800;
     }
     vistaActual = v; pintarVista(); avisoVista(v); sonar('click');
   }
@@ -4845,7 +4845,7 @@
   // ------------------------------------------------------------------
   function actualizarCamara(dt) {
     // zoom y desplazamiento se deslizan (sin saltos); al soltar el dedo sigue un poco por inercia
-    var kz = 1 - Math.exp(-dt * 7), kp = 1 - Math.exp(-dt * 11);
+    var lento = performance.now() < (cam.suaveHasta || 0), kz = 1 - Math.exp(-dt * (lento ? 2.2 : 7)), kp = 1 - Math.exp(-dt * (lento ? 2.6 : 11));
     cam.dist += (cam.distMeta - cam.dist) * kz;
     if (camSigue && oleadaActiva && enemigos.length && !arrastre) {
       var delante = enemigos.reduce(function (a, e) { return e.dist > a.dist ? e : a; });
