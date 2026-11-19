@@ -940,17 +940,17 @@
     { es: 'Construye un Aserradero', en: 'Build a Sawmill', ok: function () { return hayEdif('aserradero'); }, p: { oro: 200, madera: 300 } },
     { es: 'Construye una Cantera', en: 'Build a Quarry', ok: function () { return hayEdif('cantera'); }, p: { oro: 200, piedra: 300 } },
     { es: 'Construye un Cuartel', en: 'Build a Barracks', ok: function () { return hayEdif('cuartel'); }, p: { oro: 300, comida: 300 } },
-    { es: 'Entrena 10 tropas', en: 'Train 10 troops', ok: function () { return logro('tropas') >= 10; }, p: { comida: 500, gemas: 5 } },
+    { es: 'Entrena 10 tropas', en: 'Train 10 troops', ok: function () { return logro('tropas') >= 10; }, p: { comida: 500 } },
     { es: 'Gana la oleada 1', en: 'Win wave 1', ok: function () { return (estado.oleada || 1) > 1; }, p: { oro: 400 } },
     { es: 'Construye una Mina de oro', en: 'Build a Gold mine', ok: function () { return hayEdif('mina'); }, p: { oro: 400 } },
     { es: 'Recolecta tus campos 5 veces', en: 'Collect your fields 5 times', ok: function () { return logro('recolectas') >= 5; }, p: { madera: 500, piedra: 500 } },
-    { es: 'Sube el Castillo a nivel 2', en: 'Upgrade the Castle to level 2', ok: function () { return (estado.castillo || 1) >= 2; }, p: { oro: 600, gemas: 5 } },
+    { es: 'Sube el Castillo a nivel 2', en: 'Upgrade the Castle to level 2', ok: function () { return (estado.castillo || 1) >= 2; }, p: { oro: 600 } },
     { es: 'Construye 2 Granjas', en: 'Build 2 Farms', ok: function () { return hayEdif('granja', 2); }, p: { comida: 800 } },
     { es: 'Construye la Academia', en: 'Build the Academy', ok: function () { return hayEdif('academia'); }, p: { oro: 800 } },
     { es: 'Mejora la Muralla a nivel 1', en: 'Upgrade the Wall to level 1', ok: function () { return (estado.muralla || 0) >= 1; }, p: { piedra: 1000 } },
-    { es: 'Vence un campamento en el Mundo', en: 'Beat a camp in the World', ok: function () { return logro('campamentos') >= 1; }, p: { oro: 1000, gemas: 10 } },
-    { es: 'Sube el Castillo a nivel 3', en: 'Upgrade the Castle to level 3', ok: function () { return (estado.castillo || 1) >= 3; }, p: { oro: 1500, gemas: 10 } },
-    { es: 'Únete a una alianza', en: 'Join an alliance', ok: function () { return !!estado.alianza; }, p: { gemas: 15 } }
+    { es: 'Vence un campamento en el Mundo', en: 'Beat a camp in the World', ok: function () { return logro('campamentos') >= 1; }, p: { oro: 1000 } },
+    { es: 'Sube el Castillo a nivel 3', en: 'Upgrade the Castle to level 3', ok: function () { return (estado.castillo || 1) >= 3; }, p: { oro: 1500 } },
+    { es: 'Únete a una alianza', en: 'Join an alliance', ok: function () { return !!estado.alianza; }, p: { oro: 1000 } }
   ];
   // ---------- PANEL DE MISIONES: grupos, misión diaria, recomendada y recompensa a la vista ----------
   var pestMis = 'misiones';
@@ -960,11 +960,11 @@
   function nEd(t) { return function () { return edificiosDe(t).length; }; }
   function nvEd(t) { return function () { return nivelMayor(t); }; }
   function lg(k) { return function () { return logro(k); }; }
-  function tm(id, es, en, v, n, p) { return { id: id, es: es, en: en, v: v, n: n, p: p }; }
+  function tm(id, es, en, v, n, p) { if (p) delete p.gemas; return { id: id, es: es, en: en, v: v, n: n, p: p }; } // v6.74: sin gemas de premio
   var GRUPOS_MIS = [
     { id: 'ciudad', ico: '🏰', es: 'Mejora tu ciudad', en: 'Improve your city', t: [
       tm('c_granja', 'Construye una Granja', 'Build a Farm', nEd('granja'), 1, { oro: 300, comida: 300 }),
-      tm('c_nombre', 'Elige el nombre de tu reino', 'Choose your kingdom’s name', function () { return hayCuenta() ? 1 : 0; }, 1, { gemas: 10 }),
+      tm('c_nombre', 'Elige el nombre de tu reino', 'Choose your kingdom’s name', function () { return hayCuenta() ? 1 : 0; }, 1, { oro: 1000 }),
       tm('c_cast2', 'Sube el Castillo a nivel 2', 'Upgrade the Castle to level 2', function () { return estado.castillo || 1; }, 2, { oro: 800, madera: 500, gemas: 5 }),
       tm('c_pobl', 'Haz crecer tu pueblo: 6 edificios', 'Grow your town: 6 buildings', nEdificios, 6, { comida: 1000, madera: 800 }),
       tm('c_muralla', 'Construye la Muralla (nivel 1)', 'Build the Wall (level 1)', function () { return estado.muralla || 0; }, 1, { piedra: 1200, oro: 500 }),
@@ -1005,7 +1005,7 @@
     tm('d_rec', 'Recolecta tus campos 3 veces', 'Collect your fields 3 times', deHoy('recolectas'), 3, { madera: 600, piedra: 600 }),
     tm('d_trop', 'Entrena 10 tropas', 'Train 10 troops', deHoy('tropas'), 10, { comida: 800 }),
     tm('d_ole', 'Gana 1 oleada', 'Win 1 wave', deHoy('oleadas'), 1, { oro: 800 }),
-    tm('d_acel', 'Usa 1 acelerador', 'Use 1 speed-up', deHoy('acel'), 1, { gemas: 5 }),
+    tm('d_acel', 'Usa 1 acelerador', 'Use 1 speed-up', deHoy('acel'), 1, { oro: 500 }),
     tm('d_todo', 'Completa las 4 misiones del día', 'Finish the 4 daily quests', function () { var h = misDia().hechas; return ['d_rec', 'd_trop', 'd_ole', 'd_acel'].filter(function (id) { return h[id]; }).length; }, 4, { gemas: 15, objeto: 'acel_15m' })
   ];
   function misHecha(t, dia) { return dia ? !!misDia().hechas[t.id] : !!(estado.misHechas && estado.misHechas[t.id]); }
@@ -2486,7 +2486,7 @@
   function premioRegalo(grande) {
     var n = grande ? 3 : 1, r = Math.random(), p = {};
     if (r < 0.3) p.oro = 300 * n; else if (r < 0.55) p.comida = 450 * n; else if (r < 0.75) p.madera = 300 * n; else if (r < 0.88) p.piedra = 200 * n; else p.objeto = grande ? 'acel_1h' : 'acel_15m';
-    if (grande && Math.random() < 0.4) p.gemas = 10;
+    // v6.74: los regalos de alianza ya no dan gemas
     return p;
   }
   function regaloAlianza(origen, grande) {
@@ -3377,7 +3377,9 @@
     pulso('pill-monedas');
     actualizarHUD();
   }
+  // v6.74: las gemas ya no se regalan jugando (misiones, cofres, oleadas, campamentos, torneo, alianza, promociones): solo se compran
   function sumarGemas(n, pos) {
+    return;
     estado.gemas += n;
     if (pos) flotar('+' + n + ' 💎', pos, 'gema');
     pulso('pill-gemas');
@@ -5338,10 +5340,11 @@
   }
   // ================= v6.34: RANKING DE TODOS Y TORNEO SEMANAL =================
   var PUNTOS_TORNEO = { tropas: 2, recolectas: 5, acel: 5, campamentos: 60, oleada: 40, obra: 25, ataque: 120 };
-  var PREMIOS_TORNEO = [
+  var PREMIOS_TORNEO_SIN = function (l) { l.forEach(function (q) { delete q.gemas; }); return l; };
+  var PREMIOS_TORNEO = PREMIOS_TORNEO_SIN([
     { hasta: 1, gemas: 500, oro: 200000, objeto: 'acel_15m', piezas: 3, mitico: true }, { hasta: 2, gemas: 300, oro: 120000, piezas: 2, mitico: true }, { hasta: 3, gemas: 200, oro: 80000, piezas: 2, mitico: true },
     { hasta: 10, gemas: 100, oro: 40000, piezas: 1 }, { hasta: 50, gemas: 50, oro: 15000, piezas: 1 }, { hasta: 1e9, gemas: 20, oro: 5000 }
-  ];
+  ]);
   function semanaActual() { return Math.floor((Date.now() / 86400000 + 3) / 7); } // la semana empieza el lunes
   function finDeSemana(sem) { return ((sem + 1) * 7 - 3) * 86400000; }
   function premioTorneo(pos) { for (var i = 0; i < PREMIOS_TORNEO.length; i++) if (pos <= PREMIOS_TORNEO[i].hasta) return PREMIOS_TORNEO[i]; return PREMIOS_TORNEO[PREMIOS_TORNEO.length - 1]; }
@@ -7416,7 +7419,7 @@
     var premio = GEMAS_POR_OLEADA + (n === total && !estado.infinito ? GEMAS_VICTORIA : 0);
     var html = '<div class="carta"><h3>⚔️ ' + T('oleada') + ' ' + (estado.infinito || n > total ? n : n + ' / ' + total) + '</h3><p>' + T('conquista_txt') + '</p>' +
       (n <= total ? puntos : '') +
-      '<p class="nota"><b>' + T('vienen') + '</b></p><div class="stats">' + vienen + '<span>' + T('premio', { g: premio }) + '</span></div>' +
+      '<p class="nota"><b>' + T('vienen') + '</b></p><div class="stats">' + vienen + (premio ? '<span>' + T('premio', { g: premio }) + '</span>' : '') + '</div>' +
       '<div class="stats" style="margin-top:6px"><span>❤ ' + T('castillo') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>🛡️ ' + textoTropas() + '</span></div>';
     if (oleadaActiva) html += '<p class="nota aviso-rojo"><b>' + T('oleada_curso', { n: enemigos.length + colaSpawn.length }) + '</b></p>';
     else html += '<button class="comprar rojo boton-oleada-grande" data-accion="empezar-oleada">⚔️ ' + T('empezar_oleada', { n: estado.oleada }) + '</button>';
@@ -7463,7 +7466,7 @@
   }
   function textoPremio(p) {
     var partes = [];
-    ['oro', 'comida', 'madera', 'piedra', 'gemas'].forEach(function (r) { if (p[r]) partes.push('+' + p[r] + ' ' + ICONO_RECURSO[r]); });
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) partes.push('+' + p[r] + ' ' + ICONO_RECURSO[r]); });
     if (p.objeto) partes.push(OBJETOS[p.objeto].icono + ' ' + N(p.objeto));
     if (p.tropas) { var n = 0; for (var k in p.tropas) n += p.tropas[k]; partes.push('🛡️ ' + T('tropas_regalo', { n: n })); }
     return partes.join(', ');
@@ -7643,7 +7646,7 @@
     { id: 'regalo', ico: '👑', dia: true, es: ['Regalo del Rey', 'Entra cada día y llévate tu regalo.'], en: ['King\'s gift', 'Come back every day for your gift.'], need: 0, premio: { fichas: 2, oro: 300 } },
     { id: 'cosecha', ico: '🌾', k: 'recolectas', es: ['Fiebre de la cosecha', 'Recolecta tus campos 30 veces esta semana.'], en: ['Harvest fever', 'Collect your fields 30 times this week.'], need: 30, premio: { objeto: 'cofre_plata', madera: 2000 } },
     { id: 'reclutas', ico: '🛡️', k: 'tropas', es: ['Reclutamiento real', 'Entrena 100 tropas esta semana.'], en: ['Royal recruitment', 'Train 100 troops this week.'], need: 100, premio: { objeto: 'acel_1h', comida: 3000 } },
-    { id: 'defensa', ico: '⚔️', k: 'oleadas', es: ['Defensores del Caribe', 'Gana 5 oleadas esta semana.'], en: ['Caribbean defenders', 'Win 5 waves this week.'], need: 5, premio: { objeto: 'cofre_oro', gemas: 10 } },
+    { id: 'defensa', ico: '⚔️', k: 'oleadas', es: ['Defensores del Caribe', 'Gana 5 oleadas esta semana.'], en: ['Caribbean defenders', 'Win 5 waves this week.'], need: 5, premio: { objeto: 'cofre_oro', oro: 5000 } },
     { id: 'rapido', ico: '⏩', k: 'acel', es: ['Manos a la obra', 'Usa 10 aceleradores esta semana.'], en: ['Get to work', 'Use 10 speed-ups this week.'], need: 10, premio: { objeto: 'libro_peq', fichas: 3 } }
   ];
   function promoEstado() {
@@ -8179,7 +8182,7 @@
   function htmlInforme(filas, botin) {
     return '<div class="casilla-tabla">' + filas.map(function (f) { return '<span>' + f[0] + '</span><b>' + f[1] + '</b>'; }).join('') + '</div>' + (botin ? '<p class="nota">' + textoBotin(botin) + '</p>' : '');
   }
-  function textoPremioCorreo(p) { var a = []; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) a.push(ICONO_RECURSO[r] + ' ' + formatoNumero(p[r])); }); if (p.gemas) a.push('💎 ' + p.gemas); if (p.objeto) a.push(OBJETOS[p.objeto].icono + ' ' + N(p.objeto)); if (p.pieza) a.push('🧰 ' + L('Pieza de equipo', 'Gear piece')); if (p.puntos) a.push('🛡️ ' + p.puntos + ' ' + L('puntos de alianza', 'alliance points')); return a.join(' · '); }
+  function textoPremioCorreo(p) { var a = []; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) a.push(ICONO_RECURSO[r] + ' ' + formatoNumero(p[r])); }); if (p.objeto) a.push(OBJETOS[p.objeto].icono + ' ' + N(p.objeto)); if (p.pieza) a.push('🧰 ' + L('Pieza de equipo', 'Gear piece')); if (p.puntos) a.push('🛡️ ' + p.puntos + ' ' + L('puntos de alianza', 'alliance points')); return a.join(' · '); }
   function reclamarCorreo(m) {
     if (!m.premio || m.reclamado) return false;
     var p = m.premio; m.reclamado = true;
@@ -8577,7 +8580,7 @@
     var o = composicion(n), partes = [];
     ['trasgo', 'bruto', 'ogro'].forEach(function (k) { if (o[k]) partes.push(N(k) + ' ×' + o[k]); });
     var premio = GEMAS_POR_OLEADA + (n === OLEADAS.length && !estado.infinito ? GEMAS_VICTORIA : 0);
-    return partes.join(' · ') + ' · ' + T('premio', { g: premio }) + (n === OLEADAS.length && !estado.infinito ? ' — ' + T('ultima') : '');
+    return partes.join(' · ') + (premio ? ' · ' + T('premio', { g: premio }) : '') + (n === OLEADAS.length && !estado.infinito ? ' — ' + T('ultima') : '');
   }
   function calcularPoder() {
     var p = 0;
