@@ -1801,3 +1801,44 @@ img.ico-obj { width: 1.5em; height: 1.5em; object-fit: contain; vertical-align: 
 
 /* v6.86: imagen limpia: el contador de tropas no sale en la ciudad (las tropas se ven dentro del Cuartel) */
 #pill-tropas, body.tema-oscuro #pill-tropas { display: none !important; }
+
+/* ===== v6.88: botones de eventos (salen solo mientras el evento está abierto) ===== */
+#eventos-botones { position: fixed; left: 8px; top: calc(env(safe-area-inset-top) + 150px); z-index: 35; display: flex; flex-direction: column; gap: 8px; }
+#eventos-botones.oculto { display: none; }
+.ev-btn { position: relative; width: 62px; height: 62px; border-radius: 50%; border: 3px solid #f2c45a; background: radial-gradient(circle at 50% 35%, #ffe9a0, #c8792a 60%, #5a2a0c); box-shadow: 0 0 12px rgba(255,200,80,.75), 0 3px 0 rgba(0,0,0,.4); cursor: pointer; padding: 0; animation: evLatido 1.6s ease-in-out infinite; }
+.ev-btn .ev-ico { font-size: 32px; line-height: 56px; }
+.ev-btn .ev-t { position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%); white-space: nowrap; background: #a8221a; color: #fff; font: 800 11px system-ui, sans-serif; padding: 2px 6px; border-radius: 6px; border: 1px solid #ffb0a0; }
+.ev-btn.ev-premium { background: radial-gradient(circle at 50% 35%, #e8d0ff, #7a3ad0 60%, #2a0c5a); }
+@keyframes evLatido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+body.panel-abierto #eventos-botones { display: none; }
+
+/* ===== Ruleta de la Capitana Coral ===== */
+#panel.rul-panel .rul-arriba { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-bottom: 6px; color: #f1e2c0; }
+#panel.rul-panel .rul-arriba b { color: #ff5a4a; }
+#panel.rul-panel .rul-arriba small { color: #c9b48a; }
+.rul-marco { position: relative; width: min(78vw, 300px); aspect-ratio: 1; margin: 6px auto 10px; }
+.rul-flecha { position: absolute; left: 50%; top: -14px; transform: translateX(-50%); z-index: 3; color: #ffd86a; font-size: 30px; text-shadow: 0 2px 3px #000; }
+.rul-rueda { position: absolute; inset: 0; border-radius: 50%; border: 8px solid #6a4210; box-shadow: 0 0 0 3px #f2c45a, 0 6px 14px rgba(0,0,0,.6), inset 0 0 20px rgba(0,0,0,.5);
+  background: repeating-conic-gradient(from -22.5deg, #1f4a6a 0 45deg, #8a6420 45deg 90deg); }
+.rul-seg { position: absolute; inset: 0; }
+.rul-ic { position: absolute; left: 50%; top: 9%; transform: translateX(-50%); font-size: 30px; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+.rul-ic img.ico-obj { width: 40px; height: 40px; }
+.rul-centro { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; width: 34%; aspect-ratio: 1; border-radius: 50%; border: 4px solid #f2c45a; background: radial-gradient(circle at 50% 35%, #5cc24a, #1f6a17); color: #fff; font: 800 20px Georgia, serif; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,.6); }
+.rul-centro small { font: 700 13px system-ui, sans-serif; }
+.rul-galeon { text-align: center; color: #f1e2c0; margin: 4px 0; }
+.rul-llaves { display: flex; justify-content: center; gap: 6px; font-size: 22px; }
+.rul-llaves span { opacity: .25; filter: grayscale(1); }
+.rul-llaves span.si { opacity: 1; filter: none; }
+.rul-cofre img.ico-obj { width: 70px; height: 70px; }
+.rul-galeon p { margin: 2px 0; font-weight: 700; color: #ffd86a; }
+.rul-botones .az-b { flex-direction: column; min-width: 92px; font-size: 15px; }
+.rul-botones .az-b small { font: 700 12px system-ui, sans-serif; }
+#rul-premios { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#rul-premios .rp-caja { max-width: 420px; width: 100%; max-height: 86vh; overflow-y: auto; text-align: center; color: #f1e2c0; }
+#rul-premios h3 { margin: 0 0 6px; color: #ffd86a; font: 800 20px Georgia, serif; }
+.rp-rejilla { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0 14px; }
+.rp-rejilla.uno { grid-template-columns: 1fr; justify-items: center; }
+.rp-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 10px; border: 2px solid #f2c45a; background: radial-gradient(circle, #5a8ad0, #1a3a6a); box-shadow: 0 0 14px rgba(255,210,90,.6); }
+.rp-item.gordo { background: radial-gradient(circle, #ffe066, #b8801e); }
+.rp-ic { font-size: 38px; } .rp-ic img.ico-obj { width: 52px; height: 52px; }
+.rp-item small { font: 700 12px system-ui, sans-serif; color: #fff; }

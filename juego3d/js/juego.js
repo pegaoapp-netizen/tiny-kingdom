@@ -8029,7 +8029,7 @@
     '<rect x="14" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="44" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="6" y="24" width="52" height="5" fill="#d9a13a" stroke="#6a4a10"/>' +
     '<rect x="27" y="27" width="10" height="12" rx="2" fill="#f2c45a" stroke="#6a4a10"/><circle cx="32" cy="33" r="2" fill="#3a2410"/></svg>';
   var PREMIOS_AZAR = [['bolsa_oro', 20], ['saco_comida', 18], ['saco_madera', 18], ['saco_piedra', 14], ['acel_5m', 14], ['acel_15m', 8], ['libro_peq', 6], ['cofre_madera', 6], ['acel_1h', 3], ['cofre_plata', 2]];
-  var PREMIOS_AZAR_PREMIUM = [['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4]];
+  var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4]];
   var RAROS_AZAR = ['cofre_oro', 'libro_gra', 'acel_8h'];
   var modoAzar = 'normal', azarGrid = null;
   function fichasAzar() {
@@ -8041,9 +8041,10 @@
   function sortearAzar(lista) { var t = lista.reduce(function (a, x) { return a + x[1]; }, 0), n = Math.random() * t; for (var i = 0; i < lista.length; i++) { n -= lista[i][1]; if (n <= 0) return lista[i][0]; } return lista[0][0]; }
   function abrirAzar(modo) {
     if (modo) { modoAzar = modo; azarGrid = null; }
+    var evP = eventoActivo('premium'); if (modoAzar === 'premium' && !evP) { modoAzar = 'normal'; azarGrid = null; }
     var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 2 : 1;
     if (!azarGrid) azarGrid = [null, null, null, null, null, null, null, null, null];
-    var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button><button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + '</button></div>' +
+    var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button>' + (evP ? '<button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + ' ⏳' + fmtTiempo(Math.ceil((evP.fin - Date.now()) / 1000)) + '</button>' : '') + '</div>' +
       '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
         return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
@@ -8071,6 +8072,116 @@
   function comprarFichas() {
     if (!pagar(0, 20)) return;
     estado.fichas = fichasAzar() + 10; sonar('moneda'); guardar(true); abrirAzar();
+  }
+  // ================= v6.88: EVENTOS CON FECHA FIJA (Ruleta y Azar Premium, 2 veces al mes cada uno) =================
+  // Cada evento dura 11 horas: de 10:00 a 21:00 (hora de Nueva York, se calcula en UTC: 15:00 a 02:00).
+  var EVENTOS = {
+    ruleta: { dias: [5, 19], ico: '🎡', es: 'Ruleta', en: 'Wheel' },
+    premium: { dias: [12, 26], ico: '🎲', es: 'Azar Premium', en: 'Premium Lucky' }
+  };
+  var EV_INICIO_UTC = 15, EV_HORAS = 11;
+  // eventos sueltos (fuera del calendario): la Ruleta de estreno, del 19 de noviembre (5 pm NY) al 20 (5 am NY)
+  var EVENTOS_EXTRA = [{ k: 'ruleta', ini: Date.UTC(2026, 10, 19, 22, 0), fin: Date.UTC(2026, 10, 20, 10, 0) }];
+  function forzarEventos() { return /[?&]eventos=1/.test(location.search); }
+  // devuelve { fin, id } si el evento está activo ahora, o null
+  function eventoActivo(k) {
+    var ev = EVENTOS[k], ahora = Date.now();
+    for (var d = -1; d <= 0; d++) {
+      var f = new Date(ahora + d * 86400000);
+      if (ev.dias.indexOf(f.getUTCDate()) < 0) continue;
+      var ini = Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate(), EV_INICIO_UTC), fin = ini + EV_HORAS * 3600000;
+      if (ahora >= ini && ahora < fin) return { fin: fin, id: k + '_' + f.getUTCFullYear() + '_' + (f.getUTCMonth() + 1) + '_' + f.getUTCDate() };
+    }
+    for (var x = 0; x < EVENTOS_EXTRA.length; x++) { var e2 = EVENTOS_EXTRA[x]; if (e2.k === k && ahora >= e2.ini && ahora < e2.fin) return { fin: e2.fin, id: k + '_extra' + x }; }
+    if (forzarEventos()) return { fin: ahora + 3600000, id: k + '_prueba' };
+    return null;
+  }
+  function proximoEvento(k) {
+    var ev = EVENTOS[k], ahora = Date.now();
+    for (var d = 0; d < 40; d++) { var f = new Date(ahora + d * 86400000); if (ev.dias.indexOf(f.getUTCDate()) < 0) continue; var ini = Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate(), EV_INICIO_UTC); if (ini > ahora) return ini; }
+    return 0;
+  }
+  // botones de los eventos activos (salen arriba a la izquierda con su reloj y se quitan solos al terminar)
+  function pintarBotonesEventos() {
+    var c = $('eventos-botones');
+    if (!c) { c = document.createElement('div'); c.id = 'eventos-botones'; document.body.appendChild(c); c.addEventListener('click', function (ev) { var b = ev.target.closest('[data-ev]'); if (!b || enMenu) return; sonar('click'); if (b.dataset.ev === 'ruleta') abrirRuleta(); else abrirAzar('premium'); }); }
+    var ocultar = enMenu || enMundo || !!panelActual;
+    var h = Object.keys(EVENTOS).map(function (k) { var a = eventoActivo(k); if (!a) return ''; return '<button class="ev-btn ev-' + k + '" data-ev="' + k + '"><span class="ev-ico">' + EVENTOS[k].ico + '</span><span class="ev-t">' + fmtTiempo(Math.max(0, Math.ceil((a.fin - Date.now()) / 1000))) + '</span></button>'; }).join('');
+    c.classList.toggle('oculto', ocultar || !h);
+    if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
+  }
+
+  // ================= RULETA DE LA CAPITANA CORAL =================
+  // 8 casillas; 2 dan llaves. Con 5 llaves se abre el Cofre del Galeón (el premio gordo).
+  var RULETA = [
+    { k: 'cofre_plata', p: 18 }, { k: 'llave', p: 12 }, { k: 'acel_1h', p: 18 }, { k: 'cofre_oro', p: 8 },
+    { k: 'llave', p: 12 }, { k: 'inv_1h', p: 14 }, { k: 'caracola', p: 8 }, { k: 'libro_gra', p: 10 }
+  ];
+  var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1 }, GALEON_GEMAS = 50;
+  var RUL_FICHAS = 3, RUL_GEMAS = 15;
+  function estadoRuleta(id) { var r = estado.ruleta; if (!r || r.id !== id) { r = estado.ruleta = { id: id, llaves: 0 }; } return r; }
+  function htmlRueda() {
+    var n = RULETA.length, paso = 360 / n;
+    return '<div class="rul-marco"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda">' + RULETA.map(function (s, i) {
+      var ico = s.k === 'llave' ? '🗝️' : OBJETOS[s.k].icono;
+      return '<span class="rul-seg" style="transform:rotate(' + (i * paso) + 'deg)"><span class="rul-ic">' + ico + '</span></span>';
+    }).join('') + '</div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasAzar() >= RUL_FICHAS ? '🪙 ' + RUL_FICHAS : '💎 ' + RUL_GEMAS) + '</small></button></div>';
+  }
+  function abrirRuleta() {
+    var a = eventoActivo('ruleta');
+    if (!a) { var p = proximoEvento('ruleta'); consejoTemporal(L('La Ruleta no está abierta. Vuelve el ', 'The Wheel is closed. Back on ') + (p ? new Date(p).toLocaleDateString(estado.idioma === 'en' ? 'en' : 'es', { day: 'numeric', month: 'long' }) : '')); return; }
+    var r = estadoRuleta(a.id), f = fichasAzar(), g = estado.gemasInfinitas ? Infinity : (estado.gemas || 0);
+    var falta = Math.max(0, 5 - r.llaves);
+    var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + L('Necesitas: fichas o gemas', 'You need: tokens or gems') + '</small></div>' +
+      '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + L('¡Gira el timón y junta 5 llaves para abrir el Cofre del Galeón, marinero!', 'Spin the helm and collect 5 keys to open the Galleon Chest, sailor!') + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
+      htmlRueda() +
+      '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">🗝️</span>'; }).join('') + '</div><div class="rul-cofre">' + (window.ICONO_FICHA ? '' : '') + '<img class="ico-obj" src="iconos/ui/o_cofre_tesoro.webp" alt="🎁"></div>' +
+      '<p>' + (falta ? L('¡Junta ' + falta + ' llave' + (falta > 1 ? 's' : '') + ' más para el Cofre del Galeón!', 'Collect ' + falta + ' more key' + (falta > 1 ? 's' : '') + ' for the Galleon Chest!') : L('¡Cofre listo!', 'Chest ready!')) + '</p></div>' +
+      '<p class="az-tienes">' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : f) + '</b></p>' +
+      '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
+        var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
+        return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🪙 ' + (RUL_FICHAS * n) : '💎 ' + (RUL_GEMAS * n)) + '</small></button>';
+      }).join('') + '</div>';
+    abrirPanel('🎡 ' + L('Ruleta de la Capitana', 'Captain\'s Wheel'), html, { tipo: 'ruleta' });
+    $('panel').classList.add('iv-panel', 'az-panel', 'rul-panel');
+  }
+  function sortearRuleta() { var t = RULETA.reduce(function (s, x) { return s + x.p; }, 0), n = Math.random() * t; for (var i = 0; i < RULETA.length; i++) { n -= RULETA[i].p; if (n <= 0) return i; } return 0; }
+  var girando = false;
+  function tirarRuleta(n) {
+    if (girando) return;
+    var a = eventoActivo('ruleta'); if (!a) { cerrarPanel(); return; }
+    var conF = n < 50 && fichasAzar() >= RUL_FICHAS * n;
+    if (conF) { if (!estado.gemasInfinitas) estado.fichas -= RUL_FICHAS * n; }
+    else if (!pagar(0, RUL_GEMAS * n)) return;
+    var r = estadoRuleta(a.id), ganados = [], idx = [];
+    for (var i = 0; i < n; i++) {
+      var j = sortearRuleta(), s = RULETA[j]; idx.push(j);
+      if (s.k === 'llave') { r.llaves++; ganados.push({ ico: '🗝️', nom: L('Llave del Galeón', 'Galleon Key') }); }
+      else { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k) }); }
+      while (r.llaves >= 5) {
+        r.llaves -= 5;
+        Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k]; });
+        estado.gemas = (estado.gemas || 0) + GALEON_GEMAS;
+        ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_cofre_tesoro.webp" alt="🎁">', nom: L('¡COFRE DEL GALEÓN!', 'GALLEON CHEST!'), gordo: true });
+      }
+    }
+    guardar(true); actualizarHUD();
+    // la rueda gira y para en la casilla del último premio
+    var rueda = $('rul-rueda'), paso = 360 / RULETA.length, ult = idx[idx.length - 1];
+    var giro = (rueda && +rueda.dataset.giro || 0); giro += 360 * (n === 1 ? 5 : 3) + (360 - ((giro % 360) + 360) % 360) - ult * paso;
+    girando = true; sonar('magia');
+    if (rueda) { rueda.style.transition = 'transform ' + (n === 1 ? 3.2 : 1.6) + 's cubic-bezier(.17,.67,.2,1)'; rueda.style.transform = 'rotate(' + giro + 'deg)'; rueda.dataset.giro = giro; }
+    setTimeout(function () { girando = false; mostrarPremiosRuleta(ganados); }, n === 1 ? 3300 : 1700);
+  }
+  function mostrarPremiosRuleta(l) {
+    var v = $('rul-premios'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'rul-premios';
+    var hayGordo = l.some(function (x) { return x.gordo; });
+    d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!')) + '</h3>') +
+      '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) { return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + '</span><small>' + x.nom + '</small></div>'; }).join('') + '</div>' +
+      '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div>';
+    document.body.appendChild(d); sonar(hayGordo ? 'victoria' : 'moneda');
+    $('rp-vale').addEventListener('click', function () { sonar('click'); d.remove(); if (panelActual && panelActual.tipo === 'ruleta') abrirRuleta(); });
   }
   // ---------- v6.58: CENTRO DE PROMOCIONES (cada una con su tiempo, su premio y su punto rojo) ----------
   function finDeHoy() { var d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
@@ -8883,6 +8994,7 @@
     else if (a.indexOf('mail-') === 0) accionCorreo(a, b);
     else if (a === 'inv-tab') { sonar('click'); abrirPanelMochila(b.getAttribute('data-tab')); }
     else if (a === 'inv-modo') { sonar('click'); abrirPanelMochila(b.getAttribute('data-m')); }
+    else if (a === 'rul-tirar') tirarRuleta(+b.getAttribute('data-n'));
     else if (a === 'azar-modo') { sonar('click'); abrirAzar(b.getAttribute('data-m')); }
     else if (a === 'promo-reclamar') reclamarPromo(b.getAttribute('data-id'));
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
@@ -9629,6 +9741,7 @@
   // cola de entrenamiento siempre a la vista
   function actualizarPillEntreno() {
     try { actualizarDock(); } catch (e) {}
+    try { pintarBotonesEventos(); var rr = $('rul-reloj'); if (rr) { var qf = Math.ceil((+rr.dataset.fin - Date.now()) / 1000); rr.textContent = fmtTiempo(Math.max(0, qf)); if (qf <= 0 && panelActual && panelActual.tipo === 'ruleta') cerrarPanel(); } } catch (e) {}
     var p = $('pill-entreno'); if (!p) return;
     if (!colaEntreno.length) { p.classList.add('oculto-pill'); return; }
     p.classList.remove('oculto-pill');
