@@ -1179,3 +1179,26 @@ html body.barra-oro #abajo > button .txt, html body.barra-oro #abajo > button sp
 #aviso-version { display: none !important; }
 /* v6.76: transición al Mundo suave (sin pantalla oscura) */
 #mundo-transicion { background: radial-gradient(circle, rgba(255,255,255,0) 45%, rgba(20,14,6,.55) 100%) !important; transition: opacity .35s ease !important; }
+
+/* ---------------- v6.85: en el teléfono las ventanas son más bajas y compactas (se ve la ciudad arriba) ---------------- */
+@media (max-width: 560px) and (orientation: portrait) {
+  html body.tema-oscuro #panel#panel { top: auto !important; bottom: calc(112px + env(safe-area-inset-bottom)) !important; max-height: 60vh !important; min-height: 0 !important; height: auto !important; }
+  html body.tema-oscuro #panel#panel.cafe { top: auto !important; left: 0 !important; right: 0 !important; min-height: 0 !important; max-height: 60vh !important; }
+  html body.tema-oscuro #panel#panel .panel-cab { padding-top: 6px !important; padding-bottom: 6px !important; min-height: 0 !important; }
+  html body.tema-oscuro #panel#panel #panel-titulo { font-size: 17px !important; }
+  html body.tema-oscuro #panel#panel #panel-cuerpo { font-size: 14px !important; padding: 8px 10px !important; }
+  html body.tema-oscuro #panel#panel #panel-gemas { height: 34px !important; min-width: 78px !important; padding: 2px 6px 2px 8px !important; }
+  html body.tema-oscuro #panel#panel #panel-gemas .pg-gema { width: 24px !important; height: 20px !important; }
+  html body.tema-oscuro #panel#panel .cafe-mas { padding: 3px 7px !important; font-size: 12px !important; }
+  html body.tema-oscuro #panel#panel .iv-modos button, html body.tema-oscuro #panel#panel .hi-tabs button, html body.tema-oscuro #panel#panel .ve-tabs button, html body.tema-oscuro #panel#panel .subtabs button { padding: 7px 4px !important; font-size: 13px !important; min-height: 0 !important; }
+  html body.tema-oscuro #panel#panel .iv-fila, html body.tema-oscuro #panel#panel .cq2-fila { padding: 5px 4px !important; gap: 8px !important; }
+  html body.tema-oscuro #panel#panel .iv-ico { width: 40px !important; height: 40px !important; font-size: 22px !important; }
+  html body.tema-oscuro #panel#panel .cq2-foto { width: 60px !important; height: 60px !important; }
+  html body.tema-oscuro #panel#panel .iv-boton { min-height: 34px !important; min-width: 70px !important; font-size: 14px !important; }
+  html body.tema-oscuro #panel#panel .al-if, html body.tema-oscuro #panel#panel .al-fila b, html body.tema-oscuro #panel#panel .cs-filas span { font-size: 13px !important; }
+  html body.tema-oscuro #panel#panel .al-fila { padding: 7px 4px !important; }
+  html body.tema-oscuro #panel#panel .al-3b button { min-height: 40px !important; font-size: 14px !important; }
+  html body.tema-oscuro #panel#panel .carta, html body.tema-oscuro #panel#panel .cs-caja { padding: 8px !important; }
+  html body.tema-oscuro #panel#panel h3 { font-size: 15px !important; }
+  html body.tema-oscuro #panel#panel button.comprar { min-height: 38px !important; font-size: 14px !important; padding-top: 5px !important; padding-bottom: 5px !important; }
+}
