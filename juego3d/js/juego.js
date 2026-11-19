@@ -1814,8 +1814,9 @@
         fb.traverse(function (o) { if (o.isMesh) { o.material = o.material.clone(); o.material.depthTest = false; o.material.transparent = true; o.renderOrder = 6; } });
         fb.scale.setScalar(1.8); fb.position.set(0.55, 0.3, -0.55); return fb;
       }
-      if (estado.alianza && (aliada || esYo)) g.add(banderaReino(0x2a6ad0, 0xf2c45a));
-      if (hostil) g.add(banderaReino(0xc0281e, 0x1a1a1a));
+      // v6.86: azul = tú y tu alianza; roja = todos los demás reinos (enemigos)
+      if (esYo || aliada) g.add(banderaReino(0x2a6ad0, 0xf2c45a));
+      else g.add(banderaReino(0xc0281e, hostil ? 0x1a1a1a : 0xf2c45a));
       if (esYo) { var brillo = new THREE.Mesh(new THREE.CircleGeometry(1.25, 28), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.38, depthWrite: false })); brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.03; g.add(brillo); M3.brilloYo = brillo; }
       if (prot) { var cup = new THREE.Mesh(new THREE.SphereGeometry(1.35, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x8fd6ff, transparent: true, opacity: 0.3, depthWrite: false })); g.add(cup); }
       g.position.copy(p); M3.cosas.add(g);
