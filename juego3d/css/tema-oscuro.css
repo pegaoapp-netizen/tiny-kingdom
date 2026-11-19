@@ -1170,3 +1170,6 @@ body #mundo #mundo-xy { position: fixed !important; left: 0 !important; right: 0
 body.mundo-buscando #mundo-xy .mxy-bestia { background: linear-gradient(180deg, #e0a23c, #a86a1a); }
 body:has(#mundo:not(.oculto)) #consejo { display: none !important; } /* los consejos de la ciudad no salen en el mundo */
 body.barra-oro #abajo #btn-mundo { display: none !important; } /* v6.70: «Mundo» salía dos veces: el botón de la izquierda ya cambia Ciudad / Campos / Mundo */
+/* v6.71: sin el letrero «Mapa del mundo» ni la X de arriba (para volver se usa el botón Ciudad / Mundo de abajo) */
+#mundo .mundo-cab { display: none !important; }
+body #mundo #mundo-xy { top: env(safe-area-inset-top) !important; }
