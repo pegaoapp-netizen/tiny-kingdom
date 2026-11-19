@@ -4527,11 +4527,12 @@
       }
       if (s.modelo.userData.banderas) s.modelo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     });
+    if (castillo.userData.colorPuesto !== (estado.colorBandera || 'rojo')) { castillo.userData.colorPuesto = estado.colorBandera || 'rojo'; pintarBanderasCastillo(); }
     castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
 
     // ---- impuestos del castillo ----
     impuestoCd += dt;
-    if (impuestoCd >= IMPUESTO.cada) { impuestoCd -= IMPUESTO.cada; sumarRecurso('oro', Math.round(IMPUESTO.oro * (1 + bono('impuestos'))), castilloPos.clone().setY(9)); }
+    if (impuestoCd >= IMPUESTO.cada) { impuestoCd -= IMPUESTO.cada; var oroImp = Math.round(IMPUESTO.oro * (impuestoPct() / 30) * (1 + bono('impuestos'))); if (oroImp > 0) sumarRecurso('oro', oroImp, castilloPos.clone().setY(9)); }
     // ---- las tropas comen ----
     comidaCd += dt;
     if (comidaCd >= COMIDA_TROPA.cada) {
@@ -6590,7 +6591,7 @@
   }
   function velReal() { return Math.max(velocidad, 0.0001); }
   // Las obras van a tiempo real: el x2 del jugador no las acelera (solo el dueño con su x10)
-  function velObras() { return estado.dueno ? velReal() : 1; }
+  function velObras() { return (estado.dueno ? velReal() : 1) * factorImpuestoObras(); } // v6.66: el impuesto alto hace las obras un poco más lentas
   function gemasParaTerminar(seg) { return Math.max(1, Math.ceil(Math.max(0, seg) / 600) * GEMAS_POR_10MIN); }
   // v6.40: la cola puede tener miles de tropas; el resumen se calcula una vez y se reusa mientras no cambie
   var resumenCola = { n: -1, p: null, resto: 0, cuenta: {} };
@@ -7447,6 +7448,7 @@
   function fichasAzar() {
     // cada día te regalan 2 fichas de la suerte (se ganan jugando, no se pierden)
     var hoy = hoyTexto(); if (estado.fichaDia !== hoy) { estado.fichaDia = hoy; estado.fichas = (estado.fichas || 0) + 2; }
+    if (estado.gemasInfinitas) return 9999; // v6.65: la cuenta del dueño tiene todo ilimitado
     return estado.fichas || 0;
   }
   function sortearAzar(lista) { var t = lista.reduce(function (a, x) { return a + x[1]; }, 0), n = Math.random() * t; for (var i = 0; i < lista.length; i++) { n -= lista[i][1]; if (n <= 0) return lista[i][0]; } return lista[0][0]; }
@@ -7460,8 +7462,8 @@
         return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '">' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
       (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
-        L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + n + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
-      '<p class="az-tienes">🪙 ' + L('Fichas: ', 'Tokens: ') + '<b>' + n + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
+        L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
+      '<p class="az-tienes">🪙 ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
       '<div class="az-botones"><button class="az-b verde" data-accion="azar-sacar" data-n="1"' + (n >= costo ? '' : ' disabled') + '>' + L('Sacar 1', 'Draw 1') + '</button>' +
       (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : '<button class="az-b azul" data-accion="azar-sacar" data-n="9"' + (n >= 9 ? '' : ' disabled') + '>' + L('Sacar 9', 'Draw 9') + '</button>') + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
@@ -7470,7 +7472,7 @@
   function sacarAzar(cuantos) {
     var prem = modoAzar === 'premium', costo = (prem ? 2 : 1) * cuantos;
     if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
-    estado.fichas -= costo;
+    if (!estado.gemasInfinitas) estado.fichas -= costo;
     azarGrid = [null, null, null, null, null, null, null, null, null];
     var libres = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(function () { return Math.random() - 0.5; }).slice(0, cuantos), ganado = {};
     libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; estado.mochila[k] = (estado.mochila[k] || 0) + 1; ganado[k] = (ganado[k] || 0) + 1; });
@@ -7806,8 +7808,49 @@
       '<p class="nota">🪙 ' + T('impuesto', { n: IMPUESTO.oro, s: IMPUESTO.cada }) + '</p>' +
       '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>' +
       (estado.muralla ? '<p class="nota">🏹 <b>' + T('torres_puerta') + ':</b> ' + T('torres_puerta_txt') + ' (⚔ ' + Math.round((TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * (1 + bono('flechas'))) + ')</p>' : '');
-    abrirPanel(T('castillo'), html, { tipo: 'castillo' });
+    // v6.66: CASTILLO con 5 pestañas como el video del dueño
+    var t = castTab;
+    var tabs = '<div class="cafe-tabs ve-tabs cs-tabs">' + [['detalles', L('Detalles', 'Details')], ['general', L('Vista general', 'Overview')], ['conquistas', L('Conquistas', 'Conquests')], ['defensa', L('Defensa', 'Defense')], ['personalizar', L('Personalizar', 'Customize')]].map(function (q) { return '<button data-accion="cast-tab" data-t="' + q[0] + '" class="' + (t === q[0] ? 'activo' : '') + '">' + q[1] + '</button>'; }).join('') + '</div>';
+    var banner = '<div class="cs-banner"><div class="cs-banner-img">' + fotoHTML('castillo', '🏰') + '</div><p>' + L('¡El castillo es el corazón de tu reino! Cada vez que lo mejoras abres más parcelas para construir y tu ciudad se hace más fuerte.', 'The castle is the heart of your kingdom! Each upgrade opens more plots and makes your city stronger.') + '</p></div>';
+    var cuerpo = '';
+    if (t === 'detalles') cuerpo = banner + (nc >= CASTILLO_MAX && !oc ? '<div class="ve-max">' + L('Has alcanzado el máximo nivel', 'You have reached the max level') + '</div>' : '<div class="cs-det">' + mej + '</div>') +
+      '<div class="cs-stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>⚔ ' + T('dano') + ' ' + danoCastillo() + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div>' +
+      '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>';
+    if (t === 'general') {
+      var imp = impuestoPct(), oroH = Math.round(IMPUESTO.oro * (imp / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada);
+      cuerpo = '<div class="cs-caja"><h4>' + L('Impuestos', 'Taxes') + '</h4><p class="cs-txt">' + L('Mueve la barra: más impuesto da más oro cada hora, pero la gente trabaja más despacio en las obras.', 'Move the bar: higher tax gives more gold per hour, but people build more slowly.') + '</p>' +
+        '<div class="cs-imp"><input type="range" min="0" max="50" step="5" value="' + imp + '" id="cs-impuesto"><b id="cs-imp-n">' + imp + '%</b></div>' +
+        '<div class="cs-filas"><div><span>🪙 ' + L('Oro por hora', 'Gold per hour') + '</span><b id="cs-oro-h">' + formatoNumero(oroH) + '</b></div><div><span>🔨 ' + L('Velocidad de obras', 'Build speed') + '</span><b id="cs-obra-v">' + Math.round(factorImpuestoObras() * 100) + '%</b></div>' +
+        '<div><span>👥 ' + L('Población', 'Population') + '</span><b>' + formatoNumero(poblacionMax()) + '</b></div><div><span>🏰 ' + L('Nivel del castillo', 'Castle level') + '</span><b>' + nc + ' / ' + CASTILLO_MAX + '</b></div></div></div>';
+    }
+    if (t === 'conquistas') {
+      var mc = misCasillas();
+      cuerpo = '<div class="cs-caja"><h4>' + L('Tus territorios', 'Your territories') + ' (' + mc.length + ' / ' + maxCasillas() + ')</h4>' + (mc.length ? mc.map(function (k) { var p = k.split('_'), c = casillaMundo(+p[0], +p[1]), ti = TIPOS_CASILLA[c.tipo]; return '<div class="ru-marcha"><span class="ru-ic">' + ti.icono + '</span><div class="ru-dat"><b>' + T('cas_' + c.tipo) + ' (' + L('Nv ', 'Lv ') + c.nivel + ')</b><small>X ' + p[0] + ' · Y ' + p[1] + ' · +' + formatoNumero(guardadoCasilla(c).hora) + ' ' + T('r_' + ti.r) + L('/hora', '/hour') + '</small></div><button class="iv-boton" data-accion="reunion-ver" data-x="' + p[0] + '" data-y="' + p[1] + '">' + L('Ver', 'View') + '</button></div>'; }).join('')
+        : '<p class="iv-vacio">' + L('Todavía no conquistaste territorios. Ve al Mundo, toca una pradera, bosque o cantera y elige Ataque.', 'No territories yet. Go to the World, tap a field, forest or quarry and choose Attack.') + '</p>') + '</div>';
+    }
+    if (t === 'defensa') {
+      var on = estado.tropasDefienden !== false, casa = {};
+      tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; casa[u.tipo] = (casa[u.tipo] || 0) + 1; });
+      cuerpo = '<div class="cs-caja"><h4>' + L('Tropas defienden', 'Troops defend') + '</h4><p class="cs-txt">' + L('Encendido: tus tropas salen a defender cuando te atacan (y pueden morir). Apagado: se quedan guardadas y solo defienden el castillo y la muralla.', 'On: your troops defend when you are attacked (and may die). Off: they stay safe and only the castle and wall defend.') + '</p>' +
+        '<button class="cs-switch' + (on ? ' on' : '') + '" data-accion="cast-defensa"><span>' + (on ? 'ON' : 'OFF') + '</span><i></i></button></div>' +
+        '<div class="cs-caja"><h4>' + L('Defensores en casa', 'Defenders at home') + '</h4><table class="ru-tabla"><tr><th>' + L('Tropa', 'Troop') + '</th><th>' + L('Cantidad', 'Amount') + '</th></tr>' + (Object.keys(casa).length ? Object.keys(casa).map(function (k) { return '<tr><td>' + TROPAS[k].icono + ' ' + N(k) + '</td><td>' + formatoNumero(casa[k]) + '</td></tr>'; }).join('') : '<tr><td colspan="2">' + L('No tienes tropas en casa.', 'No troops at home.') + '</td></tr>') + '</table>' +
+        '<p class="cs-txt">🛡️ ' + T('at_defensa') + ': <b>' + formatoNumero(Math.round(defensaReino())) + '</b></p></div>';
+    }
+    if (t === 'personalizar') {
+      var col = estado.colorBandera || 'rojo';
+      cuerpo = '<div class="cs-caja"><h4>' + L('Banderas del castillo', 'Castle flags') + '</h4><p class="cs-txt">' + L('Elige el color de las banderas que ondean en tus torres. Todos los vecinos las verán.', 'Choose the color of the flags on your towers.') + '</p><div class="cs-colores">' +
+        Object.keys(COLORES_BANDERA).map(function (k) { return '<button class="cs-color' + (col === k ? ' activo' : '') + '" data-accion="cast-color" data-c="' + k + '"><i style="background:#' + COLORES_BANDERA[k][0].toString(16).padStart(6, '0') + '"></i><span>' + L(COLORES_BANDERA[k][1], COLORES_BANDERA[k][2]) + '</span></button>'; }).join('') + '</div></div>';
+    }
+    abrirPanel(L('Castillo', 'Castle') + ' (' + L('Nvl.', 'Lvl.') + nc + ')', tabs + cuerpo, { tipo: 'castillo' });
+    ponerCafe();
+    var ri = $('cs-impuesto'); if (ri) ri.addEventListener('input', function () { estado.impuesto = +this.value; $('cs-imp-n').textContent = this.value + '%'; $('cs-oro-h').textContent = formatoNumero(Math.round(IMPUESTO.oro * (estado.impuesto / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada)); $('cs-obra-v').textContent = Math.round(factorImpuestoObras() * 100) + '%'; guardar(); });
   }
+  var castTab = 'detalles';
+  function impuestoPct() { return estado.impuesto === undefined ? 30 : estado.impuesto; }
+  // con más de 30% de impuesto la gente construye un poco más lento (con menos, un poco más rápido)
+  function factorImpuestoObras() { return Math.max(0.75, Math.min(1.1, 1 - (impuestoPct() - 30) / 80)); }
+  var COLORES_BANDERA = { rojo: [0xc0302a, 'Rojo', 'Red'], azul: [0x2a5aa8, 'Azul', 'Blue'], verde: [0x2e8a22, 'Verde', 'Green'], dorado: [0xd9a13a, 'Dorado', 'Gold'], morado: [0x7a2fd0, 'Morado', 'Purple'], negro: [0x22201c, 'Negro pirata', 'Pirate black'] };
+  function pintarBanderasCastillo() { var c = COLORES_BANDERA[estado.colorBandera || 'rojo']; if (!c || !castillo || !castillo.userData.banderas) return; castillo.userData.banderas.forEach(function (tl, i) { if (tl && tl.material) { tl.material = tl.material.clone(); tl.material.color.setHex(i === 0 ? c[0] : c[0]); } }); }
 
   function escaparHTML(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 
@@ -8131,6 +8174,9 @@
     else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
+    else if (a === 'cast-tab') { sonar('click'); castTab = b.getAttribute('data-t'); abrirPanelCastillo(); }
+    else if (a === 'cast-defensa') { estado.tropasDefienden = estado.tropasDefienden === false; sonar('click'); actualizarBotonDefensa(); consejoTemporal(T(estado.tropasDefienden ? 'def_on_txt' : 'def_off_txt')); guardar(true); publicarAldea(true); abrirPanelCastillo(); }
+    else if (a === 'cast-color') { sonar('click'); estado.colorBandera = b.getAttribute('data-c'); pintarBanderasCastillo(); guardar(true); abrirPanelCastillo(); }
     else if (a === 'cuartel-sub') { sonar('click'); subCuartel = b.getAttribute('data-s'); abrirPanelEdificio(slotElegido); }
     else if (a === 'derribar-panel') {
       var dj = +b.getAttribute('data-slot'), sd3 = slots[dj]; if (!sd3 || !sd3.edificio) return;

@@ -1009,3 +1009,28 @@ body.tema-oscuro #panel .cq2-top small { color: #e8842e !important; font: 600 13
 body.tema-oscuro #panel .cq2-frase { color: #cdb88e !important; font: 13px/1.35 Georgia, serif; }
 .cq2-flecha { flex: none; font-style: normal; color: #e0a23c; font: 700 34px/1 Georgia, serif; }
 .cq2-fila.bloq .cq2-top b { opacity: .8; }
+
+/* ---------------- v6.66: CASTILLO con 5 pestañas ---------------- */
+.cs-tabs { display: flex !important; overflow-x: auto; scrollbar-width: none; gap: 3px !important; }
+.cs-tabs::-webkit-scrollbar { display: none; }
+.cs-tabs button { flex: 1 0 auto !important; padding: 9px 8px !important; font-size: 13px !important; white-space: nowrap; }
+.cs-banner { position: relative; display: flex; align-items: center; gap: 10px; margin: 8px 0; padding: 12px; border-radius: 8px; background: linear-gradient(180deg, #8fc8f0 0%, #cfe8f4 45%, #6aa84a 46%, #3a7a2a 100%); border: 1px solid #5a3d22; overflow: hidden; }
+.cs-banner-img { flex: none; width: 96px; height: 96px; border-radius: 8px; overflow: hidden; border: 2px solid #d4a94a; background: #2a1a0c; display: grid; place-items: center; font-size: 54px; }
+.cs-banner-img img, .cs-banner-img canvas { width: 100%; height: 100%; object-fit: cover; }
+.cs-banner p { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(20,12,4,.72); color: #f6e6c0; font: 13px/1.4 Georgia, serif; }
+.cs-det { margin-top: 6px; }
+.cs-stats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; } .cs-stats span { padding: 5px 10px; border-radius: 12px; background: rgba(0,0,0,.35); border: 1px solid #5a3d22; color: #e8d6b0; font: 13px Georgia, serif; }
+.cs-caja { margin: 8px 0; padding: 12px; border-radius: 8px; background: rgba(0,0,0,.25); border: 1px solid #5a3d22; }
+.cs-caja h4 { margin: 0 0 6px; color: #f2c45a; font: 700 16px Georgia, serif; }
+.cs-txt { margin: 4px 0 10px; color: #cdb88e; font: 13px/1.4 Georgia, serif; }
+.cs-imp { display: flex; align-items: center; gap: 12px; } .cs-imp input { flex: 1; accent-color: #e0a23c; } .cs-imp b { min-width: 48px; text-align: center; color: #fff; font: 700 18px Georgia, serif; background: #2a1a0c; border: 1px solid #d4a94a; border-radius: 6px; padding: 4px; }
+.cs-filas { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; } .cs-filas div { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 6px; background: rgba(0,0,0,.25); } .cs-filas span { color: #e8d6b0; font: 14px Georgia, serif; } .cs-filas b { color: #f2c45a; font: 700 14px Georgia, serif; }
+.cs-switch { position: relative; width: 120px; height: 44px; border-radius: 22px; border: 2px solid #5a3d22; background: linear-gradient(180deg, #5a2a1a, #3a160e); cursor: pointer; }
+.cs-switch span { position: absolute; top: 50%; transform: translateY(-50%); right: 16px; color: #fff; font: 700 16px Georgia, serif; }
+.cs-switch i { position: absolute; top: 4px; left: 4px; width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fff, #c8c0b0); transition: left .2s; }
+.cs-switch.on { background: linear-gradient(180deg, #4caf3a, #1f5e17); } .cs-switch.on span { right: auto; left: 16px; } .cs-switch.on i { left: 82px; }
+.cs-colores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cs-color { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px; border-radius: 8px; background: rgba(0,0,0,.3); border: 2px solid #3a2414; cursor: pointer; }
+.cs-color.activo { border-color: #f2c45a; box-shadow: 0 0 8px rgba(242,196,90,.5); }
+.cs-color i { width: 40px; height: 28px; border-radius: 2px 8px 8px 2px; border: 1px solid #000; clip-path: polygon(0 0, 100% 0, 85% 50%, 100% 100%, 0 100%); }
+.cs-color span { color: #e8d6b0; font: 12px Georgia, serif; }
