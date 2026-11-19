@@ -1685,13 +1685,14 @@
     M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
     var cc0 = casillaMundo(x, y); $('mundo-coord').textContent = '📍 ' + TIPOS_CASILLA[cc0.tipo].icono + ' ' + T('cas_' + cc0.tipo) + ' · X ' + x + ' · Y ' + y;
     var q = ocupadasMundo[x + '_' + y];
-    if (q && q.bestia !== undefined) { mostrarBestia(q.bestia); return; }
+    function centrarAqui() { M3.obj.copy(posCelda(x, y)); var bj = window.innerWidth < window.innerHeight ? 2.3 : 2.4; M3.obj.x -= bj; M3.obj.z -= bj; M3.vel = null; }
+    if (q && q.bestia !== undefined) { centrarAqui(); mostrarBestia(q.bestia); return; }
     if (q && q.libre) { mostrarLugarLibre(x, y); return; }
     M3.sel.material.color.setHex(0xffe14a);
     if (!M3.verde) { M3.verde = new THREE.Mesh(new THREE.PlaneGeometry(CELDA_M * 0.98, CELDA_M * 0.98), new THREE.MeshBasicMaterial({ color: 0x3fd45a, transparent: true, opacity: 0.55, depthWrite: false })); M3.verde.rotation.x = -Math.PI / 2; M3.verde.renderOrder = 3; M3.e.add(M3.verde); }
     M3.verde.visible = false;
     if (q && q.aldea !== undefined) { M3.sel.material.color.setHex(0x3fd45a); M3.verde.position.set(p.x, 0.09, p.z); M3.verde.visible = true; M3.obj.copy(posCelda(x, y)); var bajarT = window.innerWidth < window.innerHeight ? 1.8 : 2.4; M3.obj.x -= bajarT; M3.obj.z -= bajarT; /* v6.54: el castillo queda más abajo y la tarjeta cabe encima */ $('mundo-info').innerHTML = ''; var b = $('mundo-aldeas').querySelector('[data-aldea="' + q.aldea + '"]'); if (b) b.click(); return; }
-    if (q && q.campamento !== undefined) { mostrarCampamento(q.campamento); return; }
+    if (q && q.campamento !== undefined) { centrarAqui(); mostrarCampamento(q.campamento); return; }
     // v6.58: igual que con un reino: la casilla queda abajo del centro y su tarjeta cabe encima
     M3.obj.copy(posCelda(x, y)); var bajarC = window.innerWidth < window.innerHeight ? 2.3 : 2.4; M3.obj.x -= bajarC; M3.obj.z -= bajarC; M3.vel = null;
     mostrarCasilla(casillaMundo(x, y));
@@ -1990,7 +1991,23 @@
     var et = M.etiquetaEdificio(t.icono + ' ' + L('Nv', 'Lv') + ' ' + b.nivel, b.nivel); et.position.set(0, 1.5, 0); et.scale.multiplyScalar(0.48); et.visible = false; var gg = new THREE.Group(); gg.add(g); gg.add(et);
     return gg;
   }
+  // v6.75: una sola forma de tarjeta para todo el mundo (terreno, bestia, aldea bárbara): solo cambia la información
+  function tarjetaMundo(tit, x, y, lineas, idEspiar, idAtacar, aviso) {
+    return '<div class="carta casilla-info pergamino tarjeta-terreno"><h3 class="perg-tit">' + tit + '</h3><p class="perg-sub">' + x + ', ' + y + '</p>' +
+      '<div class="tt-datos">' + lineas.map(function (l, k) { return '<div' + (k === 0 ? ' class="tt-dueno"' : '') + '>' + l + '</div>'; }).join('') + '</div>' +
+      (aviso ? '<p class="fc-aviso">' + aviso + '</p>' : '<div class="perg-botones">' + (idEspiar ? '<button class="comprar azul" id="' + idEspiar + '">' + L('Espiar', 'Scout') + '</button>' : '') + '<button class="comprar azul" id="' + idAtacar + '">' + L('Ataque', 'Attack') + '</button></div>') + '</div>';
+  }
   function mostrarBestia(i) {
+    var b0 = listaBestias()[i]; if (!b0) return;
+    var d0 = defensaBestia(b0.nivel), f0 = fuerzaEjercito(), m0 = premioBestia(b0.nivel);
+    var dif0 = f0 > d0 * 1.3 ? L('Fácil', 'Easy') : f0 > d0 * 0.85 ? L('Pareja', 'Even') : L('Difícil', 'Hard');
+    $('mundo-info').innerHTML = tarjetaMundo(nombreBestia(b0) + ' (' + L('Nv. ', 'Lv. ') + b0.nivel + ')', b0.x, b0.y, [
+      L('Bestia salvaje', 'Wild beast'), L('Poder', 'Power') + ': ' + formatoNumero(d0), L('Tu fuerza', 'Your strength') + ': ' + formatoNumero(f0) + ' · ' + dif0,
+      L('Botín', 'Loot') + ': ' + ['oro', 'comida', 'madera', 'piedra'].filter(function (r) { return m0[r]; }).map(function (r) { return ICONO_RECURSO[r] + ' ' + formatoNumero(m0[r]); }).join(' · '),
+      L('Puede dar', 'May give') + ': ' + L('libros, aceleradores y equipo', 'books, speed-ups and gear')], 'bestia-espiar', 'bestia-atacar');
+    $('bestia-atacar').addEventListener('click', function () { this.disabled = true; atacarBestia(i); });
+    $('bestia-espiar').addEventListener('click', function () { espiarLugar(nombreBestia(b0) + ' (' + L('Nv ', 'Lv ') + b0.nivel + ')', b0.x, b0.y, [[L('Poder', 'Power'), '⚔️ ' + formatoNumero(d0)], [L('Tu fuerza', 'Your strength'), formatoNumero(f0)]]); });
+    return;
     var b = listaBestias()[i]; if (!b) return;
     var d = defensaBestia(b.nivel), f = fuerzaEjercito(), muestra = premioBestia(b.nivel);
     var dif = f > d * 1.3 ? T('at_facil') : f > d * 0.85 ? T('at_parejo') : T('at_dificil');
@@ -2237,6 +2254,13 @@
   }
   function mostrarCampamento(i) {
     var cm = CAMPAMENTOS[i], c = celdaDe(cm.x, cm.y), espera = ((estado.cdCamp || {})[i] || 0) - Date.now();
+    var bmC = botinMaximo(cm.nivel);
+    $('mundo-info').innerHTML = tarjetaMundo(T('campamento') + ' (' + L('Nv. ', 'Lv. ') + cm.nivel + ')', c.x, c.y, [
+      L('Ocupado por bárbaros', 'Held by barbarians'), L('Poder', 'Power') + ': ' + formatoNumero(defensaCampamento(cm.nivel)), L('Tu fuerza', 'Your strength') + ': ' + formatoNumero(Math.round(fuerzaEjercito())),
+      L('Alianza', 'Alliance') + ': ' + L('Ninguna', 'None'), L('Diplomacia', 'Diplomacy') + ': ' + L('Hostil', 'Hostile')], 'camp-espiar', 'camp-atacar', espera > 0 ? T('camp_espera', { t: fmtTiempo(espera / 1000) }) : '');
+    var b1 = $('camp-atacar'); if (b1) b1.addEventListener('click', function () { this.disabled = true; atacarCampamento(i); });
+    var be1 = $('camp-espiar'); if (be1) be1.addEventListener('click', function () { espiarLugar(T('campamento') + ' (' + L('Nv ', 'Lv ') + cm.nivel + ')', c.x, c.y, [[L('Guerreros bárbaros', 'Barbarian warriors'), '⚔️ ' + formatoNumero(defensaCampamento(cm.nivel))], [L('Botín posible', 'Possible loot'), textoBotin(bmC)]]); });
+    return;
     var html = '<div class="carta pergamino"><h3 class="perg-tit">🛖 ' + T('campamento') + ' (' + L('Nv ', 'Lv ') + cm.nivel + ')</h3><p class="perg-sub">X ' + c.x + ' · Y ' + c.y + ' · ⚔️ ' + formatoNumero(defensaCampamento(cm.nivel)) + '</p><p>' + T('campamento_txt') + '</p>' +
       '<div class="stats"><span>📍 X ' + c.x + ' · Y ' + c.y + '</span><span>⚔️ ' + L('Poder recomendado: ', 'Recommended power: ') + formatoNumero(defensaCampamento(cm.nivel)) + '</span><span>💪 ' + L('Tu poder: ', 'Your power: ') + formatoNumero(Math.round(fuerzaEjercito())) + '</span><span>' + T('at_botin') + ': ' + textoBotin(botinMaximo(cm.nivel)) + ' · +' + gemasCampamento(cm.nivel) + ' 💎</span></div>' +
       (espera > 0 ? '<p class="nota aviso-rojo">' + T('camp_espera', { t: fmtTiempo(espera / 1000) }) + '</p>' : '<div class="perg-botones"><button class="comprar azul" id="camp-espiar">🔍 ' + L('Espiar', 'Spy') + '</button><button class="comprar azul" id="camp-atacar">⚔️ ' + L('Atacar', 'Attack') + '</button></div>') + '</div>';
@@ -9412,7 +9436,14 @@
       if (m && m[1] !== VERSION_JUEGO) { if (enMenu) location.reload(); else avisarVersionNueva(m[1]); }
     }).catch(function () {});
   }
+  // v6.75: el juego se actualiza solo (sin aviso que tape): guarda y recarga cuando no estás en medio de una oleada ni con una ventana abierta
+  var actualizando = false;
   function avisarVersionNueva(v) {
+    if (actualizando) return;
+    if (oleadaActiva || (panelActual && !document.hidden)) { setTimeout(function () { avisarVersionNueva(v); }, 15000); return; }
+    actualizando = true; try { guardar(true); } catch (e) {}
+    setTimeout(function () { location.reload(); }, 700);
+    return;
     if ($('aviso-version')) return;
     var d = document.createElement('button'); d.id = 'aviso-version';
     d.textContent = '🔄 ' + T('version_nueva', { v: v || '' });
