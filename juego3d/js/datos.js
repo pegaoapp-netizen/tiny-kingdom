@@ -722,7 +722,8 @@ var ICONOS_IMG = {
 };
 // retratos dibujados de las tropas (si no hay, se usa la foto del modelo 3D)
 var RETRATOS_IMG = {
-  espadachin: 't_espadachin', arquero: 't_arquero', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano'
+  espadachin: 't_espadachin', arquero: 't_arquero', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano',
+  jinete: 't_jinete', caballeria_pesada: 't_caballeria_pesada', balista: 't_balista', ariete: 't_ariete'
 };
 // la ficha de la suerte del Azar
 var ICONO_FICHA = '<img class="ico-obj" src="iconos/ui/o_ficha.webp" alt="🪙" draggable="false">';
