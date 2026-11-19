@@ -176,7 +176,7 @@
   function aLocal(x, z) { return { a: x * EJE_U.x + z * EJE_U.z, b: x * EJE_V.x + z * EJE_V.z }; }
   var R_CIUDAD = MURALLA_FORMA.rx;
   // recinto de los campos: detrás de la ciudad, al otro lado del río (centro y medio fondo / medio ancho)
-  var CAMPOS_RECT = { a: -(R_CIUDAD + 52), b: 0, ha: 29, hb: 47 };
+  var CAMPOS_RECT = { a: -(R_CIUDAD + 55), b: 0, ha: 33, hb: 47 }; // v6.87: 6 × 7 parcelas
   function fueraCampos(x, z) { var l = aLocal(x, z); return Math.hypot(Math.max(0, Math.abs(l.a - CAMPOS_RECT.a) - CAMPOS_RECT.ha), Math.max(0, Math.abs(l.b - CAMPOS_RECT.b) - CAMPOS_RECT.hb)); }
   function enCampos(x, z, m) { var l = aLocal(x, z); return Math.abs(l.a - CAMPOS_RECT.a) < CAMPOS_RECT.ha + (m || 0) && Math.abs(l.b - CAMPOS_RECT.b) < CAMPOS_RECT.hb + (m || 0); }
   // las oleadas entran derecho por la puerta de delante hasta el castillo
@@ -468,9 +468,8 @@
     var ciudad = [], fijo = [];
     puestos.forEach(function (p) { ciudad.push(aMundo(p[0], p[1])); fijo.push(p[2] || ''); });
     var campos = [];
-    for (var fa = -1.5; fa <= 1.5; fa++) for (var fb = -2.5; fb <= 2.5; fb++) campos.push(aMundo(CAMPOS_RECT.a + fa * 10, CAMPOS_RECT.b + fb * 10));
+    for (var fa = -2.5; fa <= 2.5; fa++) for (var fb = -3; fb <= 3; fb++) campos.push(aMundo(CAMPOS_RECT.a + fa * 10, CAMPOS_RECT.b + fb * 10)); // v6.87: 42 parcelas
     campos.sort(function (p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); });
-    campos = campos.slice(0, 24);
     var nCiudad = ciudad.length;
     var orden = ciudad.map(function (_, i) { return i; }).sort(function (i, j) {
       return Math.hypot(ciudad[i][0], ciudad[i][1]) - Math.hypot(ciudad[j][0], ciudad[j][1]);
@@ -602,8 +601,8 @@
     var borde = new THREE.Mesh(new THREE.PlaneGeometry(23, 23), new THREE.MeshLambertMaterial({ color: 0x8a7f6e })); borde.rotation.x = -Math.PI / 2; borde.position.y = 0.08; borde.receiveShadow = true; G.add(borde);
     var plaza = new THREE.Mesh(new THREE.PlaneGeometry(21, 21), matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.position.y = 0.088; plaza.receiveShadow = true; G.add(plaza);
     // rejilla de caminitos de piedra entre las parcelas de los campos
-    for (var cb = -30; cb <= 30; cb += 10) losa(CA - 20, CA + HA - 1, cb, cb, 0.1, 1.6);
-    for (var ca2 = -20; ca2 <= 20; ca2 += 10) losa(CA + ca2, CA + ca2, -30, 30, 0.1, 1.6);
+    for (var cb = -35; cb <= 35; cb += 10) losa(CA - 30, CA + 30, cb, cb, 0.1, 1.6);
+    for (var ca2 = -30; ca2 <= 30; ca2 += 10) losa(CA + ca2, CA + ca2, -35, 35, 0.1, 1.6);
     escena.add(G);
 
     // muralla cuadrada de los campos, con torres en las esquinas y puerta hacia la ciudad
@@ -856,7 +855,7 @@
     // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
-    var metaC = 11 + 14 * Math.pow((Math.min(30, nvC) - 1) / 29, 0.8);
+    var metaC = 11 + 11 * Math.pow((Math.min(12, nvC) - 1) / 11, 0.8);
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
@@ -906,6 +905,7 @@
     var fc = faltaObra('castillo', n + 1); if (fc) { consejoTemporal('🔒 ' + fc); sonar('error'); return; }
     var pendC = trabajosPendientes('castillo', n + 1); if (pendC.length) { avisoTrabajos(pendC); return; }
     if (!pagar(costoCastillo(n + 1))) return;
+    gastarEspecial('castillo', n + 1);
     estado.obraCastillo = { nivel: n + 1, t: 0, total: tiempoCastillo(n + 1) };
     andamiosDelCastillo(true);
     sonar('martillo');
@@ -920,7 +920,7 @@
     andamiosDelCastillo(false);
     ponerCastillo();
     actualizarParcelas();
-    if (o.nivel <= NIVEL_VIEJO) setTimeout(function () { consejoTemporal(T('parcelas_nuevas', { n: PARCELAS_POR_NIVEL })); }, 2500);
+    setTimeout(function () { var nc = camposAbiertos(o.nivel) - camposAbiertos(o.nivel - 1); consejoTemporal('🌾 +' + nc + L(' parcelas en los campos', ' field plots')); }, 2500);
     chispas(new V3(0, 6, 0), 0xffe14a, 30, 5);
     sonar('listo'); sonar('victoria');
     consejoTemporal(T('castillo_listo', { n: o.nivel })); sumarXP(40 * o.nivel);
@@ -933,7 +933,7 @@
     var v = $('nivel-nuevo'); if (v) v.remove();
     var lista = [['🧱', L('+' + PARCELAS_POR_NIVEL + ' parcelas en la ciudad', '+' + PARCELAS_POR_NIVEL + ' plots in the city')], ['🏗️', L('Tus edificios pueden subir hasta el nivel ' + n, 'Your buildings can reach level ' + n)], ['🏰', L('La muralla puede subir hasta el nivel ' + n, 'The wall can reach level ' + n)], ['🚩', L('Puedes tener ' + n + ' casillas en el mundo', 'You can hold ' + n + ' world tiles')]];
     if (n > NIVEL_MAX) lista = [['❤', L('+' + MEJORA_CASTILLO.vida + ' de vida y +' + MEJORA_CASTILLO.dano + ' de daño del castillo', '+' + MEJORA_CASTILLO.vida + ' castle health and +' + MEJORA_CASTILLO.dano + ' damage')], ['🚩', L('Puedes tener ' + n + ' casillas en el mundo', 'You can hold ' + n + ' world tiles')]];
-    if ([5, 10, 15, 30].indexOf(n) >= 0) lista.unshift(['🏰', L(n === 30 ? '¡Castillo ULTRA: cúpula de oro, magia azul y 14 torres!' : '¡Tu castillo cambió de forma y es más grande!', n === 30 ? 'ULTRA castle: golden dome, blue magic and 14 towers!' : 'Your castle changed shape and is bigger!')]);
+    if ([3, 6, 9, 12].indexOf(n) >= 0) lista.unshift(['🏰', L(n === 12 ? '¡Castillo ULTRA: cúpula de oro, magia azul y 14 torres!' : '¡Tu castillo cambió de forma y es más grande!', n === 30 ? 'ULTRA castle: golden dome, blue magic and 14 towers!' : 'Your castle changed shape and is bigger!')]);
     if (n === 5) lista.push(['🫧', L('Termina la burbuja de protección', 'The protection bubble ends')]);
     var d = document.createElement('div'); d.id = 'nivel-nuevo';
     d.innerHTML = '<div class="nn-caja"><div class="nn-cinta">' + L('¡Felicidades!', 'Congratulations!') + '</div><h3>🏰 ' + L('Castillo nivel ', 'Castle level ') + n + '</h3><p class="nota"><b>' + L('Desbloqueado', 'Unlocked') + '</b></p>' +
@@ -1163,6 +1163,7 @@
     var nivel = estado.muralla + 1;
     var fmu = faltaObra('muralla', nivel); if (fmu) { consejoTemporal('🔒 ' + fmu); sonar('error'); return; }
     if (!pagar(costoMuralla(nivel - 1))) return;
+    gastarEspecial('muralla', nivel);
     iniciarObraMuralla(nivel, 0, MURALLA.tiempo[nivel - 1] * (1 - bono('obras')));
     sonar('martillo');
     cerrarPanel();
@@ -1211,24 +1212,26 @@
     // dentro de la muralla el cuadro es la mitad: el edificio ocupa 1 cuadro, no 2
     if (!campo) t.scale.setScalar(0.5);
     g.add(t);
-    var tc = campo ? null : M.parcelaCerrada(); if (tc) { tc.scale.setScalar(0.5); tc.visible = false; g.add(tc); }
+    var tc = M.parcelaCerrada(); tc.scale.setScalar(campo ? 0.9 : 0.5); tc.visible = false; g.add(tc);
     g.userData.slot = i;
     escena.add(g);
-    return { i: i, campo: campo, fijo: campo ? '' : (PARCELAS.fijo[i] || ''), orden: campo ? -1 : PARCELAS.orden.indexOf(i), pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, tierraCerrada: tc, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0, guardado: 0 };
+    return { i: i, campo: campo, fijo: campo ? '' : (PARCELAS.fijo[i] || ''), orden: campo ? -1 : PARCELAS.orden.indexOf(i), oc: campo ? i - PARCELAS.nCiudad : -1, pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, tierraCerrada: tc, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0, guardado: 0 };
   });
   // ---- PARCELAS QUE ABRE EL CASTILLO ----
   function parcelasAbiertas() { return PARCELAS_INICIO + PARCELAS_POR_NIVEL * ((estado.castillo || 1) - 1); }
   function nivelParaParcela(s) { return Math.max(1, Math.ceil((s.orden + 1 - PARCELAS_INICIO) / PARCELAS_POR_NIVEL) + 1); }
   // una parcela de la ciudad está cerrada si el castillo no la abrió todavía (si ya tiene edificio, se queda)
-  function cerrada(s) { return !s.campo && s.orden >= parcelasAbiertas() && !s.edificio && !s.obra; }
+  function camposAbiertos(n) { n = Math.max(1, Math.min(12, n || estado.castillo || 1)); return CAMPOS_POR_NIVEL[n]; }
+  function nivelParaCampo(s) { for (var n = 1; n <= 12; n++) if (CAMPOS_POR_NIVEL[n] > s.oc) return n; return 13; }
+  function cerrada(s) { if (s.edificio || s.obra) return false; return s.campo ? s.oc >= camposAbiertos() : s.orden >= parcelasAbiertas(); }
   function actualizarParcelas() {
     slots.forEach(function (s) {
       var c = cerrada(s);
       s.terreno.visible = !c;
       if (s.tierraCerrada) s.tierraCerrada.visible = c;
       // solo se marcan con candado las 3 parcelas que abre el siguiente nivel del castillo
-      var proxima = c && nivelParaParcela(s) === (estado.castillo || 1) + 1;
-      if (proxima && !s.candado) { s.candado = M.etiquetaEdificio('🔒 ' + T('castillo'), nivelParaParcela(s)); s.candado.position.set(0, 1.4, 0); s.candado.scale.multiplyScalar(0.8); s.grupo.add(s.candado); }
+      var nvP = s.campo ? nivelParaCampo(s) : nivelParaParcela(s), proxima = c && nvP === (estado.castillo || 1) + 1;
+      if (proxima && !s.candado) { s.candado = M.etiquetaEdificio('🔒 ' + T('castillo'), nvP); s.candado.position.set(0, 1.4, 0); s.candado.scale.multiplyScalar(0.8); s.grupo.add(s.candado); }
       if (!proxima && s.candado) { s.grupo.remove(s.candado); s.candado = null; }
     });
   }
@@ -2798,18 +2801,24 @@
     var nom = que === 'jugador' ? '⭐ ' + L('Tu nivel', 'Your level') : que === 'castillo' ? '🏰 ' + T('castillo') : que === 'muralla' ? '🧱 ' + L('Muralla', 'Wall') : (EDIFICIOS[que] ? EDIFICIOS[que].icono + ' ' : '') + N(que);
     return { nombre: nom, pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + tiene, ok: tiene >= pide || !!estado.dueno, k: que, n: pide };
   }
+  // v6.87: objeto especial que pide la obra (se gasta al empezarla)
+  function filaObjeto(k) { var t = (estado.mochila && estado.mochila[k]) || 0; return { nombre: OBJETOS[k].icono + ' ' + N(k), pide: '×1', tiene: '×' + t, ok: t >= 1 || !!estado.dueno, k: k, n: 1, objeto: true }; }
+  function gastarEspecial(que, L2) { var k = que === 'castillo' ? ESPECIAL_CASTILLO[L2] : ESPECIAL_EDIFICIO[L2]; if (k && estado.mochila && estado.mochila[k] > 0) estado.mochila[k]--; }
   function requisitosObra(que, L2) {
     var l = [];
     if (que === 'castillo') {
       // v6.32: cada nivel del castillo pide tu nivel, la muralla y subir los demás edificios (del 18 al 30, todos al 17)
-      if (L2 >= 2) l.push(filaReq('jugador', Math.min(60, L2 <= NIVEL_VIEJO ? L2 : NIVEL_VIEJO + Math.round((L2 - NIVEL_VIEJO) * 3.31))));
-      if (L2 >= 3) l.push(filaReq('muralla', Math.min(NIVEL_MAX, L2 - 2)));
-      [['cuartel', 3, 1], ['cabana', 4, 2], ['granja', 4, 1], ['academia', 5, 2], ['aserradero', 6, 2], ['mina', 7, 2], ['herreria', 8, 3], ['cantera', 9, 3], ['establo', 11, 4],
-        ['galeria', 12, 4], ['enfermeria', 13, 4], ['torre', 14, 5], ['almacen', 16, 5], ['mercado', 18, 6], ['vigia', 20, 6]]
+      // v6.87: castillo hasta el 12 (muralla como en los juegos de reinos: 10 pide muralla 8, 11 pide 10 y 12 pide 11)
+      if (L2 >= 2) l.push(filaReq('jugador', [0, 0, 2, 4, 6, 9, 12, 16, 20, 26, 34, 45, 60][L2]));
+      if (L2 >= 3) l.push(filaReq('muralla', L2 <= 10 ? L2 - 2 : L2 - 1));
+      [['cuartel', 3, 1], ['cabana', 3, 1], ['granja', 4, 1], ['academia', 4, 2], ['aserradero', 5, 2], ['mina', 5, 2], ['herreria', 6, 2], ['cantera', 6, 2], ['establo', 7, 3],
+        ['galeria', 7, 3], ['enfermeria', 8, 3], ['torre', 8, 3], ['almacen', 9, 3], ['mercado', 10, 4], ['vigia', 11, 4]]
         .forEach(function (q) { if (L2 >= q[1]) l.push(filaReq(q[0], Math.min(NIVEL_MAX, L2 - q[2]))); });
+      if (ESPECIAL_CASTILLO[L2]) l.push(filaObjeto(ESPECIAL_CASTILLO[L2]));
       return l;
     }
-    if (que === 'muralla') { l.push(filaReq('castillo', L2)); l.push(filaReq('cantera', Math.min(NIVEL_MAX, L2 + 1))); l.push(filaReq('jugador', L2 + 2)); return l; }
+    if (que === 'muralla') { l.push(filaReq('castillo', L2)); l.push(filaReq('cantera', Math.min(NIVEL_MAX, L2))); l.push(filaReq('jugador', L2 + 2)); if (ESPECIAL_EDIFICIO[L2]) l.push(filaObjeto(ESPECIAL_EDIFICIO[L2])); return l; }
+    if (ESPECIAL_EDIFICIO[L2]) l.push(filaObjeto(ESPECIAL_EDIFICIO[L2]));
     if (L2 >= 2) l.push(filaReq('castillo', L2));
     if (que === 'cuartel' && L2 >= 2) l.push(filaReq('jugador', L2));
     if (que === 'academia' && L2 >= 2) l.push(filaReq('jugador', L2 + 1));
@@ -3578,6 +3587,7 @@
     var pendE = trabajosPendientes('edificio', n + 1); if (pendE.length) { avisoTrabajos(pendE); return; }
     if (s.edificio.tipo !== 'cabana' && faltanObreros()) return;
     if (!pagar(costoEdif(s.edificio.tipo, n))) return;
+    gastarEspecial(s.edificio.tipo, n + 1);
     empezarObra(s, s.edificio.tipo, n + 1);
     sonar('martillo');
     cerrarPanel();
@@ -3620,7 +3630,7 @@
   var TAM_TIPO = { cuartel: 8.4, almacen: 8.2, embajada: 8.2, academia: 8.0, relevo: 7.6, mercado: 7.6, herreria: 7.4, establo: 7.6, enfermeria: 7.2, galeria: 7.4,
     cabana: 4.6, granja: 5.2, aserradero: 5.2, mina: 5.2, cantera: 5.2, torre: 6.4, vigia: 5.6 };
   // v6.82: empiezan chiquitos (45% al nivel 1) y crecen en cada nivel hasta su tamaño completo en el 30; el más grande (5,6) sigue siendo más chico que el castillo de nivel 1 (7)
-  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.4) * (0.6 + 0.4 * Math.pow((n - 1) / 29, 0.6)); }
+  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.4) * (0.6 + 0.4 * Math.pow((Math.min(12, n) - 1) / 11, 0.6)); }
   function encajarEnParcela(m, tr, tipo, nivel) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
     var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6);
@@ -7642,7 +7652,7 @@
     { id: 'tropas', ico: '🛡️', es: 'General', en: 'General', txt: ['Entrena tropas', 'Train troops'], v: function () { return logro('tropas'); }, n: [50, 500, 5000] },
     { id: 'recolectas', ico: '🌾', es: 'Granjero', en: 'Farmer', txt: ['Recolecta tus campos', 'Collect your fields'], v: function () { return logro('recolectas'); }, n: [20, 200, 1000] },
     { id: 'campamentos', ico: '👹', es: 'Cazador', en: 'Hunter', txt: ['Vence campamentos', 'Beat camps'], v: function () { return logro('campamentos'); }, n: [1, 20, 100] },
-    { id: 'castillo', ico: '🏰', es: 'Constructor', en: 'Builder', txt: ['Sube el Castillo', 'Upgrade the Castle'], v: function () { return estado.castillo || 1; }, n: [5, 15, 30] },
+    { id: 'castillo', ico: '🏰', es: 'Constructor', en: 'Builder', txt: ['Sube el Castillo', 'Upgrade the Castle'], v: function () { return estado.castillo || 1; }, n: [4, 8, 12] },
     { id: 'muralla', ico: '🧱', es: 'Fortaleza', en: 'Fortress', txt: ['Sube la Muralla', 'Upgrade the Wall'], v: function () { return estado.muralla || 0; }, n: [1, 5, 10] },
     { id: 'heroes', ico: '🦸', es: 'Coleccionista', en: 'Collector', txt: ['Consigue héroes', 'Get heroes'], v: function () { return Object.keys(estado.heroes || {}).length; }, n: [2, 5, 10] },
     { id: 'nivel', ico: '👑', es: 'Leyenda', en: 'Legend', txt: ['Sube tu nivel de rey', 'Raise your king level'], v: function () { return nivelJugador(); }, n: [5, 20, 50] }
@@ -8165,6 +8175,7 @@
       var cs = $('cj-si'); if (cs) { cs.classList.remove('rojo'); cs.classList.add('verde'); }
       return;
     }
+    if (o.especial) { consejoTemporal(L('Se usa solo al mejorar: ', 'Used automatically when upgrading: ') + D(k)); return; }
     if (o.segundos) { abrirUsarAcelerador(k); return; }
     if (o.portal === 'elegir') { consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
     if (o.portal === 'azar') { if (portalAlAzar()) { cerrarPanel(); abrirMundo(); } return; }
@@ -9417,6 +9428,17 @@
     var idioma = estado.idioma, sonido = estado.sonido, dueno = estado.dueno, oroInf = estado.oroInfinito, gemInf = estado.gemasInfinitas, correo = estado.correo;
     estado = nuevoEstado();
     estado.idioma = idioma; estado.sonido = sonido; estado.dueno = dueno; estado.oroInfinito = oroInf; estado.gemasInfinitas = gemInf; estado.correo = correo;
+    if (g && !g.escala12) {
+      // v6.87: el máximo pasó de 30 a 12: los niveles se convierten en proporción (30 -> 12, 15 -> 6)
+      var a12 = function (n) { return n ? Math.max(1, Math.min(12, Math.round(n * 12 / 30))) : n; };
+      if (g.castillo) g.castillo = a12(g.castillo);
+      if (g.muralla) g.muralla = Math.min(g.castillo || 12, a12(g.muralla));
+      (g.edificios || []).forEach(function (e) { if (e && e.nivel) e.nivel = Math.min(g.castillo || 12, a12(e.nivel)); });
+      (g.obras || []).forEach(function (o, i) { if (o && o.nivel) { o.nivel = a12(o.nivel); var e = (g.edificios || [])[i]; if (e && e.nivel >= o.nivel) g.obras[i] = null; } });
+      if (g.obraCastillo) { g.obraCastillo.nivel = a12(g.obraCastillo.nivel); if (g.obraCastillo.nivel <= g.castillo) g.obraCastillo = null; }
+      if (g.obraMuralla) { g.obraMuralla.nivel = a12(g.obraMuralla.nivel); if (g.obraMuralla.nivel <= (g.muralla || 0)) g.obraMuralla = null; }
+    }
+    estado.escala12 = true;
     if (g) {
       estado.monedas = g.monedas; estado.gemas = g.gemas; estado.oleada = g.oleada || 1;
       estado.infinito = !!g.infinito;

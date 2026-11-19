@@ -841,7 +841,7 @@ var M = (function () {
       if (m.userData.flota) m.position.y = m.userData.y0 + Math.sin(t * 1.6 + i) * m.userData.flota;
     });
   }, 40);
-  function etapaCastillo(n) { return n >= 30 ? 5 : n >= 15 ? 4 : n >= 10 ? 3 : n >= 5 ? 2 : 1; }
+  function etapaCastillo(n) { return n >= 12 ? 5 : n >= 9 ? 4 : n >= 6 ? 3 : n >= 3 ? 2 : 1; } // v6.87: castillo hasta el 12
   // =================================================================
   //  v6.35 (prueba): castillo de piedra arenisca con torres redondas, ménsulas, almenas,
   //  techos cónicos de teja, banderas rojas y puerta en arco con rastrillo. Texturas dibujadas aquí.
@@ -999,7 +999,7 @@ var M = (function () {
     for (var s = 0; s < 3; s++) g.add(cajaU(2.4 + s * 0.3, 0.16, 0.45, A3, 0, 0.08 + (2 - s) * 0.16, ZP + 0.6 + s * 0.42));
     rendija(-0.6, 4.2, ZP + 0.31, 0); rendija(0.6, 4.2, ZP + 0.31, 0);
     // un poco más grande en cada etapa y dentro de la etapa
-    var base = [0, 0, 0.78, 0.88, 0.98, 1.08][e], ini = [0, 1, 5, 10, 15, 30][e], paso = e === 4 ? 0.006 : 0.015;
+    var base = [0, 0, 0.78, 0.88, 0.98, 1.08][e], ini = [0, 1, 3, 6, 9, 12][e], paso = e === 4 ? 0.006 : 0.015;
     g.scale.setScalar(base * (1 + paso * Math.max(0, n - ini)));
     var r = fusionar(g) || g; r.userData.banderas = banderas; r.userData.etapa = e;
     return r;
@@ -1031,9 +1031,9 @@ var M = (function () {
       m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       g.add(m);
       // v6.43: chico al empezar (nivel 1) y crece parejo hasta el nivel 30
-      var nn = Math.max(1, Math.min(30, n || 1));
+      var nn = Math.max(1, Math.min(12, n || 1));
       // v6.82: el castillo siempre es lo más grande: al nivel 1 ya es más grande que cualquier edificio y en el 30 llena la plaza
-      g.scale.setScalar(15 * (0.55 + 0.53 * Math.pow((nn - 1) / 29, 0.85)));
+      g.scale.setScalar(15 * (0.55 + 0.53 * Math.pow((nn - 1) / 11, 0.85)));
       g.userData.banderas = []; g.userData.etapa = e;
       // v6.56: banderas que ondean en lo alto de las torres (la más alta y la de cada esquina)
       try {
@@ -1177,7 +1177,7 @@ var M = (function () {
       }
     }
     // dentro de cada etapa crece un poco con el nivel
-    var ini = [0, 1, 5, 10, 15, 30][e], paso = e === 4 ? 0.012 : 0.03;
+    var ini = [0, 1, 3, 6, 9, 12][e], paso = e === 4 ? 0.012 : 0.03;
     g.scale.setScalar(1 + paso * Math.max(0, n - ini));
     g.userData.banderas = banderas;
     var r = fusionar(g) || g; r.userData.banderas = banderas; r.userData.etapa = e;
