@@ -9016,7 +9016,8 @@
   function textoTropas() {
     var inv = tropas.filter(function (u) { return u.invocada || u.tipo === 'heroe'; }).length;
     var her = totalHeridos();
-    return (tropasNormales() + her) + (inv ? ' +' + inv + '✨' : '') + (her ? ' 💚' + her : '');
+    // v6.86: claro y corto: «Tropas 76,7K» (los héroes e invocadas ya no salen como un «+10 ✨» que nadie entendía)
+    return L('Tropas ', 'Troops ') + corto(tropasNormales() + her) + (her ? ' · 💚' + corto(her) : '');
   }
   function textoOleada() {
     var n = oleadaActiva ? oleadaActual : estado.oleada;
