@@ -8113,7 +8113,7 @@
     var c = $('eventos-botones');
     if (!c) { c = document.createElement('div'); c.id = 'eventos-botones'; document.body.appendChild(c); c.addEventListener('click', function (ev) { var b = ev.target.closest('[data-ev]'); if (!b || enMenu) return; sonar('click'); if (b.dataset.ev === 'ruleta') abrirRuleta(); else abrirAzar('premium'); }); }
     var ocultar = enMenu || enMundo || !!panelActual;
-    var h = Object.keys(EVENTOS).map(function (k) { var a = eventoActivo(k); if (!a) return ''; return '<button class="ev-btn ev-' + k + '" data-ev="' + k + '"><span class="ev-ico">' + EVENTOS[k].ico + '</span><span class="ev-t">' + fmtTiempo(Math.max(0, Math.ceil((a.fin - Date.now()) / 1000))) + '</span></button>'; }).join('');
+    var h = Object.keys(EVENTOS).map(function (k) { var a = eventoActivo(k); if (!a) return ''; return '<button class="ev-btn ev-' + k + '" data-ev="' + k + '"><span class="ev-ico">' + (k === 'ruleta' ? '<img class="ev-img" src="iconos/ui/e_ruleta.webp" alt="🎡">' : EVENTOS[k].ico) + '</span><span class="ev-t">' + fmtTiempo(Math.max(0, Math.ceil((a.fin - Date.now()) / 1000))) + '</span></button>'; }).join('');
     c.classList.toggle('oculto', ocultar || !h);
     if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
   }
@@ -8130,7 +8130,7 @@
   function htmlRueda() {
     var n = RULETA.length, paso = 360 / n;
     return '<div class="rul-marco"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda">' + RULETA.map(function (s, i) {
-      var ico = s.k === 'llave' ? '🗝️' : OBJETOS[s.k].icono;
+      var ico = s.k === 'llave' ? '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' : OBJETOS[s.k].icono;
       return '<span class="rul-seg" style="transform:rotate(' + (i * paso) + 'deg)"><span class="rul-ic">' + ico + '</span></span>';
     }).join('') + '</div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasAzar() >= RUL_FICHAS ? '🪙 ' + RUL_FICHAS : '💎 ' + RUL_GEMAS) + '</small></button></div>';
   }
@@ -8141,8 +8141,8 @@
     var falta = Math.max(0, 5 - r.llaves);
     var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + L('Necesitas: fichas o gemas', 'You need: tokens or gems') + '</small></div>' +
       htmlRueda() +
-      '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">🗝️</span>'; }).join('') + '</div><div class="rul-cofre">' + (window.ICONO_FICHA ? '' : '') + '<img class="ico-obj" src="iconos/ui/o_cofre_tesoro.webp" alt="🎁"></div>' +
-      (falta ? '<p>' + L('Junta ' + falta + ' llave' + (falta > 1 ? 's' : '') + ' más para el Cofre del Galeón', 'Collect ' + falta + ' more key' + (falta > 1 ? 's' : '') + ' for the Galleon Chest') + '</p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">🗝️ ' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
+      '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre">' + (window.ICONO_FICHA ? '' : '') + '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁"></div>' +
+      (falta ? '<p>' + L('Junta ' + falta + ' llave' + (falta > 1 ? 's' : '') + ' más para el Cofre del Galeón', 'Collect ' + falta + ' more key' + (falta > 1 ? 's' : '') + ' for the Galleon Chest') + '</p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
       '<p class="az-tienes">' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : f) + '</b></p>' +
       '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
         var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
@@ -8167,7 +8167,7 @@
     var r = estadoRuleta(a.id), ganados = [], idx = [];
     for (var i = 0; i < n; i++) {
       var j = sortearRuleta(), s = RULETA[j]; idx.push(j);
-      if (s.k === 'llave') { r.llaves++; ganados.push({ ico: '🗝️', nom: L('Llave del Galeón', 'Galleon Key') }); }
+      if (s.k === 'llave') { r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key') }); }
       else { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k) }); }
     }
     guardar(true); actualizarHUD();
@@ -8182,7 +8182,7 @@
   function abrirGaleon() {
     var r = estado.ruleta; if (!r || r.llaves < 5) return;
     r.llaves -= 5;
-    var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_cofre_tesoro.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest'), gordo: true }];
+    var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest'), gordo: true }];
     Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k]; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k] }); });
     estado.gemas = (estado.gemas || 0) + GALEON_GEMAS; l.push({ ico: '💎', nom: GALEON_GEMAS + ' ' + L('gemas', 'gems') });
     guardar(true); actualizarHUD();
