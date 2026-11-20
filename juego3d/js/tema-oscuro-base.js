@@ -91,7 +91,7 @@
     var cajon = document.createElement('div'); cajon.id = 'cajon-lateral';
     ['btn-defensa', 'btn-velocidad', 'btn-ranking', 'btn-centrar', 'btn-pausa', 'btn-sonido', 'btn-ajustes'].forEach(function (id) { var b = $(id); if (b) cajon.appendChild(b); });
     var bCaj = document.createElement('button'); bCaj.className = 'redondo'; bCaj.id = 'btn-cajon'; bCaj.title = 'Más';
-    bCaj.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 7h16M4 12h16M4 17h16" stroke="#4a2a00" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>';
+    bCaj.innerHTML = '<img class="rd-img" src="iconos/ui/b_menu.webp" alt="☰">'; // v6.88: dibujo propio
     lat.appendChild(bCaj); lat.appendChild(cajon);
     bCaj.addEventListener('click', function (ev) { ev.stopPropagation(); var ab = cajon.classList.toggle('abierto'); bCaj.classList.toggle('activo', ab); });
     document.addEventListener('pointerdown', function (ev) { if (cajon.classList.contains('abierto') && !cajon.contains(ev.target) && ev.target !== bCaj && !bCaj.contains(ev.target)) { cajon.classList.remove('abierto'); bCaj.classList.remove('activo'); } });

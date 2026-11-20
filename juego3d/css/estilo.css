@@ -1846,3 +1846,7 @@ body.panel-abierto #eventos-botones { display: none; }
 /* v6.88: botones redondos de la derecha con dibujo propio (promociones, misiones, chat, buzón) */
 #lateral .redondo:has(.rd-img) { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; overflow: visible; }
 #lateral .redondo .rd-img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,.55)); pointer-events: none; }
+/* v6.88: los botones con dibujo van completos dentro de la pantalla (antes el borde los cortaba) */
+html body #lateral { right: calc(14px + env(safe-area-inset-right)) !important; }
+html body #lateral .redondo:has(.rd-img), html body.tema-oscuro #lateral .redondo:has(.rd-img) { background: none !important; border: none !important; box-shadow: none !important; width: 54px !important; height: 54px !important; padding: 0 !important; overflow: visible !important; }
+html body #lateral .redondo:has(.rd-img) .badge { top: -4px !important; right: -2px !important; left: auto !important; }
