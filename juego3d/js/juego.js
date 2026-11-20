@@ -3128,7 +3128,7 @@
     aldeanos.push(nuevoCaminante(tipoAl, ma, pa, tipoAl === 'anciano' ? 0.75 + Math.random() * 0.2 : tipoAl === 'nino' ? 1.5 + Math.random() * 0.5 : 1.15 + Math.random() * 0.45));
   }
   // night watch: guards with torches walking the stone streets
-  for (var gu = 0; gu < 4 && ESQUINAS.length; gu++) {
+  for (var gu = 0; gu < 0 && ESQUINAS.length; gu++) { // v6.88: sin los guardias cabezones
     var mg = M.unidad('guardian'), pg = ESQUINAS[Math.floor(Math.random() * ESQUINAS.length)].clone();
     M.antorcha(mg.grupo, 0.42, 1.15, 0.12);
     mg.grupo.position.copy(pg); escena.add(mg.grupo);

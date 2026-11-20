@@ -1842,3 +1842,7 @@ body.panel-abierto #eventos-botones { display: none; }
 .rp-item.gordo { background: radial-gradient(circle, #ffe066, #b8801e); }
 .rp-ic { font-size: 38px; } .rp-ic img.ico-obj { width: 52px; height: 52px; }
 .rp-item small { font: 700 12px system-ui, sans-serif; color: #fff; }
+
+/* v6.88: botones redondos de la derecha con dibujo propio (promociones, misiones, chat, buzón) */
+#lateral .redondo:has(.rd-img) { background: none !important; border: none !important; box-shadow: none !important; padding: 0 !important; overflow: visible; }
+#lateral .redondo .rd-img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 3px 3px rgba(0,0,0,.55)); pointer-events: none; }
