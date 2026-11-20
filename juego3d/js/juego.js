@@ -76,8 +76,10 @@
     if (vars) for (var v in vars) s = s.split('{' + v + '}').join(vars[v]);
     return s;
   }
-  function N(k) { return NOMBRES[k][estado.idioma] || NOMBRES[k].es; }
-  function D(k) { return NOMBRES[k]['des_' + estado.idioma] || NOMBRES[k].des_es || ''; }
+  // v7.05: si algo nuevo no tiene nombre todavía, el juego sigue andando (muestra su código) en vez de caerse
+  var avisadosN = {};
+  function N(k) { var n = NOMBRES[k]; if (!n) { if (!avisadosN[k]) { avisadosN[k] = 1; console.warn('Falta el nombre de "' + k + '" en NOMBRES (datos.js)'); } return String(k); } return n[estado.idioma] || n.es || String(k); }
+  function D(k) { var n = NOMBRES[k]; if (!n) return ''; return n['des_' + estado.idioma] || n.des_es || ''; }
 
   // ------------------------------------------------------------------
   //  ESCENA
@@ -9159,6 +9161,8 @@
     h += '</div></div>';
     abrirPanel(escaparHTML(nom) + ' (' + cl.x + ',' + cl.y + ')', h, { tipo: 'recursos' });
   }
+  // v7.05: el aviso de errores (js/tk-guardian.js) solo se le muestra al dueño
+  setInterval(function () { try { if (esCuentaDueno() || estado.dueno) localStorage.setItem('tk_dueno', '1'); } catch (e) {} }, 5000);
   function esCuentaDueno() { return !!(window.Cuentas && Cuentas.usuario() && HUELLAS_DUENO.indexOf(sha256(Cuentas.correo().toLowerCase())) >= 0); }
   // v6.99: tocar la fila de recursos abre la ventana de Recursos de la ciudad
   ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (id) {

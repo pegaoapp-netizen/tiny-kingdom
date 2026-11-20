@@ -8,7 +8,8 @@
       "**/.*",
       "LEEME.txt",
       "**/node_modules/**",
-      "nube/**"
+      "nube/**",
+      "pruebas/**"
     ],
     "headers": [
       {
@@ -47,6 +48,9 @@
           }
         ]
       }
+    ],
+    "predeploy": [
+      "node pruebas/revisar.js"
     ]
   }
 }
