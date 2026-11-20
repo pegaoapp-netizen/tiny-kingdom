@@ -726,6 +726,7 @@ var TIENDA = [
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
 // Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
 var ICONOS_IMG = {
+  caracola: 'o_caracola', caracola_real: 'o_caracola',
   portal_elegir: 'o_portal_elegir', reclutas: 'o_reclutas',
   libro_peq: 'o_libro', libro_gra: 'o_tomo', pergamino: 'o_pergamino', portal_azar: 'o_portal_azar',
   lingote: 'o_lingote',

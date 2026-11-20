@@ -1889,3 +1889,5 @@ html body #abajo #btn-menu-mas.en-abajo { position: static !important; translate
 .ev-btn .ev-ico { font-size: 40px !important; line-height: 68px !important; }
 .ev-btn .ev-img { width: 92%; height: 92%; object-fit: contain; display: block; margin: 4% auto 0; pointer-events: none; }
 .ev-btn .ev-t { font-size: 12px !important; bottom: -16px !important; }
+.rul-llaves img.ico-obj { width: 24px; height: 24px; }
+.ev-btn.ev-ruleta { background: none !important; border: none !important; box-shadow: 0 0 14px rgba(255,200,80,.6) !important; border-radius: 50%; }
