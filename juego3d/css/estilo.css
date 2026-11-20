@@ -2023,3 +2023,22 @@ html body #panel.rul-panel .rul-llaves { margin: 0 !important; line-height: 1; }
 html body #panel.rul-panel .rul-llaves img.ico-obj { width: 24px !important; height: 24px !important; }
 html body #panel.rul-panel .rul-galeon p { font-size: 13px; }
 html body #panel.rul-panel .rul-abrir { margin: 2px auto 4px !important; padding: 6px 14px !important; }
+
+/* ===== v6.89: Inventario: 4 categorías a la vez, filas que no se montan; Uso en masa sale desde abajo ===== */
+html body #panel .iv-cats { gap: 2px !important; }
+html body #panel .iv-carril { gap: 6px !important; scroll-snap-type: x mandatory !important; }
+html body #panel .iv-carril button { flex: 0 0 calc((100% - 18px) / 4) !important; min-width: 0 !important; padding: 8px 2px !important; font-size: 13px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; scroll-snap-align: start !important; }
+html body #panel .iv-flecha { width: 30px !important; font-size: 30px !important; }
+html body #panel .iv-lista { display: flex; flex-direction: column; }
+html body #panel .iv-fila { position: relative; flex: none; min-height: 64px; contain: layout paint; transform: translateZ(0); }
+html body #panel .iv-fila .iv-dat { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+html body #panel .iv-fila .iv-dat b { white-space: normal; line-height: 1.15; }
+html body #panel .iv-fila .iv-ico[data-accion] { cursor: pointer; }
+html body #panel .iv-fila .iv-boton { flex: none; }
+html body #panel .iv-vacio b { font-size: 17px; color: #f1e2c0; }
+#uso-masa { align-items: flex-end !important; padding: 0 !important; }
+#uso-masa .um-caja { width: 100% !important; max-width: 520px; border-radius: 18px 18px 0 0 !important; border-bottom: 0 !important; padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; animation: umDesdeAbajo .3s ease-out !important; }
+@keyframes umDesdeAbajo { from { transform: translateY(100%); } to { transform: none; } }
+
+html body #panel .iv-carril button { font: 700 12px/1.1 system-ui, sans-serif !important; letter-spacing: -.2px; padding: 9px 0 !important; text-overflow: clip !important; }
+html body #panel .iv-carril button { font-size: 11px !important; letter-spacing: -.4px !important; } html body #panel .iv-flecha { width: 22px !important; } html body #panel .iv-carril { gap: 4px !important; } html body #panel .iv-carril button { flex-basis: calc((100% - 12px) / 4) !important; }

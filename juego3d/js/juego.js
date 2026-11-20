@@ -7986,17 +7986,17 @@
   }
   // v6.58: INVENTARIO como en las fotos del dueño: arriba Tienda / Mis objetos, debajo categorías que se deslizan,
   // y una fila por objeto con su icono, su nombre, «Tienes: X» y el botón Usa (o Reciclar en el equipo). Todo en español.
-  var SUBCAT_INV = ['equipo', 'heroe', 'intercambia', 'ciudad', 'misc', 'reliquia', 'acelerar', 'combate', 'recursos', 'cofre', 'potenciador'];
-  var NOM_SUBCAT = { equipo: ['Equipo', 'Gear'], heroe: ['Héroe', 'Hero'], intercambia: ['Intercambia', 'Trade'], ciudad: ['Ciudad', 'City'], misc: ['Misc.', 'Misc.'], reliquia: ['Reliquia', 'Relic'], acelerar: ['Acelerar', 'Speed-ups'], combate: ['Combate', 'Combat'], recursos: ['Recursos', 'Resources'], cofre: ['Cofre', 'Chests'], potenciador: ['Potenciador', 'Boosts'] };
+  var SUBCAT_INV = ['misc', 'reliquia', 'acelerar', 'combate', 'recursos', 'cofre', 'potenciador', 'tropas', 'equipo', 'heroe', 'intercambia', 'ciudad']; // v6.89: orden del video
+  var NOM_SUBCAT = { equipo: ['Equipo', 'Gear'], heroe: ['Héroe', 'Hero'], intercambia: ['Intercambia', 'Trade'], ciudad: ['Ciudad', 'City'], misc: ['Misc.', 'Misc.'], reliquia: ['Reliquia', 'Relic'], acelerar: ['Acelerar', 'Speed-ups'], combate: ['Combate', 'Combat'], recursos: ['Recursos', 'Resources'], cofre: ['Cofre', 'Chests'], potenciador: ['Potenciador', 'Boosts'], tropas: ['Tropas', 'Troops'] };
   var modoInv = 'mios', subInv = 'recursos';
   function subcatObjeto(k) {
     var o = OBJETOS[k] || {};
     if (o.equipo) return 'equipo'; if (o.exp !== undefined || o.pergamino) return 'heroe'; if (o.escudo || o.portal) return 'ciudad';
-    if (o.segundos || o.acelera) return 'acelerar'; if (o.tropas) return 'combate'; if (o.da) return 'recursos'; if (o.mejora) return 'potenciador';
+    if (o.segundos || o.acelera) return 'acelerar'; if (o.tropas) return 'tropas'; if (o.da) return 'recursos'; if (o.mejora) return 'potenciador';
     if (o.cofre || o.paquete) return 'cofre'; if (o.reliquia) return 'reliquia'; if (o.intercambio) return 'intercambia'; return 'misc';
   }
-  function filaInv(icono, nombre, sub, boton, info) {
-    return '<div class="iv-fila"><span class="iv-ico" title="' + escaparHTML(info || '') + '">' + icono + '<i class="iv-i">i</i></span><span class="iv-dat"><b>' + nombre + '</b><small>' + sub + '</small></span>' + boton + '</div>';
+  function filaInv(icono, nombre, sub, boton, info, k) {
+    return '<div class="iv-fila"><span class="iv-ico" title="' + escaparHTML(info || '') + '"' + (k && OBJETOS[k] ? ' data-accion="obj-info" data-k="' + k + '"' : '') + '>' + icono + '<i class="iv-i">i</i></span><span class="iv-dat"><b>' + nombre + '</b><small>' + sub + '</small></span>' + boton + '</div>';
   }
   function abrirPanelMochila(tab) {
     if (tab === 'tienda' || tab === 'mios') modoInv = tab; else if (tab && SUBCAT_INV.indexOf(tab) >= 0) subInv = tab; else if (tab === 'ingresos') subInv = 'cofre';
@@ -8011,7 +8011,7 @@
     if (modoInv === 'tienda') {
       TIENDA.forEach(function (it, i) {
         if (!OBJETOS[it.id] || subcatObjeto(it.id) !== subInv) return;
-        filas += filaInv(OBJETOS[it.id].icono, N(it.id), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[it.id] || 0), '<button class="iv-boton" data-accion="comprar" data-i="' + i + '"><span class="ico gema"></span>' + it.gemas + '</button>', D(it.id));
+        filas += filaInv(OBJETOS[it.id].icono, N(it.id), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[it.id] || 0), '<button class="iv-boton" data-accion="comprar" data-i="' + i + '"><span class="ico gema"></span>' + it.gemas + '</button>', D(it.id), it.id);
       });
       if (!filas) filas = '<p class="iv-vacio">' + (subInv === 'equipo' || subInv === 'heroe' ? L('El equipo y los libros se ganan jugando: oleadas, campamentos, bestias, torneos y cofres.', 'Gear and books are earned by playing: waves, camps, beasts, tournaments and chests.') : L('No hay nada para comprar aquí por ahora.', 'Nothing to buy here for now.')) + '</p>';
     } else {
@@ -8026,9 +8026,9 @@
       });
       Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0 && subcatObjeto(k) === subInv; }).forEach(function (k) {
         var o = OBJETOS[k], bt = o.escudo && protegido() ? '<button class="iv-boton" disabled>' + fmtTiempo((estado.escudoHasta - Date.now()) / 1000) + '</button>' : '<button class="iv-boton" data-accion="usar" data-obj="' + k + '">' + L('Usa', 'Use') + '</button>';
-        filas += filaInv(o.icono, N(k), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[k]), bt, D(k));
+        filas += filaInv(o.icono, N(k), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[k]), bt, D(k), k);
       });
-      if (!filas) filas = '<p class="iv-vacio">' + L('No tienes objetos de este tipo. Mira en la Tienda o gánalos jugando.', 'You have no items of this kind. Check the Shop or earn them by playing.') + '</p>';
+      if (!filas) filas = '<p class="iv-vacio"><b>' + L('No hay objetos', 'No items') + '</b><br><small>' + L('Mira en la Tienda o gánalos jugando.', 'Check the Shop or earn them by playing.') + '</small></p>';
     }
     html += '<div class="iv-lista">' + filas + '</div>';
     var yaInv = panelActual && panelActual.tipo === 'mochila' && !$('panel').classList.contains('oculto');
@@ -8394,13 +8394,18 @@
       if (o.paquete) Object.keys(o.paquete).forEach(function (q) { objs[q] = (objs[q] || 0) + o.paquete[q]; });
       if (o.mejora) o.mejora.forEach(function (r) { pzs.push(darPieza(null, r)); });
       if (o.equipo) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'));
+      (EXTRA_COFRE[k] || []).forEach(function (e) { if (Math.random() >= e[2]) return; if (e[0] === 'pieza') pzs.push(darPieza(null, e[1])); else objs[e[0]] = (objs[e[0]] || 0) + e[1]; });
     }
+    pzs = pzs.filter(Boolean);
     estado.mochila[k] -= n;
     Object.keys(objs).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + objs[q]; });
     chispas(castilloPos.clone().setY(6), 0xffe14a, 24, 5); sonar('gemas');
     guardar(true); reabrirPanel();
-    var p = {}; Object.keys(tot).forEach(function (r) { p[r] = tot[r]; }); p.objetos = objs; p.piezas = pzs;
-    mostrarRecompensas(N(k) + (n > 1 ? ' ×' + formatoNumero(n) : ''), premioAItems(p), function () { if (Object.keys(tot).length) darPremio(tot); guardar(true); actualizarHUD(); reabrirPanel(); });
+    var p = {}; Object.keys(tot).forEach(function (r) { p[r] = tot[r]; }); p.objetos = objs;
+    var items = premioAItems(p), porR = {};
+    if (pzs.length <= 3) pzs.forEach(function (pz) { items.push({ ico: '🛡️', nom: nombrePieza(pz), n: 1 }); });
+    else { pzs.forEach(function (pz) { porR[pz.r] = (porR[pz.r] || 0) + 1; }); Object.keys(porR).forEach(function (r) { items.push({ ico: '🛡️', nom: L('Armaduras y armas ', 'Armor and weapons ') + ({ comun: L('comunes', 'common'), raro: L('raras', 'rare'), legendario: L('legendarias', 'legendary'), mitico: L('míticas', 'mythic') }[r] || r), n: porR[r] }); }); }
+    mostrarRecompensas(N(k) + (n > 1 ? ' ×' + formatoNumero(n) : ''), items, function () { if (Object.keys(tot).length) darPremio(tot); guardar(true); actualizarHUD(); reabrirPanel(); });
   }
   // ---------- TIENDA ----------
   var pestTienda = 'acelerar';
@@ -8413,6 +8418,7 @@
     if (o.paquete) Object.keys(o.paquete).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.paquete[q]]); });
     if (o.mejora) o.mejora.forEach(function (r) { l.push(['🧰', L('Pieza de equipo ', 'Equipment piece ') + T('eq_r_' + r), '×1']); });
     if (o.equipo) l.push(['🧰', L('Pieza de equipo rara (20% legendaria)', 'Rare equipment piece (20% legendary)'), '×1']);
+    (EXTRA_COFRE[k] || []).forEach(function (e) { var pr = Math.round(e[2] * 100) + '%'; if (e[0] === 'pieza') l.push(['🛡️', L('Armadura o arma ', 'Armor or weapon ') + nomRarezaEq(e[1]), L('a veces ', 'sometimes ') + pr]); else if (OBJETOS[e[0]]) l.push([OBJETOS[e[0]].icono, N(e[0]) + (e[1] > 1 ? ' ×' + e[1] : ''), L('a veces ', 'sometimes ') + pr]); });
     if (o.da) Object.keys(o.da).forEach(function (r) { l.push([ICONO_RECURSO[r], T('r_' + r), formatoNumero(o.da[r])]); });
     if (o.tropas) Object.keys(o.tropas).forEach(function (t) { l.push([TROPAS[t].icono, N(t), '×' + o.tropas[t]]); });
     if (o.segundos) l.push(['⏱️', o.soloInv ? L('Quita tiempo a una investigación', 'Takes time off a research') : L('Quita tiempo a una obra, entrenamiento o investigación', 'Takes time off a build, training or research'), fmtTiempo(o.segundos)]);
@@ -8424,6 +8430,14 @@
     return l;
   }
   function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo); }
+  // v6.89: los cofres no traen solo recursos: también armaduras/armas para los héroes, aceleradores, libros y escudos (con su probabilidad)
+  var EXTRA_COFRE = {
+    cofre_madera: [['pieza', 'comun', 0.25], ['acel_1h', 1, 0.3], ['libro_peq', 1, 0.2]],
+    cofre_plata: [['pieza', 'comun', 0.4], ['pieza', 'raro', 0.1], ['acel_1h', 1, 0.4], ['libro_peq', 1, 0.3], ['escudo_2h', 1, 0.1]],
+    cofre_oro: [['pieza', 'raro', 0.4], ['pieza', 'legendario', 0.05], ['acel_8h', 1, 0.3], ['libro_gra', 1, 0.3], ['escudo_8h', 1, 0.15]],
+    cofre_tesoro: [['pieza', 'raro', 0.6], ['pieza', 'legendario', 0.3], ['acel_24h', 1, 0.4], ['libro_gra', 2, 0.5], ['caracola', 1, 0.3]]
+  };
+  function nomRarezaEq(r) { return { comun: L('común', 'common'), raro: L('rara', 'rare'), legendario: L('legendaria', 'legendary'), mitico: L('mítica', 'mythic') }[r] || r; }
   function htmlContenido(k) {
     var l = contenidoObjeto(k);
     return '<div class="oi-lista">' + l.map(function (x) { return '<div class="oi-fila"><span class="oi-ic">' + x[0] + '</span><b>' + x[1] + '</b><span class="oi-n">' + x[2] + '</span></div>'; }).join('') + '</div>';
@@ -9117,7 +9131,7 @@
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
-    else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth * 0.7, behavior: 'smooth' }); }
+    else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth, behavior: 'smooth' }); }
     else if (a === 'inv-reciclar') reciclarPiezaInv(b.getAttribute('data-i'));
     else if (a === 'inv-mejorar') mejorarPiezaInv(b.getAttribute('data-i'));
     else if (a === 'inv-tropa') { sonar('click'); filtroInv = b.getAttribute('data-tipo'); abrirPanelInvestigacion('tropas', true); }
