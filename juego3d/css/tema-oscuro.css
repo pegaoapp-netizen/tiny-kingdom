@@ -1268,3 +1268,21 @@ html body #vista-aviso.ver { animation-duration: 1.1s !important; }
   html body #panel .subtabs:not(.pest-tropa) { display: flex !important; flex-wrap: wrap !important; gap: 4px !important; overflow: visible !important; }
   html body #panel .subtabs:not(.pest-tropa) > button { flex: 1 1 calc(33.333% - 4px) !important; min-width: 0 !important; max-width: none !important; white-space: nowrap !important; overflow: visible !important; text-overflow: clip !important; font-size: 12px !important; padding-left: 2px !important; padding-right: 2px !important; letter-spacing: -0.2px; }
 }
+
+/* ===== v7.03: Campaña con premios, defensa e historial ===== */
+html body #panel .cp-caja { margin-top: 10px; }
+html body #panel .cp-caja h3 { margin: 0 0 8px; }
+html body #panel .cp-lista { display: flex; flex-direction: column; gap: 4px; }
+html body #panel .cp-premio { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: rgba(255,230,170,.10); border: 1px solid rgba(242,196,90,.25); }
+html body #panel .cp-premio.cp-quiza { opacity: .85; border-style: dashed; }
+html body #panel .cp-ico { flex: none; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+html body #panel .cp-ico img { width: 30px; height: 30px; object-fit: contain; }
+html body #panel .cp-nom { flex: 1; min-width: 0; font-size: 13px; }
+html body #panel .cp-premio b { flex: none; color: #7fe07a; font-size: 14px; }
+html body #panel .cp-def { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; font-size: 13px; }
+html body #panel .cp-def span:last-child { grid-column: 1 / -1; }
+html body #panel .cp-equipo { margin-top: 10px; width: 100%; min-height: 40px !important; }
+html body #panel .cp-hist { display: flex; flex-direction: column; gap: 4px; }
+html body #panel .cp-h { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; background: rgba(120,200,120,.10); font-size: 13px; }
+html body #panel .cp-ok { color: #7fe07a; font-weight: 900; }
+html body #panel .cp-h small { margin-left: auto; opacity: .8; }

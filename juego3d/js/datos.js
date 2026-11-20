@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.02';
+var VERSION_JUEGO = '7.03';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -107,7 +107,7 @@ var TEXTOS = {
     armadura_max: 'Armadura de Dragón al máximo ★★★★', defensa: 'Defensa', armadura_lista: '🛡️ ¡Armadura de {t} nivel {n}! Se nota en tus tropas.',
     b_conquista: 'Campaña', b_heroes: 'Tropas', b_mochila: 'Inventario', b_tienda: 'Tienda',
     p_conquista: 'Campaña', p_heroes: 'Tropas', p_mochila: 'Inventario', p_tienda: 'Tienda', sub_tropas: 'Tropas', sub_invocar: 'Invocar',
-    conquista_txt: 'Defiende el reino de cada oleada. Al ganarla recibes gemas.', oleada_curso: 'Oleada en curso: quedan {n} enemigos.',
+    conquista_txt: 'Defiende el reino de cada oleada. Al ganarla recibes experiencia, libros, pergaminos y aceleradores.', oleada_curso: 'Oleada en curso: quedan {n} enemigos.',
     vienen: 'Vienen:', oleadas_ganadas: 'Oleadas ganadas',
     diario_titulo: 'Cofre diario', diario_txt: 'Entra cada día para un cofre mejor. Si faltas un día, la racha vuelve a empezar.',
     diario_dia: 'Día {n}', diario_reclamar: '🎁 Reclamar cofre del día {n}', diario_listo: 'Ya lo reclamaste hoy. Vuelve mañana por el día {n}.',
@@ -249,7 +249,7 @@ var TEXTOS = {
     armadura_max: 'Dragon armor at max ★★★★', defensa: 'Defense', armadura_lista: '🛡️ {t} armor level {n}! You can see it on your troops.',
     b_conquista: 'Campaign', b_heroes: 'Troops', b_mochila: 'Inventory', b_tienda: 'Shop',
     p_conquista: 'Campaign', p_heroes: 'Troops', p_mochila: 'Inventory', p_tienda: 'Shop', sub_tropas: 'Troops', sub_invocar: 'Summon',
-    conquista_txt: 'Defend the kingdom from each wave. Win it to earn gems.', oleada_curso: 'Wave in progress: {n} enemies left.',
+    conquista_txt: 'Defend the kingdom from each wave. Win it to earn experience, books, scrolls and speed-ups.', oleada_curso: 'Wave in progress: {n} enemies left.',
     vienen: 'Coming:', oleadas_ganadas: 'Waves won',
     diario_titulo: 'Daily chest', diario_txt: 'Come back every day for a better chest. Miss a day and the streak starts over.',
     diario_dia: 'Day {n}', diario_reclamar: '🎁 Claim day {n} chest', diario_listo: 'Already claimed today. Come back tomorrow for day {n}.',

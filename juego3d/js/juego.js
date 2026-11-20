@@ -4822,6 +4822,7 @@
     sonar('gemas');
     premioHeroesOleada(n);
     nuevoCorreo('informes', L('Informe de batalla: oleada ' + n + ' superada', 'Battle report: wave ' + n + ' won'), L('Defensa del reino', 'Kingdom defense'), htmlInforme([[L('Resultado', 'Result'), '🏆 ' + L('Victoria', 'Victory')], [L('Oleada', 'Wave'), n], [L('Gemas', 'Gems'), '💎 ' + g], [L('Vida del castillo', 'Castle health'), Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo()]]));
+    estado.histOleadas = (estado.histOleadas || []).concat([{ n: n, f: Date.now(), v: Math.round(estado.vidaCastillo / vidaMaxCastillo() * 100) }]).slice(-20); // v7.03: historial para la Campaña
     estado.oleada = n + 1;
     sumarTorneo(PUNTOS_TORNEO.oleada);
     estado.vidaCastillo = vidaMaxCastillo();
@@ -8196,6 +8197,45 @@
     d.addEventListener('click', function (ev) { if (ev.target === d || ev.target.id === 'eq-guia-x') d.remove(); });
   }
   // ---------- CONQUISTA (oleadas) ----------
+  // v7.03: CAMPAÑA más completa: lo que ganas exactamente en la oleada, con qué defiendes y las oleadas que ya superaste
+  function filaPremio(ico, nom, cant, extra) { return '<div class="cp-premio' + (extra ? ' cp-quiza' : '') + '"><span class="cp-ico">' + ico + '</span><span class="cp-nom">' + nom + '</span><b>' + cant + '</b></div>'; }
+  function htmlPremiosOleada(n) {
+    var hay = estado.equipo && estado.equipo.length, ob = function (k) { return OBJETOS[k] ? OBJETOS[k].icono : '🎁'; };
+    var h = '<div class="carta cp-caja"><h3>🎁 ' + L('Premios de la oleada ', 'Wave rewards ') + n + '</h3><div class="cp-lista">' +
+      filaPremio('⭐', L('Experiencia del reino', 'Kingdom experience'), '+' + formatoNumero(15 + 5 * n)) +
+      filaPremio('🏆', L('Puntos del torneo', 'Tournament points'), '+' + PUNTOS_TORNEO.oleada);
+    if (hay) {
+      h += filaPremio('🦸', L('Experiencia de cada héroe del equipo', 'Experience for each team hero'), '+' + formatoNumero(30 + 12 * n)) +
+        filaPremio('🧩', L('Fragmentos de un héroe del equipo', 'Fragments of a team hero'), '+' + Math.min(5, 1 + Math.floor(n / 5))) +
+        filaPremio(ob('pergamino'), N('pergamino'), '+' + (1 + Math.floor(n / 10))) +
+        filaPremio(ob('libro_peq'), N('libro_peq'), '+' + (1 + Math.floor(n / 8))) +
+        (n % 5 === 0 ? filaPremio(ob('libro_gra'), N('libro_gra'), '+1') : '') +
+        filaPremio(ob('acel_5m'), N('acel_5m'), '+1') +
+        (n % 3 === 0 ? filaPremio(ob('acel_15m'), N('acel_15m'), '+1') : '') +
+        filaPremio('🛡️', L('Pieza de armadura', 'Armor piece'), '35%', true);
+    }
+    h += '</div>' + (hay ? '' : '<p class="nota aviso-rojo">' + L('Pon héroes en tu equipo para ganar también libros, pergaminos, aceleradores y piezas.', 'Put heroes in your team to also win books, scrolls, speed-ups and pieces.') + '</p>') + '</div>';
+    return h;
+  }
+  function htmlDefensaCampana() {
+    var eq = (estado.equipo || []).filter(function (id) { return estado.heroes[id]; });
+    return '<div class="carta cp-caja"><h3>🛡️ ' + L('Tu defensa', 'Your defense') + '</h3><div class="cp-def">' +
+      '<span>⚔️ ' + L('Fuerza', 'Strength') + ': <b>' + formatoNumero(Math.round(fuerzaEjercito())) + '</b></span>' +
+      '<span>🏰 ' + L('Castillo', 'Castle') + ': <b>' + L('Nv ', 'Lv ') + (estado.castillo || 1) + '</b></span>' +
+      '<span>🧱 ' + L('Muralla', 'Wall') + ': <b>' + L('Nv ', 'Lv ') + (estado.muralla || 0) + '</b></span>' +
+      '<span>🦸 ' + L('Equipo', 'Team') + ': <b>' + (eq.length ? eq.map(function (id) { return NH(id); }).join(', ') : L('sin héroes', 'no heroes')) + '</b></span></div>' +
+      '<button class="comprar azul cp-equipo" data-accion="sub-heroes">🦸 ' + L('Cambiar héroes', 'Change heroes') + '</button></div>';
+  }
+  function htmlHistorialOleadas(n) {
+    var hist = (estado.histOleadas || []).slice().reverse(), conFecha = {};
+    hist.forEach(function (x) { conFecha[x.n] = x; });
+    var hechas = []; for (var k = n - 1; k >= 1 && hechas.length < 10; k--) hechas.push(k);
+    if (!hechas.length) return '<div class="carta cp-caja"><h3>📜 ' + L('Oleadas superadas', 'Waves won') + '</h3><p class="nota">' + L('Todavía no has superado ninguna oleada. ¡Defiende tu reino!', 'You have not won any wave yet. Defend your kingdom!') + '</p></div>';
+    return '<div class="carta cp-caja"><h3>📜 ' + L('Oleadas superadas', 'Waves won') + ' (' + (n - 1) + ')</h3><div class="cp-hist">' + hechas.map(function (k) {
+      var x = conFecha[k];
+      return '<div class="cp-h"><span class="cp-ok">✓</span><b>' + T('oleada') + ' ' + k + '</b><small>' + (x ? new Date(x.f).toLocaleDateString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short' }) + ' · ❤ ' + x.v + '%' : '') + '</small></div>';
+    }).join('') + '</div></div>';
+  }
   function abrirPanelConquista() {
     vistos().campana = estado.oleada;
     var n = oleadaActiva ? oleadaActual : estado.oleada, total = OLEADAS.length;
@@ -8213,7 +8253,8 @@
       '<div class="stats" style="margin-top:6px"><span>❤ ' + T('castillo') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>🛡️ ' + textoTropas() + '</span></div>';
     if (oleadaActiva) html += '<p class="nota aviso-rojo"><b>' + T('oleada_curso', { n: enemigos.length + colaSpawn.length }) + '</b></p>';
     else html += '<button class="comprar rojo boton-oleada-grande" data-accion="empezar-oleada">⚔️ ' + T('empezar_oleada', { n: estado.oleada }) + '</button>';
-    abrirPanel(T('p_conquista'), html + '</div>', { tipo: 'conquista' });
+    html += '</div>' + htmlPremiosOleada(n) + htmlDefensaCampana() + htmlHistorialOleadas(n);
+    abrirPanel(T('p_conquista'), html, { tipo: 'conquista' });
   }
   // ---------- COFRE DIARIO ----------
   function fechaLocal(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
