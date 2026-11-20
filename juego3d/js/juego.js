@@ -5485,7 +5485,7 @@
   // ------------------------------------------------------------------
   var panelActual = null;
   function abrirPanel(titulo, html, cual) {
-    $('panel').classList.remove('cafe'); var gmV = document.querySelector('#panel .cafe-mas'); if (gmV) gmV.remove(); var icV = document.querySelector('#panel .ve-icono'); if (icV) icV.remove();
+    $('panel').classList.remove('cafe', 'desde-abajo', 'co-panel'); var gmV = document.querySelector('#panel .cafe-mas'); if (gmV) gmV.remove(); var icV = document.querySelector('#panel .ve-icono'); if (icV) icV.remove();
     if (menuEdif.el) cerrarMenuEdif();
     $('panel-titulo').textContent = titulo;
     $('panel-cuerpo').innerHTML = html;
@@ -8763,43 +8763,55 @@
     if (p.puntos) sumarPuntosAlianza(p.puntos);
     return true;
   }
+  // ================= v6.88: CORREO que sube desde abajo: Sistema / Correo / Informe / Enviados =================
+  var TABS_CORREO = [['sistema', 'Sistema', 'System'], ['correo', 'Correo', 'Mail'], ['informe', 'Informe', 'Report'], ['enviados', 'Enviados', 'Sent']];
+  var correoEditar = false;
+  function tabDe(m) { return m.cat === 'sistema' ? 'sistema' : (m.cat === 'guerras' || m.cat === 'informes') ? 'informe' : m.cat === 'enviados' ? 'enviados' : 'correo'; }
+  function delTab(t) { return correoLista().filter(function (m) { return tabDe(m) === t; }).sort(function (a, b) { return (b.fecha || 0) - (a.fecha || 0); }); }
+  function icoCorreo(m) { return m.cat === 'sistema' ? '📜' : m.cat === 'guerras' ? '⚔️' : m.cat === 'informes' ? '📋' : m.cat === 'enviados' ? '📤' : m.cat === 'alianza' ? '🛡️' : '✉️'; }
   function abrirCorreo(tab) {
-    if (tab) { pestanaCorreo = tab; correoAbierto = null; }
-    var lista = correoLista().filter(function (m) { return pestanaCorreo === 'marcados' ? m.marcado : m.cat === pestanaCorreo; });
-    var h = '<div class="subtabs correo-tabs">' + CATS_CORREO.map(function (c) { var n = sinLeer(c); return '<button data-accion="mail-tab" data-tab="' + c + '" class="' + (c === pestanaCorreo ? 'activo' : '') + '">' + ICONO_CORREO[c] + ' ' + nombreCat(c) + (n ? ' <span class="mail-n">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>';
-    if (!lista.length) h += '<p class="nota">' + L('No hay mensajes aquí.', 'No messages here.') + '</p>';
-    h += '<div class="mail-lista">' + lista.map(function (m) {
-      var abierto = correoAbierto === m.id, pend = m.premio && !m.reclamado;
-      return '<div class="mail' + (m.leido ? '' : ' nuevo') + (abierto ? ' abierto' : '') + '"><div class="mail-cab" data-accion="mail-abrir" data-id="' + m.id + '"><span class="mail-ic">' + ICONO_CORREO[m.cat] + '</span><div class="mail-txt"><b>' + escaparHTML(m.titulo) + '</b><span>' + escaparHTML(m.de) + ' · ' + fechaCorta(m.fecha) + '</span></div>' + (pend ? '<span class="mail-regalo">🎁</span>' : '') +
-        '<button class="mail-estrella' + (m.marcado ? ' si' : '') + '" data-accion="mail-marcar" data-id="' + m.id + '">' + (m.marcado ? '★' : '☆') + '</button></div>' +
-        (abierto ? '<div class="mail-cuerpo">' + m.cuerpo + (m.premio ? '<p class="mail-premio">🎁 ' + textoPremioCorreo(m.premio) + '</p>' + (m.reclamado ? '<p class="nota">✓ ' + L('Reclamado', 'Claimed') + '</p>' : '<button class="comprar naranja mini" data-accion="mail-reclamar" data-id="' + m.id + '">' + L('Reclamar', 'Claim') + '</button>') : '') + '</div>' : '') + '</div>';
-    }).join('') + '</div>';
-    h += '<div class="mail-botones"><button class="comprar mini" data-accion="mail-leidos">✓ ' + L('Marcar todo leído', 'Mark all read') + '</button><button class="comprar mini azul" data-accion="mail-enviar">✉️ ' + L('Enviar', 'Send') + '</button><button class="comprar mini rojo" data-accion="mail-borrar">🗑️ ' + L('Eliminar leídos', 'Delete read') + '</button><button class="comprar mini naranja" data-accion="mail-todo">📬 ' + L('Leer y reclamar todo', 'Read and claim all') + '</button></div>';
-    abrirPanel('📬 ' + L('Correo', 'Mail'), h, { tipo: 'buzon' });
+    if (tab && !TABS_CORREO.some(function (t) { return t[0] === tab; })) tab = tab === 'sistema' ? 'sistema' : (tab === 'guerras' || tab === 'informes') ? 'informe' : 'correo';
+    if (tab) { pestanaCorreo = tab; correoAbierto = null; correoEditar = false; }
+    if (!TABS_CORREO.some(function (t) { return t[0] === pestanaCorreo; })) pestanaCorreo = 'sistema';
+    var lista = delTab(pestanaCorreo), nuevos = lista.filter(function (m) { return !m.leido; }).length;
+    var h = '<div class="co-cab"><span class="co-ciudad"><img src="iconos/ui/b_ciudad.webp" alt=""></span><b class="co-tit">' + L('Correo', 'Mail') + '</b><button class="co-editar' + (correoEditar ? ' activo' : '') + '" data-accion="co-editar">' + (correoEditar ? L('Listo', 'Done') : L('Editar', 'Edit')) + '</button></div>';
+    h += '<div class="co-tabs">' + TABS_CORREO.map(function (t) { var n = delTab(t[0]).filter(function (m) { return !m.leido; }).length; return '<button data-accion="co-tab" data-tab="' + t[0] + '" class="' + (t[0] === pestanaCorreo ? 'activo' : '') + '">' + L(t[1], t[2]) + (n ? '<i class="co-n">' + n + '</i>' : '') + '</button>'; }).join('') + '</div>';
+    var m = correoAbierto ? lista.filter(function (x) { return x.id === correoAbierto; })[0] : null;
+    if (m) {
+      var pend = m.premio && !m.reclamado;
+      h += '<div class="co-leer"><button class="co-volver" data-accion="co-volver">‹ ' + L('Volver', 'Back') + '</button><h3>' + icoCorreo(m) + ' ' + escaparHTML(m.titulo) + '</h3><small>' + escaparHTML(m.de || '') + ' · ' + fechaCorta(m.fecha) + '</small><div class="co-cuerpo">' + m.cuerpo + '</div>' +
+        (m.premio ? '<p class="mail-premio">🎁 ' + textoPremioCorreo(m.premio) + '</p>' + (pend ? '<button class="az-b verde" data-accion="co-reclamar" data-id="' + m.id + '">' + L('Reclamar', 'Claim') + '</button>' : '<p class="nota">✓ ' + L('Reclamado', 'Claimed') + '</p>') : '') + '</div>';
+    } else {
+      h += '<div class="co-lista">' + (lista.length ? lista.map(function (x) {
+        return '<div class="co-fila' + (x.leido ? '' : ' nuevo') + '" data-accion="co-abrir" data-id="' + x.id + '"><span class="co-ic">' + icoCorreo(x) + '</span><div class="co-txt"><b>' + escaparHTML(x.titulo) + '</b><small>' + fechaCorta(x.fecha) + '</small></div>' +
+          (x.premio && !x.reclamado ? '<span class="co-regalo">🎁</span>' : '') + (correoEditar ? '<button class="co-borrar" data-accion="co-borrar" data-id="' + x.id + '">✕</button>' : '<span class="co-flecha">›</span>') + '</div>';
+      }).join('') : '<p class="co-vacio">' + L('No tienes ningún correo', 'You have no mail') + '</p>') + '</div>';
+    }
+    h += '<div class="co-pie"><span>' + lista.length + ' ' + L('Mensajes', 'Messages') + ' / ' + nuevos + ' ' + L('Nuevo', 'New') + '</span><span class="co-bots"><button class="az-b rojo" data-accion="co-vaciar"' + (lista.length ? '' : ' disabled') + '>' + L('Vacío', 'Empty') + '</button><button class="az-b azul" data-accion="co-enviar">' + L('Enviar', 'Send') + '</button></span></div>';
+    var ya = panelActual && panelActual.tipo === 'buzon' && !$('panel').classList.contains('oculto');
+    if (ya) { $('panel').classList.add('sin-anim'); $('panel-cuerpo').innerHTML = h; setTimeout(function () { $('panel').classList.remove('sin-anim'); }, 50); }
+    else { abrirPanel(L('Correo', 'Mail'), h, { tipo: 'buzon' }); $('panel').classList.add('desde-abajo', 'co-panel'); }
     actualizarBuzon();
   }
   function accionCorreo(a, b) {
     var id = b.getAttribute('data-id'), m = correoLista().filter(function (x) { return x.id === id; })[0];
-    if (a === 'mail-tab') { sonar('click'); abrirCorreo(b.getAttribute('data-tab')); return; }
-    if (a === 'mail-abrir' && m) { sonar('click'); correoAbierto = correoAbierto === id ? null : id; m.leido = true; if (m.ver) { estado.novedadesVistas = m.ver; try { localStorage.setItem('tinykingdom_novedades', m.ver); } catch (e) {} } guardar(); abrirCorreo(); return; }
-    if (a === 'mail-marcar' && m) { m.marcado = !m.marcado; sonar('click'); guardar(); abrirCorreo(); return; }
-    if (a === 'mail-reclamar' && m) { if (reclamarCorreo(m)) { sonar('gemas'); consejoTemporal(T('recibiste', { t: textoPremioCorreo(m.premio) })); } guardar(true); abrirCorreo(); return; }
-    if (a === 'mail-todo') {
-      var n = 0; correoLista().filter(function (x) { return pestanaCorreo === 'marcados' ? x.marcado : x.cat === pestanaCorreo; }).forEach(function (x) { x.leido = true; if (reclamarCorreo(x)) n++; if (x.ver) estado.novedadesVistas = x.ver; });
-      sonar(n ? 'gemas' : 'click'); if (n) consejoTemporal(L('🎁 Reclamaste ' + n + ' recompensa(s)', '🎁 You claimed ' + n + ' reward(s)')); guardar(true); abrirCorreo(); return;
-    }
-    if (a === 'mail-leidos') {
-      confirmarJuego('✓ ' + L('Marcar todo leído', 'Mark all read'), L('Todos los mensajes de esta pestaña quedan como leídos. Las recompensas siguen esperando a que las reclames.', 'All messages in this tab are marked as read. Rewards still wait for you to claim them.'), L('Aceptar', 'OK'), function () {
-        correoLista().forEach(function (x) { if (pestanaCorreo === 'marcados' ? x.marcado : x.cat === pestanaCorreo) x.leido = true; }); sonar('click'); guardar(); abrirCorreo();
+    if (a === 'co-tab' || a === 'mail-tab') { sonar('click'); abrirCorreo(b.getAttribute('data-tab')); return; }
+    if (a === 'co-editar') { sonar('click'); correoEditar = !correoEditar; abrirCorreo(); return; }
+    if (a === 'co-volver') { sonar('click'); correoAbierto = null; abrirCorreo(); return; }
+    if ((a === 'co-abrir' || a === 'mail-abrir') && m) { if (correoEditar) return; sonar('click'); correoAbierto = id; m.leido = true; if (m.ver) { estado.novedadesVistas = m.ver; try { localStorage.setItem('tinykingdom_novedades', m.ver); } catch (e) {} } guardar(); abrirCorreo(); return; }
+    if ((a === 'co-reclamar' || a === 'mail-reclamar') && m) { if (reclamarCorreo(m)) { sonar('gemas'); consejoTemporal(T('recibiste', { t: textoPremioCorreo(m.premio) })); } guardar(true); abrirCorreo(); return; }
+    if (a === 'co-borrar' && m) { sonar('click'); reclamarCorreo(m); estado.buzon = correoLista().filter(function (x) { return x.id !== id; }); guardar(true); abrirCorreo(); return; }
+    if (a === 'co-enviar' || a === 'mail-enviar') { sonar('click'); abrirPanelChat(); return; }
+    if (a === 'co-vaciar') {
+      var n = delTab(pestanaCorreo).length; if (!n) return;
+      confirmarJuego('🗑️ ' + L('Vaciar', 'Empty'), L('¿Seguro que quieres eliminar los ' + n + ' mensajes de esta pestaña?', 'Are you sure you want to delete the ' + n + ' messages in this tab?'), L('Vale', 'OK'), function () {
+        // las recompensas sin reclamar se reclaman antes de borrar, para no perderlas
+        var t = pestanaCorreo, rec = 0; correoLista().forEach(function (x) { if (tabDe(x) === t && reclamarCorreo(x)) rec++; });
+        estado.buzon = correoLista().filter(function (x) { return tabDe(x) !== t; });
+        if (rec) consejoTemporal(L('🎁 Se reclamaron ' + rec + ' recompensa(s) antes de borrar', '🎁 ' + rec + ' reward(s) claimed before deleting'));
+        sonar('click'); correoAbierto = null; guardar(true); abrirCorreo();
       });
-      return;
-    }
-    if (a === 'mail-enviar') { sonar('click'); abrirPanelChat(); return; }
-    if (a === 'mail-borrar') {
-      confirmarJuego('🗑️ ' + L('Eliminar leídos', 'Delete read'), L('Se borran los mensajes leídos de esta pestaña. Los que tienen recompensa sin reclamar y los marcados no se borran.', 'Read messages in this tab will be deleted. Messages with unclaimed rewards and starred ones are kept.'), L('Eliminar', 'Delete'), function () {
-        estado.buzon = correoLista().filter(function (x) { var enTab = pestanaCorreo === 'marcados' ? x.marcado : x.cat === pestanaCorreo; return !(enTab && x.leido && !x.marcado && !(x.premio && !x.reclamado)); });
-        sonar('click'); guardar(); abrirCorreo();
-      });
+      var no = $('cj-no'); if (no) no.textContent = L('Cancelar', 'Cancel');
     }
   }
   function abrirBuzon() {
@@ -9014,7 +9026,7 @@
     else if (a === 'empezar-oleada') { cerrarPanel(); empezarOleada(); }
     else if (a === 'diario') reclamarDiario();
     else if (a === 'usar') usarObjeto(b.getAttribute('data-obj'));
-    else if (a.indexOf('mail-') === 0) accionCorreo(a, b);
+    else if (a.indexOf('mail-') === 0 || a.indexOf('co-') === 0) accionCorreo(a, b);
     else if (a === 'inv-tab') { sonar('click'); abrirPanelMochila(b.getAttribute('data-tab')); }
     else if (a === 'inv-modo') { sonar('click'); abrirPanelMochila(b.getAttribute('data-m')); }
     else if (a === 'rul-tirar') tirarRuleta(+b.getAttribute('data-n'));
