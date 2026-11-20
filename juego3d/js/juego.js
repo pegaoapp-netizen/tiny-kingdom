@@ -6343,6 +6343,9 @@
   };
   // v6.89: armaduras y armas con su dibujo (el emoji queda para las listas desplegables)
   Object.keys(EQ).forEach(function (t) { EQ[t].emoji = EQ[t].icono; EQ[t].icono = '<img class="ico-obj" src="iconos/ui/q_' + t + '.webp" alt="' + EQ[t].emoji + '" draggable="false">'; });
+  // v6.90: las armaduras de cada héroe (las de torneo) con su propio dibujo: iconos/ui/q_<pieza>_<héroe>.webp
+  var EQ_SET_IMG = { sol: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1 }, luna: { arma: 1, casco: 1 } };
+  function icoPieza(p) { if (!p) return ''; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
   function nombrePieza(p) { if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
@@ -6424,7 +6427,7 @@
     var h = '<div class="eq-numeros">' + numeroSube(L('Ataque', 'Attack'), '⚔', ant.dano, sE.dano) + numeroSube(L('Salud', 'Health'), '❤', ant.vida, sE.vida) + '<button class="eq-guia-btn" data-accion="eq-guia" title="' + L('¿Cómo funciona?', 'How does it work?') + '">?</button></div>';
     h += '<div class="eq-rejilla">' + TIPOS_EQ.map(function (t) {
       var p = piezasDe(id).filter(function (x) { return x.t === t; })[0];
-      return '<button class="eq-hueco' + (p ? ' ' + p.r : '') + '" data-accion="eq-hueco" data-id="' + id + '" data-t="' + t + '"' + (e ? '' : ' disabled') + '><span class="eq-ico">' + EQ[t].icono + '</span>' +
+      return '<button class="eq-hueco' + (p ? ' ' + p.r : '') + '" data-accion="eq-hueco" data-id="' + id + '" data-t="' + t + '"' + (e ? '' : ' disabled') + '><span class="eq-ico">' + (p ? icoPieza(p) : EQ[t].icono) + '</span>' +
         (p ? '<span class="eq-nv">' + p.n + '</span><span class="eq-nom">' + T('eq_' + t) + '</span>' : '<span class="eq-nom vacio">' + T('eq_' + t) + '</span>') + '</button>';
     }).join('') + '</div>';
     var b = bonosEquipo(id), partes = [];
@@ -6441,7 +6444,7 @@
     var lista = piezas().filter(function (p) { return p.t === t && p !== actual && (!p.s || p.s === id); }).sort(function (a, b) { return (a.h ? 1 : 0) - (b.h ? 1 : 0) || puntosPieza(b) - puntosPieza(a); });
     function fila(p, esActual) {
       var c = costoMejoraPieza(p);
-      return '<div class="eq-fila ' + p.r + '"><span class="eq-ico">' + EQ[p.t].icono + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b><span>' + textoPieza(p) + (p.h && !esActual ? ' · ' + T('eq_de', { n: NH(p.h) }) : '') + '</span></div><div class="eq-bts">' +
+      return '<div class="eq-fila ' + p.r + '"><span class="eq-ico">' + icoPieza(p) + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b><span>' + textoPieza(p) + (p.h && !esActual ? ' · ' + T('eq_de', { n: NH(p.h) }) : '') + '</span></div><div class="eq-bts">' +
         (esActual ? (p.n < EQ_NIVEL_MAX ? '<button class="comprar mini" data-eq="mejorar" data-i="' + p.i + '" data-costo=\'' + JSON.stringify(c) + '\'>⬆ ' + htmlCosto(c) + '</button>' : '') + '<button class="comprar mini" data-eq="quitar" data-i="' + p.i + '">' + T('eq_quitar') + '</button>'
           : '<button class="comprar mini naranja" data-eq="equipar" data-i="' + p.i + '">' + T('eq_equipar') + '</button>' + (p.h ? '' : '<button class="comprar mini" data-eq="fundir" data-i="' + p.i + '">🔥</button>')) + '</div></div>';
     }
@@ -7900,7 +7903,7 @@
     if (p.objeto) l.push({ ico: OBJETOS[p.objeto].icono, nom: N(p.objeto), n: 1 });
     if (p.objetos) Object.keys(p.objetos).forEach(function (k) { l.push({ ico: OBJETOS[k].icono, nom: N(k), n: p.objetos[k] }); });
     if (p.tropas) Object.keys(p.tropas).forEach(function (t) { l.push({ ico: TROPAS[t] ? TROPAS[t].icono : '🛡️', nom: N(t), n: p.tropas[t] }); });
-    if (p.piezas) p.piezas.forEach(function (pz) { l.push({ ico: EQ[pz.t] ? EQ[pz.t].icono : '🧰', nom: nombrePieza(pz), n: 1 }); });
+    if (p.piezas) p.piezas.forEach(function (pz) { l.push({ ico: icoPieza(pz), nom: nombrePieza(pz), n: 1 }); });
     return l;
   }
   function mostrarRecompensas(titulo, items, alRecoger) {
@@ -8023,7 +8026,7 @@
       });
       if (subInv === 'cofre' && diarioDisponible()) filas += '<div class="iv-diario">' + htmlDiario() + '</div>';
       if (subInv === 'equipo') piezas().slice().sort(function (a, b) { return MULT_RAREZA_EQ[b.r] - MULT_RAREZA_EQ[a.r] || b.n - a.n; }).forEach(function (p) {
-        filas += filaInv(EQ[p.t].icono, nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n, (p.h && HEROE[p.h] ? L('Lo lleva ', 'Worn by ') + NH(p.h) : L('Tienes: 1', 'Owned: 1')),
+        filas += filaInv(icoPieza(p), nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n, (p.h && HEROE[p.h] ? L('Lo lleva ', 'Worn by ') + NH(p.h) : L('Tienes: 1', 'Owned: 1')),
           p.h ? '<button class="iv-boton" disabled>' + L('Puesto', 'Worn') + '</button>' : '<button class="iv-boton" data-accion="inv-reciclar" data-i="' + p.i + '">' + L('Reciclar', 'Recycle') + '</button>', textoPieza(p));
       });
       Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0 && subcatObjeto(k) === subInv; }).forEach(function (k) {
@@ -8405,7 +8408,7 @@
     guardar(true); reabrirPanel();
     var p = {}; Object.keys(tot).forEach(function (r) { p[r] = tot[r]; }); p.objetos = objs;
     var items = premioAItems(p), porR = {};
-    if (pzs.length <= 3) pzs.forEach(function (pz) { items.push({ ico: EQ[pz.t].icono, nom: nombrePieza(pz), n: 1 }); });
+    if (pzs.length <= 3) pzs.forEach(function (pz) { items.push({ ico: icoPieza(pz), nom: nombrePieza(pz), n: 1 }); });
     else { pzs.forEach(function (pz) { porR[pz.r] = (porR[pz.r] || 0) + 1; }); Object.keys(porR).forEach(function (r) { items.push({ ico: EQ.pechera.icono, nom: L('Armaduras y armas ', 'Armor and weapons ') + ({ comun: L('comunes', 'common'), raro: L('raras', 'rare'), legendario: L('legendarias', 'legendary'), mitico: L('míticas', 'mythic') }[r] || r), n: porR[r] }); }); }
     mostrarRecompensas(N(k) + (n > 1 ? ' ×' + formatoNumero(n) : ''), items, function () { if (Object.keys(tot).length) darPremio(tot); guardar(true); actualizarHUD(); reabrirPanel(); });
   }
