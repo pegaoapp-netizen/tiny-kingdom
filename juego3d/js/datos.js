@@ -513,6 +513,17 @@ var NIVEL_ESTRELLA = 12;
 // Burbuja de protección para los que empiezan: 7 días o hasta el Castillo nivel 5 (lo primero que llegue)
 var BURBUJA = { dias: 7, castillo: 5 };
 // Carretas: se entrenan en el Mercado como las tropas; cada nivel carga más (nivel 1..4)
+// v6.94: TROPAS DE SUMINISTRO. La carga se mide en «carretas»: la carretilla carga 0,4 de una carreta y el convoy 3.
+// vel = cuánto tarda el viaje (1 = normal; menos es más rápido). Todas se entrenan en el Mercado (el convoy pide Mercado nivel 5).
+var SUMINISTRO = {
+  carretilla: { img: 't_carretilla', icono: '🛒', carga: 0.4, vel: 0.75, costo: { oro: 15, madera: 30 }, tiempo: 25, mercado: 1,
+    es: 'Carretilla', en: 'Wheelbarrow', des_es: 'Pequeña y rápida: un aldeano la empuja. Carga poco pero llega antes.', des_en: 'Small and fast: a villager pushes it. Carries little but arrives sooner.' },
+  carreta: { img: 't_carreta', icono: '🐴', carga: 1, vel: 1, costo: { oro: 40, madera: 80 }, tiempo: 60, mercado: 1,
+    es: 'Tropa de suministro', en: 'Supply troop', des_es: 'La carreta con caballo de siempre: carga y velocidad normales.', des_en: 'The classic horse cart: normal cargo and speed.' },
+  convoy: { img: 't_convoy', icono: '🚚', carga: 3, vel: 1.35, costo: { oro: 200, madera: 350, piedra: 120 }, tiempo: 240, mercado: 5,
+    es: 'Convoy', en: 'Convoy', des_es: 'Varias carretas con escolta: carga muchísimo pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
+};
+var SUMINISTRO_ORDEN = ['carretilla', 'carreta', 'convoy'];
 var CARRETA = { costo: { oro: 40, madera: 80 }, tiempo: 60, inicio: 2, capacidad: [0, 1000, 2000, 3500, 6000],
   mejora: [null, null, { oro: 600, madera: 900, piedra: 250 }, { oro: 1800, madera: 2800, piedra: 900 }, { oro: 5000, madera: 7000, piedra: 2800 }] };
 // Lo que produce por hora cada casilla conquistada del mundo (por nivel de la casilla) y cuántas horas guarda

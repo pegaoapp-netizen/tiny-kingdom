@@ -38,6 +38,20 @@
     // Tropas: lista de filas
     H + ' .tk-tropas-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }',
     H + ' .tk-volver-lista { margin: 6px 0 4px !important; }',
+    // tropas de suministro (Mercado): una fila por tipo con foto, Tienes, carga, velocidad, tiempo y dónde se entrenan
+    '.sum-fila { border: 1px solid rgba(201,138,26,.55); border-radius: 10px; padding: 8px; margin: 8px 0; background: linear-gradient(180deg, rgba(60,40,20,.85), rgba(30,20,10,.85)); }',
+    '.sum-fila.bloq { opacity: .75; } .sum-cab { display: flex; gap: 10px; align-items: center; }',
+    '.sum-foto { flex: none; width: 64px; height: 64px; border-radius: 9px; overflow: hidden; display: grid; place-items: center; font-size: 34px; background: radial-gradient(circle at 50% 35%, #fff3cf 0%, #d9a54a 60%, #6b3e12 100%); border: 2px solid #c98a1a; }',
+    '.sum-foto img { width: 100%; height: 100%; object-fit: cover; }',
+    '.sum-dat { display: flex; flex-direction: column; gap: 2px; min-width: 0; } .sum-dat b { font-size: 15px; color: #ffe08a; } .sum-dat small { color: #f0c060; font-weight: 700; } .sum-frase { font-size: 12px; opacity: .9; }',
+    '.sum-stats { display: flex; flex-wrap: wrap; gap: 4px; margin: 7px 0 4px; } .sum-stats span { font-size: 11.5px; padding: 3px 7px; border-radius: 999px; background: rgba(0,0,0,.35); border: 1px solid rgba(201,138,26,.45); }',
+    '.sum-fila .car-botones { display: flex; gap: 5px; flex-wrap: wrap; } .sum-fila .car-botones .comprar { flex: 1 1 0; min-width: 0; font-size: 12px !important; padding: 7px 4px !important; }',
+    '#perfil-jugador .pj-extra { margin-top: 10px; } #perfil-jugador .pj-extra button.pj-oro { background: linear-gradient(180deg, #ffd56a, #d89a1a) !important; color: #3a2000 !important; border-color: #7a4a0a !important; }',
+    // Hospital
+    '.hosp-camas { display: flex; flex-direction: column; gap: 5px; margin: 4px 0 8px; } .hosp-barra { height: 12px; border-radius: 999px; background: rgba(0,0,0,.45); border: 1px solid #c98a1a; overflow: hidden; }',
+    '.hosp-barra i { display: block; height: 100%; background: linear-gradient(90deg, #5fd06a, #e8c23a 70%, #e0523a); }',
+    '.hosp-fila { cursor: default !important; } .hosp-fila .cq2-dat { flex: 1; gap: 6px; } .hosp-fila .comprar { align-self: flex-start; font-size: 12px !important; padding: 6px 10px !important; }',
+    '.hosp-todos { width: 100%; margin-top: 10px !important; font-size: 15px !important; }',
     // la Paloma (Potenciador): pergamino en el centro
     H + '.tk-centro:not(.oculto) { position: fixed !important; top: 50% !important; left: 50% !important; bottom: auto !important; right: auto !important; width: min(92vw, 420px) !important; max-width: 92vw !important;' +
       ' height: auto !important; max-height: 78vh !important; transform: translate(-50%, -50%) !important; border-radius: 16px !important; z-index: 70 !important;' +

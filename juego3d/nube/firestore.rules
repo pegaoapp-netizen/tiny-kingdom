@@ -286,7 +286,7 @@ service cloud.firestore {
         && request.resource.data.paraNombre is string && request.resource.data.paraNombre.size() <= 30
         && request.resource.data.tropas is map && request.resource.data.tropas.size() <= 20
         && request.resource.data.piezas is list && request.resource.data.piezas.size() <= 30
-        && request.resource.data.gemas is int && request.resource.data.gemas >= 0 && request.resource.data.gemas <= 100000
+        && request.resource.data.gemas is int && request.resource.data.gemas >= 0 && request.resource.data.gemas <= 999999999
         && request.resource.data.recursos is map && request.resource.data.recursos.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
         && request.resource.data.nota is string && request.resource.data.nota.size() <= 120
         && request.resource.data.fecha is int;
