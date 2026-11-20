@@ -8383,7 +8383,7 @@
   var modoInv = 'mios', subInv = 'recursos';
   function subcatObjeto(k) {
     var o = OBJETOS[k] || {};
-    if (/^cofre/.test(k) || o.cofre || o.paquete || o.mejora || o.equipo) return 'cofre'; // v6.92: todos los cofres juntos en «Cofre»
+    if (/^cofre/.test(k) || o.cofre || o.paquete || o.mejora || o.equipo || o.da) return 'cofre'; // v6.92: todos los cofres juntos en «Cofre» // v7.06: también los de recursos (bolsas, sacos, lingote)
     if (o.equipo) return 'equipo'; if (o.exp !== undefined || o.pergamino) return 'heroe'; if (o.escudo || o.portal) return 'ciudad';
     if (o.segundos || o.acelera) return 'acelerar'; if (o.tropas) return 'tropas'; if (o.da) return 'recursos'; if (o.mejora) return 'potenciador';
     if (o.cofre || o.paquete) return 'cofre'; if (o.reliquia) return 'reliquia'; if (o.intercambio) return 'intercambia'; return 'misc';
@@ -8758,7 +8758,8 @@
       chispas(castilloPos.clone().setY(6), 0xffe14a, 24, 5);
     }
     estado.mochila[k]--;
-    if (premio) { if (o.cofre) { var pr = premio; mostrarRecompensas(N(k), premioAItems(pr), function () { darPremio(pr); guardar(true); }); } else { darPremio(premio); consejoTemporal(T('recibiste', { t: textoPremio(premio) })); } }
+    if (premio) { if (o.cofre || o.da) { var pr = premio; // v7.06: al abrir se ve lo que trae y cada cosa va a su lugar
+       mostrarRecompensas(N(k), premioAItems(pr), function () { darPremio(pr); guardar(true); }); } else { darPremio(premio); consejoTemporal(T('recibiste', { t: textoPremio(premio) })); } }
     sonar('gemas');
     guardar(true);
     reabrirPanel();
@@ -8793,6 +8794,7 @@
     var tot = {}, objs = {}, pzs = [];
     for (var i = 0; i < n; i++) {
       if (o.cofre) Object.keys(o.cofre).forEach(function (r) { var a = o.cofre[r]; tot[r] = (tot[r] || 0) + a[0] + Math.floor(Math.random() * (a[1] - a[0] + 1)); });
+      if (o.da) Object.keys(o.da).forEach(function (r) { tot[r] = (tot[r] || 0) + o.da[r]; });
       if (o.paquete) Object.keys(o.paquete).forEach(function (q) { objs[q] = (objs[q] || 0) + o.paquete[q]; });
       if (o.mejora) o.mejora.forEach(function (r) { pzs.push(darPieza(null, r)); });
       if (o.equipo) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'));
@@ -8834,7 +8836,7 @@
     if (o.portal) l.push(['🌀', o.portal === 'elegir' ? L('Mueve tu reino al lugar que elijas', 'Moves your kingdom where you choose') : L('Mueve tu reino a un lugar al azar', 'Moves your kingdom to a random place'), '']);
     return l;
   }
-  function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo); }
+  function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo || o.da); } // v7.06: bolsas y sacos de recursos también se abren en masa
   // v6.89: los cofres no traen solo recursos: también armaduras/armas para los héroes, aceleradores, libros y escudos (con su probabilidad)
   var EXTRA_COFRE = {
     cofre_madera: [['pieza', 'comun', 0.12], ['acel_1h', 1, 0.3], ['libro_peq', 1, 0.2]],
