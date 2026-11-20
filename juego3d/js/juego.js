@@ -8129,7 +8129,7 @@
   // 8 casillas; 2 dan llaves. Con 5 llaves se abre el Cofre del Galeón (el premio gordo).
   var RULETA = [
     { k: 'cofre_plata', p: 17 }, { k: 'llave', p: 3 }, { k: 'acel_8h', p: 11 }, { k: 'cofre_oro', p: 13 },
-    { k: 'llave', p: 3 }, { k: 'inv_8h', p: 12 }, { k: 'caracola', p: 13 }, { k: 'libro_gra', p: 13 }, { k: 'estrella_mar', p: 5 }, { k: 'escudo_8h', p: 10 }
+    { k: 'llave', p: 3 }, { k: 'inv_8h', p: 12 }, { k: 'caracola', p: 13 }, { k: 'libro_gra', p: 13 }, { k: 'cofre_tesoro', p: 5 }, { k: 'escudo_8h', p: 10 }
   ];
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1 }, GALEON_GEMAS = 50;
   var RUL_FICHAS = 3, RUL_GEMAS = 15;
@@ -8190,10 +8190,10 @@
   // v6.88: abrir el Cofre del Galeón con 5 llaves (sin depender del evento: las llaves no se pierden)
   function abrirGaleon() {
     var r = estado.ruleta; if (!r || r.llaves < 5) return;
-    r.llaves -= 5;
-    var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest'), gordo: true }];
-    Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k]; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k], cat: subcatObjeto(k) }); });
-    estado.gemas = (estado.gemas || 0) + GALEON_GEMAS; l.push({ ico: '💎', nom: GALEON_GEMAS + ' ' + L('gemas', 'gems'), dest: L('Arriba, en tus gemas', 'Top bar, your gems') });
+    var veces = Math.floor(r.llaves / 5); r.llaves -= veces * 5; // v6.88: con 10, 15… llaves se abren todos los galeones a la vez
+    var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest') + (veces > 1 ? ' ×' + veces : ''), gordo: true }];
+    Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k] * veces; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k] * veces, cat: subcatObjeto(k) }); });
+    estado.gemas = (estado.gemas || 0) + GALEON_GEMAS * veces; l.push({ ico: '💎', nom: GALEON_GEMAS * veces + ' ' + L('gemas', 'gems'), dest: L('Arriba, en tus gemas', 'Top bar, your gems') });
     guardar(true); actualizarHUD();
     var c = document.querySelector('.rul-cofre'); if (c) c.classList.add('abriendo');
     sonar('magia'); setTimeout(function () { mostrarPremiosRuleta(l, true); }, 900);
@@ -8316,7 +8316,8 @@
   function usarObjeto(k, confirmado) {
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
-    if (esCofre(k) && !confirmado) {
+    if (esCofre(k) && !confirmado) { abrirUsoMasa(k); return; }
+    if (false) {
       confirmarJuego(o.icono + ' ' + L('¿Abrir ', 'Open ') + N(k) + '?', '<b>' + L('Qué trae:', 'What is inside:') + '</b>' + htmlContenido(k) + '<small>' + L('Tienes ', 'You have ') + estado.mochila[k] + '</small>', L('Abrir', 'Open'), function () { usarObjeto(k, true); });
       var cs = $('cj-si'); if (cs) { cs.classList.remove('rojo'); cs.classList.add('verde'); }
       return;
@@ -8362,6 +8363,47 @@
     sonar('gemas');
     guardar(true);
     reabrirPanel();
+  }
+  // v6.88: «Uso en masa»: abrir muchos cofres a la vez con un deslizador de 1 a Todos
+  function abrirUsoMasa(k) {
+    var v = $('uso-masa'); if (v) v.remove();
+    var max = estado.mochila[k] || 0; if (!max) return;
+    var d = document.createElement('div'); d.id = 'uso-masa';
+    d.innerHTML = '<div class="um-caja"><button class="um-x" id="um-x">✕</button><h3>' + L('Uso en masa', 'Bulk use') + '</h3>' +
+      '<div class="um-cab"><span class="um-ico">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(max) + '</small></div></div>' +
+      '<div class="um-trae"><b>' + L('Qué trae (cada uno):', 'What is inside (each):') + '</b>' + htmlContenido(k) + '</div>' +
+      '<div class="um-cant"><button class="um-menos" id="um-menos">−</button><input id="um-n" type="number" inputmode="numeric" min="1" max="' + max + '" value="1"><button class="um-mas" id="um-mas">+</button></div>' +
+      '<div class="um-desl"><span>1</span><input id="um-r" type="range" min="1" max="' + max + '" value="1"><button class="um-todos" id="um-todos">' + L('Todos', 'All') + '</button></div>' +
+      '<button class="um-usa" id="um-usa">' + L('Usa', 'Use') + ' <b id="um-cuenta">1</b></button></div>';
+    document.body.appendChild(d);
+    var inp = $('um-n'), rg = $('um-r');
+    function poner(n) { n = Math.max(1, Math.min(max, Math.floor(+n || 1))); inp.value = n; rg.value = n; $('um-cuenta').textContent = formatoNumero(n); }
+    inp.addEventListener('input', function () { if (inp.value !== '') poner(inp.value); });
+    inp.addEventListener('blur', function () { poner(inp.value); });
+    rg.addEventListener('input', function () { poner(rg.value); });
+    $('um-menos').addEventListener('click', function () { poner(+inp.value - 1); });
+    $('um-mas').addEventListener('click', function () { poner(+inp.value + 1); });
+    $('um-todos').addEventListener('click', function () { poner(max); sonar('click'); });
+    $('um-x').addEventListener('click', function () { sonar('click'); d.remove(); });
+    d.addEventListener('click', function (ev) { if (ev.target === d) d.remove(); });
+    $('um-usa').addEventListener('click', function () { var n = +inp.value; d.remove(); usarEnMasa(k, n); });
+  }
+  function usarEnMasa(k, n) {
+    var o = OBJETOS[k]; n = Math.max(1, Math.min(estado.mochila[k] || 0, Math.floor(+n || 1)));
+    if (!(estado.mochila[k] > 0)) return;
+    var tot = {}, objs = {}, pzs = [];
+    for (var i = 0; i < n; i++) {
+      if (o.cofre) Object.keys(o.cofre).forEach(function (r) { var a = o.cofre[r]; tot[r] = (tot[r] || 0) + a[0] + Math.floor(Math.random() * (a[1] - a[0] + 1)); });
+      if (o.paquete) Object.keys(o.paquete).forEach(function (q) { objs[q] = (objs[q] || 0) + o.paquete[q]; });
+      if (o.mejora) o.mejora.forEach(function (r) { pzs.push(darPieza(null, r)); });
+      if (o.equipo) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'));
+    }
+    estado.mochila[k] -= n;
+    Object.keys(objs).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + objs[q]; });
+    chispas(castilloPos.clone().setY(6), 0xffe14a, 24, 5); sonar('gemas');
+    guardar(true); reabrirPanel();
+    var p = {}; Object.keys(tot).forEach(function (r) { p[r] = tot[r]; }); p.objetos = objs; p.piezas = pzs;
+    mostrarRecompensas(N(k) + (n > 1 ? ' ×' + formatoNumero(n) : ''), premioAItems(p), function () { if (Object.keys(tot).length) darPremio(tot); guardar(true); actualizarHUD(); reabrirPanel(); });
   }
   // ---------- TIENDA ----------
   var pestTienda = 'acelerar';

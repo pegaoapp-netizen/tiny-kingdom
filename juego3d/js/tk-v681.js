@@ -64,7 +64,7 @@
   function abierta(c) { if (!c || c.classList.contains('oculto')) return false; var r = c.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(c).visibility !== 'hidden'; }
   document.addEventListener('pointerdown', function (ev) {
     var t = ev.target;
-    if (t.closest && t.closest('#recompensas, #confirmar-juego, #rul-premios, #usar-acel, #nivel-nuevo, .rc-caja')) return; // v6.88: las ventanitas encima no cierran la de abajo
+    if (t.closest && t.closest('#recompensas, #confirmar-juego, #rul-premios, #uso-masa, #usar-acel, #nivel-nuevo, .rc-caja')) return; // v6.88: las ventanitas encima no cierran la de abajo
     CRUCES.forEach(function (sel) {
       document.querySelectorAll(sel).forEach(function (b) {
         var c = tarjetaDe(b);
