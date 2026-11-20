@@ -5785,7 +5785,7 @@
   var PESTANAS_TROPA = { cuartel: ['explorador', 'miliciano', 'espadachin', 'guardian', 'balista', 'ariete', 'catapulta', 'torre_asedio'], establo: ['jinete', 'caballeria', 'caballeria_pesada'], tiro: ['arquero'] };
   var ICONO_PESTANA = { cuartel: '🏰', establo: '🐎', tiro: '🏹' };
   var ROMANO = ['I', 'II', 'III', 'IV', 'V'];
-  var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1 };
+  var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1, lista: true };
   var visor = null;
   // Escuadrón: el líder adelante y 7 soldados en formación detrás (todos del rango elegido)
   function escuadron(tipo, rango) {
@@ -5879,6 +5879,16 @@
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
     // escena con el muñeco
+    // v6.93: primero la lista, como en Camelot: retrato, nombre, «Tienes: X», descripción y flecha
+    if (v.lista) {
+      html += '<div class="tl-lista">' + lista.map(function (k) {
+        var ok = puedeEntrenarTipo(k);
+        return '<button class="tl-fila' + (ok ? '' : ' bloq') + '" data-accion="tropa-ver" data-tipo="' + k + '"><span class="tl-foto">' + fotoHTML(k, TROPAS[k].icono) + '<i>' + ROMANO[nivelArmadura(k)] + '</i></span>' +
+          '<span class="tl-txt"><span class="tl-cab"><b>' + N(k) + '</b><em>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaTipo(k)) + '</em></span><small>' + D(k) + '</small>' + (ok ? '' : '<small class="tl-bloq">🔒 ' + avisoEdificioTropa(k) + '</small>') + '</span><span class="tl-flecha">›</span></button>';
+      }).join('') + '</div>';
+      abrirPanel(T('p_heroes'), html, { tipo: 'tropas' }); $('panel').scrollTop = arriba; return;
+    }
+    html += '<button class="tl-volver" data-accion="tropa-lista">‹ ' + L('Todas las tropas', 'All troops') + '</button>';
     // v6.92: la tropa pintada (no el muñeco 3D), con el marco del color de su rango
     html += '<div class="tropa-escena"><div class="visor-tropa pintada r' + r + '" id="visor-tropa">' + (RETRATOS_IMG[t] ? '<img src="iconos/ui/' + RETRATOS_IMG[t] + '.webp" alt="" draggable="false">' : fotoHTML(t, d.icono)) + '</div>' +
       '<div class="tropa-nombre"><h3>' + N(t) + '</h3><span class="rango-chapa r' + r + '">' + T('rango') + ' ' + ROMANO[r] + '</span></div>' +
@@ -9138,7 +9148,9 @@
     else if (a === 'mer-enviar') enviarMercado(b);
     else if (a === 'armadura-gemas') mejorarArmadura(b.getAttribute('data-tipo'), true);
     else if (a === 'sub-tropas') abrirPanelTropas();
-    else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-pest') { vistaTropa.lista = true; vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-ver') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.lista = false; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-lista') { vistaTropa.lista = true; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-tipo') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-rango') { vistaTropa.rango = +b.getAttribute('data-r'); sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-menos') cambiarCantidad(-1);
@@ -9969,6 +9981,7 @@
     $('dk-accion').addEventListener('click', function () {
       if (enMenu) return; sonar('click');
       var a = this.getAttribute('data-a');
+      if (a.indexOf('acel:') === 0) { abrirAcelerar(a.slice(5)); return; } // v6.93: usar relojes ahí mismo
       if (a === 'mundo') irAlMundo();
       else if (a === 'tropas') abrirPanelTropas();
       else if (a === 'marchas') { var r = slotRelevo(); if (r) abrirReunion(r.i, 'marchas'); else irAlMundo(); }
@@ -10009,12 +10022,12 @@
     } else if (dockPest === 'tropas') {
       lleno = activo.tropas;
       txt = lleno ? '⚔️ ' + L('Entrenando', 'Training') + ' ×' + colaEntreno.length + ' · <b>⏱ ' + fmtTiempo(faltaEntreno()) + '</b>' : L('No hay tropas entrenando.', 'No troops in training.');
-      btn = lleno ? L('Ver', 'View') : L('Entrenar', 'Train'); acc = 'tropas';
+      btn = lleno ? '⏩ ' + L('Acelerar', 'Speed up') : L('Entrenar', 'Train'); acc = lleno ? 'acel:entreno' : 'tropas';
     } else {
       var inv = estado.investigando; lleno = !!inv;
       var ti = inv ? buscarTec(inv.id) : null;
       txt = lleno ? '📚 ' + (ti ? ti.icono + ' ' : '') + N('inv_' + inv.id) + ' → ' + L('Nv ', 'Lv ') + inv.nivel + ' · <b>⏱ ' + fmtTiempo(faltaInvestigacion()) + '</b>' : L('No hay ninguna investigación activa.', 'No research in progress.');
-      btn = lleno ? L('Ver', 'View') : L('Comenzar', 'Start'); acc = 'invest';
+      btn = lleno ? '⏩ ' + L('Acelerar', 'Speed up') : L('Comenzar', 'Start'); acc = lleno ? 'acel:invest' : 'invest';
     }
     var t = $('dk-txt'), b = $('dk-accion');
     if (t.dataset.h !== txt) { t.dataset.h = txt; t.innerHTML = txt; }
