@@ -1998,3 +1998,28 @@ html body #panel#panel.desde-abajo.rul-panel { max-height: 66vh !important; }
 #uso-masa .um-todos { padding: 8px 12px; border-radius: 10px; border: 2px solid #5a3410; background: #f0c24a; font: 900 15px system-ui; color: #3a2610; }
 #uso-masa .um-usa { display: block; width: 100%; padding: 13px; border-radius: 12px; border: 2px solid #163e7a; background: linear-gradient(180deg, #4f94ef, #2459b4); color: #fff; font: 900 21px system-ui; box-shadow: 0 3px 0 #163e7a; }
 html body #uso-masa .um-cant input { background: #fffaf0 !important; color: #3a2610 !important; -webkit-text-fill-color: #3a2610; }
+
+/* ===== v6.89: Ruleta como el timón de la Capitana (dibujo de Maikel) ===== */
+html body #panel#panel.rul-panel { background: radial-gradient(ellipse at 50% 30%, #1d2a48, #0e1528 75%) !important; border: 2px solid #c9a24a !important; box-shadow: inset 0 0 0 4px #0e1528, inset 0 0 0 5px #8a6a2a, 0 -6px 24px rgba(0,0,0,.6) !important; }
+html body #panel.rul-panel #panel-titulo, html body #panel.rul-panel .panel-titulo, html body #panel.rul-panel h2 { color: #f3cf6a !important; font-family: "UnifrakturMaguntia", "Old English Text MT", Georgia, serif !important; text-shadow: 0 2px 0 #5a3a10, 0 0 10px rgba(243,207,106,.35); }
+html body #panel.rul-panel .rul-marco.timon { width: min(68vw, 270px) !important; aspect-ratio: 1; margin: 10px auto 2px !important; position: relative; }
+html body #panel.rul-panel .rul-marco.timon .rul-rueda { background: none !important; border: 0 !important; box-shadow: none !important; width: 100%; height: 100%; border-radius: 50%; }
+html body #panel.rul-panel .rul-timon { width: 100%; height: 100%; display: block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.7)); pointer-events: none; }
+html body #panel.rul-panel .rul-marco.timon .rul-flecha { z-index: 3; top: -12px; color: #f3cf6a; text-shadow: 0 2px 2px #000; }
+html body #panel.rul-panel .rul-marco.timon .rul-centro { width: 25% !important; height: 25% !important; left: 37.5% !important; top: 37.5% !important; transform: none !important; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #b98a3a, #5a3a14 70%) !important; border: 3px solid #e8c25a !important; color: #fff3d0 !important; font: 900 17px Georgia, serif !important; box-shadow: 0 0 0 3px #4a2e10, 0 4px 10px rgba(0,0,0,.6) !important; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 2; position: absolute; }
+html body #panel.rul-panel .rul-galeon { color: #f1e2c0; }
+html body #panel.rul-panel .rul-cofre { display: block; margin: 0 auto; }
+html body #panel.rul-panel .rul-cofre img { width: 120px; height: auto; display: block; margin: 0 auto; filter: drop-shadow(0 4px 6px rgba(0,0,0,.7)); }
+html body #panel.rul-panel .rul-cofre:not(.cerrado) img { animation: evLatido 1.2s ease-in-out infinite; filter: drop-shadow(0 0 12px #ffd86a); cursor: pointer; }
+html body #panel.rul-panel .rul-galeon p { color: #f3d98a; font-weight: 700; margin: 2px 0; }
+html body #panel.rul-panel .rul-botones { background: linear-gradient(rgba(14,21,40,0), #0e1528 35%) !important; }
+html body #panel.rul-panel .rul-botones .az-b { background: linear-gradient(180deg, #23345c, #121c36) !important; border: 2px solid #d6b157 !important; border-radius: 12px !important; color: #fff3d0 !important; box-shadow: 0 3px 0 #0a0f1e !important; }
+html body #panel.rul-panel .rul-botones .az-b small { color: #ffe7a0 !important; }
+html body #panel#panel.desde-abajo.rul-panel { max-height: 74vh !important; }
+html body #panel.rul-panel .rul-marco.timon { width: min(60vw, 236px) !important; margin: 8px auto 0 !important; }
+html body #panel.rul-panel .rul-arriba { margin-bottom: 0 !important; }
+html body #panel.rul-panel .rul-cofre img { width: 92px; }
+html body #panel.rul-panel .rul-llaves { margin: 0 !important; line-height: 1; }
+html body #panel.rul-panel .rul-llaves img.ico-obj { width: 24px !important; height: 24px !important; }
+html body #panel.rul-panel .rul-galeon p { font-size: 13px; }
+html body #panel.rul-panel .rul-abrir { margin: 2px auto 4px !important; padding: 6px 14px !important; }

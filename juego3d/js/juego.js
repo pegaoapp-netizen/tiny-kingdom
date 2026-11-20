@@ -8128,29 +8128,27 @@
   // ================= RULETA DE LA CAPITANA CORAL =================
   // 8 casillas; 2 dan llaves. Con 5 llaves se abre el Cofre del Galeón (el premio gordo).
   var RULETA = [
-    { k: 'cofre_plata', p: 17 }, { k: 'llave', p: 3 }, { k: 'acel_8h', p: 11 }, { k: 'cofre_oro', p: 13 },
-    { k: 'llave', p: 3 }, { k: 'inv_8h', p: 12 }, { k: 'caracola', p: 13 }, { k: 'libro_gra', p: 13 }, { k: 'cofre_tesoro', p: 5 }, { k: 'escudo_8h', p: 10 }
+    // v6.89: el timón de la Capitana (iconos/ui/rul_timon.webp): 7 cofres en el orden del dibujo, empezando arriba y en el sentido del reloj
+    { k: 'cofre_acel', p: 16 }, { k: 'cofre_oro', p: 12 }, { k: 'cofre_plata', p: 22 }, { k: 'cofre_tesoro', p: 6 },
+    { k: 'cofre_madera', p: 24 }, { k: 'cofre_equipo', p: 10 }, { k: 'cofre_mejora1', p: 10 }
   ];
+  var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1 }, GALEON_GEMAS = 50;
   var RUL_FICHAS = 3, RUL_GEMAS = 15;
   function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; r.llaves = Math.max(0, Math.floor(+r.llaves || 0)); r.sinLlave = Math.max(0, Math.floor(+r.sinLlave || 0)); return r; }
   function htmlRueda() {
     var n = RULETA.length, paso = 360 / n;
-    return '<div class="rul-marco"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda">' + RULETA.map(function (s, i) {
-      var ico = s.k === 'llave' ? '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' : OBJETOS[s.k].icono;
-      return '<span class="rul-seg" style="transform:rotate(' + (i * paso) + 'deg)"><span class="rul-ic">' + ico + '</span></span>';
-    }).join('') + '</div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasAzar() >= RUL_FICHAS ? '🪙 ' + RUL_FICHAS : '💎 ' + RUL_GEMAS) + '</small></button></div>';
+    return '<div class="rul-marco timon"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda"><img class="rul-timon" src="iconos/ui/rul_timon.webp" alt=""></div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasAzar() >= RUL_FICHAS ? '🪙 ' + RUL_FICHAS : '💎 ' + RUL_GEMAS) + '</small></button></div>';
   }
   function abrirRuleta() {
     var a = eventoActivo('ruleta');
     if (!a) { var p = proximoEvento('ruleta'); consejoTemporal(L('La Ruleta no está abierta. Vuelve el ', 'The Wheel is closed. Back on ') + (p ? new Date(p).toLocaleDateString(estado.idioma === 'en' ? 'en' : 'es', { day: 'numeric', month: 'long' }) : '')); return; }
     var r = estadoRuleta(a.id), f = fichasAzar(), g = estado.gemasInfinitas ? Infinity : (estado.gemas || 0);
     var falta = Math.max(0, 5 - r.llaves);
-    var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + L('Necesitas: fichas o gemas', 'You need: tokens or gems') + '</small></div>' +
+    var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b class="rul-fichas">' + (estado.gemasInfinitas ? '∞' : f) + '</b> · ' + L('o gemas', 'or gems') + '</small></div>' +
       htmlRueda() +
-      '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre">' + (window.ICONO_FICHA ? '' : '') + '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁"></div>' +
-      (falta ? '<p>' + L('Junta ' + falta + ' llave' + (falta > 1 ? 's' : '') + ' más para el Cofre del Galeón', 'Collect ' + falta + ' more key' + (falta > 1 ? 's' : '') + ' for the Galleon Chest') + ' (' + r.llaves + '/5)</p><button class="az-b gris rul-abrir-no" disabled>🔒 ' + L('Abrir el Cofre del Galeón', 'Open the Galleon Chest') + '</button>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
-      '<p class="az-tienes">' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : f) + '</b></p>' +
+      '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre' + (falta ? ' cerrado' : '') + '"' + (falta ? '' : ' data-accion="rul-galeon"') + '><img src="iconos/ui/rul_galeon.webp" alt="🎁"></div>' +
+      (falta ? '<p>' + L('Junta 5 llaves para abrir el Cofre del Galeón', 'Collect 5 keys to open the Galleon Chest') + ' <b>(' + r.llaves + '/5)</b></p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
       '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
         var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
         return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🪙 ' + (RUL_FICHAS * n) : '💎 ' + (RUL_GEMAS * n)) + '</small></button>';
@@ -8173,11 +8171,10 @@
     else if (!pagar(0, RUL_GEMAS * n)) return;
     var r = estadoRuleta(a.id), ganados = [], idx = [];
     for (var i = 0; i < n; i++) {
-      var j = sortearRuleta();
-      if (RULETA[j].k !== 'llave' && r.sinLlave >= 24) j = RULETA.map(function (q) { return q.k; }).indexOf('llave'); // garantía: una llave cada 25 tiradas como mucho
-      var s = RULETA[j]; idx.push(j); r.sinLlave = s.k === 'llave' ? 0 : r.sinLlave + 1;
-      if (s.k === 'llave') { r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key') }); }
-      else { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
+      var j = sortearRuleta(), s = RULETA[j]; idx.push(j);
+      estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) });
+      if (Math.random() < RUL_LLAVE || r.sinLlave >= 24) { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
+      else r.sinLlave++;
     }
     guardar(true); actualizarHUD();
     // la rueda gira y para en la casilla del último premio
