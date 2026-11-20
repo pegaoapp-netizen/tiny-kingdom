@@ -1857,3 +1857,17 @@ body #abajo .bot-img { width: 46px !important; height: 46px !important; object-f
 /* v6.88: la Ruleta se puede deslizar hacia abajo y no parpadea al cobrar */
 html body #panel.rul-panel { overflow-y: auto !important; -webkit-overflow-scrolling: touch; touch-action: pan-y; max-height: 82vh !important; }
 #panel.sin-anim #panel-cuerpo > * { animation: none !important; }
+/* v6.88: Ruleta más chiquita: se ve la ciudad detrás y los botones caben */
+html body #panel.rul-panel { max-height: 64vh !important; width: min(380px, 94vw) !important; }
+#panel.rul-panel .rul-arriba { margin-bottom: 2px; font-size: 13px; }
+#panel.rul-panel .rul-marco { width: min(52vw, 200px); margin: 14px auto 6px; }
+#panel.rul-panel .rul-ic { font-size: 22px; top: 8%; } #panel.rul-panel .rul-ic img.ico-obj { width: 28px; height: 28px; }
+#panel.rul-panel .rul-centro { font-size: 15px; } #panel.rul-panel .rul-centro small { font-size: 11px; }
+#panel.rul-panel .rul-galeon { margin: 2px 0; } #panel.rul-panel .rul-llaves { font-size: 18px; }
+#panel.rul-panel .rul-cofre img.ico-obj { width: 48px; height: 48px; }
+#panel.rul-panel .az-tienes { margin: 2px 0; font-size: 13px; }
+#panel.rul-panel .rul-botones { position: sticky; bottom: 0; padding: 6px 0 4px; background: linear-gradient(rgba(32,22,13,0), #20160d 35%); gap: 8px; }
+#panel.rul-panel .rul-botones .az-b { min-width: 0; flex: 1; min-height: 40px; font-size: 13px; padding: 4px 6px; }
+.rul-abrir { margin: 4px auto; animation: evLatido 1.2s ease-in-out infinite; font-size: 15px !important; }
+.rul-cofre.abriendo img { animation: galeonAbre .9s ease-out both; }
+@keyframes galeonAbre { 0% { transform: scale(1); } 30% { transform: scale(1.4) rotate(-8deg); } 60% { transform: scale(1.5) rotate(8deg); filter: brightness(1.6) drop-shadow(0 0 18px #ffd86a); } 100% { transform: scale(1.3); filter: brightness(2) drop-shadow(0 0 30px #ffe066); } }
