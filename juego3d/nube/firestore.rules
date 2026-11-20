@@ -294,6 +294,25 @@ service cloud.firestore {
       allow delete: if request.auth != null && (resource.data.para == request.auth.uid || esDueno());
     }
 
+    // v7.07: SOPORTE. Cada jugador crea sus mensajes y lee solo los suyos; el dueño lee todos, responde y borra.
+    match /soporte/{id} {
+      allow read: if request.auth != null && (resource.data.de == request.auth.uid || esDueno());
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['de', 'nombre', 'tipo', 'texto', 'version', 'fecha', 'equipo'])
+        && request.resource.data.de == request.auth.uid
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 30
+        && request.resource.data.tipo in ['error', 'pregunta', 'pago', 'jugador', 'otro']
+        && request.resource.data.texto is string && request.resource.data.texto.size() >= 3 && request.resource.data.texto.size() <= 600
+        && request.resource.data.version is string && request.resource.data.version.size() <= 10
+        && request.resource.data.equipo is string && request.resource.data.equipo.size() <= 80
+        && request.resource.data.fecha is int;
+      allow update: if esDueno()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['respuesta', 'respondido'])
+        && request.resource.data.respuesta is string && request.resource.data.respuesta.size() <= 600
+        && request.resource.data.respondido is int;
+      allow delete: if esDueno();
+    }
+
     // Todo lo demás está cerrado.
     match /{document=**} {
       allow read, write: if false;

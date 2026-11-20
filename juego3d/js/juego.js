@@ -2213,7 +2213,7 @@
     var items = [];
     [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
-      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')]]
+      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]]
       .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span>' + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') + '</button>';
@@ -8182,6 +8182,74 @@
     }).catch(function () { regalosRecibiendo = false; });
   }
   setInterval(function () { if (!enMenu) recibirRegalos(); }, 45000);
+  // ---------- v7.07: SOPORTE ----------
+  // El jugador escribe su problema dentro del juego; al dueño le llega a su bandeja (sin mostrar su correo) y responde ahí mismo.
+  // Cuando llega la respuesta, el jugador la recibe en su Correo.
+  var TIPOS_SOPORTE = [['error', '🐞', L('Un error', 'A bug')], ['pregunta', '❓', L('Una pregunta', 'A question')], ['pago', '💳', L('Pagos y gemas', 'Payments & gems')], ['jugador', '🚩', L('Otro jugador', 'Another player')], ['otro', '💬', L('Otra cosa', 'Something else')]];
+  var soporteTipo = 'error', soporteVista = 'escribir', soporteCache = [], soporteDueno = [];
+  function fechaCorta(ms) { try { return new Date(ms).toLocaleString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } }
+  function nombreTipoSoporte(t) { var q = TIPOS_SOPORTE.filter(function (x) { return x[0] === t; })[0]; return q ? q[1] + ' ' + q[2] : t; }
+  function abrirSoporte(vista) {
+    soporteVista = vista || soporteVista;
+    var dueno = esCuentaDueno();
+    var tabs = '<div class="cafe-tabs ve-tabs sp-tabs"><button data-accion="sp-vista" data-v="escribir" class="' + (soporteVista === 'escribir' ? 'activo' : '') + '">' + L('Escribir', 'Write') + '</button><button data-accion="sp-vista" data-v="mios" class="' + (soporteVista === 'mios' ? 'activo' : '') + '">' + L('Mis mensajes', 'My messages') + '</button>' +
+      (dueno ? '<button data-accion="sp-vista" data-v="bandeja" class="' + (soporteVista === 'bandeja' ? 'activo' : '') + '">' + L('Bandeja', 'Inbox') + '</button>' : '') + '</div>';
+    var h = tabs;
+    if (!hayCuenta()) h += '<p class="nota aviso-rojo">' + L('Crea una cuenta para escribirle a Soporte.', 'Create an account to write to Support.') + '</p>';
+    else if (soporteVista === 'escribir') {
+      h += '<div class="carta sp-caja"><p class="sp-txt">' + L('Cuéntanos qué pasó. Te responderemos aquí y te llegará al Correo del juego.', 'Tell us what happened. We will answer here and in your in-game Mail.') + '</p>' +
+        '<div class="sp-tipos">' + TIPOS_SOPORTE.map(function (q) { return '<button data-accion="sp-tipo" data-t="' + q[0] + '" class="' + (soporteTipo === q[0] ? 'activo' : '') + '">' + q[1] + ' ' + q[2] + '</button>'; }).join('') + '</div>' +
+        '<textarea id="sp-texto" maxlength="600" rows="6" placeholder="' + L('Escribe aquí (qué hiciste, qué esperabas y qué salió)…', 'Write here (what you did, what you expected and what happened)…') + '"></textarea>' +
+        '<p class="nota aviso-rojo" id="sp-error"></p><button class="comprar azul sp-enviar" data-accion="sp-enviar">📨 ' + L('Enviar a Soporte', 'Send to Support') + '</button></div>';
+    } else if (soporteVista === 'mios') {
+      h += '<div class="sp-lista" id="sp-lista"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>';
+    } else {
+      h += '<div class="sp-lista" id="sp-lista"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>';
+    }
+    abrirPanel('🛟 ' + L('Soporte', 'Support'), h, { tipo: 'soporte' });
+    if (!hayCuenta()) return;
+    if (soporteVista === 'mios') Cuentas.misSoportes().then(function (l) { soporteCache = l.sort(function (a, b) { return b.fecha - a.fecha; }); pintarSoporteMios(); revisarSoporte(); }).catch(function () { var e = $('sp-lista'); if (e) e.innerHTML = '<p class="nota aviso-rojo">' + L('No se pudo cargar. Revisa tu internet.', 'Could not load. Check your internet.') + '</p>'; });
+    if (soporteVista === 'bandeja' && dueno) Cuentas.todosSoportes().then(function (l) { soporteDueno = l; pintarSoporteBandeja(); }).catch(function (er) { var e = $('sp-lista'); if (e) e.innerHTML = '<p class="nota aviso-rojo">' + L('No se pudo cargar', 'Could not load') + ' (' + ((er && er.code) || '?') + ')</p>'; });
+  }
+  function pintarSoporteMios() {
+    var e = $('sp-lista'); if (!e) return;
+    e.innerHTML = soporteCache.length ? soporteCache.map(function (m) {
+      return '<div class="carta sp-msg"><div class="sp-cab"><b>' + nombreTipoSoporte(m.tipo) + '</b><small>' + fechaCorta(m.fecha) + '</small></div><p class="sp-cuerpo">' + escaparHTML(m.texto) + '</p>' +
+        (m.respuesta ? '<div class="sp-resp"><b>🛟 ' + L('Respuesta', 'Answer') + '</b> <small>' + fechaCorta(m.respondido) + '</small><p>' + escaparHTML(m.respuesta) + '</p></div>' : '<p class="sp-espera">⏳ ' + L('Esperando respuesta', 'Waiting for an answer') + '</p>') + '</div>';
+    }).join('') : '<p class="iv-vacio">' + L('Todavía no le has escrito a Soporte.', 'You have not written to Support yet.') + '</p>';
+  }
+  function pintarSoporteBandeja() {
+    var e = $('sp-lista'); if (!e) return;
+    var sin = soporteDueno.filter(function (m) { return !m.respuesta; }).length;
+    e.innerHTML = '<p class="nota"><b>' + soporteDueno.length + '</b> ' + L('mensajes', 'messages') + ' · <b>' + sin + '</b> ' + L('sin responder', 'unanswered') + '</p>' + soporteDueno.map(function (m) {
+      return '<div class="carta sp-msg' + (m.respuesta ? ' sp-hecho' : '') + '"><div class="sp-cab"><b>' + escaparHTML(m.nombre || '?') + '</b><small>' + nombreTipoSoporte(m.tipo) + ' · ' + fechaCorta(m.fecha) + ' · v' + escaparHTML(m.version || '') + '</small></div>' +
+        '<p class="sp-cuerpo">' + escaparHTML(m.texto) + '</p>' + (m.equipo ? '<p class="sp-equipo">📱 ' + escaparHTML(m.equipo) + '</p>' : '') +
+        (m.respuesta ? '<div class="sp-resp"><b>' + L('Tu respuesta', 'Your answer') + '</b><p>' + escaparHTML(m.respuesta) + '</p></div>' : '') +
+        '<textarea class="sp-resp-txt" id="spr-' + escaparHTML(m.id) + '" maxlength="600" rows="3" placeholder="' + L('Escribe la respuesta…', 'Write the answer…') + '"></textarea>' +
+        '<div class="sp-bts"><button class="comprar azul" data-accion="sp-responder" data-id="' + escaparHTML(m.id) + '">' + (m.respuesta ? L('Responder otra vez', 'Answer again') : L('Responder', 'Answer')) + '</button><button class="comprar rojo" data-accion="sp-borrar" data-id="' + escaparHTML(m.id) + '">' + L('Borrar', 'Delete') + '</button></div></div>';
+    }).join('');
+  }
+  function enviarSoporte(b) {
+    var t = $('sp-texto'), txt = t ? t.value.replace(/\s+/g, ' ').trim() : '';
+    if (txt.length < 3) { $('sp-error').textContent = L('Escribe un poco más.', 'Write a bit more.'); sonar('error'); return; }
+    var falta = (estado.ultSoporte || 0) + 120000 - Date.now();
+    if (falta > 0) { $('sp-error').textContent = L('Espera ', 'Wait ') + fmtTiempo(falta / 1000) + L(' para mandar otro mensaje.', ' to send another message.'); sonar('error'); return; }
+    b.disabled = true;
+    var eq = (navigator.userAgent || '').replace(/\(KHTML[^)]*\)/, '').slice(0, 80);
+    Cuentas.enviarSoporte({ de: Cuentas.usuario().uid, nombre: String(Cuentas.nombrePublico()).slice(0, 30), tipo: soporteTipo, texto: txt.slice(0, 600), version: String(VERSION_JUEGO).slice(0, 10), fecha: Date.now(), equipo: eq })
+      .then(function () { estado.ultSoporte = Date.now(); guardar(true); sonar('moneda'); consejoTemporal('📨 ' + L('¡Mensaje enviado a Soporte! Te llegará la respuesta al Correo.', 'Message sent to Support! The answer will arrive in your Mail.')); abrirSoporte('mios'); })
+      .catch(function (er) { b.disabled = false; $('sp-error').textContent = L('No se pudo enviar', 'Could not send') + ' (' + ((er && er.code) || '?') + ').'; sonar('error'); });
+  }
+  // las respuestas nuevas llegan al Correo del juego
+  function revisarSoporte() {
+    if (!hayCuenta() || !Cuentas.misSoportes) return;
+    Cuentas.misSoportes().then(function (l) {
+      var vistos = estado.soporteVisto || (estado.soporteVisto = {}), hubo = false;
+      l.forEach(function (m) { if (m.respuesta && vistos[m.id] !== m.respondido) { vistos[m.id] = m.respondido; hubo = true; nuevoCorreo('sistema', '🛟 ' + L('Soporte te respondió', 'Support answered you'), L('Soporte', 'Support'), '<p><b>' + L('Tu mensaje:', 'Your message:') + '</b> ' + escaparHTML(m.texto) + '</p><p><b>' + L('Respuesta:', 'Answer:') + '</b> ' + escaparHTML(m.respuesta) + '</p>'); } });
+      if (hubo) { guardar(true); sonar('moneda'); consejoTemporal('🛟 ' + L('Soporte te respondió: mira tu Correo.', 'Support answered: check your Mail.')); }
+    }).catch(function () {});
+  }
+  setTimeout(revisarSoporte, 20000); setInterval(function () { if (!enMenu) revisarSoporte(); }, 180000);
   setTimeout(recibirRegalos, 8000);
   // +EXP: usa un libro (primero el grande) en ese caballero
   function unLibroCaballero(id) {
@@ -9466,6 +9534,11 @@
     else if (a === 'ref-enviar') abrirEnviarRefuerzo(b.getAttribute('data-uid'), b.getAttribute('data-nombre'));
     else if (a === 'ref-mandar') mandarRefuerzo(b);
     else if (a === 'ref-siguiente') siguienteRefuerzo(b);
+    else if (a === 'sp-vista') { sonar('click'); abrirSoporte(b.getAttribute('data-v')); }
+    else if (a === 'sp-tipo') { sonar('click'); soporteTipo = b.getAttribute('data-t'); var tx = $('sp-texto') ? $('sp-texto').value : ''; abrirSoporte('escribir'); if ($('sp-texto')) $('sp-texto').value = tx; }
+    else if (a === 'sp-enviar') enviarSoporte(b);
+    else if (a === 'sp-responder') { var idr = b.getAttribute('data-id'), tr = $('spr-' + idr), vr = tr ? tr.value.trim() : ''; if (!vr) { sonar('error'); return; } b.disabled = true; Cuentas.responderSoporte(idr, vr).then(function () { sonar('moneda'); consejoTemporal('✅ ' + L('Respuesta enviada.', 'Answer sent.')); abrirSoporte('bandeja'); }).catch(function (er) { b.disabled = false; consejoTemporal(L('No se pudo responder', 'Could not answer') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
+    else if (a === 'sp-borrar') { var idb = b.getAttribute('data-id'); b.disabled = true; Cuentas.borrarSoporte(idb).then(function () { abrirSoporte('bandeja'); }).catch(function () { b.disabled = false; sonar('error'); }); }
     else if (a === 'rc-mejora') { sonar('click'); cerrarPanel(); irAVista(b.getAttribute('data-r') === 'oro' && !edificiosDe('mina').length ? 'ciudad' : 'campos'); consejoTemporal(L('Toca un campo para mejorarlo.', 'Tap a field to upgrade it.')); }
     else if (a === 'ref-volver') { sonar('click'); if (refSel) abrirEnviarRefuerzo(refSel.uid, refSel.nombre, refPedido); }
     else if (a === 'ref-heroe') { sonar('click'); refHeroe = b.getAttribute('data-id'); abrirRefuerzoCaballero(); }
@@ -9791,6 +9864,7 @@
     if (ev.target.closest('#mg-cerrar')) { sonar('click'); cerrarMenuGrande(); return; }
     var b = ev.target.closest('[data-mg]'); if (!b) return; var id = b.getAttribute('data-mg'); cerrarMenuGrande();
     if (id === 'mg-azar') { sonar('click'); abrirAzar('normal'); return; }
+    if (id === 'mg-soporte') { sonar('click'); abrirSoporte('escribir'); return; }
     if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
     if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
     if (id === 'mg-equipo') { sonar('click'); var hq = (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || 'sol'; pestanaHeroe = 'equipo'; abrirPanelHeroe(hq); return; }

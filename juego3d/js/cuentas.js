@@ -318,6 +318,12 @@ var Cuentas = (function () {
     borrarChat: function (canal, id) { return db.collection('canales').doc(canal).collection('mensajes').doc(id).delete(); },
     // v6.84: regalos del dueño (solo la cuenta del dueño puede crearlos; ver nube/firestore.rules)
     enviarRegalo: function (g) { return db.collection('regalos').add(g); },
+    // v7.07: SOPORTE: el jugador escribe, el dueño lee y responde (nadie ve el correo del dueño)
+    enviarSoporte: function (d) { return db.collection('soporte').add(d); },
+    misSoportes: function () { if (!usuario) return Promise.resolve([]); return db.collection('soporte').where('de', '==', usuario.uid).limit(30).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }); },
+    todosSoportes: function () { return db.collection('soporte').orderBy('fecha', 'desc').limit(60).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }); },
+    responderSoporte: function (id, txt) { return db.collection('soporte').doc(id).update({ respuesta: String(txt).slice(0, 600), respondido: Date.now() }); },
+    borrarSoporte: function (id) { return db.collection('soporte').doc(id).delete(); },
     regalosRecibidos: function () {
       if (!usuario) return Promise.resolve([]);
       return db.collection('regalos').where('para', '==', usuario.uid).limit(20).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });

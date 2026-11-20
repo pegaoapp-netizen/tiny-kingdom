@@ -1286,3 +1286,27 @@ html body #panel .cp-hist { display: flex; flex-direction: column; gap: 4px; }
 html body #panel .cp-h { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; background: rgba(120,200,120,.10); font-size: 13px; }
 html body #panel .cp-ok { color: #7fe07a; font-weight: 900; }
 html body #panel .cp-h small { margin-left: auto; opacity: .8; }
+
+/* ===== v7.07: Soporte ===== */
+html body #panel .sp-caja { display: flex; flex-direction: column; gap: 10px; }
+html body #panel .sp-txt { margin: 0; font-size: 13px; }
+html body #panel .sp-tipos { display: flex; flex-wrap: wrap; gap: 6px; }
+html body #panel .sp-tipos button { flex: 1 1 calc(50% - 6px); min-height: 40px; border-radius: 8px; border: 2px solid #8a6a3a; background: rgba(255,240,200,.08); color: inherit; font-size: 13px; }
+html body #panel .sp-tipos button.activo { background: linear-gradient(#f2c45a, #c8901e); color: #2a1a08; border-color: #ffe9a0; font-weight: 800; }
+html body #panel #sp-texto, html body #panel .sp-resp-txt { width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #b08a4a; background: #fff8e2; color: #2a1a08; padding: 8px; font-size: 15px; resize: vertical; }
+html body #panel .sp-enviar { min-height: 46px !important; font-size: 16px !important; }
+html body #panel .sp-lista { display: flex; flex-direction: column; gap: 8px; }
+html body #panel .sp-msg { display: flex; flex-direction: column; gap: 6px; }
+html body #panel .sp-msg.sp-hecho { opacity: .8; }
+html body #panel .sp-cab { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+html body #panel .sp-cab small, html body #panel .sp-equipo { opacity: .75; font-size: 12px; }
+html body #panel .sp-cuerpo { margin: 0; white-space: pre-wrap; }
+html body #panel .sp-resp { border-left: 4px solid #4cc23a; background: rgba(76,194,58,.12); padding: 6px 8px; border-radius: 6px; }
+html body #panel .sp-resp p { margin: 4px 0 0; }
+html body #panel .sp-espera { margin: 0; opacity: .8; font-size: 13px; }
+html body #panel .sp-bts { display: flex; gap: 8px; }
+html body #panel .sp-bts button { flex: 1; min-height: 40px !important; }
+html body #panel .sp-tabs { display: flex !important; gap: 6px; margin-bottom: 8px; }
+html body #panel .sp-tabs button { flex: 1; min-height: 40px; border-radius: 8px 8px 0 0; border: 2px solid #8a6a3a !important; background: linear-gradient(#4a3420, #2a1c0e) !important; color: #f3dfae !important; font-weight: 700; font-size: 14px; }
+html body #panel .sp-tabs button.activo { background: linear-gradient(#f2c45a, #c8901e) !important; color: #2a1a08 !important; border-color: #ffe9a0 !important; }
+html body #panel #sp-texto, html body #panel .sp-resp-txt { background: #fff8e2 !important; color: #2a1a08 !important; border: 1px solid #b08a4a !important; }
