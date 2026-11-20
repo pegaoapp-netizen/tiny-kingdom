@@ -52,6 +52,13 @@
     '.hosp-barra i { display: block; height: 100%; background: linear-gradient(90deg, #5fd06a, #e8c23a 70%, #e0523a); }',
     '.hosp-fila { cursor: default !important; } .hosp-fila .cq2-dat { flex: 1; gap: 6px; } .hosp-fila .comprar { align-self: flex-start; font-size: 12px !important; padding: 6px 10px !important; }',
     '.hosp-todos { width: 100%; margin-top: 10px !important; font-size: 15px !important; }',
+    // MARCHA: también sube desde abajo y ocupa toda la pantalla
+    'html body #marcha { padding: 0 !important; align-items: stretch !important; justify-content: stretch !important; z-index: 72 !important; }',
+    'html body #marcha .mc-caja { width: 100% !important; max-width: none !important; height: 100% !important; max-height: none !important; border-radius: 0 !important; box-sizing: border-box;' +
+      ' padding: calc(env(safe-area-inset-top) + 10px) 12px calc(env(safe-area-inset-bottom) + 12px) !important; display: flex; flex-direction: column; animation: tkHojaSube .32s cubic-bezier(.2, .85, .25, 1) both; }',
+    'html body #marcha .mc-caja > .mc-lista { flex: 1 1 auto; min-height: 0; overflow-y: auto; max-height: none !important; }',
+    'html body #marcha .mc-botones { margin-top: auto; padding-top: 10px; }',
+    'html body #marcha .mc-pasos { flex: none; }',
     // la Paloma (Potenciador): pergamino en el centro
     H + '.tk-centro:not(.oculto) { position: fixed !important; top: 50% !important; left: 50% !important; bottom: auto !important; right: auto !important; width: min(92vw, 420px) !important; max-width: 92vw !important;' +
       ' height: auto !important; max-height: 78vh !important; transform: translate(-50%, -50%) !important; border-radius: 16px !important; z-index: 70 !important;' +
