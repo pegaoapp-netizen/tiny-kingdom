@@ -153,6 +153,8 @@ var Cuentas = (function () {
       var nom = String(d.nombre || '?').slice(0, 30) || '?';
       var doc = { nombre: nom, nivel: ent(d.nivel, 1, 100000), poder: ent(d.poder, 0, 1000000000000000), x: ent(d.x, 0, MAPA_TAM - 1), y: ent(d.y, 0, MAPA_TAM - 1), mapa: MAPA_TAM,
         alianza: d.alianza || null, actualizado: Date.now(), escudo: ent(d.escudo, 0, 9e15) };
+      // v7.08: puntos de Liquidación (total para siempre, y los de la temporada con su número)
+      if (d.kp !== undefined) { doc.kp = ent(d.kp, 0, 1e15); doc.kpt = ent(d.kpt, 0, 1e15); doc.kps = ent(d.kps, 0, 1e9); }
       if (!d.minimo) {
         doc.defensa = ent(d.defensa, 0, 100000000);
         var e = d.espia || {}, es = {};
@@ -191,6 +193,9 @@ var Cuentas = (function () {
       });
     },
     // v6.34: ranking de todos los jugadores por poder
+    rankingLiquidacion: function () {
+      return db.collection('aldeas').orderBy('kp', 'desc').limit(100).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; }); });
+    },
     ranking: function () {
       return db.collection('aldeas').orderBy('poder', 'desc').limit(100).get().then(function (q) {
         return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; });

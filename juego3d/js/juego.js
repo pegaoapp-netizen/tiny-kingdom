@@ -1375,7 +1375,7 @@
     if (!forzar && ahora - ultimaPublicacion < 60000) return;
     ultimaPublicacion = ahora;
     var l = miLugar();
-    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, defensa: defensaReino(), espia: datosEspia() })
+    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, kp: estado.kpTotal || 0, kpt: estado.kpSem === semanaActual() ? (estado.kpTemp || 0) : 0, kps: semanaActual(), defensa: defensaReino(), espia: datosEspia() })
       .catch(function () {
         // v6.94: si la nube no acepta los datos completos, se publica lo mínimo para que el reino SIEMPRE salga en el mapa
         Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, minimo: true }).catch(function () {});
@@ -2414,7 +2414,7 @@
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
-    var caidas = bajasEjercito(res.bajas);
+    var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
@@ -2435,7 +2435,7 @@
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
-    var caidas = bajasEjercito(res.bajas);
+    var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
     nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano) { sumarXP(10 * lv); sumarPuntosAlianza(25); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdVilla = estado.cdVilla || {}; estado.cdVilla[a.uid] = Date.now() + 20 * 60 * 1000;
@@ -4656,6 +4656,17 @@
     if (!obj.aliado && n >= 1) flotar('-' + Math.round(n), obj.pos.clone().setY(obj.altoBarra + 0.3), 'dano');
     if (obj.vida <= 0) morir(obj);
   }
+  // v7.08: PUNTOS DE LIQUIDACIÓN: se ganan matando tropas enemigas; las grandes valen mucho más (nivel² × 10).
+  // kpTotal nunca se borra (sale en el perfil); kpTemp es de la temporada (la semana del torneo).
+  var NIVEL_ENEMIGO = { trasgo: 1, bruto: 2, ogro: 4 };
+  function puntosEnemigo(tipo) { var n = NIVEL_ENEMIGO[tipo] || 1; return n * n * 10; }
+  function liqDeDefensa(defensa, frac) { return Math.round(Math.max(0, defensa || 0) * (frac || 0) / 20); }
+  function sumarLiquidacion(p) {
+    p = Math.round(p || 0); if (p <= 0) return;
+    var sem = typeof semanaActual === 'function' ? semanaActual() : 0;
+    if (estado.kpSem !== sem) { estado.kpSem = sem; estado.kpTemp = 0; }
+    estado.kpTotal = (estado.kpTotal || 0) + p; estado.kpTemp = (estado.kpTemp || 0) + p;
+  }
   function morir(u) {
     var lista = u.aliado ? tropas : enemigos;
     var i = lista.indexOf(u);
@@ -4665,6 +4676,7 @@
     sonar('muerte');
     chispas(u.pos.clone().setY(0.6), u.aliado ? 0x8fb8ff : 0x8fcf4a, 10, 3);
     if (!u.aliado) {
+      sumarLiquidacion(puntosEnemigo(u.tipo));
       sumarMonedas(u.d.oro, u.pos.clone().setY(u.altoBarra + 0.8));
       sonar('moneda');
     } else {
@@ -5835,12 +5847,26 @@
   function abrirPanelRanking(tab) {
     tab = tab || abrirPanelRanking.tab || 'poder'; abrirPanelRanking.tab = tab;
     var tabs = '<div class="subtabs rk-tabs"><button class="' + (tab === 'poder' ? 'activo' : '') + '" data-accion="rk-tab" data-t="poder">💪 ' + L('Poder', 'Power') + '</button>' +
-      '<button class="' + (tab === 'torneo' ? 'activo' : '') + '" data-accion="rk-tab" data-t="torneo">🏆 ' + L('Torneo semanal', 'Weekly tournament') + '</button></div>';
+      '<button class="' + (tab === 'torneo' ? 'activo' : '') + '" data-accion="rk-tab" data-t="torneo">🏆 ' + L('Torneo semanal', 'Weekly tournament') + '</button>' +
+      '<button class="' + (tab === 'liquidacion' ? 'activo' : '') + '" data-accion="rk-tab" data-t="liquidacion">⚔️ ' + L('Liquidación', 'Kills') + '</button></div>';
     abrirPanel('🏆 ' + L('Ranking', 'Ranking'), tabs + '<div id="rk-cuerpo"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>', { tipo: 'ranking' });
     if (!hayCuenta()) { $('rk-cuerpo').innerHTML = '<div class="carta"><p>' + L('Crea una cuenta para aparecer en el ranking y jugar el torneo.', 'Create an account to show up in the ranking and play the tournament.') + '</p><button class="comprar" data-accion="ir-cuenta">' + T('entrar_o_crear') + '</button></div>'; return; }
     var yo = Cuentas.usuario().uid;
     function listo(html) { if (panelActual && panelActual.tipo === 'ranking' && abrirPanelRanking.tab === tab && $('rk-cuerpo')) $('rk-cuerpo').innerHTML = html; }
     function error() { listo('<p class="nota aviso-rojo">' + T('mundo_error') + '</p>'); }
+    if (tab === 'liquidacion') {
+      publicarAldea(true);
+      var sem0 = semanaActual(), mT = estado.kpSem === sem0 ? (estado.kpTemp || 0) : 0;
+      Cuentas.rankingLiquidacion().then(function (lista) {
+        lista = lista.filter(function (a) { return (a.kp || 0) > 0; });
+        var i = lista.map(function (x) { return x.uid; }).indexOf(yo);
+        listo('<div class="carta rk-tuyo"><b>' + L('Tu puesto: ', 'Your place: ') + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</b><span class="chip">⚔️ ' + formatoNumero(estado.kpTotal || 0) + '</span>' +
+          '<p class="nota">' + L('Esta semana: ', 'This week: ') + '<b>' + formatoNumero(mT) + '</b></p></div>' +
+          '<div class="carta" style="margin-top:8px"><h3>' + L('Cómo se ganan', 'How to earn them') + '</h3><p class="nota">' + L('Matando tropas enemigas: en las oleadas (trasgo 10, bruto 40, ogro jefe 160), venciendo aldeas bárbaras y villas, y atacando a otros jugadores. Mientras más fuerte el enemigo, más puntos. Los puntos totales nunca se borran y salen en tu perfil.', 'By killing enemy troops: in waves (goblin 10, brute 40, ogre boss 160), beating barbarian camps and villages, and attacking other players. The stronger the enemy, the more points. Total points never reset and show on your profile.') + '</p></div>' +
+          '<div class="carta" style="margin-top:8px">' + (lista.length ? lista.map(function (a, k) { return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">⚔️ ' + formatoNumero(a.kp || 0) + '</span>', a.uid === yo); }).join('') : '<p>' + L('Todavía nadie tiene puntos de Liquidación.', 'Nobody has kill points yet.') + '</p>') + '</div>');
+      }).catch(error);
+      return;
+    }
     if (tab === 'poder') {
       publicarAldea(true);
       Cuentas.ranking().then(function (lista) {
@@ -7333,7 +7359,7 @@
     d.innerHTML = '<div class="fc-caja"><button class="fc-x" id="fc-x">✕</button>' + (!esMio && a.uid && !a.bot ? '<button class="fc-chat" id="fc-chat" title="' + L('Enviar mensaje', 'Send message') + '">💬</button>' : '') + '<div class="fc-cab">' + escaparHTML(a.nombre) + ' <small>' + c.x + ', ' + c.y + '</small></div>' +
       '<div class="fc-cuerpo"><div class="fc-retrato">' + escaparHTML(String(a.nombre || '?').charAt(0).toUpperCase()) + '</div><div class="fc-datos">' +
       '<div class="fc-nombre">' + escaparHTML(a.nombre) + ' (' + L('Nv.', 'Lv.') + nv + ')</div>' +
-      '<div class="fc-fila">' + L('Poder', 'Power') + ': ' + formatoNumero(a.poder || 0) + '</div>' +
+      '<div class="fc-fila">' + L('Poder', 'Power') + ': ' + formatoNumero(a.poder || 0) + '</div>' + (a.bot ? '' : '<div class="fc-fila">⚔️ ' + L('Liquidación', 'Kills') + ': ' + formatoNumero(esMio ? (estado.kpTotal || 0) : (a.kp || 0)) + '</div>') +
       '<div class="fc-fila">' + L('Alianza', 'Alliance') + ': <span id="fc-alianza">' + (a.alianza ? escaparHTML(a.alianza) : L('Ninguna', 'None')) + '</span></div>' +
       '<div class="fc-fila">' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</div>' +
       '<div class="fc-fila">' + L('Liga', 'League') + ': ' + ligaDe(a.poder || 0).replace(/^[^A-Za-z]+/, '').replace(/^Liga de /, '').replace(/ league$/, '') + '</div></div></div>' +
@@ -7684,6 +7710,7 @@
       if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: Date.now(), llega: Date.now() + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
       else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
       if (r.gano) sumarTorneo(PUNTOS_TORNEO.ataque);
+      sumarLiquidacion(liqDeDefensa(r.defensa || 0, r.gano ? 1 : 0.25)); // v7.08
       if (estado.destinos) delete estado.destinos[r.id];
       var um = estado.ultimaMarcha || {}, envi = 0; for (var kU in (um.tropas || {})) envi += um.tropas[kU] || 0; if (!envi) envi = tropasNormales();
       var herid = Math.round(caidas * 0.3);
@@ -10654,7 +10681,7 @@
       var dp = al ? diplomacia(al) : { t: L('Neutral', 'Neutral') }, inv = estado.alianza && al && !al.alianza && uid !== yo;
       d.innerHTML = '<div class="pj-caja"><button class="pj-x" data-pj="cerrar">✕</button><h3>' + L('Perfil del jugador', 'Player profile') + '</h3>' +
         '<div class="pj-cuerpo"><div class="pj-av">' + escaparHTML(String(nombre || '?').charAt(0).toUpperCase()) + '</div><div class="pj-dat"><b>' + escaparHTML(nombre) + '</b>' +
-        '<span>' + L('Nivel', 'Level') + ': ' + (al ? (al.nivel || 1) : '…') + '</span><span>' + L('Poder', 'Power') + ': ' + (al ? formatoNumero(al.poder || 0) : '…') + '</span></div></div>' +
+        '<span>' + L('Nivel', 'Level') + ': ' + (al ? (al.nivel || 1) : '…') + '</span><span>' + L('Poder', 'Power') + ': ' + (al ? formatoNumero(al.poder || 0) : '…') + '</span><span>⚔️ ' + L('Liquidación', 'Kills') + ': ' + (al ? formatoNumero(al.kp || 0) : '…') + '</span></div></div>' +
         '<div class="pj-al"><span>' + L('Alianza', 'Alliance') + ': <b>' + (al ? (al.alianza ? escaparHTML(alNom || al.alianza) : L('Ninguna', 'None')) : '…') + '</b></span><span>' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</span></div>' +
         // v6.94: dónde está su reino y botón para ir al mapa (y, para el dueño, regalarle)
         (esCuentaDueno() ? '<div class="pj-al pj-coord"><span>📍 ' + L('Reino', 'Kingdom') + ': <b>' + (al ? 'X ' + celdaDe(al.x, al.y).x + ' · Y ' + celdaDe(al.x, al.y).y : (buscado ? L('todavía no está en el mapa', 'not on the map yet') : '…')) + '</b></span></div>' : '') + // v6.96: coordenadas y «Ver su reino» solo para el dueño
