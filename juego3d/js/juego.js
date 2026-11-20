@@ -8181,7 +8181,9 @@
       '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) { return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + '</span><small>' + x.nom + '</small></div>'; }).join('') + '</div>' +
       '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div>';
     document.body.appendChild(d); sonar(hayGordo ? 'victoria' : 'moneda');
-    $('rp-vale').addEventListener('click', function () { sonar('click'); d.remove(); if (panelActual && panelActual.tipo === 'ruleta') abrirRuleta(); });
+    // v6.88: al cobrar, la Ruleta sigue abierta para seguir tirando (se vuelve a abrir aunque algo la haya cerrado)
+    d.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    $('rp-vale').addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); d.remove(); if (eventoActivo('ruleta')) abrirRuleta(); });
   }
   // ---------- v6.58: CENTRO DE PROMOCIONES (cada una con su tiempo, su premio y su punto rojo) ----------
   function finDeHoy() { var d = new Date(); d.setHours(24, 0, 0, 0); return d.getTime(); }
