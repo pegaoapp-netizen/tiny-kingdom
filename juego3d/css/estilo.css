@@ -1850,3 +1850,5 @@ body.panel-abierto #eventos-botones { display: none; }
 html body #lateral { right: calc(14px + env(safe-area-inset-right)) !important; }
 html body #lateral .redondo:has(.rd-img), html body.tema-oscuro #lateral .redondo:has(.rd-img) { background: none !important; border: none !important; box-shadow: none !important; width: 54px !important; height: 54px !important; padding: 0 !important; overflow: visible !important; }
 html body #lateral .redondo:has(.rd-img) .badge { top: -4px !important; right: -2px !important; left: auto !important; }
+/* v6.88: dibujo del castillo en el botón de Ciudad */
+#btn-vista .bv-img { width: 1.9em; height: 1.9em; object-fit: contain; display: inline-block; vertical-align: middle; filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }

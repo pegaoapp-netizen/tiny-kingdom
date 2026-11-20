@@ -2129,7 +2129,7 @@
   };
   function pintarVista() {
     var q = VISTAS[vistaActual], b = $('btn-vista'); if (!b || !q) return;
-    var h = '<span class="bv-ico">' + q.ico + '</span><small>' + (estado.idioma === 'en' ? q.en : q.es) + '</small>';
+    var h = '<span class="bv-ico">' + (vistaActual === 'ciudad' ? '<img class="bv-img" src="iconos/ui/b_ciudad.webp" alt="🏰">' : q.ico) + '</span><small>' + (estado.idioma === 'en' ? q.en : q.es) + '</small>';
     if (b.dataset.h !== h) { b.innerHTML = h; b.dataset.h = h; }
   }
   function avisoVista(v) {
