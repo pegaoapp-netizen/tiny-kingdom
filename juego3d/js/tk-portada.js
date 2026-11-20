@@ -2,7 +2,7 @@
 // Sale apenas se abre la página (antes de que cargue el 3D): un héroe pintado de Tiny Kingdom en grande,
 // el título en una cinta dorada y una barra de carga dorada. Cuando el juego está listo se desvanece.
 // Los héroes son los nuestros (iconos/ui/h_*.webp). Si algún día hay un dibujo grande vertical,
-// se pone en iconos/ui/portada_heroe.webp y se usa ese en vez de los retratos.
+// v7.13: ahora usa iconos/ui/portada.jpg (la portada del dibujante); si no carga, la dibujada con un héroe.
 (function () {
   if (document.getElementById('tk-portada')) return;
   var HEROES = [['luna', 'Luna'], ['sol', 'Sir Sol'], ['ancla', 'Capitán Ancla'], ['trueno', 'Trueno'], ['fenix', 'Fénix']];
@@ -40,18 +40,29 @@
     '#tk-portada .pt-pie { position: relative; z-index: 3; width: 100%; padding: 14px 0 calc(env(safe-area-inset-bottom) + 22px); background: linear-gradient(180deg, transparent, rgba(10,5,2,.85) 40%); text-align: center; }',
     '#tk-portada .pt-barra { width: min(84vw, 460px); height: 22px; margin: 0 auto; padding: 3px; border-radius: 12px; background: linear-gradient(180deg, #3a2410, #1a0e06); border: 2px solid #c9a24a; box-shadow: 0 0 0 2px #3a2108, 0 4px 12px rgba(0,0,0,.6); box-sizing: border-box; }',
     '#tk-portada .pt-barra i { display: block; height: 100%; width: 3%; border-radius: 8px; background: linear-gradient(180deg, #ffe08a, #f08a2a 60%, #b8501a); box-shadow: 0 0 10px rgba(255,170,60,.7); transition: width .35s ease; }',
+    '#tk-portada .pt-foto { position: absolute; inset: 0; background: #1a0f08 no-repeat top center / contain; animation: ptFoto .9s ease-out both; -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(177.7vw - 110px), transparent calc(177.7vw - 4px)); mask-image: linear-gradient(180deg, #000 0, #000 calc(177.7vw - 110px), transparent calc(177.7vw - 4px)); }',
+    '#tk-portada.con-foto { background: linear-gradient(180deg, #2a1a10, #120a05); }',
+    '#tk-portada .pt-espacio { flex: 1; }',
+    '#tk-portada.con-foto .pt-pie { padding-top: 110px; background: linear-gradient(180deg, transparent 0%, rgba(18,10,5,.75) 45%, #120a05 75%); }',
+    '@keyframes ptFoto { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }',
     '#tk-portada .pt-txt { margin-top: 8px; color: #f3dfae; font: 600 13px system-ui, sans-serif; text-shadow: 0 1px 2px #000; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-portada-css'; st.textContent = css; document.head.appendChild(st);
 
   var d = document.createElement('div'); d.id = 'tk-portada';
-  d.innerHTML = '<div class="pt-sala"></div><div class="pt-trono"></div><div class="pt-gradas"></div><div class="pt-dosel"></div><div class="pt-cortina izq"></div><div class="pt-cortina der"></div><div class="pt-velas"></div>' +
+  // v7.13: la portada del dibujante (título, castillo junto al mar y Sir Sol) a pantalla completa; si no carga, sale la portada dibujada de antes
+  var FOTO = 'iconos/ui/portada.jpg?v=713';
+  var PIE = '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
+  function armarDibujada() {
+    d.innerHTML = '<div class="pt-sala"></div><div class="pt-trono"></div><div class="pt-gradas"></div><div class="pt-dosel"></div><div class="pt-cortina izq"></div><div class="pt-cortina der"></div><div class="pt-velas"></div>' +
     '<div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Tiny Kingdom</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div>' +
     '<div class="pt-heroe"><img id="pt-img" alt="" src="iconos/ui/h_' + h[0] + '.webp"><span class="pt-nombre-h">' + h[1] + '</span></div>' +
     '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
+  }
+  d.className = 'con-foto';
+  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + ')"></div><div class="pt-espacio"></div>' + PIE;
+  var prueba = new Image(); prueba.onerror = function () { var av = document.getElementById('pt-avance'), w = av ? av.style.width : ''; d.className = ''; armarDibujada(); var av2 = document.getElementById('pt-avance'); if (av2) av2.style.width = w; }; prueba.src = FOTO;
   (document.body || document.documentElement).appendChild(d);
-  // si existe el dibujo grande de la portada, se usa ese
-  var grande = new Image(); grande.onload = function () { var im = document.getElementById('pt-img'); if (im) { im.src = grande.src; var nh = d.querySelector('.pt-nombre-h'); if (nh) nh.remove(); } }; grande.src = 'iconos/ui/portada_heroe.webp';
 
   // barra: avanza sola hasta 90 % y se completa cuando el juego está listo (se ve al menos 2,5 s)
   var t0 = Date.now(), MIN = 2500, av = 3, fin = false;
