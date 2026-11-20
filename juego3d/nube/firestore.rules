@@ -217,7 +217,8 @@ service cloud.firestore {
       allow read: if request.auth != null
         && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'paraNombre', 'tropas', 'alianza', 'fecha', 'devuelto'])
+        && request.resource.data.keys().hasOnly(['de', 'deNombre', 'para', 'paraNombre', 'tropas', 'alianza', 'fecha', 'devuelto', 'heroe'])
+        && (!('heroe' in request.resource.data) || (request.resource.data.heroe is string && request.resource.data.heroe.size() <= 30))
         && request.resource.data.de == request.auth.uid
         && request.resource.data.para is string
         && request.resource.data.para != request.auth.uid

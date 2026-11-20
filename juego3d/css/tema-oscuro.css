@@ -1202,3 +1202,43 @@ html body.barra-oro #abajo > button .txt, html body.barra-oro #abajo > button sp
   html body.tema-oscuro #panel#panel h3 { font-size: 15px !important; }
   html body.tema-oscuro #panel#panel button.comprar { min-height: 38px !important; font-size: 14px !important; padding-top: 5px !important; padding-bottom: 5px !important; }
 }
+
+/* ===== v6.97: tarjeta de aliado (Transportar / Reforzar + chat) y ventanas Escoger tropas / Seleccionar caballero / Transportar ===== */
+body #ficha-ciudad .fc-chat { position: absolute; top: 6px; left: 8px; width: 36px; height: 36px; border-radius: 10px; border: 2px solid #b08a4a; background: linear-gradient(#fff3d2, #e6c98c); font-size: 18px; line-height: 1; z-index: 2; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,.25); }
+html body #panel .rf-hoja { display: flex; flex-direction: column; gap: 8px; color: #4a3418; }
+html body #panel .rf-para { margin: 0; font-size: 13px; color: #6b4a22; text-align: center; }
+html body #panel .rf-lista { display: flex; flex-direction: column; background: linear-gradient(#fbf0d4, #efdcae); border: 2px solid #b08a4a; border-radius: 10px; padding: 4px 10px; }
+html body #panel .rf-fila { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid rgba(120,80,30,.35); }
+html body #panel .rf-fila:last-child { border-bottom: 0; }
+html body #panel .rf-fila.vacia { opacity: .55; }
+html body #panel .rf-foto { position: relative; flex: none; width: 58px; height: 58px; border: 2px solid #9a6a2a; border-radius: 6px; overflow: hidden; background: #3a2a18; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+html body #panel .rf-foto img { width: 100%; height: 100%; object-fit: cover; }
+html body #panel .rf-foto.rf-rec { background: linear-gradient(#fff3d2, #e2c486); }
+html body #panel .rf-dat { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+html body #panel .rf-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+html body #panel .rf-top b, html body #panel .rf-hnom { color: #6b4a22; font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body #panel .rf-num { width: 92px; flex: none; text-align: right; font-size: 15px; padding: 4px 8px; border-radius: 4px; border: 1px solid #b08a4a; background: #fff8e2; color: #3a2a14; }
+html body #panel .rf-barra { display: flex; align-items: center; gap: 6px; }
+html body #panel .rf-barra input[type=range] { flex: 1; min-width: 0; accent-color: #2a6fb3; height: 26px; }
+html body #panel .rf-pm { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #5a5048; background: radial-gradient(#9a9088, #4a4038); color: #fff; font-weight: 900; font-size: 16px; line-height: 1; padding: 0; }
+html body #panel .rf-max { flex: none; width: 34px; height: 30px; border-radius: 4px; border: 2px solid #2a1c0c; background: linear-gradient(#5a4632, #2a1c0c); color: #ffd23a; font-size: 15px; padding: 0; }
+html body #panel .rf-lim { display: flex; justify-content: space-between; font-size: 12px; color: #7a5a30; padding: 0 34px 0 30px; }
+html body #panel .rf-pie { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+html body #panel .rf-cap { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: #4a3418; font-weight: 700; }
+html body #panel .rf-cap .rojo, html body #panel .rf-cap span.rojo { color: #b3261e; }
+html body #panel .rf-sig { min-width: 150px; min-height: 44px !important; font-size: 16px !important; }
+/* caballero */
+html body #panel .rf-heroe.sel { background: rgba(255,215,120,.35); border-radius: 8px; }
+html body #panel .rf-radio { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid #9a7a4a; background: #fff8e2; padding: 0; display: flex; align-items: center; justify-content: center; }
+html body #panel .rf-heroe.sel .rf-radio i { width: 12px; height: 12px; border-radius: 50%; background: #2a1c0c; display: block; }
+html body #panel .rf-foto .rf-i { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 3px; background: #2a5fb3; color: #fff; font: 700 12px/16px Georgia, serif; font-style: normal; text-align: center; }
+html body #panel .rf-hst { display: flex; gap: 10px; font-size: 13px; color: #4a3418; }
+html body #panel .rf-exp { position: relative; height: 16px; border-radius: 8px; background: #3a2a18; border: 1px solid #6b4a22; overflow: hidden; }
+html body #panel .rf-exp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(#ffd86a, #c8901e); }
+html body #panel .rf-exp span { position: relative; display: block; text-align: center; font-size: 11px; line-height: 16px; color: #fff; }
+html body #panel .rf-masexp { flex: none; min-width: 60px; height: 40px; border-radius: 6px; border: 2px solid #1e5a12; background: linear-gradient(#4cc23a, #1f7a14); color: #fff; font-weight: 800; font-size: 14px; padding: 0 6px; }
+html body #panel .rf-pie .rf-cap, html body #panel .rf-para { color: #f3dfae !important; }
+html body #panel .rf-pie .rf-cap .rojo { color: #ff7a6a !important; }
+html body #panel .rf-hoja input.rf-num { background: #fff8e2 !important; color: #3a2a14 !important; border: 1px solid #b08a4a !important; }
+html body #panel .rf-hoja input.rf-num:disabled { background: #e8dcc0 !important; color: #8a7a60 !important; }
+html body #panel .rf-top b { text-transform: capitalize; }

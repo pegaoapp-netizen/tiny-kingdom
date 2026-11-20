@@ -1857,8 +1857,10 @@
     });
     lista.forEach(function (a, i) {
       var c = celdaDe(a.x, a.y), p = posCelda(c.x, c.y), g = new THREE.Group();
-      var tam = a.uid === yo ? nivelVisual(estado.castillo || 1) : (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3);
-      if (M3.camelot) g.add(CAMELOT.sprite(a.uid === yo ? 'castillo-yo' : 'castillo', (a.uid === yo ? 0.56 : 0.6) + tam * 0.06)); // v6.45: aldeas más chicas, del tamaño de una casilla
+      // v6.97: el castillo de cada reino se dibuja con SU nivel de castillo y el mismo dibujo para todos (el tuyo y el de los demás)
+      var nvC = a.uid === yo ? (estado.castillo || 1) : ((a.espia && a.espia.castillo) || (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 5 : 9));
+      var tam = nivelVisual(nvC);
+      if (M3.camelot) g.add(CAMELOT.sprite('castillo-yo', 0.56 + tam * 0.06)); // v6.45: aldeas más chicas, del tamaño de una casilla
       else { var cs = M.castillo(tam); cs.scale.setScalar(0.12); g.add(cs); }
       var esYo = a.uid === yo, aliada = estado.alianza && a.alianza === estado.alianza;
       if (esYo || aliada) { var aro = new THREE.Mesh(new THREE.RingGeometry(0.85, 1.0, 24), new THREE.MeshBasicMaterial({ color: esYo ? 0xffd34a : 0x4aa3ff, depthWrite: false, transparent: true })); aro.rotation.x = -Math.PI / 2; aro.position.y = 0.04; g.add(aro); }
@@ -2904,7 +2906,7 @@
     h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_en_reino') + '</b></p>';
     if (!rec.length) h += '<p class="nota">' + T('ref_nadie') + '</p>';
     rec.forEach(function (r) {
-      h += '<div class="fila-miembro">🛡️<b>' + T('ref_de', { n: totalTropasDe(r.tropas), q: escaparHTML(r.deNombre) }) + '</b><span class="chip">' + iconosTropas(r.tropas) + '</span><button class="comprar mini" data-accion="ref-devolver" data-id="' + escaparHTML(r.id) + '">' + T('ref_devolver') + '</button></div>';
+      h += '<div class="fila-miembro">🛡️<b>' + T('ref_de', { n: totalTropasDe(r.tropas), q: escaparHTML(r.deNombre) }) + (r.heroe ? ' · 🦸 ' + escaparHTML(r.heroe) : '') + '</b><span class="chip">' + iconosTropas(r.tropas) + '</span><button class="comprar mini" data-accion="ref-devolver" data-id="' + escaparHTML(r.id) + '">' + T('ref_devolver') + '</button></div>';
     });
     var env = enviados.filter(function (r) { return !r.devuelto; });
     h += '<p class="nota" style="margin-top:8px"><b>' + T('ref_enviados') + '</b></p>';
@@ -2914,11 +2916,57 @@
     });
     return h + '</div>';
   }
-  var refPedido = null;
+  var refPedido = null, refSel = null, refHeroe = null;
+  // v6.97: paso 1 «Escoger tropas»: cada tropa en su fila con foto, número, barra con − / + y botón de máximo; abajo cuántas llevas
+  function topeRefuerzoDe(k) { return Math.min(refPedido ? Math.max(0, refPedido.cantidad - (refPedido.recibido || 0)) : 300, propiasDe(k).length); }
   function abrirEnviarRefuerzo(uid, nombre, pedido) {
     refPedido = pedido || null;
     if (!hayCuenta() || !estado.alianza) return;
     if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    var antes = refSel && refSel.uid === uid ? refSel.t : {}, cap = 0;
+    var h = '<div class="rf-hoja"><p class="rf-para">' + T('ref_enviar_a', { q: escaparHTML(nombre) }) + '</p><div class="rf-lista">' + TIPOS_REFUERZO.map(function (k) {
+      var n = topeRefuerzoDe(k), v = Math.min(n, antes[k] || 0); cap += n;
+      return '<div class="rf-fila' + (n ? '' : ' vacia') + '"><div class="rf-foto">' + fotoHTML(k, TROPAS[k].icono) + '</div><div class="rf-dat"><div class="rf-top"><b>' + N(k) + '</b><input type="number" inputmode="numeric" class="rf-num" id="refn-' + k + '" min="0" max="' + n + '" value="' + v + '"' + (n ? '' : ' disabled') + '></div>' +
+        '<div class="rf-barra"><button class="rf-pm" data-accion="ref-menos" data-tipo="' + k + '"' + (n ? '' : ' disabled') + '>−</button><input type="range" id="ref-' + k + '" min="0" max="' + n + '" value="' + v + '"' + (n ? '' : ' disabled') + '><button class="rf-pm" data-accion="ref-mas" data-tipo="' + k + '"' + (n ? '' : ' disabled') + '>+</button>' +
+        '<button class="rf-max" data-accion="ref-max" data-tipo="' + k + '"' + (n ? '' : ' disabled') + ' title="' + T('maximo') + '">⏭</button></div><div class="rf-lim"><span>0</span><span>' + formatoNumero(n) + '</span></div></div></div>';
+    }).join('') + '</div><p class="nota aviso-rojo" id="ref-error"></p>' +
+      '<div class="rf-pie"><div class="rf-cap"><span>🪖 <b id="ref-total">0</b>/' + formatoNumero(cap) + '</span></div><button class="comprar azul rf-sig" data-accion="ref-siguiente" data-uid="' + escaparHTML(uid) + '" data-nombre="' + escaparHTML(nombre) + '">' + L('Siguiente', 'Next') + '</button></div></div>';
+    abrirPanel(L('Escoger tropas', 'Choose troops'), h, { tipo: 'refuerzo' });
+    function total() { var t = 0; TIPOS_REFUERZO.forEach(function (k) { var rg = $('ref-' + k); if (rg) t += +rg.value || 0; }); var e = $('ref-total'); if (e) e.textContent = formatoNumero(t); }
+    TIPOS_REFUERZO.forEach(function (k) {
+      var rg = $('ref-' + k), nu = $('refn-' + k); if (!rg) return;
+      rg.addEventListener('input', function () { nu.value = rg.value; total(); });
+      nu.addEventListener('input', function () { var v = Math.max(0, Math.min(+rg.max, Math.floor(+nu.value || 0))); rg.value = v; total(); });
+      nu.addEventListener('change', function () { nu.value = rg.value; });
+    });
+    total();
+  }
+  function cambiarRefuerzo(k, d) { var rg = $('ref-' + k); if (!rg) return; rg.value = Math.max(0, Math.min(+rg.max, (+rg.value || 0) + d)); rg.dispatchEvent(new Event('input')); }
+  function siguienteRefuerzo(b) {
+    var t = {}, tot = 0;
+    TIPOS_REFUERZO.forEach(function (k) { var rg = $('ref-' + k); var n = rg ? Math.max(0, Math.min(+rg.value || 0, topeRefuerzoDe(k))) : 0; t[k] = n; tot += n; });
+    if (!tot) { $('ref-error').textContent = T('ref_nada'); sonar('error'); return; }
+    refSel = { uid: b.getAttribute('data-uid'), nombre: b.getAttribute('data-nombre'), t: t };
+    sonar('click'); abrirRefuerzoCaballero();
+  }
+  // v6.97: paso 2 «Seleccionar caballero»: tus héroes con nivel, ataque, vida y experiencia; eliges uno y Reforzar
+  function abrirRefuerzoCaballero() {
+    if (!refSel) return;
+    var mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });
+    if (refHeroe && !estado.heroes[refHeroe]) refHeroe = null;
+    if (!refHeroe && mios.length) refHeroe = mios[0].id;
+    var h = '<div class="rf-hoja"><button class="volver-mini" data-accion="ref-volver">‹ ' + L('Escoger tropas', 'Choose troops') + '</button><div class="rf-lista">' + (mios.length ? mios.map(function (hr) {
+      var e = estado.heroes[hr.id], st = statsHeroe(hr.id), need = expNivel(e.nivel), ex = Math.min(e.exp || 0, need), sel = refHeroe === hr.id;
+      return '<div class="rf-fila rf-heroe' + (sel ? ' sel' : '') + '"><button class="rf-radio" data-accion="ref-heroe" data-id="' + hr.id + '" aria-label="' + NH(hr.id) + '"><i></i></button>' +
+        '<button class="rf-foto ' + hr.rareza + '" data-accion="heroe-ver" data-id="' + hr.id + '">' + fotoHTML('h_' + hr.id, '🦸') + '<i class="rf-i">i</i></button>' +
+        '<div class="rf-dat" data-accion="ref-heroe" data-id="' + hr.id + '"><b class="rf-hnom">' + NH(hr.id) + '</b><div class="rf-hst"><span>Lv ' + e.nivel + '</span><span>⚔️ ' + formatoNumero(st.dano) + '</span><span>❤️ ' + formatoNumero(st.vida) + '</span></div>' +
+        '<div class="rf-exp"><i style="width:' + Math.round(ex / need * 100) + '%"></i><span>' + formatoNumero(ex) + '/' + formatoNumero(need) + '</span></div></div>' +
+        '<button class="rf-masexp" data-accion="heroe-ver" data-id="' + hr.id + '">+EXP</button></div>';
+    }).join('') : '<p class="iv-vacio">' + L('No tienes héroes: tus tropas irán solas.', 'You have no heroes: your troops will go alone.') + '</p>') + '</div><p class="nota aviso-rojo" id="ref-error"></p>' +
+      '<div class="rf-pie"><div class="rf-cap"><span>🪖 ' + formatoNumero(totalTropasDe(refSel.t)) + '</span></div><button class="comprar azul rf-sig" data-accion="ref-mandar">' + T('ref_reforzar') + '</button></div></div>';
+    abrirPanel(L('Seleccionar caballero', 'Select knight'), h, { tipo: 'refuerzo' });
+  }
+  function abrirEnviarRefuerzoViejo(uid, nombre, pedido) {
     var h = '<div class="carta"><h3>' + T('ref_enviar_a', { q: escaparHTML(nombre) }) + '</h3><p class="nota">' + T('ref_txt') + '</p>';
     TIPOS_REFUERZO.forEach(function (k) {
       var n = Math.min(refPedido ? Math.max(0, refPedido.cantidad - (refPedido.recibido || 0)) : 300, propiasDe(k).length);
@@ -2934,13 +2982,16 @@
   }
   function mandarRefuerzo(b) {
     if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    if (!refSel) return;
     var t = {}, total = 0;
     var tope = refPedido ? Math.max(0, refPedido.cantidad - (refPedido.recibido || 0)) : 1e9;
-    TIPOS_REFUERZO.forEach(function (k) { var rg = $('ref-' + k); var n = rg ? Math.min(+rg.value || 0, propiasDe(k).length, refPedido ? tope : 300) : 0; n = Math.min(n, tope - total); t[k] = n; total += n; });
+    TIPOS_REFUERZO.forEach(function (k) { var n = Math.min(refSel.t[k] || 0, propiasDe(k).length, refPedido ? tope : 300); n = Math.min(n, tope - total); t[k] = n; total += n; });
     if (!total) { $('ref-error').textContent = T('ref_nada'); sonar('error'); return; }
-    var uid = b.getAttribute('data-uid'), nombre = b.getAttribute('data-nombre');
+    var uid = refSel.uid, nombre = refSel.nombre;
     b.disabled = true;
-    Cuentas.enviarRefuerzo({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: uid, paraNombre: String(nombre).slice(0, 30), tropas: t, alianza: estado.alianza, fecha: Date.now(), devuelto: false })
+    var docR = { de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: uid, paraNombre: String(nombre).slice(0, 30), tropas: t, alianza: estado.alianza, fecha: Date.now(), devuelto: false };
+    if (refHeroe && estado.heroes[refHeroe]) docR.heroe = String(NH(refHeroe)).slice(0, 30); // v6.97: el caballero que lleva el refuerzo
+    Cuentas.enviarRefuerzo(docR)
       .then(function () {
         // las tropas salen de tu reino (primero las que están guardadas en el cuartel)
         TIPOS_REFUERZO.forEach(function (k) {
@@ -2950,7 +3001,7 @@
         guardar(true); publicarAldea(true); actualizarHUD();
         sonar('cuerno'); consejoTemporal(T('ref_enviado', { q: nombre }));
         if (refPedido) { Cuentas.donarPedido(refPedido.id, total, Cuentas.nombrePublico()).catch(function () {}); refPedido = null; }
-        cerrarPanel();
+        refSel = null; cerrarPanel();
       }).catch(function () { b.disabled = false; $('ref-error').textContent = T('ref_error'); sonar('error'); });
   }
   function abrirNuevoPedido(tipo, motivo) {
@@ -2981,6 +3032,42 @@
       '<button class="comprar naranja boton-oleada-grande" data-accion="ped-mandar" data-id="' + escaparHTML(p.id) + '"' + (max ? '' : ' disabled') + '>🛒 ' + T('ped_donar') + '</button></div>';
     abrirPanel(T('ped_titulo'), h, { tipo: 'pedido' });
     var rg = $('don-n'); rg.addEventListener('input', function () { $('don-num').textContent = formatoNumero(+rg.value); });
+  }
+  // v6.97: TRANSPORTAR a un aliado: eliges cuánto de cada recurso; lo llevan tus tropas de suministro (carretas)
+  var trSel = null;
+  function abrirTransportar(uid, nombre) {
+    if (!hayCuenta() || !estado.alianza) return;
+    trSel = { uid: uid, nombre: nombre };
+    var capT = capCarreta() * carretasLibres();
+    var h = '<div class="rf-hoja"><p class="rf-para">' + L('Mandar recursos a ', 'Send resources to ') + '<b>' + escaparHTML(nombre) + '</b></p><div class="rf-lista">' + ['oro', 'comida', 'madera', 'piedra'].map(function (r) {
+      var n = Math.max(0, Math.min(Math.floor(cantidad(r)), capT, 100000000));
+      return '<div class="rf-fila' + (n ? '' : ' vacia') + '"><div class="rf-foto rf-rec">' + ICONO_RECURSO[r] + '</div><div class="rf-dat"><div class="rf-top"><b>' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="rf-num" id="trn-' + r + '" min="0" max="' + n + '" value="0"' + (n ? '' : ' disabled') + '></div>' +
+        '<div class="rf-barra"><button class="rf-pm" data-accion="tr-menos" data-r="' + r + '"' + (n ? '' : ' disabled') + '>−</button><input type="range" id="tr-' + r + '" min="0" max="' + n + '" step="' + Math.max(1, Math.round(n / 100)) + '" value="0"' + (n ? '' : ' disabled') + '><button class="rf-pm" data-accion="tr-mas" data-r="' + r + '"' + (n ? '' : ' disabled') + '>+</button>' +
+        '<button class="rf-max" data-accion="tr-max" data-r="' + r + '"' + (n ? '' : ' disabled') + ' title="' + T('maximo') + '">⏭</button></div><div class="rf-lim"><span>0</span><span>' + cortoNum(n) + '</span></div></div></div>';
+    }).join('') + '</div><p class="nota aviso-rojo" id="tr-error"></p>' +
+      '<div class="rf-pie"><div class="rf-cap"><span>📦 <b id="tr-total">0</b>/' + cortoNum(capT) + '</span><span>🛒 ' + carretasLibres() + '/' + carretas().n + '</span></div><button class="comprar azul rf-sig" data-accion="tr-mandar">' + L('Transportar', 'Transport') + '</button></div></div>';
+    abrirPanel(L('Transportar', 'Transport'), h, { tipo: 'refuerzo' });
+    function total() { var t = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var nu = $('trn-' + r); if (nu) t += Math.max(0, Math.min(+nu.max, Math.floor(+nu.value || 0))); }); var e = $('tr-total'); if (e) { e.textContent = cortoNum(t); e.parentNode.classList.toggle('rojo', t > capT); } }
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) {
+      var rg = $('tr-' + r), nu = $('trn-' + r); if (!rg) return;
+      rg.addEventListener('input', function () { nu.value = rg.value; total(); });
+      nu.addEventListener('input', function () { var v = Math.max(0, Math.min(+rg.max, Math.floor(+nu.value || 0))); rg.value = v; total(); });
+      nu.addEventListener('change', function () { nu.value = Math.max(0, Math.min(+rg.max, Math.floor(+nu.value || 0))); total(); });
+    });
+  }
+  function cortoNum(n) { n = Math.floor(n || 0); return n >= 1e9 ? (Math.floor(n / 1e8) / 10) + 'b' : n >= 1e6 ? (Math.floor(n / 1e5) / 10) + 'm' : n >= 1e4 ? (Math.floor(n / 100) / 10) + 'k' : formatoNumero(n); }
+  function cambiarTransporte(r, d, max) { var rg = $('tr-' + r); if (!rg) return; var nu = $('trn-' + r), v = max ? +rg.max : Math.max(0, Math.min(+rg.max, (Math.floor(+nu.value || 0)) + d * Math.max(1, +rg.step || 1))); rg.value = v; rg.dispatchEvent(new Event('input')); nu.value = v; nu.dispatchEvent(new Event('input')); }
+  function mandarTransporte(b) {
+    if (!trSel) return;
+    var rec = { oro: 0, comida: 0, madera: 0, piedra: 0 }, tot = 0;
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var nu = $('trn-' + r); var n = nu ? Math.max(0, Math.min(Math.floor(+nu.value || 0), +nu.max, Math.floor(cantidad(r)))) : 0; rec[r] = n; tot += n; });
+    if (!tot) { $('tr-error').textContent = L('Elige cuánto quieres mandar.', 'Choose how much to send.'); sonar('error'); return; }
+    var nc = carretasPara(tot); if (carretasLibres() < nc) { $('tr-error').textContent = T('car_faltan', { n: nc, l: carretasLibres() }); sonar('error'); return; }
+    var pago = {}; Object.keys(rec).forEach(function (r) { if (rec[r]) pago[r] = rec[r]; }); if (!pagar(pago)) return;
+    b.disabled = true; var dest = trSel, destino, seg;
+    lugarDeNube(dest.uid).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: dest.uid, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc }); })
+      .then(function () { salirCarretas('envio', miLugar(), destino, rec, nc, dest.nombre); consejoTemporal('🛒 ' + L('Tus tropas de suministro van hacia ', 'Your supply troops are heading to ') + escaparHTML(dest.nombre)); sonar('moneda'); guardar(true); trSel = null; cerrarPanel(); })
+      .catch(function () { Object.keys(pago).forEach(function (r) { sumarRecurso(r, pago[r]); }); b.disabled = false; $('tr-error').textContent = T('ref_error'); sonar('error'); });
   }
   function mandarDonacion(b) {
     var p = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!p) return;
@@ -7175,7 +7262,7 @@
     var dp = diplomacia(a), nv = (a.espia && a.espia.nivelJ) || a.nivel || 1, mio = Math.round(calcularPoder()), prot = (a.escudo || 0) > Date.now();
     var mucho = (a.poder || 0) > mio * 1.5;
     var d = document.createElement('div'); d.id = 'ficha-ciudad';
-    d.innerHTML = '<div class="fc-caja"><button class="fc-x" id="fc-x">✕</button><div class="fc-cab">' + escaparHTML(a.nombre) + ' <small>' + c.x + ', ' + c.y + '</small></div>' +
+    d.innerHTML = '<div class="fc-caja"><button class="fc-x" id="fc-x">✕</button>' + (!esMio && a.uid ? '<button class="fc-chat" id="fc-chat" title="' + L('Enviar mensaje', 'Send message') + '">💬</button>' : '') + '<div class="fc-cab">' + escaparHTML(a.nombre) + ' <small>' + c.x + ', ' + c.y + '</small></div>' +
       '<div class="fc-cuerpo"><div class="fc-retrato">' + escaparHTML(String(a.nombre || '?').charAt(0).toUpperCase()) + '</div><div class="fc-datos">' +
       '<div class="fc-nombre">' + escaparHTML(a.nombre) + ' (' + L('Nv.', 'Lv.') + nv + ')</div>' +
       '<div class="fc-fila">' + L('Poder', 'Power') + ': ' + formatoNumero(a.poder || 0) + '</div>' +
@@ -7183,9 +7270,9 @@
       '<div class="fc-fila">' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</div>' +
       '<div class="fc-fila">' + L('Liga', 'League') + ': ' + ligaDe(a.poder || 0).replace(/^[^A-Za-z]+/, '').replace(/^Liga de /, '').replace(/ league$/, '') + '</div></div></div>' +
       (prot ? '<p class="fc-aviso">🫧 ' + T('protegido_falta', { t: fmtTiempo((a.escudo - Date.now()) / 1000) }) + '</p>' : '') +
-      (dp.k === 'aliada' ? '<p class="fc-aviso verde">🛡️ ' + L('Es de tu alianza: no se puede atacar.', 'It is in your alliance: it cannot be attacked.') + '</p>' : '') +
-      '<div class="fc-botones"><button class="comprar azul" id="fc-espiar">' + L('Espiar', 'Scout') + '</button>' +
-      (dp.k === 'aliada' ? '<button class="comprar verde" id="fc-reforzar">' + T('ref_reforzar') + '</button>' : '<button class="comprar rojo" id="fc-atacar"' + (prot ? ' disabled' : '') + '>' + L('Atacar', 'Attack') + '</button>') + '</div></div>';
+      // v6.97: a un aliado: Transportar (recursos con tropas de suministro) y Reforzar (tropas + caballero)
+      '<div class="fc-botones">' + (dp.k === 'aliada' ? '<button class="comprar azul" id="fc-transportar">' + L('Transportar', 'Transport') + '</button><button class="comprar azul" id="fc-reforzar">' + T('ref_reforzar') + '</button>' :
+      '<button class="comprar azul" id="fc-espiar">' + L('Espiar', 'Scout') + '</button><button class="comprar rojo" id="fc-atacar"' + (prot ? ' disabled' : '') + '>' + L('Atacar', 'Attack') + '</button>') + '</div></div>';
     if (esMio) { var fb = d.querySelector('.fc-botones'); if (fb) fb.innerHTML = '<button class="comprar azul" id="fc-entrar">' + L('Entrar a mi ciudad', 'Enter my city') + '</button>'; d.querySelectorAll('.fc-aviso').forEach(function (x) { x.remove(); }); }
     $('mundo').appendChild(d);
     var fe = $('fc-entrar'); if (fe) fe.addEventListener('click', function () { sonar('click'); cerrarFicha(); entrarCiudad(); });
@@ -7196,6 +7283,8 @@
     var fsp = $('fc-espiar'); if (fsp) fsp.addEventListener('click', function () { espiarCiudad(a, this); });
     var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); abrirMarcha(a); });
     var rf = $('fc-reforzar'); if (rf) rf.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); });
+    var ft = $('fc-transportar'); if (ft) ft.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirTransportar(a.uid, a.nombre); });
+    var fch = $('fc-chat'); if (fch) fch.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirPrivado(a.uid, a.nombre); });
   }
   // espiar: manda un explorador (o paga oro), no empieza batalla y el informe llega al Correo
   var COSTO_ESPIAR = 150;
@@ -9227,6 +9316,12 @@
     else if (a === 'al-mapa') { cerrarPanel(); abrirMundo(); }
     else if (a === 'ref-enviar') abrirEnviarRefuerzo(b.getAttribute('data-uid'), b.getAttribute('data-nombre'));
     else if (a === 'ref-mandar') mandarRefuerzo(b);
+    else if (a === 'ref-siguiente') siguienteRefuerzo(b);
+    else if (a === 'ref-volver') { sonar('click'); if (refSel) abrirEnviarRefuerzo(refSel.uid, refSel.nombre, refPedido); }
+    else if (a === 'ref-heroe') { sonar('click'); refHeroe = b.getAttribute('data-id'); abrirRefuerzoCaballero(); }
+    else if (a === 'ref-menos' || a === 'ref-mas') cambiarRefuerzo(b.getAttribute('data-tipo'), a === 'ref-mas' ? 1 : -1);
+    else if (a === 'tr-menos' || a === 'tr-mas' || a === 'tr-max') cambiarTransporte(b.getAttribute('data-r'), a === 'tr-mas' ? 1 : -1, a === 'tr-max');
+    else if (a === 'tr-mandar') mandarTransporte(b);
     else if (a === 'ref-max') { var rg = $('ref-' + b.getAttribute('data-tipo')); if (rg) { rg.value = rg.max; rg.dispatchEvent(new Event('input')); } }
     else if (a === 'ref-pedir') pedirRefuerzos(b);
     else if (a === 'ped-nuevo') abrirNuevoPedido(b.getAttribute('data-tipo'), b.getAttribute('data-motivo'));
