@@ -9017,9 +9017,42 @@
     actualizarHUD();
     guardarPreferencias();
   }
+  // v6.99: RECURSOS DE LA CIUDAD (al tocar la fila de recursos de arriba), como Kingdoms of Camelot:
+  // población, felicidad, impuestos y almacén; y cada recurso con producción por hora, mantenimiento, lo que tienes, capacidad y Mejora
+  function produccionHoraDe(r) {
+    var p = 0;
+    slots.forEach(function (sl) { if (sl.edificio && esCampo(sl.edificio.tipo) && !sl.obra && EDIFICIOS[sl.edificio.tipo].recurso === r) p += ritmoCampo(sl) * 3600; });
+    misCasillas().forEach(function (id) { var xy = id.split('_'), c = casillaMundo(+xy[0], +xy[1]); if (c && TIPOS_CASILLA[c.tipo] && TIPOS_CASILLA[c.tipo].r === r) p += guardadoCasilla(c).hora; });
+    return Math.round(p);
+  }
+  function capacidadDe(r) { var c = 0; slots.forEach(function (sl) { if (sl.edificio && esCampo(sl.edificio.tipo) && EDIFICIOS[sl.edificio.tipo].recurso === r) c += capacidadCampo(sl); }); return Math.round(c); }
+  function oroImpuestoHora() { return Math.round(IMPUESTO.oro * (impuestoPct() / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada); }
+  function comidaTropasHora() { return estado.oroInfinito ? 0 : Math.round(tropas.length * 3600 / COMIDA_TROPA.cada); }
+  function abrirPanelRecursos() {
+    var l = miLugar(), cl = celdaDe(l.x, l.y), nom = hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino');
+    var capT = ['comida', 'madera', 'piedra', 'oro'].reduce(function (a, r) { return a + capacidadDe(r); }, 0);
+    var pobMax = poblacionMax(), libre = Math.max(0, poblacionLibre());
+    var h = '<div class="rc-hoja"><div class="rc-caja">' +
+      '<span>' + L('Población', 'Population') + ': ' + formatoNumero(pobMax - libre + tropas.length) + '</span><span>' + L('Felicidad', 'Happiness') + ': ' + felicidad() + '%</span>' +
+      '<span>' + L('Población disponible', 'Available population') + ': ' + formatoNumero(libre) + '</span><span>' + L('Impuestos', 'Taxes') + ': ' + impuestoPct() + '%</span>' +
+      '<span>' + L('Límite de población', 'Population limit') + ': ' + formatoNumero(pobMax) + '</span><span>' + L('Cap. de los campos', 'Fields capacity') + ': ' + cortoNum(capT) + '</span>' +
+      '<span class="rc-ancho">' + L('Protección del almacén', 'Warehouse protection') + ': ' + cortoNum(proteccionAlmacen()) + '</span></div><div class="rc-lista">';
+    function fila(r, ico, lineas) {
+      return '<div class="rc-fila"><div class="rc-foto">' + ico + '</div><div class="rc-dat"><b>' + T('r_' + r) + '</b>' + lineas.join('') + '</div>' +
+        '<button class="comprar verde rc-mejora" data-accion="rc-mejora" data-r="' + r + '">' + L('Mejora', 'Upgrade') + '</button></div>';
+    }
+    function ln(t, v, rojo) { return '<span>' + t + ': <i' + (rojo ? ' class="rojo"' : '') + '>' + v + '</i></span>'; }
+    var mant = comidaTropasHora();
+    h += fila('comida', ICONO_RECURSO.comida, [ln(L('Producción', 'Production'), formatoNumero(produccionHoraDe('comida')) + '/h'), ln(L('Mantenimiento', 'Upkeep'), formatoNumero(mant) + '/h', mant > produccionHoraDe('comida')), ln(L('Tienes', 'You have'), formatoNumero(Math.floor(cantidad('comida')))), ln(L('Capacidad', 'Capacity'), formatoNumero(capacidadDe('comida')))]);
+    ['madera', 'piedra'].forEach(function (r) { h += fila(r, ICONO_RECURSO[r], [ln(L('Producción', 'Production'), formatoNumero(produccionHoraDe(r)) + '/h'), ln(L('Tienes', 'You have'), formatoNumero(Math.floor(cantidad(r)))), ln(L('Capacidad', 'Capacity'), formatoNumero(capacidadDe(r)))]); });
+    h += fila('oro', ICONO_RECURSO.oro, [ln(L('Producción', 'Production'), formatoNumero(produccionHoraDe('oro') + oroImpuestoHora()) + '/h'), ln(L('Impuestos', 'Taxes'), formatoNumero(oroImpuestoHora()) + '/h'), ln(L('Tienes', 'You have'), estado.oroInfinito ? '∞' : formatoNumero(Math.floor(cantidad('oro'))))]);
+    h += '</div></div>';
+    abrirPanel(escaparHTML(nom) + ' (' + cl.x + ',' + cl.y + ')', h, { tipo: 'recursos' });
+  }
   function esCuentaDueno() { return !!(window.Cuentas && Cuentas.usuario() && HUELLAS_DUENO.indexOf(sha256(Cuentas.correo().toLowerCase())) >= 0); }
-  ['monedas', 'comida', 'madera', 'piedra', 'gemas'].forEach(function (id) {
-    $('pill-' + id).addEventListener('click', function () { if (enMenu) return; consejoTemporal(T('info_' + (id === 'monedas' ? 'oro' : id))); });
+  // v6.99: tocar la fila de recursos abre la ventana de Recursos de la ciudad
+  ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (id) {
+    var p = $('pill-' + id); if (p) p.addEventListener('click', function () { if (enMenu) return; sonar('click'); abrirPanelRecursos(); });
   });
   // 5 toques seguidos en el oro
   var toquesOro = [];
@@ -9317,6 +9350,7 @@
     else if (a === 'ref-enviar') abrirEnviarRefuerzo(b.getAttribute('data-uid'), b.getAttribute('data-nombre'));
     else if (a === 'ref-mandar') mandarRefuerzo(b);
     else if (a === 'ref-siguiente') siguienteRefuerzo(b);
+    else if (a === 'rc-mejora') { sonar('click'); cerrarPanel(); irAVista(b.getAttribute('data-r') === 'oro' && !edificiosDe('mina').length ? 'ciudad' : 'campos'); consejoTemporal(L('Toca un campo para mejorarlo.', 'Tap a field to upgrade it.')); }
     else if (a === 'ref-volver') { sonar('click'); if (refSel) abrirEnviarRefuerzo(refSel.uid, refSel.nombre, refPedido); }
     else if (a === 'ref-heroe') { sonar('click'); refHeroe = b.getAttribute('data-id'); abrirRefuerzoCaballero(); }
     else if (a === 'ref-menos' || a === 'ref-mas') cambiarRefuerzo(b.getAttribute('data-tipo'), a === 'ref-mas' ? 1 : -1);
