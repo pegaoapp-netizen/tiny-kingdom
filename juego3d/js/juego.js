@@ -1754,7 +1754,7 @@
     M3.sel.material.color.setHex(0xffe14a);
     if (!M3.verde) { M3.verde = new THREE.Mesh(new THREE.PlaneGeometry(CELDA_M * 0.98, CELDA_M * 0.98), new THREE.MeshBasicMaterial({ color: 0x3fd45a, transparent: true, opacity: 0.55, depthWrite: false })); M3.verde.rotation.x = -Math.PI / 2; M3.verde.renderOrder = 3; M3.e.add(M3.verde); }
     M3.verde.visible = false;
-    if (q && q.aldea !== undefined) { M3.sel.material.color.setHex(0x3fd45a); M3.verde.position.set(p.x, 0.09, p.z); M3.verde.visible = true; M3.obj.copy(posCelda(x, y)); var bajarT = window.innerWidth < window.innerHeight ? 1.8 : 2.4; M3.obj.x -= bajarT; M3.obj.z -= bajarT; /* v6.54: el castillo queda más abajo y la tarjeta cabe encima */ $('mundo-info').innerHTML = ''; var b = $('mundo-aldeas').querySelector('[data-aldea="' + q.aldea + '"]'); if (b) b.click(); return; }
+    if (q && q.aldea !== undefined) { M3.sel.material.color.setHex(0x3fd45a); M3.verde.position.set(p.x, 0.09, p.z); M3.verde.visible = true; M3.obj.copy(posCelda(x, y)); var bajarT = window.innerWidth < window.innerHeight ? 1.8 : 2.4; M3.obj.x -= bajarT; M3.obj.z -= bajarT; /* v6.54: el castillo queda más abajo y la tarjeta cabe encima */ $('mundo-info').innerHTML = ''; var b = $('mundo-aldeas').querySelector('[data-aldea="' + q.aldea + '"]'); if (b) b.click(); else { var aq = M3.ultimaLista && M3.ultimaLista[q.aldea]; if (aq) { sonar('click'); abrirFichaCiudad(aq, false); } } return; }
     if (q && q.campamento !== undefined) { centrarAqui(); mostrarCampamento(q.campamento); return; }
     // v6.58: igual que con un reino: la casilla queda abajo del centro y su tarjeta cabe encima
     M3.obj.copy(posCelda(x, y)); var bajarC = window.innerWidth < window.innerHeight ? 2.3 : 2.4; M3.obj.x -= bajarC; M3.obj.z -= bajarC; M3.vel = null;
@@ -2180,6 +2180,7 @@
     var q = VISTAS[v], d = $('vista-aviso'); if (!q || !d) return;
     d.innerHTML = '<b>' + q.ico + ' ' + (estado.idioma === 'en' ? q.en : q.es) + '</b><small>' + q.sub[estado.idioma === 'en' ? 1 : 0] + '</small>';
     d.classList.remove('ver'); void d.offsetWidth; d.classList.add('ver');
+    if (!d.dataset.toque) { d.dataset.toque = 1; window.addEventListener('pointerdown', function () { d.classList.remove('ver'); }, true); } // v7.02: al tocar la pantalla se quita
   }
   function irAVista(v) {
     if (enMenu) return;
@@ -2420,13 +2421,13 @@
     guardar(true); actualizarHUD(); mostrarCampamento(i);
   }
   // v7.01: atacar una villa del mapa (sin dueño): marcha, batalla y botín, y 20 minutos de espera para volver a atacarla
-  function atacarVilla(a, llego) {
+  function atacarVilla(a, llego, fzElegida) {
     var cdv = ((estado.cdVilla || {})[a.uid] || 0) - Date.now();
     if (cdv > 0 && !estado.dueno) { consejoTemporal(T('camp_espera', { t: fmtTiempo(cdv / 1000) })); sonar('error'); return; }
     if (!tropas.some(function (u) { return !u.heroeId; })) { consejoTemporal(T('at_sin_tropas')); sonar('error'); return; }
     var c = celdaDe(a.x, a.y);
-    if (!llego) { marcharA(c, '🏰 ' + a.nombre, function () { atacarVilla(a, true); }); return; }
-    var lv = a.nivelVilla || 1, fz = fuerzaEjercito(), d = a.defensa || defensaCampamento(lv), res = resolverBatalla(fz, d);
+    if (!llego) { marcharA(c, '🏰 ' + a.nombre, function () { atacarVilla(a, true, fzElegida); }); return; }
+    var lv = a.nivelVilla || 1, fz = Math.round(fzElegida || fuerzaEjercito()), d = a.defensa || defensaCampamento(lv), res = resolverBatalla(fz, d);
     var bm = botinMaximo(lv), botin = {};
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { botin[rr] = Math.floor(bm[rr] * res.margen * 1.2); });
     sonar('cuerno');
@@ -2564,10 +2565,11 @@
     var hayYo = lista.some(function (a) { return a.uid === yo; });
     lista = conVillas(lista); // v7.01: las villas del mapa
     if (!hayYo) lista = lista.concat([{ uid: yo, nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: lugarYo.x, y: lugarYo.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0 }]);
-    CAMPAMENTOS.forEach(function (c, i) {
+    if (false) CAMPAMENTOS.forEach(function (c, i) { // v7.02: ya no se arman (el mapa es 3D y se tocan ahí)
       h += '<button class="aldea trasgo" data-campamento="' + i + '" style="left:' + c.x + '%;top:' + c.y + '%"><span class="ic">' + iconoMapa('mapa_campamento', '⛺') + '</span><span class="nom">' + T('leyenda_trasgos') + '</span><span class="niv">' + c.nivel + '</span></button>';
     });
     lista.forEach(function (a, i) {
+      if (a.bot) return; // v7.02: las villas no llevan botón escondido (se tocan en el mapa 3D)
       var cls = a.uid === yo ? 'yo' : (estado.alianza && a.alianza === estado.alianza ? 'aliada' : '');
       // tu castillo con su nivel real; los demás según su nivel
       var tam = a.uid === yo ? nivelVisual(estado.castillo || 1) : (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3);
@@ -7338,7 +7340,7 @@
     if (a.alianza && hayCuenta()) Cuentas.alianza(a.alianza).then(function (al) { var e = $('fc-alianza'); if (e && al && al.nombre) e.textContent = al.nombre; }).catch(function () {});
     d.addEventListener('click', function (ev) { if (ev.target === d) cerrarFicha(); });
     var fsp = $('fc-espiar'); if (fsp) fsp.addEventListener('click', function () { espiarCiudad(a, this); });
-    var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); if (a.bot) atacarVilla(a); else abrirMarcha(a); });
+    var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); abrirMarcha(a); }); // v7.02: también a las villas se les ataca con la ventana de Marcha
     var rf = $('fc-reforzar'); if (rf) rf.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); });
     var ft = $('fc-transportar'); if (ft) ft.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirTransportar(a.uid, a.nombre); });
     var fch = $('fc-chat'); if (fch) fch.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirPrivado(a.uid, a.nombre); });
@@ -7553,6 +7555,7 @@
     actualizarAlertas();
   }
   function puedeAtacar(a) {
+    if (a && a.bot) { var cdv = ((estado.cdVilla || {})[a.uid] || 0) - Date.now(); if (cdv > 0 && !estado.dueno) return T('camp_espera', { t: fmtTiempo(cdv / 1000) }); return tropas.some(function (u) { return !u.heroeId; }) ? '' : T('at_sin_tropas'); } // v7.02: villas sin dueño
     if (!hayCuenta()) return T('at_cuenta');
     if ((a.escudo || 0) > Date.now()) return T('at_protegido', { t: fmtTiempo((a.escudo - Date.now()) / 1000) });
     if (estado.alianza && a.alianza === estado.alianza) return T('at_aliado');
@@ -7627,6 +7630,7 @@
   }
   var marchas = [], entrantes = [], dejarDeEscuchar = null, resolviendo = {};
   function realizarAtaque(a, fuerzaElegida, nCarretas) {
+    if (a && a.bot) { atacarVilla(a, false, fuerzaElegida); return; } // v7.02: a una villa: marcha por el mapa y batalla con las tropas elegidas
     var no = puedeAtacar(a);
     if (no) { consejoTemporal(no); sonar('error'); return; }
     nCarretas = Math.max(0, Math.min(nCarretas || 0, carretasLibres()));
@@ -10275,6 +10279,12 @@
   try { var dp = JSON.parse(localStorage.getItem('tinykingdom_dock') || '{}'); if (dp.p) dockPest = dp.p; if (dp.a === false) dockAbierto = false; } catch (e) {}
   function guardarDock() { try { localStorage.setItem('tinykingdom_dock', JSON.stringify({ p: dockPest, a: dockAbierto })); } catch (e) {} }
   function slotRelevo() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'relevo'; })[0]; }
+  // v7.02: la misión se pone justo encima de la barra de procesos (antes quedaba escondida detrás)
+  setInterval(function () {
+    var m = $('mision'), dk = $('dock-procesos'); if (!m || m.classList.contains('oculto')) return;
+    var r = dk && getComputedStyle(dk).display !== 'none' ? dk.getBoundingClientRect() : null;
+    if (r && r.height > 0) m.style.setProperty('bottom', Math.round(window.innerHeight - r.top + 6) + 'px', 'important'); else m.style.removeProperty('bottom');
+  }, 400);
   function crearDock() {
     if ($('dock-procesos')) return $('dock-procesos');
     var d = document.createElement('div'); d.id = 'dock-procesos';

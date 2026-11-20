@@ -1259,3 +1259,12 @@ html body #panel .rc-dat i.rojo { color: #ff5a4a; }
 html body #panel .rc-mejora { flex: none; min-width: 96px; min-height: 44px !important; font-size: 15px !important; }
 html body #panel .rc-caja { box-sizing: border-box; width: 100%; text-align: left !important; background: rgba(40,20,8,.55) !important; border: 2px solid #6b3f1c !important; }
 html body #panel .rc-caja span { color: #f2c45a !important; text-align: left !important; font-size: 12.5px; }
+
+/* v7.02: el cartel de Ciudad / Campos / Mundo se va más rápido (y al tocar la pantalla se quita) */
+html body #vista-aviso.ver { animation-duration: 1.1s !important; }
+
+/* v7.02: las 6 pestañas de Tropas (Tropas, Héroes, Invocar, Caballeros, Cargos, Fortaleza) en 2 filas de 3 para que no se corten */
+@media (max-width: 600px) {
+  html body #panel .subtabs:not(.pest-tropa) { display: flex !important; flex-wrap: wrap !important; gap: 4px !important; overflow: visible !important; }
+  html body #panel .subtabs:not(.pest-tropa) > button { flex: 1 1 calc(33.333% - 4px) !important; min-width: 0 !important; max-width: none !important; white-space: nowrap !important; overflow: visible !important; text-overflow: clip !important; font-size: 12px !important; padding-left: 2px !important; padding-right: 2px !important; letter-spacing: -0.2px; }
+}
