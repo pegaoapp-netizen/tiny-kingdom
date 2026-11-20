@@ -2063,3 +2063,21 @@ html body #panel .visor-tropa.pintada.r1 img { filter: drop-shadow(0 0 10px #6fd
 html body #panel .visor-tropa.pintada.r2 img { filter: drop-shadow(0 0 12px #4fa3ff) drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
 html body #panel .visor-tropa.pintada.r3 img { filter: drop-shadow(0 0 14px #c06bff) drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
 html body #panel .visor-tropa.pintada.r4 img { filter: drop-shadow(0 0 16px #ffcf3a) drop-shadow(0 6px 8px rgba(0,0,0,.6)) saturate(1.15); }
+
+/* v6.92: información de la pieza y su juego */
+#eq-info { position: fixed; inset: 0; z-index: 9700; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; }
+#eq-info .ei-caja { position: relative; width: 100%; max-width: 520px; max-height: 86vh; overflow-y: auto; background: linear-gradient(180deg,#f6e7c4,#e5cc95); border: 3px solid #8a5a22; border-bottom: 0; border-radius: 18px 18px 0 0; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); color: #3a2610; animation: umDesdeAbajo .3s ease-out; }
+#eq-info .ei-x { position: absolute; top: 8px; right: 8px; width: 38px; height: 38px; border-radius: 50%; border: 2px solid #5a3410; background: #b8452e; color: #fff; font: 900 18px system-ui; }
+#eq-info .ei-cab { display: flex; gap: 12px; align-items: center; padding-right: 40px; }
+#eq-info .ei-ico img { width: 72px; height: 72px; object-fit: contain; }
+#eq-info h3 { margin: 0; font: 900 19px Georgia, serif; color: #5a3410; } #eq-info .ei-cab small { font-weight: 800; color: #7a4a12; }
+#eq-info .ei-num { font: 900 16px system-ui; margin: 8px 0 2px; }
+.ei-req { font-weight: 900; } .ei-req.no { color: #c0261a !important; display: block; font-style: normal; } .ei-req.ok { color: #2f7a20; }
+#eq-info .ei-set { margin-top: 8px; background: rgba(255,255,255,.4); border: 1px solid #b08a4a; border-radius: 12px; padding: 8px; }
+#eq-info .ei-piezas { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 6px 0; }
+#eq-info .ei-piezas span { display: flex; flex-direction: column; align-items: center; font-size: 10px; text-align: center; }
+#eq-info .ei-piezas img { width: 42px; height: 42px; object-fit: contain; }
+#eq-info .ei-piezas .falta { opacity: .35; filter: grayscale(1); } #eq-info .ei-piezas .puesta small { color: #2f7a20; font-weight: 900; }
+#eq-info .lote-on { color: #2f7a20; font-weight: 900; margin: 2px 0; } #eq-info .lote-off { color: #7a6a50; margin: 2px 0; }
+.eq-fila .eq-ico[data-eq] { cursor: pointer; }
+#eq-info .nota { background: none !important; color: #3a2610 !important; border: 0 !important; padding: 0 !important; }
