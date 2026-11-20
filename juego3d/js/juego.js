@@ -2538,7 +2538,7 @@
         $('mundo-info').innerHTML = '<div class="carta"><h3>' + (a.uid === yo ? '👑 ' + T('tu_reino') : '🏰 ' + T('reino_de', { n: escaparHTML(a.nombre) })) + '</h3>' +
           '<div class="stats"><span>⭐ ' + T('nivel') + ' ' + a.nivel + '</span><span>💪 ' + T('poder') + ' ' + formatoNumero(a.poder) + '</span>' +
           '<span>🛡️ ' + (a.alianza ? '[' + escaparHTML(a.alianza) + ']' : T('sin_alianza')) + '</span><span>📍 ' + a.x + ', ' + a.y + '</span>' +
-          ((a.escudo || 0) > Date.now() ? '<span>' + T('protegido_falta', { t: fmtTiempo((a.escudo - Date.now()) / 1000) }) + '</span>' : '') +
+          ((a.escudo || 0) > Date.now() ? '<span>' + T('protegido_falta', { t: fmtLargo((a.escudo - Date.now()) / 1000) }) + '</span>' : '') +
           (a.defensa ? '<span>🏰 ' + T('defensa_txt') + ' ~' + formatoNumero(Math.round(a.defensa / 100) * 100) + '</span>' : '') + '</div>' +
           (estado.alianza && a.alianza === estado.alianza ? '<button class="comprar boton-oleada-grande" id="btn-reforzar">' + T('ref_reforzar') + '</button>' : '') +
           (a.uid !== yo ? '<button class="comprar rojo boton-oleada-grande" id="btn-atacar">' + T('atacar') + '</button>' : '') + '</div>';
@@ -7269,7 +7269,7 @@
       '<div class="fc-fila">' + L('Alianza', 'Alliance') + ': <span id="fc-alianza">' + (a.alianza ? escaparHTML(a.alianza) : L('Ninguna', 'None')) + '</span></div>' +
       '<div class="fc-fila">' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</div>' +
       '<div class="fc-fila">' + L('Liga', 'League') + ': ' + ligaDe(a.poder || 0).replace(/^[^A-Za-z]+/, '').replace(/^Liga de /, '').replace(/ league$/, '') + '</div></div></div>' +
-      (prot ? '<p class="fc-aviso">🫧 ' + T('protegido_falta', { t: fmtTiempo((a.escudo - Date.now()) / 1000) }) + '</p>' : '') +
+      (prot ? '<p class="fc-aviso">🫧 ' + T('protegido_falta', { t: fmtLargo((a.escudo - Date.now()) / 1000) }) + '</p>' : '') +
       // v6.97: a un aliado: Transportar (recursos con tropas de suministro) y Reforzar (tropas + caballero)
       '<div class="fc-botones">' + (dp.k === 'aliada' ? '<button class="comprar azul" id="fc-transportar">' + L('Transportar', 'Transport') + '</button><button class="comprar azul" id="fc-reforzar">' + T('ref_reforzar') + '</button>' :
       '<button class="comprar azul" id="fc-espiar">' + L('Espiar', 'Scout') + '</button><button class="comprar rojo" id="fc-atacar"' + (prot ? ' disabled' : '') + '>' + L('Atacar', 'Attack') + '</button>') + '</div></div>';
