@@ -8632,6 +8632,13 @@
     var n = RULETA.length, paso = 360 / n;
     return '<div class="rul-marco timon"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda"><img class="rul-timon" src="iconos/ui/rul_timon.webp" alt=""></div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasAzar() >= RUL_FICHAS ? '🪙 ' + RUL_FICHAS : '💎 ' + RUL_GEMAS) + '</small></button></div>';
   }
+  function htmlTableroRuleta(r) {
+    var tab = r.tablero || [], nl = rulNoLlaves();
+    return '<div class="rul-tablero"><div class="rul-tab-cab"><b>' + L('Tablero', 'Board') + ' ' + tab.length + '/' + nl.length + '</b><small>' + L('Cada premio sale una sola vez. Al completar el tablero:', 'Each prize comes out only once. When the board is complete:') + ' ' +
+      Object.keys(RUL_PREMIO_TABLERO).map(function (k) { return N(k); }).join(' + ') + '</small></div><div class="rul-tab-fila">' +
+      nl.map(function (i) { var k = RULETA[i].k, ya = tab.indexOf(i) >= 0; return '<span class="rul-tab-p' + (ya ? ' ya' : '') + '" title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + (ya ? '<i>✓</i>' : '') + '</span>'; }).join('') +
+      '<span class="rul-tab-p extra">' + OBJETOS.cofre_tesoro.icono + '<i>★</i></span></div></div>';
+  }
   function abrirRuleta() {
     var a = eventoActivo('ruleta');
     if (!a) { var p = proximoEvento('ruleta'); consejoTemporal(L('La Ruleta no está abierta. Vuelve el ', 'The Wheel is closed. Back on ') + (p ? new Date(p).toLocaleDateString(estado.idioma === 'en' ? 'en' : 'es', { day: 'numeric', month: 'long' }) : '')); return; }
@@ -8639,6 +8646,7 @@
     var falta = Math.max(0, 5 - r.llaves);
     var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b class="rul-fichas">' + (estado.gemasInfinitas ? '∞' : f) + '</b> · ' + L('o gemas', 'or gems') + '</small></div>' +
       htmlRueda() +
+      htmlTableroRuleta(r) +
       '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre' + (falta ? ' cerrado' : '') + '"' + (falta ? '' : ' data-accion="rul-galeon"') + '><img src="iconos/ui/rul_galeon.webp" alt="🎁"></div>' +
       (falta ? '<p>' + L('Junta 5 llaves para abrir el Cofre del Galeón', 'Collect 5 keys to open the Galleon Chest') + ' <b>(' + r.llaves + '/5)</b></p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
       '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
@@ -8653,6 +8661,21 @@
     abrirPanel('🎡 ' + L('Ruleta de la Capitana', 'Captain\'s Wheel'), html, { tipo: 'ruleta' });
     $('panel').classList.add('iv-panel', 'az-panel', 'rul-panel');
   }
+  // v7.10: RULETA SIN REPETICIÓN. Los 5 premios del timón (sin contar las llaves) no se repiten hasta que salen todos;
+  // la probabilidad se reparte solo entre los que faltan. Al vaciar el tablero hay un premio extra y vuelve a empezar.
+  // Las llaves salen igual que antes (misma probabilidad y seguro una cada ${RUL_SIN_LLAVE_MAX} tiradas), así el Galeón no sale más seguido.
+  var RUL_LLAVES_IDX = [0, 3, 5], RUL_PREMIO_TABLERO = { cofre_tesoro: 1 }; // sin Caracola: saldría cada 5 o 6 tiradas y rompería la subida de edificios
+  function rulNoLlaves() { var l = []; RULETA.forEach(function (x, i) { if (x.k !== 'llave') l.push(i); }); return l; }
+  function sortearSinRepetir(r) {
+    var tot = RULETA.reduce(function (a, x) { return a + x.p; }, 0), pLlave = RUL_LLAVES_IDX.reduce(function (a, i) { return a + RULETA[i].p; }, 0) / tot;
+    if (r.sinLlave >= RUL_SIN_LLAVE_MAX - 1 || Math.random() < pLlave) return RUL_LLAVES_IDX[Math.floor(Math.random() * RUL_LLAVES_IDX.length)];
+    r.tablero = (r.tablero || []).filter(function (i) { return RULETA[i] && RULETA[i].k !== 'llave'; });
+    var quedan = rulNoLlaves().filter(function (i) { return r.tablero.indexOf(i) < 0; });
+    if (!quedan.length) { r.tablero = []; quedan = rulNoLlaves(); }
+    var t = quedan.reduce(function (a, i) { return a + RULETA[i].p; }, 0), n = Math.random() * t;
+    for (var q = 0; q < quedan.length; q++) { n -= RULETA[quedan[q]].p; if (n <= 0) return quedan[q]; }
+    return quedan[quedan.length - 1];
+  }
   function sortearRuleta() { var t = RULETA.reduce(function (s, x) { return s + x.p; }, 0), n = Math.random() * t; for (var i = 0; i < RULETA.length; i++) { n -= RULETA[i].p; if (n <= 0) return i; } return 0; }
   var girando = false;
   function tirarRuleta(n) {
@@ -8663,9 +8686,15 @@
     else if (!pagar(0, RUL_GEMAS * n)) return;
     var r = estadoRuleta(a.id), ganados = [], idx = [];
     for (var i = 0; i < n; i++) {
-      var j = sortearRuleta();
-      if (RULETA[j].k !== 'llave' && r.sinLlave >= RUL_SIN_LLAVE_MAX - 1) j = [0, 3, 5][Math.floor(Math.random() * 3)];
+      var j = sortearSinRepetir(r);
       var s = RULETA[j]; idx.push(j);
+      if (s.k !== 'llave') {
+        r.tablero = (r.tablero || []).concat([j]);
+        if (rulNoLlaves().every(function (i) { return r.tablero.indexOf(i) >= 0; })) { // tablero vacío: premio extra y empieza otro
+          r.tablero = []; r.tableros = (r.tableros || 0) + 1;
+          Object.keys(RUL_PREMIO_TABLERO).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + RUL_PREMIO_TABLERO[k]; ganados.push({ ico: OBJETOS[k].icono, nom: N(k), cat: subcatObjeto(k), gordo: true }); });
+        }
+      }
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
       if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true }); }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }

@@ -1310,3 +1310,15 @@ html body #panel .sp-tabs { display: flex !important; gap: 6px; margin-bottom: 8
 html body #panel .sp-tabs button { flex: 1; min-height: 40px; border-radius: 8px 8px 0 0; border: 2px solid #8a6a3a !important; background: linear-gradient(#4a3420, #2a1c0e) !important; color: #f3dfae !important; font-weight: 700; font-size: 14px; }
 html body #panel .sp-tabs button.activo { background: linear-gradient(#f2c45a, #c8901e) !important; color: #2a1a08 !important; border-color: #ffe9a0 !important; }
 html body #panel #sp-texto, html body #panel .sp-resp-txt { background: #fff8e2 !important; color: #2a1a08 !important; border: 1px solid #b08a4a !important; }
+
+/* ===== v7.10: tablero de la Ruleta sin repetición ===== */
+html body #panel .rul-tablero { margin: 6px 0 4px; padding: 8px; border-radius: 10px; background: rgba(20,10,4,.45); border: 1px solid rgba(242,196,90,.35); color: #f1e2c0; text-align: center; }
+html body #panel .rul-tab-cab { display: flex; flex-direction: column; gap: 2px; margin-bottom: 6px; }
+html body #panel .rul-tab-cab small { font-size: 11.5px; opacity: .85; }
+html body #panel .rul-tab-fila { display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+html body #panel .rul-tab-p { position: relative; width: 44px; height: 44px; border-radius: 8px; border: 2px solid #8a6a3a; background: rgba(255,240,200,.08); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+html body #panel .rul-tab-p img { width: 36px; height: 36px; object-fit: contain; }
+html body #panel .rul-tab-p.ya { opacity: .35; filter: grayscale(1); }
+html body #panel .rul-tab-p.extra { border-color: #ffe066; box-shadow: 0 0 8px rgba(255,224,102,.6); }
+html body #panel .rul-tab-p i { position: absolute; right: -4px; bottom: -4px; font-style: normal; font-size: 13px; font-weight: 900; background: #2f8a2a; color: #fff; border-radius: 50%; width: 18px; height: 18px; line-height: 18px; filter: none; }
+html body #panel .rul-tab-p.extra i { background: #c8901e; }
