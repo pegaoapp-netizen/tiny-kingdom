@@ -1954,3 +1954,12 @@ html body #panel.iv-panel.desde-abajo .iv-boton { min-width: 76px; min-height: 4
 /* premios de la Ruleta: a dónde fue cada cosa */
 .rp-dest { display: block; font-style: normal; font: 700 10.5px system-ui, sans-serif; color: #ffe9a0; background: rgba(0,0,0,.35); border-radius: 6px; padding: 2px 4px; margin-top: 2px; }
 .rp-bots { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+/* ===== v6.88: TODAS las ventanas suben desde abajo ===== */
+html body #panel#panel.desde-abajo { height: auto !important; max-height: 84vh !important; }
+html body #panel#panel.desde-abajo.co-panel, html body #panel#panel.desde-abajo.iv-panel:not(.rul-panel) { height: 78vh !important; }
+html body #panel#panel.desde-abajo:not(.co-panel) .panel-cab { flex: none; display: flex !important; position: relative; padding: 10px 12px !important; border-radius: 18px 18px 0 0; }
+html body #panel#panel.desde-abajo:not(.co-panel) #panel-cuerpo { flex: 1 1 auto; min-height: 0; overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+html body #panel#panel.desde-abajo .cerrar, html body #panel#panel.desde-abajo #panel-cerrar { display: inline-flex !important; }
+/* la Ruleta sigue chiquita para ver la ciudad detrás */
+html body #panel#panel.desde-abajo.rul-panel { max-height: 66vh !important; }

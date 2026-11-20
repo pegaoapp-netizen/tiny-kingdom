@@ -5490,6 +5490,7 @@
     $('panel-titulo').textContent = titulo;
     $('panel-cuerpo').innerHTML = html;
     $('panel').classList.remove('oculto');
+    $('panel').classList.add('desde-abajo'); // v6.88: todas las ventanas suben desde abajo
     $('panel').scrollTop = 0;
     document.body.classList.add('panel-abierto');
     panelActual = cual;
