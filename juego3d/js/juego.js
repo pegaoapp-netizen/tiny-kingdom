@@ -158,8 +158,8 @@
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.5; }
-  function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? 1.12 : 1.45); } // v6.86: en la Ciudad no se aleja hasta ver los campos
-  function distInicial() { return window.innerWidth < window.innerHeight ? 104 : 80; } // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
+  function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? 1.25 : 1.45); } // v6.86: en la Ciudad no se aleja hasta ver los campos
+  function distInicial() { return window.innerWidth < window.innerHeight ? 122 : 90; } // v7.04: un poco más lejos para ver casi todos los edificios sin mover el dedo // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
   function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 175 : 125; }
@@ -3837,12 +3837,14 @@
   // v6.86: chapa con el DIBUJO del edificio, su NOMBRE y el nivel: desde arriba se sabe qué es cada cosa
   function chapaEdificio(tipo, nivel) {
     var k = tipo + '|' + nivel + '|' + (estado.idioma || 'es');
+    // v7.04: los edificios únicos (Academia, Cuartel, Mercado, Enfermería…) llevan chapa azul y más grande; las cabañas y campos, chapa chica
+    var unico = tipo !== 'cabana' && !esCampo(tipo);
     if (!cacheChapa[k]) {
       var W = 320, H = 96, c = document.createElement('canvas'); c.width = W; c.height = H; var x = c.getContext('2d');
       var tex = new THREE.CanvasTexture(c);
       function pintar(img) {
         x.clearRect(0, 0, W, H);
-        var gf = x.createLinearGradient(0, 14, 0, 82); gf.addColorStop(0, 'rgba(58,36,16,.94)'); gf.addColorStop(1, 'rgba(24,14,6,.94)');
+        var gf = x.createLinearGradient(0, 14, 0, 82); if (unico) { gf.addColorStop(0, 'rgba(36,74,150,.96)'); gf.addColorStop(1, 'rgba(14,32,78,.96)'); } else { gf.addColorStop(0, 'rgba(58,36,16,.94)'); gf.addColorStop(1, 'rgba(24,14,6,.94)'); }
         x.fillStyle = gf; x.strokeStyle = '#e8b84a'; x.lineWidth = 4;
         x.beginPath(); if (x.roundRect) x.roundRect(40, 18, W - 46, 60, 30); else x.rect(40, 18, W - 46, 60); x.fill(); x.stroke();
         // medallón con el dibujo
@@ -3864,7 +3866,7 @@
       if (arch) { var im = new Image(); im.onload = function () { pintar(im); }; im.src = 'iconos/ui/' + arch + '.webp'; }
       cacheChapa[k] = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
     }
-    var sp = new THREE.Sprite(cacheChapa[k]); sp.scale.set(6.6, 2.0, 1); sp.renderOrder = 11; return sp;
+    var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(8.4, 2.55, 1); else sp.scale.set(5.0, 1.52, 1); sp.renderOrder = unico ? 12 : 11; return sp;
   }
   function ponerEdificio(s, tipo, nivel) {
     if (s.modelo) s.grupo.remove(s.modelo);
@@ -4701,6 +4703,9 @@
   }
   // cuántas se pueden entrenar ahora (por espacio y por recursos)
   var TOPE_ORDEN = 10000, TOPE_COLA = 50000;
+  // v7.04: un lote grande tarda mucho menos que la suma de cada tropa (n^0.65) y nunca más de 12 horas
+  var LOTE_MAX_HORAS = 12;
+  function tiempoUnidadLote(tipo, n) { n = Math.max(1, n || 1); var b = TROPAS[tipo].tiempo * Math.pow(n, 0.65); b = Math.min(b, LOTE_MAX_HORAS * 3600 * rapidezEntreno()); return b / n; }
   function maxEntrenar(tipo) {
     // v6.40: cada orden llega hasta TOPE_ORDEN tropas y la cola hasta TOPE_COLA (con recursos infinitos el Máx congelaba el juego)
     var libre = Math.max(0, Math.min(capacidad() - tropasOcupadas(), TOPE_ORDEN, TOPE_COLA - colaEntreno.length)), c = costoTropa(tipo), n = libre;
@@ -4716,7 +4721,8 @@
     n = Math.min(n, maxEntrenar(tipo));
     if (n < 1) { var fa = faltante(costoTropa(tipo)); if (fa) avisarFalta(fa); else sonar('error'); return; }
     if (!pagar(costoTropas(tipo, n))) return;
-    for (var k = 0; k < n; k++) colaEntreno.push({ tipo: tipo, t: 0, total: TROPAS[tipo].tiempo });
+    var tu = tiempoUnidadLote(tipo, n);
+    for (var k = 0; k < n; k++) colaEntreno.push({ tipo: tipo, t: 0, total: tu });
     var hechas = n;
     sumarLogro('tropas', hechas);
     if (hechas > 1) consejoTemporal(T('entrenando_n', { n: hechas }));
@@ -6103,7 +6109,7 @@
     dibujarVisor(dt);
     requestAnimationFrame(pasoVisor);
   }
-  function segTropas(tipo, n) { return n * TROPAS[tipo].tiempo / rapidezEntreno(); }
+  function segTropas(tipo, n) { return n * tiempoUnidadLote(tipo, n) / rapidezEntreno(); }
   function costoTropas(tipo, n, conGemas) {
     var c = costoTropa(tipo), t = { oro: c.oro * n, comida: c.comida * n };
     if (conGemas) t.gemas = gemasParaTerminar(segTropas(tipo, n));
@@ -10258,7 +10264,8 @@
       colaEntreno = [];
       (g.colaEntreno || []).forEach(function (q) {
         if (!q || !TROPAS[q[0]] || q[0] === 'heroe') return;
-        for (var k = 0; k < Math.min(q[1] || 0, TOPE_COLA - colaEntreno.length); k++) colaEntreno.push({ tipo: q[0], t: k === 0 ? (q[2] || 0) : 0, total: TROPAS[q[0]].tiempo });
+        var tuq = tiempoUnidadLote(q[0], q[1] || 1); // v7.04: las colas guardadas también se acortan
+        for (var k = 0; k < Math.min(q[1] || 0, TOPE_COLA - colaEntreno.length); k++) colaEntreno.push({ tipo: q[0], t: k === 0 ? Math.min(q[2] || 0, tuq * 0.99) : 0, total: tuq });
       });
       avanzarCola(cuartelesListos().length ? cerrado * rapidezEntreno() : 0, function () { return reunion.clone(); });
       tropas.forEach(guardarDentro);
