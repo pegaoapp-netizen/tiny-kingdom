@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.08';
+var VERSION_JUEGO = '7.09';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -376,8 +376,8 @@ var NOMBRES = {
   arquero:    { es: 'Arquero',      en: 'Archer',
                 des_es: 'Dispara desde lejos. Poca vida.', des_en: 'Shoots from afar. Low health.' },
   cofre_madera: { es: 'Cofre de madera', en: 'Wooden chest', des_es: 'Trae oro, comida y madera.', des_en: 'Gives gold, food and wood.' },
-  cofre_plata:  { es: 'Cofre de plata', en: 'Silver chest', des_es: 'Trae oro, madera, piedra y gemas.', des_en: 'Gives gold, wood, stone and gems.' },
-  cofre_oro:    { es: 'Cofre de oro', en: 'Golden chest', des_es: 'Un gran premio de todos los recursos y gemas.', des_en: 'A big prize of every resource and gems.' },
+  cofre_plata:  { es: 'Cofre de plata', en: 'Silver chest', des_es: 'Trae oro, madera y piedra.', des_en: 'Gives gold, wood and stone.' },
+  cofre_oro:    { es: 'Cofre de oro', en: 'Golden chest', des_es: 'Un gran premio de todos los recursos.', des_en: 'A big prize of every resource.' },
   bolsa_oro:    { es: 'Bolsa de oro', en: 'Bag of gold', des_es: '+250 de oro.', des_en: '+250 gold.' },
   saco_comida:  { es: 'Saco de comida', en: 'Sack of food', des_es: '+300 de comida.', des_en: '+300 food.' },
   saco_madera:  { es: 'Montón de madera', en: 'Pile of wood', des_es: '+300 de madera.', des_en: '+300 wood.' },
@@ -411,7 +411,7 @@ var NOMBRES = {
   estrella_rey: { es: 'Estrella del Rey', en: 'King\'s Star', des_es: 'Hace falta para subir el Castillo a los niveles 14★, 15★ y 16★.', des_en: 'Needed to upgrade the Castle to levels 14★, 15★ and 16★.' },
   estrella_mar: { es: 'Estrella de Mar', en: 'Starfish', des_es: 'Hace falta para subir un edificio o la muralla a los niveles con estrella (13★ al 16★).', des_en: 'Needed to upgrade a building or the wall to star levels (13★ to 16★).' },
   lingote: { es: 'Lingote real', en: 'Royal ingot', des_es: 'Un lingote que vale 1.000.000 de oro.', des_en: 'An ingot worth 1,000,000 gold.' },
-  cofre_tesoro: { es: 'Cofre del Tesoro', en: 'Treasure chest', des_es: 'Muchos recursos y gemas al abrirlo.', des_en: 'Lots of resources and gems when opened.' },
+  cofre_tesoro: { es: 'Cofre del Tesoro', en: 'Treasure chest', des_es: 'Muchos recursos al abrirlo.', des_en: 'Lots of resources when opened.' },
   pack_tesoro7: { es: '7 Cofres del Tesoro', en: '7 Treasure chests', des_es: 'Paquete de 7 cofres del tesoro.', des_en: 'Pack of 7 treasure chests.' },
   pack_tesoro15: { es: '15 Cofres del Tesoro', en: '15 Treasure chests', des_es: 'Paquete de 15 cofres del tesoro.', des_en: 'Pack of 15 treasure chests.' },
   cofre_acel: { es: 'Cofre de aceleradores', en: 'Speed-up chest', des_es: '10 de 15 min, 5 de 1 hora, 2 de 8 horas y 1 de 24 horas.', des_en: '10× 15 min, 5× 1 hour, 2× 8 hours and 1× 24 hours.' },

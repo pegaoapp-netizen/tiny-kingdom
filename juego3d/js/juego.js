@@ -8625,7 +8625,7 @@
   var SETS_RULETA = ['sol', 'luna', 'ancla'], RUL_PIEZA = 0.02; // de vez en cuando, una pieza del Alba, Estelar o del Mar Hondo
   function piezaDeSet(set) { var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
   var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
-  var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1 }, GALEON_GEMAS = 50;
+  var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1, cofre_tesoro: 1 }; // v7.09: sin gemas (las gemas no se regalan)
   var RUL_FICHAS = 3, RUL_GEMAS = 15;
   function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; r.llaves = Math.max(0, Math.floor(+r.llaves || 0)); r.sinLlave = Math.max(0, Math.floor(+r.sinLlave || 0)); return r; }
   function htmlRueda() {
@@ -8686,7 +8686,6 @@
     var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest') + (veces > 1 ? ' ×' + veces : ''), gordo: true }];
     Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k] * veces; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k] * veces, cat: subcatObjeto(k) }); });
     for (var gv = 0; gv < veces; gv++) { var gp = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (gp) l.push({ ico: icoPieza(gp), nom: nombrePieza(gp), cat: 'equipo', gordo: true }); }
-    estado.gemas = (estado.gemas || 0) + GALEON_GEMAS * veces; l.push({ ico: '💎', nom: GALEON_GEMAS * veces + ' ' + L('gemas', 'gems'), dest: L('Arriba, en tus gemas', 'Top bar, your gems') });
     guardar(true); actualizarHUD();
     var c = document.querySelector('.rul-cofre'); if (c) c.classList.add('abriendo');
     sonar('magia'); setTimeout(function () { mostrarPremiosRuleta(l, true); }, 900);

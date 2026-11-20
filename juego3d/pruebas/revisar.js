@@ -86,6 +86,17 @@ if (D.TEXTOS && D.TEXTOS.es && D.TEXTOS.en) {
   if (sinEn.length) avi(sinEn.length + ' textos no tienen traducción al inglés: ' + sinEn.slice(0, 12).join(', ') + (sinEn.length > 12 ? '…' : ''));
 }
 
+// 8) regla del dueño: las gemas NO se regalan (ningún cofre, saco, paquete ni el Galeón da gemas)
+if (D.OBJETOS) for (const [k, o] of Object.entries(D.OBJETOS)) {
+  if ((o.cofre && o.cofre.gemas) || (o.da && o.da.gemas) || (o.paquete && o.paquete.gemas)) err('El objeto "' + k + '" regala gemas, y las gemas no se regalan (regla del dueño).');
+}
+try {
+  const jg = fs.readFileSync(path.join(RAIZ, 'js', 'juego.js'), 'utf8');
+  const g = jg.match(/var GALEON = (\{[^}]*\})/);
+  if (g && /gemas/.test(g[1])) err('El Cofre del Galeón (GALEON en juego.js) regala gemas, y las gemas no se regalan.');
+  if (/GALEON_GEMAS\s*\*/.test(jg)) err('El Cofre del Galeón suma GALEON_GEMAS: las gemas no se regalan.');
+} catch (e) {}
+
 // 7) lo que carga la página
 try {
   const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');
