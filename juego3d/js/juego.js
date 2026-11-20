@@ -10331,8 +10331,8 @@
         '<span>' + L('Nivel', 'Level') + ': ' + (al ? (al.nivel || 1) : '…') + '</span><span>' + L('Poder', 'Power') + ': ' + (al ? formatoNumero(al.poder || 0) : '…') + '</span></div></div>' +
         '<div class="pj-al"><span>' + L('Alianza', 'Alliance') + ': <b>' + (al ? (al.alianza ? escaparHTML(alNom || al.alianza) : L('Ninguna', 'None')) : '…') + '</b></span><span>' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</span></div>' +
         // v6.94: dónde está su reino y botón para ir al mapa (y, para el dueño, regalarle)
-        '<div class="pj-al pj-coord"><span>📍 ' + L('Reino', 'Kingdom') + ': <b>' + (al ? 'X ' + celdaDe(al.x, al.y).x + ' · Y ' + celdaDe(al.x, al.y).y : (buscado ? L('todavía no está en el mapa', 'not on the map yet') : '…')) + '</b></span></div>' +
-        (uid !== yo ? '<div class="pj-botones pj-extra"><button data-pj="mapa"' + (al ? '' : ' disabled') + '>🗺️ ' + L('Ver su reino', 'See kingdom') + '</button>' + (esCuentaDueno() ? '<button data-pj="regalar" class="pj-oro">🎁 ' + L('Regalar', 'Gift') + '</button>' : '') + '</div>' : '') +
+        (esCuentaDueno() ? '<div class="pj-al pj-coord"><span>📍 ' + L('Reino', 'Kingdom') + ': <b>' + (al ? 'X ' + celdaDe(al.x, al.y).x + ' · Y ' + celdaDe(al.x, al.y).y : (buscado ? L('todavía no está en el mapa', 'not on the map yet') : '…')) + '</b></span></div>' : '') + // v6.96: coordenadas y «Ver su reino» solo para el dueño
+        (uid !== yo && esCuentaDueno() ? '<div class="pj-botones pj-extra"><button data-pj="mapa"' + (al ? '' : ' disabled') + '>🗺️ ' + L('Ver su reino', 'See kingdom') + '</button><button data-pj="regalar" class="pj-oro">🎁 ' + L('Regalar', 'Gift') + '</button></div>' : '') +
         '<div class="pj-botones">' + (uid === yo ? '<button class="comprar rojo" data-pj="borrar">' + T('chat_borrar') + '</button>' :
           '<button data-pj="susurrar">' + L('Susurrar', 'Whisper') + '</button><button data-pj="mensaje">' + L('Enviar mensaje', 'Send message') + '</button>' +
           '<button data-pj="ignorar">' + (bloqueados().indexOf(uid) < 0 ? L('Ignorar', 'Ignore') : L('Dejar de ignorar', 'Unignore')) + '</button><button data-pj="denunciar">' + L('Denunciar', 'Report') + '</button>' +
@@ -10348,7 +10348,7 @@
       var que = o.getAttribute('data-pj'); d.remove(); sonar('click');
       var msg = (chat.msgs[chat.canal] || []).filter(function (m) { return m.id === idMsg; })[0];
       if (que === 'borrar') { if (idMsg) Cuentas.borrarChat(chat.canal, idMsg).catch(function () {}); return; }
-      if (que === 'mapa' && alGuardada) { var cg = celdaDe(alGuardada.x, alGuardada.y); cerrarPanel(); if (!enMundo) { irAVista('mundo'); setTimeout(function () { if (enMundo) irACoordenadas(cg.x, cg.y); }, 1700); } else irACoordenadas(cg.x, cg.y); return; }
+      if (que === 'mapa' && alGuardada && esCuentaDueno()) { var cg = celdaDe(alGuardada.x, alGuardada.y); cerrarPanel(); if (!enMundo) { irAVista('mundo'); setTimeout(function () { if (enMundo) irACoordenadas(cg.x, cg.y); }, 1700); } else irACoordenadas(cg.x, cg.y); return; }
       if (que === 'regalar') { rgElegido = { uid: uid, nombre: nombre }; rgLista = [{ uid: uid, nombre: nombre, poder: alGuardada ? alGuardada.poder : 0 }]; abrirRegalar(); return; }
       if (que === 'susurrar') { abrirPanelChat('global'); var it = $('chat-texto'); if (it) { it.value = '@' + nombre + ' '; it.focus(); } return; }
       if (que === 'mensaje') { abrirPrivado(uid, nombre); setTimeout(function () { var it2 = $('chat-texto'); if (it2) it2.focus(); }, 50); return; }
