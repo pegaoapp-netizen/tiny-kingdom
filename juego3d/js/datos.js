@@ -745,7 +745,7 @@ var ICONOS_IMG = {
 // retratos dibujados de las tropas (si no hay, se usa la foto del modelo 3D)
 var RETRATOS_IMG = {
   h_sol: 'h_sol', h_luna: 'h_luna', h_ancla: 'h_ancla', h_brisa: 'h_brisa', h_chispa: 'h_chispa', h_roble: 'h_roble', // v6.89: retratos pintados de los héroes
-  h_trueno: 'h_trueno', h_leon: 'h_leon', h_fenix: 'h_fenix', h_titan: 'h_titan', h_aguila: 'h_aguila',
+  h_trueno: 'h_trueno', h_pluma: 'h_pluma', h_leon: 'h_leon', h_fenix: 'h_fenix', h_titan: 'h_titan', h_aguila: 'h_aguila',
   espadachin: 't_espadachin', arquero: 't_arquero', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano',
   jinete: 't_jinete', caballeria_pesada: 't_caballeria_pesada', balista: 't_balista', ariete: 't_ariete', catapulta: 't_catapulta', torre_asedio: 't_torre_asedio',
   granja: 'e_granja', aserradero: 'e_aserradero', mina: 'e_mina', cantera: 'e_cantera',
