@@ -1473,8 +1473,14 @@
   }
   // el mismo mapa para todos los jugadores (sale de una fórmula, no se guarda)
   function casillaMundo(x, y) {
-    var n = ruidoM(x / 6, y / 6) * 0.65 + ruidoM(x / 2.5 + 50, y / 2.5 + 50) * 0.35;
-    var tipo = n < 0.3 ? 'lago' : n < 0.5 ? 'llanura' : n < 0.66 ? 'bosque' : n < 0.8 ? 'colina' : 'montana';
+    // v6.88: mapa más despejado: ~70% llanura, bosques y lagos en manchas pequeñas y sueltas, pocas colinas y montañas
+    var n = ruidoM(x / 9, y / 9) * 0.7 + ruidoM(x / 3 + 50, y / 3 + 50) * 0.3, hz = hashM(x * 1.7 + 3, y * 2.3 + 9);
+    var tipo = n < 0.27 ? 'lago' : n < 0.6 ? 'llanura' : n < 0.74 ? 'bosque' : n < 0.84 ? 'colina' : 'montana';
+    if (tipo === 'lago' && n > 0.23 && hz < 0.4) tipo = 'llanura';
+    if (tipo === 'bosque' && hz < 0.28) tipo = 'llanura';
+    if (tipo === 'colina' && hz < 0.3) tipo = 'llanura';
+    if (tipo === 'montana' && hz < 0.3) tipo = 'colina';
+    if (tipo === 'llanura' && hz > 0.965) tipo = 'bosque';
     var lejos = Math.hypot(x - TAM_MUNDO / 2, y - TAM_MUNDO / 2) / (TAM_MUNDO * 0.7);
     var nivel = Math.max(1, Math.min(5, 1 + Math.floor(hashM(x + 7, y + 13) * 3 + lejos * 2.5)));
     return { id: x + '_' + y, x: x, y: y, tipo: tipo, nivel: nivel };
@@ -2338,20 +2344,21 @@
   // ---------- PORTALES: mudar el reino a otro lugar del mapa ----------
   // v6.45: un jugador nuevo (castillo nivel 3 o menos, sin lugar fijo) aparece cerca de otros reinos y no perdido en un rincón del mapa
   function ubicarCercaDeOtros(listo) {
-    if (!hayCuenta() || estado.lugar || (estado.castillo || 1) > 3) { listo(); return; }
+    // v6.88: los reinos que quedaron solos en una esquina del mapa (300 × 300) se mudan UNA vez junto a los demás; el dueño no se mueve
+    if (!hayCuenta() || estado.dueno || (estado.lugar && estado.juntado)) { listo(); return; }
     var yo = Cuentas.usuario().uid;
     Cuentas.aldeas().then(function (lista) {
       aldeasCache = lista;
       var otros = lista.filter(function (a) { return a.uid !== yo; });
       if (!otros.length) { listo(); return; }
       var mia = celdaDe(miLugar().x, miLugar().y);
-      if (otros.some(function (a) { var q = celdaDe(a.x, a.y); return Math.max(Math.abs(q.x - mia.x), Math.abs(q.y - mia.y)) <= 6; })) { listo(); return; }
+      if (otros.some(function (a) { var q = celdaDe(a.x, a.y); return Math.max(Math.abs(q.x - mia.x), Math.abs(q.y - mia.y)) <= 6; })) { estado.juntado = true; listo(); return; }
       // al lado del reino que jugó más hace poco
       otros.sort(function (a, b) { return (b.actualizado || 0) - (a.actualizado || 0); });
       for (var r = 2; r <= 7; r++) for (var i = 0; i < 40; i++) {
         var o = celdaDe(otros[i % Math.min(5, otros.length)].x, otros[i % Math.min(5, otros.length)].y), ang = Math.random() * Math.PI * 2;
         var x = Math.round(o.x + Math.cos(ang) * r), y = Math.round(o.y + Math.sin(ang) * r);
-        if (celdaLibre(x, y)) { estado.lugar = { x: aCoord(x), y: aCoord(y) }; aldeasCache.forEach(function (a) { if (a.uid === yo) { a.x = estado.lugar.x; a.y = estado.lugar.y; } }); guardar(true); listo(); return; }
+        if (celdaLibre(x, y)) { estado.lugar = { x: aCoord(x), y: aCoord(y) }; estado.juntado = true; aldeasCache.forEach(function (a) { if (a.uid === yo) { a.x = estado.lugar.x; a.y = estado.lugar.y; } }); guardar(true); listo(); return; }
       }
       listo();
     }).catch(function () { listo(); });
