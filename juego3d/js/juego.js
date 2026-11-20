@@ -4867,9 +4867,11 @@
     comidaCd += dt;
     if (comidaCd >= COMIDA_TROPA.cada) {
       comidaCd -= COMIDA_TROPA.cada;
-      var bocas = tropas.length;
-      if (bocas && !estado.oroInfinito) estado.comida = Math.max(0, estado.comida - bocas);
-      hambre = bocas > 0 && estado.comida <= 0 && !estado.oroInfinito;
+      // v7.00: se come lo del mantenimiento (todas las tropas, también las guardadas)
+      var mantH = comidaTropasHora(), gasto = mantH * COMIDA_TROPA.cada / 3600 + (estado.comidaResto || 0), gEnt = Math.floor(gasto);
+      estado.comidaResto = gasto - gEnt;
+      if (gEnt && !estado.oroInfinito) estado.comida = Math.max(0, estado.comida - gEnt);
+      hambre = mantH > 0 && estado.comida <= 0 && !estado.oroInfinito;
       $('aviso-hambre').textContent = T('sin_comida');
       $('aviso-hambre').classList.toggle('oculto', !hambre);
       actualizarHUD();
@@ -6192,7 +6194,7 @@
       '<div class="cq-ret-abajo"><div><small>' + L('PODER DE TROPA', 'UNIT POWER') + '</small><b>' + formatoNumero(poder) + '</b></div><div class="cq-ret-tropas"><small>' + L('TROPAS', 'TROOPS') + '</small><b>' + formatoNumero(cuentaTipo(t)) + '</b></div></div></div>' +
       '<div class="cq-det"><div class="cq-rango">✨ ' + T('rango') + ' ' + ROMANO[na] + ' <span>/ IV</span></div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div>' +
       '<div class="cq-stats-caja">' + barraStat(L('Ataque', 'Attack'), d.dano, 90) + barraStat(L('Vida', 'Health'), d.vida, 900) + barraStat(L('Velocidad', 'Speed'), Math.round(d.vel * 100), 450) + barraStat(L('Carga', 'Load'), CARGA_TROPA[t] || 0, 60) +
-      '<div class="cq-chips"><span class="debil">' + L('Débil contra ', 'Weak vs ') + contra[0] + '</span><span class="fuerte">' + L('Fuerte contra ', 'Strong vs ') + contra[1] + '</span><span>🍞 ' + Math.round(3600 / COMIDA_TROPA.cada) + '/h</span></div></div>' +
+      '<div class="cq-chips"><span class="debil">' + L('Débil contra ', 'Weak vs ') + contra[0] + '</span><span class="fuerte">' + L('Fuerte contra ', 'Strong vs ') + contra[1] + '</span><span>🍞 ' + (COMIDA_HORA_TROPA[t] || 1) + '/h</span></div></div>' +
       '<div class="subtabs ft-pest"><button data-accion="det-pest" data-p="entrenar" class="' + (pestDetalle === 'entrenar' ? 'activo' : '') + '">' + L('Entrenar', 'Train') + '</button><button data-accion="det-pest" data-p="relevar" class="' + (pestDetalle === 'relevar' ? 'activo' : '') + '">' + L('Relevar', 'Dismiss') + '</button></div>';
     if (pestDetalle === 'relevar') {
       var tengo = propiasDe(t).length;
@@ -9027,7 +9029,9 @@
   }
   function capacidadDe(r) { var c = 0; slots.forEach(function (sl) { if (sl.edificio && esCampo(sl.edificio.tipo) && EDIFICIOS[sl.edificio.tipo].recurso === r) c += capacidadCampo(sl); }); return Math.round(c); }
   function oroImpuestoHora() { return Math.round(IMPUESTO.oro * (impuestoPct() / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada); }
-  function comidaTropasHora() { return estado.oroInfinito ? 0 : Math.round(tropas.length * 3600 / COMIDA_TROPA.cada); }
+  // v7.00: MANTENIMIENTO: TODAS tus tropas comen cada hora (las del mapa y las guardadas), más las grandes y las de asedio
+  var COMIDA_HORA_TROPA = { explorador: 1, miliciano: 2, espadachin: 3, arquero: 4, guardian: 4, jinete: 5, caballeria: 6, caballeria_pesada: 15, balista: 30, ariete: 40, catapulta: 60, torre_asedio: 80 };
+  function comidaTropasHora() { return Object.keys(COMIDA_HORA_TROPA).reduce(function (a, k) { return a + cuentaTipo(k) * COMIDA_HORA_TROPA[k]; }, 0); }
   function abrirPanelRecursos() {
     var l = miLugar(), cl = celdaDe(l.x, l.y), nom = hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino');
     var capT = ['comida', 'madera', 'piedra', 'oro'].reduce(function (a, r) { return a + capacidadDe(r); }, 0);
