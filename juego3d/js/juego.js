@@ -8149,6 +8149,11 @@
         var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
         return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🪙 ' + (RUL_FICHAS * n) : '💎 ' + (RUL_GEMAS * n)) + '</small></button>';
       }).join('') + '</div>';
+    // v6.88: si ya está abierta solo se cambia el contenido (sin bajar y subir la ventana) y se mantiene donde estabas
+    if (panelActual && panelActual.tipo === 'ruleta' && !$('panel').classList.contains('oculto')) {
+      var pp = $('panel'), sc = pp.scrollTop; pp.classList.add('sin-anim'); $('panel-cuerpo').innerHTML = html; pp.scrollTop = sc;
+      setTimeout(function () { pp.classList.remove('sin-anim'); }, 50); return;
+    }
     abrirPanel('🎡 ' + L('Ruleta de la Capitana', 'Captain\'s Wheel'), html, { tipo: 'ruleta' });
     $('panel').classList.add('iv-panel', 'az-panel', 'rul-panel');
   }
