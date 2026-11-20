@@ -36,7 +36,7 @@ service cloud.firestore {
         && request.resource.data.nombre is string
         && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
         && request.resource.data.nivel is int && request.resource.data.nivel >= 1 && request.resource.data.nivel <= 100000
-        && request.resource.data.poder is int && request.resource.data.poder >= 0 && request.resource.data.poder <= 1000000000
+        && request.resource.data.poder is int && request.resource.data.poder >= 0 && request.resource.data.poder <= 1000000000000000
         && request.resource.data.x is int && request.resource.data.x >= 0 && request.resource.data.x < 300
         && request.resource.data.y is int && request.resource.data.y >= 0 && request.resource.data.y < 300
         && request.resource.data.actualizado is int

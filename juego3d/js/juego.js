@@ -1373,16 +1373,16 @@
     if (!forzar && ahora - ultimaPublicacion < 60000) return;
     ultimaPublicacion = ahora;
     var l = miLugar();
-    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, defensa: defensaReino(), espia: datosEspia() })
+    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, defensa: defensaReino(), espia: datosEspia() })
       .catch(function () {
         // v6.94: si la nube no acepta los datos completos, se publica lo mínimo para que el reino SIEMPRE salga en el mapa
-        Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, minimo: true }).catch(function () {});
+        Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, minimo: true }).catch(function () {});
         // si la alianza ya no existe, la quitamos y probamos otra vez
         // solo si la alianza de verdad ya no existe, la quitamos y probamos otra vez
         if (estado.alianza) Cuentas.alianza(estado.alianza).then(function (al) {
           if (al) return;
           estado.alianza = null; guardar();
-          Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: null, escudo: estado.escudoHasta || 0 }).catch(function () {});
+          Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: null, escudo: estado.escudoHasta || 0 }).catch(function () {});
         }).catch(function () {});
       });
   }
@@ -8219,7 +8219,7 @@
           p.h ? '<button class="iv-boton" disabled>' + L('Puesto', 'Worn') + '</button>' : '<button class="iv-boton" data-accion="inv-reciclar" data-i="' + p.i + '">' + L('Reciclar', 'Recycle') + '</button>', textoPieza(p));
       });
       Object.keys(OBJETOS).filter(function (k) { return estado.mochila[k] > 0 && subcatObjeto(k) === subInv; }).forEach(function (k) {
-        var o = OBJETOS[k], bt = o.escudo && protegido() ? '<button class="iv-boton" disabled>' + fmtTiempo((estado.escudoHasta - Date.now()) / 1000) + '</button>' : '<button class="iv-boton" data-accion="usar" data-obj="' + k + '">' + L('Usa', 'Use') + '</button>';
+        var o = OBJETOS[k], bt = o.escudo && protegido() ? '<button class="iv-boton" disabled>' + fmtTiempo((estado.escudoHasta - Date.now()) / 1000) + '</button>' : '<button class="iv-boton" data-accion="usar" data-obj="' + k + '">' + (o.especial ? L('Para qué', 'What for') : L('Usa', 'Use')) + '</button>';
         filas += filaInv(o.icono, N(k), L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[k]), bt, D(k), k);
       });
       if (!filas) filas = '<p class="iv-vacio"><b>' + L('No hay objetos', 'No items') + '</b><br><small>' + L('Mira en la Tienda o gánalos jugando.', 'Check the Shop or earn them by playing.') + '</small></p>';
@@ -8373,7 +8373,7 @@
       if (RULETA[j].k !== 'llave' && r.sinLlave >= RUL_SIN_LLAVE_MAX - 1) j = [0, 3, 5][Math.floor(Math.random() * 3)];
       var s = RULETA[j]; idx.push(j);
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
-      if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: L('Equipo', 'Gear'), gordo: true }); }
+      if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true }); }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
       else r.sinLlave++;
     }
@@ -8391,7 +8391,7 @@
     var veces = Math.floor(r.llaves / 5); r.llaves -= veces * 5; // v6.88: con 10, 15… llaves se abren todos los galeones a la vez
     var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest') + (veces > 1 ? ' ×' + veces : ''), gordo: true }];
     Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k] * veces; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k] * veces, cat: subcatObjeto(k) }); });
-    for (var gv = 0; gv < veces; gv++) { var gp = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (gp) l.push({ ico: icoPieza(gp), nom: nombrePieza(gp), cat: L('Equipo', 'Gear'), gordo: true }); }
+    for (var gv = 0; gv < veces; gv++) { var gp = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (gp) l.push({ ico: icoPieza(gp), nom: nombrePieza(gp), cat: 'equipo', gordo: true }); }
     estado.gemas = (estado.gemas || 0) + GALEON_GEMAS * veces; l.push({ ico: '💎', nom: GALEON_GEMAS * veces + ' ' + L('gemas', 'gems'), dest: L('Arriba, en tus gemas', 'Top bar, your gems') });
     guardar(true); actualizarHUD();
     var c = document.querySelector('.rul-cofre'); if (c) c.classList.add('abriendo');
@@ -8406,7 +8406,7 @@
     var total = l.length; l = grupos;
     d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!') + ' <small>(' + total + ')</small>') + '</h3>') +
       '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) {
-        var dest = x.dest || (x.cat ? '🎒 ' + L('Inventario', 'Inventory') + ' › ' + L(NOM_SUBCAT[x.cat][0], NOM_SUBCAT[x.cat][1]) : x.gordo ? '' : '🗝️ ' + L('Abajo, en la Ruleta', 'In the Wheel'));
+        var dest = x.dest || (x.cat ? '🎒 ' + L('Inventario', 'Inventory') + ' › ' + (NOM_SUBCAT[x.cat] ? L(NOM_SUBCAT[x.cat][0], NOM_SUBCAT[x.cat][1]) : x.cat) : x.gordo ? '' : '🗝️ ' + L('Abajo, en la Ruleta', 'In the Wheel'));
         return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + (x.n > 1 ? '<b class="rp-n">×' + x.n + '</b>' : '') + '</span><small>' + x.nom + '</small>' + (dest ? '<em class="rp-dest">' + dest + '</em>' : '') + '</div>'; }).join('') + '</div>' +
       '<div class="rp-bots">' + (l.some(function (x) { return x.cat; }) ? '<button class="az-b azul" id="rp-inv">🎒 ' + L('Ver en el Inventario', 'See in Inventory') + '</button>' : '') + '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div></div>';
     var catVer = (l.filter(function (x) { return x.cat; })[0] || {}).cat;
@@ -8521,7 +8521,8 @@
       var cs = $('cj-si'); if (cs) { cs.classList.remove('rojo'); cs.classList.add('verde'); }
       return;
     }
-    if (o.especial) { consejoTemporal(L('Se usa solo al mejorar: ', 'Used automatically when upgrading: ') + D(k)); return; }
+    if (o.especial) { abrirInfoObjeto(k); return; } // v6.93: se gasta solo al mejorar; aquí se explica
+    if (o.exp || o.pergamino) { var hh = (estado.equipo || []).filter(function (x) { return estado.heroes[x]; })[0] || Object.keys(estado.heroes || {})[0]; consejoTemporal(T('libro_en_heroe')); if (hh) abrirPanelHeroe(hh); return; }
     if (o.segundos) { abrirUsarAcelerador(k); return; }
     if (o.portal === 'elegir') { consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
     if (o.portal === 'azar') { if (portalAlAzar()) { cerrarPanel(); abrirMundo(); } return; }

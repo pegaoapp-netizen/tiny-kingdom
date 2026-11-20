@@ -151,7 +151,7 @@ var Cuentas = (function () {
       // v6.94: todo se limpia para que la nube lo acepte (números enteros y dentro de los límites de las reglas)
       function ent(v, mn, mx) { v = Math.floor(+v); if (!isFinite(v)) v = mn; return Math.max(mn, Math.min(mx, v)); }
       var nom = String(d.nombre || '?').slice(0, 30) || '?';
-      var doc = { nombre: nom, nivel: ent(d.nivel, 1, 100000), poder: ent(d.poder, 0, 1000000000), x: ent(d.x, 0, MAPA_TAM - 1), y: ent(d.y, 0, MAPA_TAM - 1), mapa: MAPA_TAM,
+      var doc = { nombre: nom, nivel: ent(d.nivel, 1, 100000), poder: ent(d.poder, 0, 1000000000000000), x: ent(d.x, 0, MAPA_TAM - 1), y: ent(d.y, 0, MAPA_TAM - 1), mapa: MAPA_TAM,
         alianza: d.alianza || null, actualizado: Date.now(), escudo: ent(d.escudo, 0, 9e15) };
       if (!d.minimo) {
         doc.defensa = ent(d.defensa, 0, 100000000);
