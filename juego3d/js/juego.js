@@ -1364,7 +1364,7 @@
   var ultimaPublicacion = 0, aldeasCache = [];
   // v6.94: reinos encontrados buscando por coordenadas (no están entre los que carga la lista): no se pierden al recargar el mapa
   var aldeasExtra = {};
-  function unirExtra(lista) { var hay = {}; lista.forEach(function (a) { hay[a.uid] = 1; }); Object.keys(aldeasExtra).forEach(function (k) { if (!hay[k]) lista.push(aldeasExtra[k]); }); return lista; }
+  function unirExtra(lista) { var hay = {}; lista.forEach(function (a) { hay[a.uid] = 1; }); Object.keys(aldeasExtra).forEach(function (k) { if (!hay[k]) lista.push(aldeasExtra[k]); }); return conVillas(lista); }
   function hayCuenta() { return !!(window.Cuentas && Cuentas.disponible() && Cuentas.usuario()); }
   setInterval(function () { if (hayCuenta()) publicarAldea(); }, 120000); // v6.94: el reino se publica cada 2 min aunque no abras el Mundo
   function publicarAldea(forzar) {
@@ -1505,6 +1505,38 @@
       CAMPAMENTOS.push({ x: aCoord(x), y: aCoord(y), nivel: Math.max(1, Math.min(12, 1 + Math.floor(d * d * 10 + hashM(x, y) * 1.6))) });
     }
   })();
+  // v7.01: VILLAS del mapa: reinos sin dueño con nombre propio, repartidos por todo el Mundo (los mismos para todos los jugadores),
+  // para que el mapa no se vea vacío. Se pueden espiar y atacar como una aldea bárbara.
+  var VILLAS = [];
+  (function () {
+    var PRE = ['Villa', 'Puerto', 'Cayo', 'Bahía', 'Isla', 'Punta', 'Valle', 'Fuerte', 'Rincón', 'Playa', 'Costa', 'Loma'];
+    var NOM = ['Coral', 'Brisa', 'Mango', 'Palma', 'Sol', 'Luna', 'Arena', 'Caracol', 'Perla', 'Ceiba', 'Guayaba', 'Marea', 'Gaviota', 'Delfín', 'Tortuga', 'Ámbar', 'Canela', 'Tamarindo', 'Flamenco', 'Jade',
+      'Coco', 'Ola', 'Faro', 'Ancla', 'Vela', 'Cacao', 'Piña', 'Bambú', 'Lucero', 'Turquesa', 'Hibisco', 'Colibrí', 'Mamey', 'Guanábana', 'Caoba', 'Manatí', 'Pelícano', 'Cangrejo', 'Albatros', 'Esmeralda'];
+    var usadas = {}, nombres = {};
+    function marcar(q) { usadas[q.x + '_' + q.y] = 1; }
+    function cercaDeOtra(x, y) { for (var dx = -2; dx <= 2; dx++) for (var dy = -2; dy <= 2; dy++) if (Math.abs(dx) + Math.abs(dy) < 3 && usadas[(x + dx) + '_' + (y + dy)]) return true; return false; }
+    CAMPAMENTOS.forEach(function (cm) { marcar(celdaDe(cm.x, cm.y)); });
+    for (var i = 0, n = 0; i < 40000 && n < 1400; i++) {
+      var x = 3 + Math.floor(hashM(i * 7.77 + 11, 5.3) * (TAM_MUNDO - 6)), y = 3 + Math.floor(hashM(13.7, i * 3.91 + 7) * (TAM_MUNDO - 6)), c = casillaMundo(x, y);
+      if (c.tipo === 'lago' || c.tipo === 'montana') continue;
+      if (cercaDeOtra(x, y)) continue;
+      marcar({ x: x, y: y });
+      var nom = PRE[Math.floor(hashM(x * 1.3, y * 2.1) * PRE.length)] + ' ' + NOM[Math.floor(hashM(y * 3.7, x * 0.9) * NOM.length)];
+      if (nombres[nom]) { nombres[nom]++; nom += ' ' + ['II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][Math.min(10, nombres[nom] - 2)] + (nombres[nom] > 12 ? ' ' + nombres[nom] : ''); } else nombres[nom] = 1;
+      var d = Math.hypot(x - TAM_MUNDO / 2, y - TAM_MUNDO / 2) / (TAM_MUNDO * 0.7);
+      var hz = hashM(x + 3, y + 5), lv = Math.max(1, Math.min(16, 1 + Math.floor(hz * hz * hz * 15 + d * 2))); // v7.01: casi todas de nivel bajo, algunas fuertes
+      VILLAS.push({ uid: 'villa_' + n, bot: true, nombre: nom, x: x, y: y, nivel: 3 * lv + Math.floor(hashM(x, y + 9) * 3), poder: Math.round(1800 * Math.pow(lv, 2.6) * (0.8 + hashM(y, x) * 0.5)),
+        alianza: null, escudo: 0, defensa: Math.round(defensaCampamento(lv) * 1.4), nivelVilla: lv,
+        espia: { castillo: lv, nivelJ: 3 * lv, muralla: Math.max(0, lv - 1), tropas: { espadachin: lv * 120, arquero: lv * 80, caballeria: lv * 40 } } });
+      n++;
+    }
+  })();
+  // pone las villas junto a los reinos de verdad (sin repetir y sin tapar a un jugador)
+  function conVillas(lista) {
+    var reales = lista.filter(function (a) { return !a.bot; }), ocup = {};
+    reales.forEach(function (a) { var q = celdaDe(a.x, a.y); ocup[q.x + '_' + q.y] = 1; });
+    return reales.concat(VILLAS.filter(function (v) { return !ocup[v.x + '_' + v.y]; }));
+  }
   var ALT_TIPO = { llanura: 0, bosque: 0.04, colina: 0.22, montana: 0.36, lago: 0 };
   var MUNDO_PLANO = false;
   function posCelda(x, y) { var cx = Math.max(0, Math.min(TAM_MUNDO - 1, x)), cy = Math.max(0, Math.min(TAM_MUNDO - 1, y)); return new V3((x - TAM_MUNDO / 2 + 0.5) * CELDA_M, MUNDO_PLANO ? 0 : ALT_TIPO[casillaMundo(cx, cy).tipo] || 0, (y - TAM_MUNDO / 2 + 0.5) * CELDA_M); }
@@ -1857,6 +1889,7 @@
     });
     lista.forEach(function (a, i) {
       var c = celdaDe(a.x, a.y), p = posCelda(c.x, c.y), g = new THREE.Group();
+      if (a.bot && !cerca(c.x, c.y)) { ocupadasMundo[c.x + '_' + c.y] = { aldea: i }; return; }
       // v6.97: el castillo de cada reino se dibuja con SU nivel de castillo y el mismo dibujo para todos (el tuyo y el de los demás)
       var nvC = a.uid === yo ? (estado.castillo || 1) : ((a.espia && a.espia.castillo) || (a.nivel <= 4 ? 1 : a.nivel <= 8 ? 5 : 9));
       var tam = nivelVisual(nvC);
@@ -2386,6 +2419,27 @@
     if (mostrar) mostrar(listo);
     guardar(true); actualizarHUD(); mostrarCampamento(i);
   }
+  // v7.01: atacar una villa del mapa (sin dueño): marcha, batalla y botín, y 20 minutos de espera para volver a atacarla
+  function atacarVilla(a, llego) {
+    var cdv = ((estado.cdVilla || {})[a.uid] || 0) - Date.now();
+    if (cdv > 0 && !estado.dueno) { consejoTemporal(T('camp_espera', { t: fmtTiempo(cdv / 1000) })); sonar('error'); return; }
+    if (!tropas.some(function (u) { return !u.heroeId; })) { consejoTemporal(T('at_sin_tropas')); sonar('error'); return; }
+    var c = celdaDe(a.x, a.y);
+    if (!llego) { marcharA(c, '🏰 ' + a.nombre, function () { atacarVilla(a, true); }); return; }
+    var lv = a.nivelVilla || 1, fz = fuerzaEjercito(), d = a.defensa || defensaCampamento(lv), res = resolverBatalla(fz, d);
+    var bm = botinMaximo(lv), botin = {};
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { botin[rr] = Math.floor(bm[rr] * res.margen * 1.2); });
+    sonar('cuerno');
+    var listo = null, mostrar = null;
+    escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    var caidas = bajasEjercito(res.bajas);
+    nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
+    if (res.gano) { sumarXP(10 * lv); sumarPuntosAlianza(25); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
+    estado.cdVilla = estado.cdVilla || {}; estado.cdVilla[a.uid] = Date.now() + 20 * 60 * 1000;
+    listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
+    if (mostrar) mostrar(listo);
+    guardar(true); actualizarHUD();
+  }
   // ---------- PORTALES: mudar el reino a otro lugar del mapa ----------
   // v6.45: un jugador nuevo (castillo nivel 3 o menos, sin lugar fijo) aparece cerca de otros reinos y no perdido en un rincón del mapa
   function ubicarCercaDeOtros(listo) {
@@ -2508,6 +2562,7 @@
     var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
     var lugarYo = miLugar();
     var hayYo = lista.some(function (a) { return a.uid === yo; });
+    lista = conVillas(lista); // v7.01: las villas del mapa
     if (!hayYo) lista = lista.concat([{ uid: yo, nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), nivel: estado.oleada, poder: Math.round(calcularPoder()), x: lugarYo.x, y: lugarYo.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0 }]);
     CAMPAMENTOS.forEach(function (c, i) {
       h += '<button class="aldea trasgo" data-campamento="' + i + '" style="left:' + c.x + '%;top:' + c.y + '%"><span class="ic">' + iconoMapa('mapa_campamento', '⛺') + '</span><span class="nom">' + T('leyenda_trasgos') + '</span><span class="niv">' + c.nivel + '</span></button>';
@@ -7264,7 +7319,7 @@
     var dp = diplomacia(a), nv = (a.espia && a.espia.nivelJ) || a.nivel || 1, mio = Math.round(calcularPoder()), prot = (a.escudo || 0) > Date.now();
     var mucho = (a.poder || 0) > mio * 1.5;
     var d = document.createElement('div'); d.id = 'ficha-ciudad';
-    d.innerHTML = '<div class="fc-caja"><button class="fc-x" id="fc-x">✕</button>' + (!esMio && a.uid ? '<button class="fc-chat" id="fc-chat" title="' + L('Enviar mensaje', 'Send message') + '">💬</button>' : '') + '<div class="fc-cab">' + escaparHTML(a.nombre) + ' <small>' + c.x + ', ' + c.y + '</small></div>' +
+    d.innerHTML = '<div class="fc-caja"><button class="fc-x" id="fc-x">✕</button>' + (!esMio && a.uid && !a.bot ? '<button class="fc-chat" id="fc-chat" title="' + L('Enviar mensaje', 'Send message') + '">💬</button>' : '') + '<div class="fc-cab">' + escaparHTML(a.nombre) + ' <small>' + c.x + ', ' + c.y + '</small></div>' +
       '<div class="fc-cuerpo"><div class="fc-retrato">' + escaparHTML(String(a.nombre || '?').charAt(0).toUpperCase()) + '</div><div class="fc-datos">' +
       '<div class="fc-nombre">' + escaparHTML(a.nombre) + ' (' + L('Nv.', 'Lv.') + nv + ')</div>' +
       '<div class="fc-fila">' + L('Poder', 'Power') + ': ' + formatoNumero(a.poder || 0) + '</div>' +
@@ -7283,7 +7338,7 @@
     if (a.alianza && hayCuenta()) Cuentas.alianza(a.alianza).then(function (al) { var e = $('fc-alianza'); if (e && al && al.nombre) e.textContent = al.nombre; }).catch(function () {});
     d.addEventListener('click', function (ev) { if (ev.target === d) cerrarFicha(); });
     var fsp = $('fc-espiar'); if (fsp) fsp.addEventListener('click', function () { espiarCiudad(a, this); });
-    var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); abrirMarcha(a); });
+    var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); if (a.bot) atacarVilla(a); else abrirMarcha(a); });
     var rf = $('fc-reforzar'); if (rf) rf.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); });
     var ft = $('fc-transportar'); if (ft) ft.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirTransportar(a.uid, a.nombre); });
     var fch = $('fc-chat'); if (fch) fch.addEventListener('click', function () { sonar('click'); cerrarFicha(); cerrarMundo(); abrirPrivado(a.uid, a.nombre); });
