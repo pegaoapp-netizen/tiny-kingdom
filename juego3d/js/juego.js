@@ -8030,8 +8030,9 @@
       if (!filas) filas = '<p class="iv-vacio">' + L('No tienes objetos de este tipo. Mira en la Tienda o gánalos jugando.', 'You have no items of this kind. Check the Shop or earn them by playing.') + '</p>';
     }
     html += '<div class="iv-lista">' + filas + '</div>';
-    abrirPanel(L('Inventario', 'Inventory'), html, { tipo: 'mochila' });
-    $('panel').classList.add('iv-panel');
+    var yaInv = panelActual && panelActual.tipo === 'mochila' && !$('panel').classList.contains('oculto');
+    if (yaInv) { var sc0 = $('panel-cuerpo').scrollTop; $('panel').classList.add('sin-anim'); $('panel-cuerpo').innerHTML = html; setTimeout(function () { $('panel').classList.remove('sin-anim'); }, 50); }
+    else { abrirPanel(L('Inventario', 'Inventory'), html, { tipo: 'mochila' }); $('panel').classList.add('iv-panel', 'desde-abajo'); }
     var car = $('iv-carril'), act = car && car.querySelector('.activo'); if (act) car.scrollLeft = act.offsetLeft - car.clientWidth / 2 + act.offsetWidth / 2;
     guardar();
   }
@@ -8173,7 +8174,7 @@
     for (var i = 0; i < n; i++) {
       var j = sortearRuleta(), s = RULETA[j]; idx.push(j);
       if (s.k === 'llave') { r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key') }); }
-      else { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k) }); }
+      else { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
     }
     guardar(true); actualizarHUD();
     // la rueda gira y para en la casilla del último premio
@@ -8188,8 +8189,8 @@
     var r = estado.ruleta; if (!r || r.llaves < 5) return;
     r.llaves -= 5;
     var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest'), gordo: true }];
-    Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k]; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k] }); });
-    estado.gemas = (estado.gemas || 0) + GALEON_GEMAS; l.push({ ico: '💎', nom: GALEON_GEMAS + ' ' + L('gemas', 'gems') });
+    Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k]; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k], cat: subcatObjeto(k) }); });
+    estado.gemas = (estado.gemas || 0) + GALEON_GEMAS; l.push({ ico: '💎', nom: GALEON_GEMAS + ' ' + L('gemas', 'gems'), dest: L('Arriba, en tus gemas', 'Top bar, your gems') });
     guardar(true); actualizarHUD();
     var c = document.querySelector('.rul-cofre'); if (c) c.classList.add('abriendo');
     sonar('magia'); setTimeout(function () { mostrarPremiosRuleta(l, true); }, 900);
@@ -8199,11 +8200,15 @@
     var d = document.createElement('div'); d.id = 'rul-premios';
     var hayGordo = !!galeon;
     d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!')) + '</h3>') +
-      '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) { return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + '</span><small>' + x.nom + '</small></div>'; }).join('') + '</div>' +
-      '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div>';
+      '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) {
+        var dest = x.dest || (x.cat ? '🎒 ' + L('Inventario', 'Inventory') + ' › ' + L(NOM_SUBCAT[x.cat][0], NOM_SUBCAT[x.cat][1]) : x.gordo ? '' : '🗝️ ' + L('Abajo, en la Ruleta', 'In the Wheel'));
+        return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + '</span><small>' + x.nom + '</small>' + (dest ? '<em class="rp-dest">' + dest + '</em>' : '') + '</div>'; }).join('') + '</div>' +
+      '<div class="rp-bots">' + (l.some(function (x) { return x.cat; }) ? '<button class="az-b azul" id="rp-inv">🎒 ' + L('Ver en el Inventario', 'See in Inventory') + '</button>' : '') + '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div></div>';
+    var catVer = (l.filter(function (x) { return x.cat; })[0] || {}).cat;
     document.body.appendChild(d); sonar(hayGordo ? 'victoria' : 'moneda');
     // v6.88: al cobrar, la Ruleta sigue abierta para seguir tirando (se vuelve a abrir aunque algo la haya cerrado)
     d.addEventListener('pointerdown', function (ev) { ev.stopPropagation(); });
+    var bInv = d.querySelector('#rp-inv'); if (bInv) bInv.addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); d.remove(); modoInv = 'mios'; abrirPanelMochila(catVer); });
     $('rp-vale').addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); d.remove(); if (eventoActivo('ruleta')) abrirRuleta(); });
   }
   // ---------- v6.58: CENTRO DE PROMOCIONES (cada una con su tiempo, su premio y su punto rojo) ----------

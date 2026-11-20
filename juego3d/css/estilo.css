@@ -1946,3 +1946,11 @@ html body #panel.co-panel #panel-cuerpo { flex: 1; display: flex; flex-direction
 .co-pie .az-b { min-width: 90px; min-height: 42px; font-size: 16px; }
 .az-b.rojo { background: linear-gradient(180deg, #e0503a, #8a1a10); border: 1px solid #5a0c08; }
 #confirmar-juego { z-index: 95 !important; }
+
+/* v6.88: Inventario desde abajo (con su cabecera y la lista que se desliza) */
+html body #panel.iv-panel.desde-abajo:not(.co-panel) #panel-cuerpo { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+html body #panel.iv-panel.desde-abajo .iv-cats { position: sticky; top: 0; z-index: 2; }
+html body #panel.iv-panel.desde-abajo .iv-boton { min-width: 76px; min-height: 40px; font-size: 15px; }
+/* premios de la Ruleta: a dónde fue cada cosa */
+.rp-dest { display: block; font-style: normal; font: 700 10.5px system-ui, sans-serif; color: #ffe9a0; background: rgba(0,0,0,.35); border-radius: 6px; padding: 2px 4px; margin-top: 2px; }
+.rp-bots { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
