@@ -229,7 +229,7 @@ window.addEventListener("error", function (e) {
     <button class="cerrar" id="mundo-cerrar">✕</button>
   </div>
   <div id="mundo-estado"></div>
-  <button id="mundo-xy" title="Buscar por coordenadas"><span class="mxy-casa" title="Ir a mi castillo">📍</span><span class="mxy-fav" title="Lugares guardados">🔖</span><span id="mundo-xy-t">(0, 0)</span><span class="mxy-lupa">🔍</span><span class="mxy-bestia" title="Buscar bestias">🐗</span></button>
+  <div id="mundo-xy" title="Buscar por coordenadas"><span class="mxy-casa" title="Ir a mi castillo">📍</span><span class="mxy-fav" title="Lugares guardados">🔖</span><span id="mundo-xy-t"><label class="mxy-et" for="mxy-x">X</label><input id="mxy-x" class="mxy-in" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" enterkeyhint="next" aria-label="X"><label class="mxy-et" for="mxy-y">Y</label><input id="mxy-y" class="mxy-in" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" autocomplete="off" enterkeyhint="go" aria-label="Y"></span><button type="button" class="mxy-lupa" id="mxy-ir" title="Ir">🔍 Ir</button><span class="mxy-bestia" title="Buscar bestias">🐗</span></div>
   <div id="mundo-mapa"><canvas id="mundo-fondo" width="600" height="600"></canvas><div id="mundo-aldeas"></div></div>
   <div id="mundo-buscar"></div>
   <div id="mundo-coord"></div>

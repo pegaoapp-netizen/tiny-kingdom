@@ -148,15 +148,35 @@ var Cuentas = (function () {
     },
     publicarAldea: function (d) {
       if (!usuario) return Promise.resolve();
-      return db.collection('aldeas').doc(usuario.uid).set({
-        nombre: d.nombre, nivel: d.nivel, poder: d.poder, x: d.x, y: d.y, mapa: MAPA_TAM,
-        alianza: d.alianza || null, actualizado: Date.now(), escudo: Math.floor(d.escudo || 0), defensa: Math.floor(d.defensa || 0), espia: d.espia || {}
+      // v6.94: todo se limpia para que la nube lo acepte (números enteros y dentro de los límites de las reglas)
+      function ent(v, mn, mx) { v = Math.floor(+v); if (!isFinite(v)) v = mn; return Math.max(mn, Math.min(mx, v)); }
+      var nom = String(d.nombre || '?').slice(0, 30) || '?';
+      var doc = { nombre: nom, nivel: ent(d.nivel, 1, 100000), poder: ent(d.poder, 0, 1000000000), x: ent(d.x, 0, MAPA_TAM - 1), y: ent(d.y, 0, MAPA_TAM - 1), mapa: MAPA_TAM,
+        alianza: d.alianza || null, actualizado: Date.now(), escudo: ent(d.escudo, 0, 9e15) };
+      if (!d.minimo) {
+        doc.defensa = ent(d.defensa, 0, 100000000);
+        var e = d.espia || {}, es = {};
+        ['nivelJ', 'castillo', 'muralla', 'heroes'].forEach(function (k) { if (e[k] !== undefined) es[k] = ent(e[k], 0, 1e9); });
+        if (e.tropas && typeof e.tropas === 'object') { es.tropas = {}; Object.keys(e.tropas).slice(0, 40).forEach(function (k) { es.tropas[k] = ent(e.tropas[k], 0, 1e9); }); }
+        doc.espia = es;
+      }
+      return db.collection('aldeas').doc(usuario.uid).set(doc);
+    },
+    // v6.94: reinos alrededor de unas coordenadas (aunque no estén entre los 150 más fuertes)
+    aldeasCerca: function (x, y, r) {
+      r = r || 4;
+      return db.collection('aldeas').where('x', '>=', x - r).where('x', '<=', x + r).limit(300).get().then(function (q) {
+        return q.docs.map(function (d) { var a = d.data(); if (a.mapa !== MAPA_TAM) return null; var z = normAldea(a); z.uid = d.id; return z; })
+          .filter(function (a) { return a && Math.abs(a.y - y) <= r; });
       });
     },
     aldeas: function () {
-      return db.collection('aldeas').orderBy('poder', 'desc').limit(150).get().then(function (q) {
-        return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; });
-      });
+      // v6.94: los 150 más fuertes + los 150 que jugaron hace poco (así salen también los reinos nuevos)
+      function lista(q) { return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; }); }
+      return Promise.all([
+        db.collection('aldeas').orderBy('poder', 'desc').limit(150).get().then(lista),
+        db.collection('aldeas').orderBy('actualizado', 'desc').limit(150).get().then(lista).catch(function () { return []; })
+      ]).then(function (r) { var vistos = {}, out = []; r[0].concat(r[1]).forEach(function (a) { if (!vistos[a.uid]) { vistos[a.uid] = 1; out.push(a); } }); return out; });
     },
     // v6.34: buscar alianza por nombre o etiqueta (sin importar mayúsculas ni tildes)
     buscarAlianzas: function (texto) {
@@ -304,7 +324,12 @@ var Cuentas = (function () {
     },
     borrarRegalo: function (id) { return db.collection('regalos').doc(id).delete(); },
     buscarJugador: function (nombre) {
-      return db.collection('aldeas').where('nombre', '==', String(nombre).trim()).limit(5).get().then(function (q) { return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; }); });
+      // v6.94: nombre exacto o que empiece así
+      var t = String(nombre).trim(); function lista(q) { return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; }); }
+      return Promise.all([
+        db.collection('aldeas').where('nombre', '==', t).limit(5).get().then(lista),
+        db.collection('aldeas').where('nombre', '>=', t).where('nombre', '<', t + '\uf8ff').limit(10).get().then(lista).catch(function () { return []; })
+      ]).then(function (r) { return r[0].concat(r[1]); });
     },
     reportar: function (r) { return db.collection('reportes').add(r); },
     borrarAldea: function () { return usuario ? db.collection('aldeas').doc(usuario.uid).delete() : Promise.resolve(); }

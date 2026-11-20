@@ -1363,6 +1363,7 @@
   // ------------------------------------------------------------------
   var ultimaPublicacion = 0, aldeasCache = [];
   function hayCuenta() { return !!(window.Cuentas && Cuentas.disponible() && Cuentas.usuario()); }
+  setInterval(function () { if (hayCuenta()) publicarAldea(); }, 120000); // v6.94: el reino se publica cada 2 min aunque no abras el Mundo
   function publicarAldea(forzar) {
     if (!hayCuenta()) return;
     var ahora = Date.now();
@@ -1371,6 +1372,8 @@
     var l = miLugar();
     Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, defensa: defensaReino(), espia: datosEspia() })
       .catch(function () {
+        // v6.94: si la nube no acepta los datos completos, se publica lo mínimo para que el reino SIEMPRE salga en el mapa
+        Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: Math.max(1, estado.oleada), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, minimo: true }).catch(function () {});
         // si la alianza ya no existe, la quitamos y probamos otra vez
         // solo si la alianza de verdad ya no existe, la quitamos y probamos otra vez
         if (estado.alianza) Cuentas.alianza(estado.alianza).then(function (al) {
@@ -1704,6 +1707,7 @@
     elegirCelda(x, y);
   }
   function elegirCelda(x, y) {
+    if (M3) M3.selXY = { x: x, y: y };
     mostrarAcciones(x, y);
     var p = posCelda(x, y);
     M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
@@ -1735,7 +1739,9 @@
     M3.cam.lookAt(M3.obj);
     var cxv = Math.floor(M3.obj.x / CELDA_M + TAM_MUNDO / 2), cyv = Math.floor(M3.obj.z / CELDA_M + TAM_MUNDO / 2), txy = cxv + ',' + cyv, exy = $('mundo-xy-t');
     // v6.54: arriba, X e Y en cajitas (al tocarlas se escriben las coordenadas para ir)
-    if (exy && exy.dataset.v !== txy) { exy.dataset.v = txy; exy.innerHTML = '<span class="mxy-et">X</span><span class="mxy-v">' + cxv + '</span><span class="mxy-et">Y</span><span class="mxy-v">' + cyv + '</span>'; }
+    // v6.94: si hay una casilla elegida, X e Y muestran ESA casilla (no el centro de la pantalla); se pueden escribir
+    if (M3.sel && M3.sel.visible && M3.selXY) { cxv = M3.selXY.x; cyv = M3.selXY.y; txy = cxv + ',' + cyv; }
+    if (exy && exy.dataset.v !== txy) { var ix0 = $('mxy-x'), iy0 = $('mxy-y'), act0 = document.activeElement; if (ix0 && iy0 && act0 !== ix0 && act0 !== iy0) { exy.dataset.v = txy; ix0.value = cxv; iy0.value = cyv; } }
     if (M3.sol) { var so = M3.sol, tam = Math.max(22, d * 1.25); so.position.set(M3.obj.x - 20, 30, M3.obj.z - 14); so.target.position.copy(M3.obj); if (so.userData.tam !== tam) { so.userData.tam = tam; var sc = so.shadow.camera; sc.left = -tam; sc.right = tam; sc.top = tam; sc.bottom = -tam; sc.updateProjectionMatrix(); } }
     M3.sel.material.opacity = 0.6 + Math.sin(performance.now() / 200) * 0.35;
     var tS = performance.now() / 1000;
@@ -2222,6 +2228,39 @@
     });
   }
   // ---------- LUPA: buscar por coordenadas y ver los reinos cercanos ----------
+  // v6.94: IR A UNAS COORDENADAS: la cámara va directo y se centra; si ahí (o muy cerca) hay un reino, lo busca en la nube
+  // aunque no esté en la lista de los 150 más fuertes, y abre su ventana (nombre, poder, Espiar / Ataque)
+  function irACoordenadas(x, y) {
+    if (!M3) return false;
+    var fuera = function (v) { return isNaN(v) || v < 0 || v > TAM_MUNDO - 1 || Math.floor(v) !== v; };
+    if (fuera(x) || fuera(y)) { consejoTemporal(L('Coordenada fuera del mapa', 'Coordinate off the map') + ' (0 – ' + (TAM_MUNDO - 1) + ')'); sonar('error'); return false; }
+    M3.vel = null; M3.seguir = null;
+    M3.obj.copy(posCelda(x, y)); M3.zoom = { de: M3.dist, a: 20, t0: performance.now() };
+    var p = posCelda(x, y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
+    var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
+    function reinoCerca(lista, r) {
+      var mejor = null, dm = 1e9;
+      (lista || []).forEach(function (a) { var c = celdaDe(a.x, a.y), dd = Math.max(Math.abs(c.x - x), Math.abs(c.y - y)); if (dd <= r && dd < dm) { dm = dd; mejor = { a: a, c: c }; } });
+      return mejor;
+    }
+    function abrirAhi() {
+      pintarAldeas(aldeasCache); // pone los reinos en el mapa (3D y botones) con la lista nueva
+      var m = reinoCerca(aldeasCache, 0) || reinoCerca(aldeasCache, 3);
+      if (m && (m.c.x !== x || m.c.y !== y)) consejoTemporal('🏰 ' + escaparHTML(m.a.nombre || '?') + ' ' + L('está en', 'is at') + ' X ' + m.c.x + ' · Y ' + m.c.y);
+      var cx = m ? m.c.x : x, cy = m ? m.c.y : y;
+      if (m) { M3.obj.copy(posCelda(cx, cy)); }
+      elegirCelda(cx, cy);
+    }
+    elegirCelda(x, y);
+    if (hayCuenta() && Cuentas.aldeasCerca) {
+      Cuentas.aldeasCerca(x, y, 4).then(function (lista) {
+        var hay = {}; aldeasCache.forEach(function (a) { hay[a.uid] = a; });
+        lista.forEach(function (a) { if (hay[a.uid]) { hay[a.uid].x = a.x; hay[a.uid].y = a.y; } else aldeasCache.push(a); });
+        if (enMundo) abrirAhi();
+      }).catch(function () { if (enMundo) abrirAhi(); });
+    } else abrirAhi();
+    return true;
+  }
   function abrirLupa() {
     if (!M3) return;
     var v = $('lupa-flota'); if (v) { v.remove(); return; }
@@ -2239,15 +2278,7 @@
     document.body.appendChild(d); // v6.92: encima de todo y fuera del mapa, para que salga el teclado
     ['pointerdown', 'touchstart', 'mousedown', 'wheel'].forEach(function (t) { d.addEventListener(t, function (ev) { ev.stopPropagation(); }, { passive: true }); });
     setTimeout(function () { var ix = $('lupa-x'); if (ix) { ix.focus(); ix.select(); } }, 60);
-    function ir(x, y) {
-      var fuera = function (v) { return isNaN(v) || v < 0 || v > TAM_MUNDO - 1; };
-      if (fuera(x) || fuera(y)) { consejoTemporal(L('Coordenada fuera del mapa (del 0 al ', 'Coordinate off the map (0 to ') + (TAM_MUNDO - 1) + ')'); sonar('error'); return; }
-      x = Math.round(x); y = Math.round(y); M3.vel = null; M3.seguir = null;
-      d.remove();
-      M3.obj.copy(posCelda(x, y)); M3.zoom = { de: M3.dist, a: 20, t0: performance.now() };
-      var p = posCelda(x, y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
-      elegirCelda(x, y);
-    }
+    function ir(x, y) { if (irACoordenadas(x, y)) d.remove(); }
     $('lupa-ir').addEventListener('click', function () { sonar('click'); ir($('lupa-x').value === '' ? NaN : +$('lupa-x').value, $('lupa-y').value === '' ? NaN : +$('lupa-y').value); });
     $('lupa-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); });
     [$('lupa-x'), $('lupa-y')].forEach(function (inp) { inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); if (inp.id === 'lupa-x') { $('lupa-y').focus(); $('lupa-y').select(); } else $('lupa-ir').click(); } }); });
@@ -5495,6 +5526,7 @@
     $('panel-cuerpo').innerHTML = html;
     $('panel').classList.remove('oculto');
     $('panel').classList.add('desde-abajo'); // v6.88: todas las ventanas suben desde abajo
+    $('panel').classList.toggle('tk-centro', !!cual && (cual.tipo === 'paloma' || cual.tipo === 'potenciador')); // v6.94: la Paloma sale en el centro
     $('panel').scrollTop = 0;
     document.body.classList.add('panel-abierto');
     panelActual = cual;
@@ -5785,7 +5817,7 @@
   var PESTANAS_TROPA = { cuartel: ['explorador', 'miliciano', 'espadachin', 'guardian', 'balista', 'ariete', 'catapulta', 'torre_asedio'], establo: ['jinete', 'caballeria', 'caballeria_pesada'], tiro: ['arquero'] };
   var ICONO_PESTANA = { cuartel: '🏰', establo: '🐎', tiro: '🏹' };
   var ROMANO = ['I', 'II', 'III', 'IV', 'V'];
-  var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1, lista: true };
+  var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1, modo: 'lista' }; // v6.94: modo lista (cada tropa en su fila) o detalle
   var visor = null;
   // Escuadrón: el líder adelante y 7 soldados en formación detrás (todos del rango elegido)
   function escuadron(tipo, rango) {
@@ -5874,21 +5906,23 @@
     var r = v.rango, bloq = r > na, lista = PESTANAS_TROPA[v.pest];
     var arriba = panelActual && panelActual.tipo === 'tropas' ? $('panel').scrollTop : 0;
     var html = subtabsHeroes('tropas');
-    if (!puedeEntrenarTipo(t)) html += '<p class="nota aviso-rojo">' + avisoEdificioTropa(t) + '</p>';
-    html += '<div class="subtabs pest-tropa">' + Object.keys(PESTANAS_TROPA).map(function (k) {
+    var pestHTML = '<div class="subtabs pest-tropa">' + Object.keys(PESTANAS_TROPA).map(function (k) {
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
-    // escena con el muñeco
-    // v6.93: primero la lista, como en Camelot: retrato, nombre, «Tienes: X», descripción y flecha
-    if (v.lista) {
-      html += '<div class="tl-lista">' + lista.map(function (k) {
-        var ok = puedeEntrenarTipo(k);
-        return '<button class="tl-fila' + (ok ? '' : ' bloq') + '" data-accion="tropa-ver" data-tipo="' + k + '"><span class="tl-foto">' + fotoHTML(k, TROPAS[k].icono) + '<i>' + ROMANO[nivelArmadura(k)] + '</i></span>' +
-          '<span class="tl-txt"><span class="tl-cab"><b>' + N(k) + '</b><em>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaTipo(k)) + '</em></span><small>' + D(k) + '</small>' + (ok ? '' : '<small class="tl-bloq">🔒 ' + avisoEdificioTropa(k) + '</small>') + '</span><span class="tl-flecha">›</span></button>';
+    // v6.94: como Kingdoms of Camelot: primero la lista, cada tropa en su fila (foto, nombre, «Tienes: X» y descripción)
+    if (v.modo !== 'detalle') {
+      html += pestHTML + '<div class="cq2-lista tk-tropas-lista">' + lista.map(function (k) {
+        var ok = puedeEntrenarTipo(k), ent = infoCola().cuenta[k] || 0;
+        return '<button class="cq2-fila' + (ok ? '' : ' bloq') + '" data-accion="tropa-fila" data-tipo="' + k + '">' +
+          '<span class="cq2-foto">' + fotoHTML(k, '<span class="cq-emoji">' + TROPAS[k].icono + '</span>') + (ok ? '' : '<i class="cq2-candado">🔒</i>') + (ent ? '<i class="cq2-ent">🔨' + formatoNumero(ent) + '</i>' : '') + '</span>' +
+          '<span class="cq2-dat"><span class="cq2-top"><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaTipo(k)) + '</small></span><span class="cq2-frase">' + D(k) + '</span></span><i class="cq2-flecha">›</i></button>';
       }).join('') + '</div>';
-      abrirPanel(T('p_heroes'), html, { tipo: 'tropas' }); $('panel').scrollTop = arriba; return;
+      abrirPanel(T('p_heroes'), html, { tipo: 'tropas' });
+      return;
     }
-    html += '<button class="tl-volver" data-accion="tropa-lista">‹ ' + L('Todas las tropas', 'All troops') + '</button>';
+    if (!puedeEntrenarTipo(t)) html += '<p class="nota aviso-rojo">' + avisoEdificioTropa(t) + '</p>';
+    html += pestHTML + '<button class="comprar mini tk-volver-lista" data-accion="tropa-lista">‹ ' + L('Todas las tropas', 'All troops') + '</button>';
+    // escena con el muñeco
     // v6.92: la tropa pintada (no el muñeco 3D), con el marco del color de su rango
     html += '<div class="tropa-escena"><div class="visor-tropa pintada r' + r + '" id="visor-tropa">' + (RETRATOS_IMG[t] ? '<img src="iconos/ui/' + RETRATOS_IMG[t] + '.webp" alt="" draggable="false">' : fotoHTML(t, d.icono)) + '</div>' +
       '<div class="tropa-nombre"><h3>' + N(t) + '</h3><span class="rango-chapa r' + r + '">' + T('rango') + ' ' + ROMANO[r] + '</span></div>' +
@@ -7864,7 +7898,10 @@
     Promise.all([limite(Cuentas.aldeas().catch(function () { return []; })), q ? limite(Cuentas.buscarJugador(q).catch(function () { return []; })) : Promise.resolve([])]).then(function (r) {
       r = [r[0] || [], r[1] || []];
       var vistos = {}, yo = Cuentas.usuario() && Cuentas.usuario().uid;
-      rgLista = r[1].concat(r[0].filter(function (a) { return !q || limpio(a.nombre).indexOf(limpio(q)) >= 0; }))
+      // v6.94: también los que escribieron en el chat (tienen cuenta aunque su reino no salga en la lista)
+      var delChat = []; Object.keys(chat.msgs || {}).forEach(function (cn) { (chat.msgs[cn] || []).forEach(function (m) { if (m && m.uid && (!q || limpio(m.nombre).indexOf(limpio(q)) >= 0)) delChat.push({ uid: m.uid, nombre: m.nombre, poder: 0 }); }); });
+      (chat.privados || []).forEach(function (c) { if (c && c.uid && (!q || limpio(c.nombre).indexOf(limpio(q)) >= 0)) delChat.push({ uid: c.uid, nombre: c.nombre, poder: 0 }); });
+      rgLista = r[1].concat(r[0].filter(function (a) { return !q || limpio(a.nombre).indexOf(limpio(q)) >= 0; })).concat(delChat)
         .filter(function (a) { if (!a || !a.uid || vistos[a.uid] || a.uid === yo) return false; vistos[a.uid] = 1; return true; });
       if (!$('rg-res')) return;
       $('rg-res').innerHTML = rgLista.length ? htmlResultadosRegalo() : '<p class="nota">' + L('No encontré a nadie con ese nombre.', 'Nobody found with that name.') + '</p>';
@@ -7885,10 +7922,18 @@
     for (var k = 0; k < ne; k++) { var pq = { t: $('rg-eq-t').value || TIPOS_EQ[Math.floor(Math.random() * TIPOS_EQ.length)], r: sj ? 'mitico' : ($('rg-eq-r').value || 'comun') }; if (sj) pq.s = sj; pz.push(pq); }
     if (!nt && !gemas && !pz.length && !Object.keys(rec).length) { consejoTemporal(L('Elige al menos una cosa para regalar.', 'Choose at least one thing to give.')); sonar('error'); return; }
     var b = document.querySelector('#panel .rg-enviar'); if (b) b.disabled = true;
-    Cuentas.enviarRegalo({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: rgElegido.uid, paraNombre: String(rgElegido.nombre).slice(0, 30),
+    var est = $('rg-estado'); if (!est && b) { est = document.createElement('p'); est.id = 'rg-estado'; est.className = 'nota'; b.parentNode.insertBefore(est, b.nextSibling); }
+    function aviso(t, ok) { if (est) { est.textContent = t; est.style.color = ok ? '#7fe07a' : '#ff8a7a'; est.style.fontWeight = '700'; } consejoTemporal(t); }
+    if (est) { est.textContent = L('Enviando…', 'Sending…'); est.style.color = ''; }
+    // v6.94: si la nube no contesta en 15 s, el botón vuelve a funcionar y se dice por qué (antes se quedaba gris para siempre)
+    var listoR = false, tR = setTimeout(function () { if (listoR) return; listoR = true; if (b) b.disabled = false; rgSetCompleto = false; aviso(L('La nube no respondió. Revisa el internet y vuelve a tocar Enviar.', 'The cloud did not answer. Check the internet and tap Send again.'), false); sonar('error'); }, 15000);
+    var nomDest = rgElegido.nombre;
+    Cuentas.enviarRegalo({ de: Cuentas.usuario().uid, deNombre: String(Cuentas.nombrePublico()).slice(0, 30), para: rgElegido.uid, paraNombre: String(rgElegido.nombre).slice(0, 30),
       tropas: tropasR, piezas: pz, gemas: gemas, recursos: rec, nota: String(($('rg-nota') && $('rg-nota').value) || '').slice(0, 120), fecha: Date.now() })
-      .then(function () { sonar('magia'); consejoTemporal('🎁 ' + L('¡Regalo enviado a ', 'Gift sent to ') + escaparHTML(rgElegido.nombre) + '!'); abrirRegalar(); })
-      .catch(function (er) { if (b) b.disabled = false; rgSetCompleto = false; if (er && er.code === 'permission-denied') { consejoTemporal(L('La nube dijo «sin permiso»: faltan publicar las reglas de regalos (firebase deploy --only firestore:rules en la carpeta nube).', 'Cloud said permission denied: publish the gift rules.')); return; } consejoTemporal(L('No se pudo enviar (' + ((er && er.code) || '?') + '). Revisa tu internet (y que las reglas nuevas de la nube estén publicadas).', 'Could not send. Check your internet (and that the new cloud rules are published).')); sonar('error'); });
+      .then(function () { if (listoR) return; listoR = true; clearTimeout(tR); sonar('magia'); abrirRegalar(); aviso('🎁 ' + L('¡Regalo enviado a ', 'Gift sent to ') + nomDest + '! ' + L('Le llega en menos de un minuto.', 'It arrives within a minute.'), true); })
+      .catch(function (er) { if (listoR) return; listoR = true; clearTimeout(tR); if (b) b.disabled = false; rgSetCompleto = false; sonar('error');
+        if (er && er.code === 'permission-denied') aviso(L('La nube dijo «sin permiso»: hay que publicar las reglas nuevas (firebase deploy --only firestore:rules en la carpeta nube) y entrar con la cuenta del dueño.', 'Cloud said permission denied: publish the new rules and sign in with the owner account.'), false);
+        else aviso(L('No se pudo enviar (' + ((er && er.code) || '?') + '). Revisa tu internet.', 'Could not send (' + ((er && er.code) || '?') + ').'), false); });
   }
   var regalosRecibiendo = false;
   function recibirRegalos() {
@@ -9073,7 +9118,7 @@
     else if (a === 'det-max') { cantDetalle = Math.max(1, maxEntrenar(tropaDetalle)); refrescarFicha(); }
     else if (a === 'det-entrenar') { entrenar(b.getAttribute('data-tipo'), cantDetalle); cantDetalle = 1; abrirPanelEdificio(slotElegido); }
     else if (a === 'det-relevar') { var tr = b.getAttribute('data-tipo'), nr = cantDetalle; confirmarJuego('🏳️ ' + L('¿Relevar ' + nr + ' ' + N(tr) + '?', 'Dismiss ' + nr + ' ' + N(tr) + '?'), L('Se van del ejército y no devuelven recursos.', 'They leave the army and return no resources.'), L('Sí, relevar', 'Yes, dismiss'), function () { propiasDe(tr).slice(0, nr).forEach(quitarUnidad); asignarPuestos(); guardar(true); actualizarHUD(); sonar('click'); consejoTemporal(L('Relevaste ' + nr + ' ' + N(tr) + '.', 'You dismissed ' + nr + ' ' + N(tr) + '.')); cantDetalle = 1; abrirPanelEdificio(slotElegido); }); }
-    else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
+    else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.modo = 'detalle'; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
     else if (a === 'sub-fortaleza') { sonar('click'); abrirFortaleza(); }
@@ -9148,9 +9193,9 @@
     else if (a === 'mer-enviar') enviarMercado(b);
     else if (a === 'armadura-gemas') mejorarArmadura(b.getAttribute('data-tipo'), true);
     else if (a === 'sub-tropas') abrirPanelTropas();
-    else if (a === 'tropa-pest') { vistaTropa.lista = true; vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
-    else if (a === 'tropa-ver') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.lista = false; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
-    else if (a === 'tropa-lista') { vistaTropa.lista = true; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-fila') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.modo = 'detalle'; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-lista') { vistaTropa.modo = 'lista'; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-tipo') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-rango') { vistaTropa.rango = +b.getAttribute('data-r'); sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-menos') cambiarCantidad(-1);
@@ -9417,7 +9462,7 @@
     });
   }
   botonMenu('btn-conquista', ['conquista'], function () { abrirPanelConquista(); });
-  botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { abrirPanelTropas(); });
+  botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); });
   botonMenu('btn-mochila', ['mochila'], function () { abrirPanelMochila(); });
   botonMenu('btn-tienda', ['tienda'], function () { abrirPanelTienda(); });
   $('btn-ajustes').addEventListener('click', function () { sonar('click'); abrirPanelAjustes(); });
@@ -9489,7 +9534,21 @@
     if (ev.target.closest('.mxy-casa')) { ev.stopPropagation(); sonar('click'); irAMiCastillo(); return; }
     if (ev.target.closest('.mxy-fav')) { ev.stopPropagation(); sonar('click'); abrirFavoritos(); return; }
   });
-  $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-bestia')) { ev.stopPropagation(); sonar('click'); document.body.classList.toggle('mundo-buscando'); return; } sonar('click'); abrirLupa(); });
+  $('mundo-xy').addEventListener('click', function (ev) { if (ev.target.closest('.mxy-bestia')) { ev.stopPropagation(); sonar('click'); document.body.classList.toggle('mundo-buscando'); return; } if (ev.target.closest('#mxy-ir')) { sonar('click'); irACoordenadasBarra(); return; } });
+  // v6.94: X e Y se escriben directo arriba (sale el teclado al tocarlas) y la lupa «Ir» lleva ahí
+  ['mxy-x', 'mxy-y'].forEach(function (id) {
+    var inp = $(id); if (!inp) return;
+    ['pointerdown', 'touchstart', 'mousedown', 'wheel'].forEach(function (t) { inp.addEventListener(t, function (ev) { ev.stopPropagation(); }, { passive: true }); });
+    inp.addEventListener('focus', function () { try { inp.select(); } catch (e) {} setTimeout(function () { try { inp.select(); } catch (e) {} }, 30); });
+    inp.addEventListener('mouseup', function (ev) { ev.preventDefault(); });
+    inp.addEventListener('input', function () { inp.value = inp.value.replace(/[^0-9]/g, '').slice(0, 3); });
+    inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); if (id === 'mxy-x') $('mxy-y').focus(); else irACoordenadasBarra(); } });
+  });
+  function irACoordenadasBarra() {
+    var vx = $('mxy-x').value.trim(), vy = $('mxy-y').value.trim();
+    $('mxy-x').blur(); $('mxy-y').blur();
+    irACoordenadas(vx === '' ? NaN : +vx, vy === '' ? NaN : +vy);
+  }
   // la barra de arriba se acomoda sola: nada queda tapado ni encimado
   function acomodarHUD() {
     function abajo(id) { var e = $(id); if (!e) return 0; var cs = getComputedStyle(e); if (cs.display === 'none' || e.classList.contains('oculto')) return 0; var r = e.getBoundingClientRect(); return r.height ? r.bottom : 0; }

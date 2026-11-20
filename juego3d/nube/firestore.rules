@@ -270,10 +270,11 @@ service cloud.firestore {
     // pueden crearlos. El que lo recibe lo lee y lo borra al cobrarlo.
     function esDueno() {
       return request.auth != null && request.auth.token.email is string
-        && hashing.sha256(request.auth.token.email.lower()).toHexString().lower() in [
+        && (request.auth.token.email.lower() in ['maikelr@jugador.tinykingdom.app', 'maikelramirez55@jugador.tinykingdom.app'] ||
+        hashing.sha256(request.auth.token.email.lower()).toHexString().lower() in [
           '04ffb008e35525eb03d5dea75e79bb0d8217c5aab3a3a8953ed15953563508c4',
           'fd78fd09b2cd76c82a80675a4c758b65306b2309aaff68e598a4e344e7024bad',
-          'bc81ce5c754b6d193233a82763f34d3c63953a8f9f05d9060e46d2a9111790e2'];
+          'bc81ce5c754b6d193233a82763f34d3c63953a8f9f05d9060e46d2a9111790e2']);
     }
     match /regalos/{id} {
       allow read: if request.auth != null && (resource.data.para == request.auth.uid || resource.data.de == request.auth.uid);
