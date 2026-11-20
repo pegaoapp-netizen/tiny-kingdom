@@ -1891,3 +1891,20 @@ html body #abajo #btn-menu-mas.en-abajo { position: static !important; translate
 .ev-btn .ev-t { font-size: 12px !important; bottom: -16px !important; }
 .rul-llaves img.ico-obj { width: 24px; height: 24px; }
 .ev-btn.ev-ruleta { background: none !important; border: none !important; box-shadow: 0 0 14px rgba(255,200,80,.6) !important; border-radius: 50%; }
+
+/* ===== v6.88: el menú sube desde abajo y tapa desde abajo, botones grandes con dibujo ===== */
+html body #menu-grande { left: 0 !important; right: 0 !important; bottom: 0 !important; top: auto !important; height: auto !important; max-height: 82vh !important; z-index: 60 !important;
+  border-radius: 18px 18px 0 0 !important; padding-bottom: env(safe-area-inset-bottom) !important; box-shadow: 0 -10px 30px rgba(0,0,0,.6) !important; animation: mgSubeAbajo .26s ease-out both; }
+@keyframes mgSubeAbajo { from { transform: translateY(100%); } to { transform: translateY(0); } }
+html body #menu-grande .mg-cab { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 10px 14px !important; }
+html body #menu-grande .mg-cab b { font-size: 18px; }
+html body #menu-grande #mg-cerrar { width: 40px; height: 40px; border-radius: 50%; font-size: 18px; border: 2px solid #e0b060; background: linear-gradient(#8a5a2a, #3a2410); color: #ffe9a0; cursor: pointer; }
+html body #menu-grande .mg-rejilla { grid-template-columns: repeat(4, 1fr) !important; gap: 12px 6px !important; padding: 12px 10px 10px !important; }
+html body #menu-grande .mg-ico { width: 64px !important; height: 64px !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+html body #menu-grande .mg-img { width: 64px !important; height: 64px !important; filter: drop-shadow(0 3px 4px rgba(0,0,0,.6)); }
+html body #menu-grande .mg-txt { font-size: 13px !important; }
+html body.mg-abierto::after { content: ''; position: fixed; inset: 0; z-index: 59; background: rgba(0,0,0,.45); }
+/* fila de botones rápidos (defensa, velocidad, clasificación, centrar, pausa, sonido, ajustes) */
+#menu-grande .mg-rapidos { border-top: 1px solid rgba(214,178,108,.35); padding: 10px 8px 14px; }
+#menu-grande .mg-rapidos #cajon-lateral { display: flex !important; flex-direction: row !important; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px !important; animation: none !important; }
+#menu-grande .mg-rapidos .redondo { width: 48px !important; height: 48px !important; }

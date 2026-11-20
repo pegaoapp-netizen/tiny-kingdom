@@ -93,7 +93,7 @@
     var bCaj = document.createElement('button'); bCaj.className = 'redondo'; bCaj.id = 'btn-cajon'; bCaj.title = 'Más';
     bCaj.innerHTML = '<img class="rd-img" src="iconos/ui/b_menu.webp" alt="☰">'; // v6.88: dibujo propio
     lat.appendChild(bCaj); lat.appendChild(cajon);
-    bCaj.addEventListener('click', function (ev) { ev.stopPropagation(); var ab = cajon.classList.toggle('abierto'); bCaj.classList.toggle('activo', ab); });
+    bCaj.addEventListener('click', function (ev) { ev.stopPropagation(); var bm = document.getElementById('btn-menu-mas'); if (bm) bm.click(); }); // v6.88: el ☰ abre el menú que sube desde abajo
     document.addEventListener('pointerdown', function (ev) { if (cajon.classList.contains('abierto') && !cajon.contains(ev.target) && ev.target !== bCaj && !bCaj.contains(ev.target)) { cajon.classList.remove('abierto'); bCaj.classList.remove('activo'); } });
     var pt = $('pill-tropas'); if (pt) pt.title = 'Tropas · toca para entrenar';
   }

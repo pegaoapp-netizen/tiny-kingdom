@@ -2153,8 +2153,11 @@
   function siguienteVista() { irAVista(vistaActual === 'ciudad' ? 'campos' : vistaActual === 'campos' ? 'mundo' : 'ciudad'); }
   // ---------- MENÚ DESPLEGADO: rejilla de iconos grandes en la mitad de abajo ----------
   function cerrarMenuGrande() { document.body.classList.remove('mg-abierto'); var m = $('menu-grande'); if (m) m.classList.add('oculto'); var f = $('btn-menu-mas'); if (f) f.classList.remove('abierto'); }
+  var MENU_IMG = { 'btn-mochila': 'm_inventario', 'btn-misiones': 'm_misiones', 'btn-alianza': 'm_alianza', 'btn-buzon': 'm_correo', 'mg-azar': 'm_azar', 'btn-conquista': 'm_campana', 'mg-reliquia': 'm_reliquia', 'mg-entrenar': 'b_tropas', 'mg-investigar': 'm_investigar', 'btn-ranking': 'm_ranking', 'btn-ajustes': 'm_ajustes', 'mg-publicar': 'm_publicar', 'mg-equipo': 'm_equipo' };
   function abrirMenuGrande() {
     var m = $('menu-grande'); if (!m) return;
+    // v6.88: los botones rápidos (defensa, velocidad, pausa...) se guardan antes de redibujar el menú
+    var cj = $('cajon-lateral'), lat = $('lateral'); if (cj && lat && m.contains(cj)) lat.appendChild(cj);
     if (!m.classList.contains('oculto')) { cerrarMenuGrande(); return; }
     cerrarPanel(); if (menuAbierto()) cerrarMenuEdif();
     // v6.63: iconos propios con marco dorado
@@ -2164,11 +2167,13 @@
     [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
       ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')]]
-      .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]; items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
+      .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span>' + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     m.classList.remove('oculto'); $('btn-menu-mas').classList.add('abierto'); document.body.classList.add('mg-abierto'); sonar('click');
+    // v6.88: los botones rápidos del cajón van en una fila dentro del menú
+    if (cj) { var fr = document.createElement('div'); fr.className = 'mg-rapidos'; fr.appendChild(cj); cj.classList.add('abierto'); m.appendChild(fr); }
   }
   // ---------- BARRA DE ACCIONES al tocar algo en el Mundo: ver, marchar, tropas y procesos ----------
   function mostrarAcciones(x, y) {
@@ -9245,6 +9250,9 @@
   $('btn-menu-mas').addEventListener('click', function () { if (!enMenu) abrirMenuGrande(); });
   // v6.55: tocar el recuadro de tropas abre el Cuartel para entrenar
   $('pill-tropas').addEventListener('click', function () { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); });
+  // v6.88: tocar fuera del menú (la parte oscura) lo cierra; los botones rápidos que abren ventanas también lo cierran
+  document.addEventListener('pointerdown', function (ev) { if (document.body.classList.contains('mg-abierto') && (ev.target === document.body || ev.target === document.documentElement)) cerrarMenuGrande(); });
+  $('menu-grande').addEventListener('click', function (ev) { var r = ev.target.closest('.mg-rapidos .redondo'); if (r && (r.id === 'btn-ranking' || r.id === 'btn-ajustes' || r.id === 'btn-centrar')) setTimeout(cerrarMenuGrande, 0); });
   $('menu-grande').addEventListener('click', function (ev) {
     if (ev.target.closest('#mg-cerrar')) { sonar('click'); cerrarMenuGrande(); return; }
     var b = ev.target.closest('[data-mg]'); if (!b) return; var id = b.getAttribute('data-mg'); cerrarMenuGrande();
