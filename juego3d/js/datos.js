@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '6.89';
+var VERSION_JUEGO = '6.90';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -726,13 +726,14 @@ var TIENDA = [
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
 // Para añadir uno nuevo: guarda la imagen como iconos/ui/<archivo>.webp y ponlo en esta lista (objeto: archivo).
 var ICONOS_IMG = {
+  perla_rey: 'o_perla_rey', corona_coral: 'o_corona_coral', flor_coral: 'o_flor_coral', elevacion_sol: 'o_elevacion_sol', estrella_rey: 'o_estrella_rey', // v6.89
   caracola: 'o_caracola', caracola_real: 'o_caracola',
   portal_elegir: 'o_portal_elegir', reclutas: 'o_reclutas',
   libro_peq: 'o_libro', libro_gra: 'o_tomo', pergamino: 'o_pergamino', portal_azar: 'o_portal_azar',
   lingote: 'o_lingote',
   acelerador: 'o_acel', acel_1m: 'o_acel', acel_5m: 'o_acel', acel_15m: 'o_acel', acel_1h: 'o_acel', acel_2h5: 'o_acel', acel_8h: 'o_acel', acel_12h: 'o_acel', acel_15h: 'o_acel', acel_24h: 'o_acel',
   inv_1m: 'o_arcano', inv_15m: 'o_arcano', inv_1h: 'o_arcano', inv_2h5: 'o_arcano', inv_8h: 'o_arcano', inv_15h: 'o_arcano', inv_24h: 'o_arcano', inv_3d: 'o_arcano',
-  escudo_2h: 'o_escudo', escudo_8h: 'o_escudo', escudo_12h: 'o_escudo',
+  escudo_2h: 'o_escudo_2h', escudo_8h: 'o_escudo_8h', escudo_12h: 'o_escudo_12h', estrella_mar: 'o_estrella_mar',
   bolsa_oro: 'o_bolsa_oro', oro_500k: 'o_bolsa_oro', saco_comida: 'o_comida', comida_500k: 'o_comida',
   saco_madera: 'o_madera', madera_500k: 'o_madera', saco_piedra: 'o_piedra', piedra_500k: 'o_piedra',
   cofre_madera: 'o_cofre_madera', cofre_plata: 'o_cofre_plata', cofre_oro: 'o_cofre_oro',
@@ -743,6 +744,8 @@ var ICONOS_IMG = {
 };
 // retratos dibujados de las tropas (si no hay, se usa la foto del modelo 3D)
 var RETRATOS_IMG = {
+  h_sol: 'h_sol', h_luna: 'h_luna', h_ancla: 'h_ancla', h_brisa: 'h_brisa', h_chispa: 'h_chispa', h_roble: 'h_roble', // v6.89: retratos pintados de los héroes
+  h_trueno: 'h_trueno', h_leon: 'h_leon', h_fenix: 'h_fenix', h_titan: 'h_titan', h_aguila: 'h_aguila',
   espadachin: 't_espadachin', arquero: 't_arquero', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano',
   jinete: 't_jinete', caballeria_pesada: 't_caballeria_pesada', balista: 't_balista', ariete: 't_ariete', catapulta: 't_catapulta', torre_asedio: 't_torre_asedio',
   granja: 'e_granja', aserradero: 'e_aserradero', mina: 'e_mina', cantera: 'e_cantera',

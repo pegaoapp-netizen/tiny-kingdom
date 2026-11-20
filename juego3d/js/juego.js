@@ -6341,6 +6341,8 @@
     arma: { icono: '⚔️', dano: 6 }, casco: { icono: '⛑️', vida: 60 }, pechera: { icono: '🛡️', vida: 90, def: 0.02 },
     guantes: { icono: '🧤', danoP: 0.03 }, botas: { icono: '🥾', vida: 40, vel: 0.03 }, amuleto: { icono: '📿', recarga: 0.03 }
   };
+  // v6.89: armaduras y armas con su dibujo (el emoji queda para las listas desplegables)
+  Object.keys(EQ).forEach(function (t) { EQ[t].emoji = EQ[t].icono; EQ[t].icono = '<img class="ico-obj" src="iconos/ui/q_' + t + '.webp" alt="' + EQ[t].emoji + '" draggable="false">'; });
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
   function nombrePieza(p) { if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
@@ -7266,7 +7268,7 @@
   function escenaBatalla(a, f, d, gano, alTerminar) {
     var viejo = $('batalla-pvp'); if (viejo) viejo.remove();
     var caja = document.createElement('div'); caja.id = 'batalla-pvp';
-    var retr = estado.equipo.slice(0, 3).map(function (id) { return retratos['h_' + id] ? '<img src="' + retratos['h_' + id] + '" alt="">' : ''; }).join('');
+    var retr = estado.equipo.slice(0, 3).map(function (id) { return fotoHTML('h_' + id, ''); }).join('');
     var tipos = {}; tropas.forEach(function (u) { if (!u.heroeId) tipos[u.tipo] = (tipos[u.tipo] || 0) + 1; });
     var mios = Object.keys(tipos).map(function (k) { return '<span>' + (TROPAS[k] ? TROPAS[k].icono : '⚔️') + ' ' + tipos[k] + '</span>'; }).join('');
     var tam = a.nivel <= 4 ? 1 : a.nivel <= 8 ? 2 : 3;
@@ -7759,7 +7761,7 @@
       '<h4>⚔️ ' + L('Tropas', 'Troops') + '</h4><div class="rg-rejilla">' +
       RG_TIPOS_TROPA.map(function (t) { return '<label class="rg-celda"><span>' + (TROPAS[t].icono || '') + ' ' + N(t) + '</span><input class="campo rg-t" data-t="' + t + '" type="number" min="0" max="100000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<h4>🧰 ' + L('Equipo de héroe', 'Hero gear') + '</h4><div class="rg-rejilla">' +
-      '<label class="rg-celda"><span>' + L('Pieza', 'Piece') + '</span><select class="campo" id="rg-eq-t"><option value="">' + L('Al azar', 'Random') + '</option>' + TIPOS_EQ.map(function (t) { return '<option value="' + t + '">' + EQ[t].icono + ' ' + T('eq_' + t) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="rg-celda"><span>' + L('Pieza', 'Piece') + '</span><select class="campo" id="rg-eq-t"><option value="">' + L('Al azar', 'Random') + '</option>' + TIPOS_EQ.map(function (t) { return '<option value="' + t + '">' + EQ[t].emoji + ' ' + T('eq_' + t) + '</option>'; }).join('') + '</select></label>' +
       '<label class="rg-celda"><span>' + L('Rareza', 'Rarity') + '</span><select class="campo" id="rg-eq-r">' + ['comun', 'raro', 'legendario', 'mitico'].map(function (r) { return '<option value="' + r + '"' + (r === 'legendario' ? ' selected' : '') + '>' + T('rareza_' + r) + '</option>'; }).join('') + '</select></label>' +
       '<label class="rg-celda"><span>' + L('Cantidad', 'Amount') + '</span><input class="campo" id="rg-eq-n" type="number" min="0" max="30" inputmode="numeric" placeholder="0"></label></div>' +
       '<h4>💰 ' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="rg-rejilla">' +
@@ -7898,7 +7900,7 @@
     if (p.objeto) l.push({ ico: OBJETOS[p.objeto].icono, nom: N(p.objeto), n: 1 });
     if (p.objetos) Object.keys(p.objetos).forEach(function (k) { l.push({ ico: OBJETOS[k].icono, nom: N(k), n: p.objetos[k] }); });
     if (p.tropas) Object.keys(p.tropas).forEach(function (t) { l.push({ ico: TROPAS[t] ? TROPAS[t].icono : '🛡️', nom: N(t), n: p.tropas[t] }); });
-    if (p.piezas) p.piezas.forEach(function (pz) { l.push({ ico: '🧰', nom: nombrePieza(pz), n: 1 }); });
+    if (p.piezas) p.piezas.forEach(function (pz) { l.push({ ico: EQ[pz.t] ? EQ[pz.t].icono : '🧰', nom: nombrePieza(pz), n: 1 }); });
     return l;
   }
   function mostrarRecompensas(titulo, items, alRecoger) {
@@ -8403,8 +8405,8 @@
     guardar(true); reabrirPanel();
     var p = {}; Object.keys(tot).forEach(function (r) { p[r] = tot[r]; }); p.objetos = objs;
     var items = premioAItems(p), porR = {};
-    if (pzs.length <= 3) pzs.forEach(function (pz) { items.push({ ico: '🛡️', nom: nombrePieza(pz), n: 1 }); });
-    else { pzs.forEach(function (pz) { porR[pz.r] = (porR[pz.r] || 0) + 1; }); Object.keys(porR).forEach(function (r) { items.push({ ico: '🛡️', nom: L('Armaduras y armas ', 'Armor and weapons ') + ({ comun: L('comunes', 'common'), raro: L('raras', 'rare'), legendario: L('legendarias', 'legendary'), mitico: L('míticas', 'mythic') }[r] || r), n: porR[r] }); }); }
+    if (pzs.length <= 3) pzs.forEach(function (pz) { items.push({ ico: EQ[pz.t].icono, nom: nombrePieza(pz), n: 1 }); });
+    else { pzs.forEach(function (pz) { porR[pz.r] = (porR[pz.r] || 0) + 1; }); Object.keys(porR).forEach(function (r) { items.push({ ico: EQ.pechera.icono, nom: L('Armaduras y armas ', 'Armor and weapons ') + ({ comun: L('comunes', 'common'), raro: L('raras', 'rare'), legendario: L('legendarias', 'legendary'), mitico: L('míticas', 'mythic') }[r] || r), n: porR[r] }); }); }
     mostrarRecompensas(N(k) + (n > 1 ? ' ×' + formatoNumero(n) : ''), items, function () { if (Object.keys(tot).length) darPremio(tot); guardar(true); actualizarHUD(); reabrirPanel(); });
   }
   // ---------- TIENDA ----------
@@ -8418,7 +8420,7 @@
     if (o.paquete) Object.keys(o.paquete).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.paquete[q]]); });
     if (o.mejora) o.mejora.forEach(function (r) { l.push(['🧰', L('Pieza de equipo ', 'Equipment piece ') + T('eq_r_' + r), '×1']); });
     if (o.equipo) l.push(['🧰', L('Pieza de equipo rara (20% legendaria)', 'Rare equipment piece (20% legendary)'), '×1']);
-    (EXTRA_COFRE[k] || []).forEach(function (e) { var pr = Math.round(e[2] * 100) + '%'; if (e[0] === 'pieza') l.push(['🛡️', L('Armadura o arma ', 'Armor or weapon ') + nomRarezaEq(e[1]), L('a veces ', 'sometimes ') + pr]); else if (OBJETOS[e[0]]) l.push([OBJETOS[e[0]].icono, N(e[0]) + (e[1] > 1 ? ' ×' + e[1] : ''), L('a veces ', 'sometimes ') + pr]); });
+    (EXTRA_COFRE[k] || []).forEach(function (e) { var pr = Math.round(e[2] * 100) + '%'; if (e[0] === 'pieza') l.push([EQ.pechera.icono, L('Armadura o arma ', 'Armor or weapon ') + nomRarezaEq(e[1]), L('a veces ', 'sometimes ') + pr]); else if (OBJETOS[e[0]]) l.push([OBJETOS[e[0]].icono, N(e[0]) + (e[1] > 1 ? ' ×' + e[1] : ''), L('a veces ', 'sometimes ') + pr]); });
     if (o.da) Object.keys(o.da).forEach(function (r) { l.push([ICONO_RECURSO[r], T('r_' + r), formatoNumero(o.da[r])]); });
     if (o.tropas) Object.keys(o.tropas).forEach(function (t) { l.push([TROPAS[t].icono, N(t), '×' + o.tropas[t]]); });
     if (o.segundos) l.push(['⏱️', o.soloInv ? L('Quita tiempo a una investigación', 'Takes time off a research') : L('Quita tiempo a una obra, entrenamiento o investigación', 'Takes time off a build, training or research'), fmtTiempo(o.segundos)]);
@@ -8432,10 +8434,10 @@
   function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo); }
   // v6.89: los cofres no traen solo recursos: también armaduras/armas para los héroes, aceleradores, libros y escudos (con su probabilidad)
   var EXTRA_COFRE = {
-    cofre_madera: [['pieza', 'comun', 0.25], ['acel_1h', 1, 0.3], ['libro_peq', 1, 0.2]],
-    cofre_plata: [['pieza', 'comun', 0.4], ['pieza', 'raro', 0.1], ['acel_1h', 1, 0.4], ['libro_peq', 1, 0.3], ['escudo_2h', 1, 0.1]],
-    cofre_oro: [['pieza', 'raro', 0.4], ['pieza', 'legendario', 0.05], ['acel_8h', 1, 0.3], ['libro_gra', 1, 0.3], ['escudo_8h', 1, 0.15]],
-    cofre_tesoro: [['pieza', 'raro', 0.6], ['pieza', 'legendario', 0.3], ['acel_24h', 1, 0.4], ['libro_gra', 2, 0.5], ['caracola', 1, 0.3]]
+    cofre_madera: [['pieza', 'comun', 0.12], ['acel_1h', 1, 0.3], ['libro_peq', 1, 0.2]],
+    cofre_plata: [['pieza', 'comun', 0.2], ['acel_1h', 1, 0.4], ['libro_peq', 1, 0.3], ['escudo_2h', 1, 0.1]],
+    cofre_oro: [['pieza', 'comun', 0.3], ['pieza', 'raro', 0.04], ['acel_8h', 1, 0.3], ['libro_gra', 1, 0.3], ['escudo_8h', 1, 0.15]],
+    cofre_tesoro: [['pieza', 'comun', 0.4], ['pieza', 'raro', 0.1], ['acel_24h', 1, 0.4], ['libro_gra', 2, 0.5], ['caracola', 1, 0.3]]
   };
   function nomRarezaEq(r) { return { comun: L('común', 'common'), raro: L('rara', 'rare'), legendario: L('legendaria', 'legendary'), mitico: L('mítica', 'mythic') }[r] || r; }
   function htmlContenido(k) {

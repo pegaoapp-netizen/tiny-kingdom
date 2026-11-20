@@ -17,6 +17,13 @@
       // ojo con las pestañas que se deslizan: dejar la elegida a la vista
       var act = fijo.querySelector('.iv-carril .activo'); if (act && act.scrollIntoView) { var cr = act.parentNode; cr.scrollLeft = Math.max(0, act.offsetLeft - cr.offsetLeft - 4); }
     }
+    // los botones del juego escuchan los toques dentro de #panel-cuerpo: el toque en la franja fija se pasa allí
+    fijo.addEventListener('click', function (ev) {
+      var b = ev.target.closest && ev.target.closest('[data-accion]'); if (!b || b.disabled) return;
+      ev.stopPropagation();
+      var c = b.cloneNode(true); c.style.display = 'none'; cuerpo.appendChild(c);
+      try { c.click(); } finally { if (c.parentNode) c.parentNode.removeChild(c); }
+    });
     new MutationObserver(function (recs) {
       var nuevo = false;
       recs.forEach(function (r) { if (r.target === cuerpo && r.addedNodes.length && Array.prototype.indexOf.call(r.addedNodes, cuerpo.firstElementChild) >= 0) nuevo = true; });
@@ -28,7 +35,7 @@
     st.textContent = [
       'html body #panel#panel:not(.oculto) { display: flex !important; flex-direction: column !important; overflow: hidden !important; }',
       'html body #panel#panel .panel-cab { flex: none !important; position: relative !important; top: auto !important; }',
-      'html body #panel#panel #panel-fijo { flex: none; padding: 8px 10px 6px; background: linear-gradient(180deg, rgba(40,26,14,.98), rgba(28,18,9,.98)); border-bottom: 1px solid rgba(201,138,26,.55); box-shadow: 0 3px 6px rgba(0,0,0,.45); z-index: 3; }',
+      'html body #panel#panel #panel-fijo { flex: none; padding: 8px 10px 6px; background: inherit; border-bottom: 1px solid rgba(201,138,26,.55); box-shadow: 0 3px 6px rgba(0,0,0,.45); z-index: 3; }',
       'html body #panel#panel #panel-fijo > * { position: static !important; margin-top: 0 !important; margin-bottom: 6px !important; animation: none !important; }',
       'html body #panel#panel #panel-fijo > *:last-child { margin-bottom: 0 !important; }',
       'html body #panel#panel:not(.co-panel):not(.rul-panel) #panel-cuerpo { flex: 1 1 auto !important; min-height: 0 !important; overflow-y: auto !important; overflow-x: hidden !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; transform: translateZ(0); contain: paint; }',

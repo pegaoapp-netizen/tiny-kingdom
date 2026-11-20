@@ -69,7 +69,7 @@
       '<button id="tk-ciudad"><img src="' + RUTA + 'b_edificios.webp" alt=""><span class="tk-dat"><b id="tk-ciudad-n"></b><small id="tk-ciudad-xy"></small></span></button>' +
       '<button id="tk-gemas"><span class="tk-dat"><b id="tk-gemas-n">0</b><small id="tk-mas">Más</small></span>' + GEMA_SVG + '</button>' +
     '</div>' +
-    '<div class="tk-fila2">' + [['monedas', 'oro'], ['comida', 'comida'], ['madera', 'madera'], ['piedra', 'piedra'], ['hierro', '']].map(function (q) {
+    '<div class="tk-fila2">' + [['monedas', 'oro'], ['comida', 'comida'], ['madera', 'madera'], ['piedra', 'piedra'], ['hierro', 'hierro']].map(function (q) {
       return '<span class="tk-rec" data-de="' + q[0] + '">' + (q[1] ? '<img src="' + RUTA + 'r_' + q[1] + '.webp" alt="">' : '<i class="tk-hierro"></i>') + '<b id="tk-' + q[0] + '">0</b></span>';
     }).join('') + '</div>';
   document.body.appendChild(tk);
