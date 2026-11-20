@@ -2153,7 +2153,7 @@
   function siguienteVista() { irAVista(vistaActual === 'ciudad' ? 'campos' : vistaActual === 'campos' ? 'mundo' : 'ciudad'); }
   // ---------- MENÚ DESPLEGADO: rejilla de iconos grandes en la mitad de abajo ----------
   function cerrarMenuGrande() { document.body.classList.remove('mg-abierto'); var m = $('menu-grande'); if (m) m.classList.add('oculto'); var f = $('btn-menu-mas'); if (f) f.classList.remove('abierto'); }
-  var MENU_IMG = { 'btn-mochila': 'm_inventario', 'btn-misiones': 'm_misiones', 'btn-alianza': 'm_alianza', 'btn-buzon': 'm_correo', 'mg-azar': 'm_azar', 'btn-conquista': 'm_campana', 'mg-reliquia': 'm_reliquia', 'mg-entrenar': 'b_tropas', 'mg-investigar': 'm_investigar', 'btn-ranking': 'm_ranking', 'btn-ajustes': 'm_ajustes', 'mg-publicar': 'm_publicar', 'mg-equipo': 'm_equipo' };
+  var MENU_IMG = { 'btn-mochila': 'm_inventario', 'btn-misiones': 'm_misiones', 'btn-alianza': 'm_alianza', 'btn-buzon': 'm_correo', 'mg-azar': 'm_azar', 'btn-conquista': 'm_campana', 'mg-reliquia': 'm_reliquia', 'mg-entrenar': 'm_entrenar', 'mg-investigar': 'm_investigar', 'btn-ranking': 'm_ranking', 'btn-ajustes': 'm_ajustes', 'mg-publicar': 'm_publicar', 'mg-equipo': 'm_equipo' };
   function abrirMenuGrande() {
     var m = $('menu-grande'); if (!m) return;
     // v6.88: los botones rápidos (defensa, velocidad, pausa...) se guardan antes de redibujar el menú
