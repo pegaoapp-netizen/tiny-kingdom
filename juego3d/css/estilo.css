@@ -1884,3 +1884,8 @@ html body.barra-oro #abajo #btn-vista .bv-ico { font-size: 24px !important; }
 /* la flechita: un botón más de la fila, angosto */
 html body #abajo #btn-menu-mas.en-abajo { position: static !important; translate: none !important; transform: none !important; flex: 0 0 30px !important; width: 30px !important; min-width: 30px !important; height: auto !important; margin: 0 !important; bottom: auto !important; right: auto !important; border-radius: 6px !important; font-size: 14px !important; padding: 0 !important; background: linear-gradient(180deg, #8a5a2a, #3a2410) !important; border: 1px solid #e0b060 !important; color: #ffe9a0 !important; }
 @media (max-width: 400px) { html body.barra-oro #abajo .bot-img, html body.barra-oro #abajo #btn-vista .bv-img { width: 30px !important; height: 30px !important; } html body.barra-oro #abajo > button .txt, html body.barra-oro #abajo > button small { font-size: 9px !important; } }
+/* v6.88: botón del evento (Ruleta) un poco más grande */
+.ev-btn { width: 74px !important; height: 74px !important; }
+.ev-btn .ev-ico { font-size: 40px !important; line-height: 68px !important; }
+.ev-btn .ev-img { width: 92%; height: 92%; object-fit: contain; display: block; margin: 4% auto 0; pointer-events: none; }
+.ev-btn .ev-t { font-size: 12px !important; bottom: -16px !important; }
