@@ -106,6 +106,8 @@
   var ICONO_ABAJO = { 'btn-mundo': 'mundo' }; // v6.88: los demás botones usan los dibujos nuevos (iconos/ui/b_*.webp)
   if (window.ICONOS_ORO) Object.keys(ICONO_ABAJO).forEach(function (id) { var b = $(id); if (!b) return; var im = b.querySelector('.bot-img'); var sp = document.createElement('span'); sp.className = 'bot-io'; sp.innerHTML = ICONOS_ORO[ICONO_ABAJO[id]]; if (im) im.replaceWith(sp); else b.insertBefore(sp, b.firstChild); });
   document.body.classList.add('barra-oro');
+  // v6.88: la flechita de ver todo va en la misma línea del menú de abajo, al final
+  var bMas = $('btn-menu-mas'); if (bMas && abajo) { abajo.appendChild(bMas); bMas.classList.add('en-abajo'); }
   function copiar(de, a) { var x = $(de), y = $(a); if (x && y && y.textContent !== x.textContent) y.textContent = x.textContent; }
 
   // ---------- cosas que cambian: textos, poder, nivel y la posición del panel ----------

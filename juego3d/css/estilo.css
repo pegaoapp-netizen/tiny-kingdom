@@ -1871,3 +1871,16 @@ html body #panel.rul-panel { max-height: 64vh !important; width: min(380px, 94vw
 .rul-abrir { margin: 4px auto; animation: evLatido 1.2s ease-in-out infinite; font-size: 15px !important; }
 .rul-cofre.abriendo img { animation: galeonAbre .9s ease-out both; }
 @keyframes galeonAbre { 0% { transform: scale(1); } 30% { transform: scale(1.4) rotate(-8deg); } 60% { transform: scale(1.5) rotate(8deg); filter: brightness(1.6) drop-shadow(0 0 18px #ffd86a); } 100% { transform: scale(1.3); filter: brightness(2) drop-shadow(0 0 30px #ffe066); } }
+
+/* ===== v6.88: menú de abajo compacto: 7 botones con su dibujo + la flechita, todo en una línea ===== */
+html body.barra-oro #abajo { padding: 3px 3px calc(3px + env(safe-area-inset-bottom)) !important; gap: 3px !important; align-items: stretch !important; }
+html body.barra-oro #abajo > button { padding: 2px 1px 2px !important; gap: 0 !important; }
+html body.barra-oro #abajo .bot-io { display: none !important; }
+html body.barra-oro #abajo .bot-img { display: block !important; width: 34px !important; height: 34px !important; margin: 0 auto 1px !important; border-radius: 0 !important; object-fit: contain !important; filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)) !important; }
+html body.barra-oro #abajo > button .txt, html body.barra-oro #abajo > button span.txt, html body.barra-oro #abajo > button small { font-size: 10px !important; line-height: 1.1 !important; }
+html body.barra-oro #abajo #btn-vista { flex: 1 1 0 !important; min-width: 0 !important; padding: 2px 1px !important; }
+html body.barra-oro #abajo #btn-vista .bv-img { width: 34px !important; height: 34px !important; }
+html body.barra-oro #abajo #btn-vista .bv-ico { font-size: 24px !important; }
+/* la flechita: un botón más de la fila, angosto */
+html body #abajo #btn-menu-mas.en-abajo { position: static !important; translate: none !important; transform: none !important; flex: 0 0 30px !important; width: 30px !important; min-width: 30px !important; height: auto !important; margin: 0 !important; bottom: auto !important; right: auto !important; border-radius: 6px !important; font-size: 14px !important; padding: 0 !important; background: linear-gradient(180deg, #8a5a2a, #3a2410) !important; border: 1px solid #e0b060 !important; color: #ffe9a0 !important; }
+@media (max-width: 400px) { html body.barra-oro #abajo .bot-img, html body.barra-oro #abajo #btn-vista .bv-img { width: 30px !important; height: 30px !important; } html body.barra-oro #abajo > button .txt, html body.barra-oro #abajo > button small { font-size: 9px !important; } }
