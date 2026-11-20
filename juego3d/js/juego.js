@@ -94,6 +94,15 @@
       '<small>Your browser has 3D (WebGL) turned off. Turn on hardware acceleration and restart the browser.</small>';
     throw e;
   }
+  // v7.11: si el teléfono apaga el dibujo 3D (pantalla negra), se guarda la partida y se recarga sola una vez
+  if (render && render.domElement) {
+    render.domElement.addEventListener('webglcontextlost', function (ev) {
+      ev.preventDefault();
+      try { guardar(true); } catch (e) {}
+      var ult = 0; try { ult = +sessionStorage.getItem('tk_recarga3d') || 0; } catch (e) {}
+      if (Date.now() - ult > 60000) { try { sessionStorage.setItem('tk_recarga3d', String(Date.now())); } catch (e) {} setTimeout(function () { location.reload(); }, 600); }
+    }, false);
+  }
   render.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   render.setSize(window.innerWidth, window.innerHeight);
   render.shadowMap.enabled = true;
@@ -5681,7 +5690,7 @@
       var g = new THREE.Group(); g.add(fc); fh.rotation.y = -Math.PI / 2; fh.position.set(-0.85, 0, 0); g.add(fh); g.rotation.y = Math.PI + 0.55; e.add(g);
       g.updateMatrixWorld(true); var bx = new THREE.Box3().setFromObject(g), cen = bx.getCenter(new THREE.Vector3()), tam = bx.getSize(new THREE.Vector3()).length();
       var c = new THREE.PerspectiveCamera(30, 1, 0.1, 100); c.position.set(cen.x + tam * 0.35, cen.y + tam * 0.55, cen.z + tam * 1.55); c.lookAt(cen);
-      r.render(e, c); retratos.carreta = r.domElement.toDataURL(); r.dispose();
+      r.render(e, c); retratos.carreta = r.domElement.toDataURL(); r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); // v7.11: soltar el dibujo 3D (en iPhone, si se juntan muchos, la pantalla queda negra)
     } catch (er) { }
   }
   // fotos de las tropas con las figuras de archivo (cuando ya cargaron)
@@ -5703,7 +5712,7 @@
         e.add(u.grupo); c.position.set(cen.x + h * 0.45, cen.y + h * 0.2, cen.z + h * 1.45); c.lookAt(cen.x, cen.y + h * 0.05, cen.z);
         r.render(e, c); retratos[t] = r.domElement.toDataURL(); e.remove(u.grupo);
       });
-      r.dispose();
+      r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); // v7.11: soltar el dibujo 3D (en iPhone, si se juntan muchos, la pantalla queda negra)
     } catch (er) { }
   }
   // v6.82: fotos bonitas de los edificios y del castillo (con el modelo de verdad, buena luz, cielo y pasto detrás)
@@ -5730,7 +5739,7 @@
         try { crearModeloBase.nivel = 12; var m = crearModelo(t, tramoNivel(12)); crearModeloBase.nivel = 0; m.rotation.y = 0.55; var u = foto(m); if (u) retratos[t] = u; } catch (er) { crearModeloBase.nivel = 0; }
       });
       try { var cm = M.castilloEtapa(Math.max(10, estado.castillo || 1)); cm.rotation.y = 0.5; var uc = foto(cm); if (uc) retratos.castillo = uc; } catch (er) {}
-      r.dispose();
+      r.dispose(); if (r.forceContextLoss) r.forceContextLoss(); // v7.11: soltar el dibujo 3D (en iPhone, si se juntan muchos, la pantalla queda negra)
       if (panelActual && /edificio|castillo|construir/.test(panelActual.tipo || '')) reabrirPanel();
     } catch (er) { }
   }
