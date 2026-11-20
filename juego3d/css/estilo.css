@@ -2042,3 +2042,24 @@ html body #panel .iv-vacio b { font-size: 17px; color: #f1e2c0; }
 
 html body #panel .iv-carril button { font: 700 12px/1.1 system-ui, sans-serif !important; letter-spacing: -.2px; padding: 9px 0 !important; text-overflow: clip !important; }
 html body #panel .iv-carril button { font-size: 11px !important; letter-spacing: -.4px !important; } html body #panel .iv-flecha { width: 22px !important; } html body #panel .iv-carril { gap: 4px !important; } html body #panel .iv-carril button { flex-basis: calc((100% - 12px) / 4) !important; }
+
+/* v6.92: buscar por coordenadas, encima de todo y con campos grandes */
+html body #lupa-flota { position: fixed !important; z-index: 9800 !important; left: 8px; right: 8px; top: calc(env(safe-area-inset-top) + 70px); }
+html body #lupa-flota .lf-caja { display: flex; align-items: center; gap: 6px; background: rgba(20,14,8,.95); border: 2px solid #c9a24a; border-radius: 14px; padding: 8px; }
+html body #lupa-flota input { flex: 1; min-width: 0; height: 46px; font: 900 22px system-ui !important; text-align: center; background: #fffaf0 !important; color: #2a1a08 !important; -webkit-text-fill-color: #2a1a08; border: 2px solid #8a5a22; border-radius: 10px; pointer-events: auto !important; -webkit-user-select: text; user-select: text; }
+html body #lupa-flota .lf-et { font: 900 18px system-ui; color: #f3cf6a; }
+html body #lupa-flota .lf-ok { height: 46px; padding: 0 16px; border-radius: 10px; border: 2px solid #163e7a; background: linear-gradient(180deg,#4f94ef,#2459b4); color: #fff; font: 900 18px system-ui; }
+html body #lupa-flota .lf-no { height: 46px; width: 46px; border-radius: 10px; border: 2px solid #5a1a10; background: #b8452e; color: #fff; font: 900 18px system-ui; }
+
+/* v6.92: Tropas limpio: pestañas en una sola fila que se desliza, y la tropa pintada con el color de su rango */
+html body #panel .subtabs { display: flex !important; flex-wrap: nowrap !important; overflow-x: auto !important; gap: 5px !important; scrollbar-width: none; padding-bottom: 2px; }
+html body #panel .subtabs::-webkit-scrollbar { display: none; }
+html body #panel .subtabs > button { flex: 0 0 auto !important; min-width: 0 !important; width: auto !important; padding: 7px 11px !important; font-size: 13px !important; line-height: 1.1 !important; white-space: nowrap !important; min-height: 0 !important; }
+html body #panel .subtabs > button br { display: none; }
+html body #panel .visor-tropa.pintada { display: flex; align-items: center; justify-content: center; }
+html body #panel .visor-tropa.pintada img { height: 100%; max-height: 230px; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+html body #panel .visor-tropa.pintada.r0 img { filter: drop-shadow(0 0 0 transparent) drop-shadow(0 6px 8px rgba(0,0,0,.6)) saturate(.85); }
+html body #panel .visor-tropa.pintada.r1 img { filter: drop-shadow(0 0 10px #6fd36a) drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+html body #panel .visor-tropa.pintada.r2 img { filter: drop-shadow(0 0 12px #4fa3ff) drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+html body #panel .visor-tropa.pintada.r3 img { filter: drop-shadow(0 0 14px #c06bff) drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+html body #panel .visor-tropa.pintada.r4 img { filter: drop-shadow(0 0 16px #ffcf3a) drop-shadow(0 6px 8px rgba(0,0,0,.6)) saturate(1.15); }

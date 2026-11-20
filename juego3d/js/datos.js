@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '6.91';
+var VERSION_JUEGO = '6.92';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -747,7 +747,7 @@ var RETRATOS_IMG = {
   h_sol: 'h_sol', h_luna: 'h_luna', h_ancla: 'h_ancla', h_brisa: 'h_brisa', h_chispa: 'h_chispa', h_roble: 'h_roble', // v6.89: retratos pintados de los héroes
   h_trueno: 'h_trueno', h_pluma: 'h_pluma', h_leon: 'h_leon', h_fenix: 'h_fenix', h_titan: 'h_titan', h_aguila: 'h_aguila',
   espadachin: 't_espadachin', arquero: 't_arquero', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano',
-  jinete: 't_jinete', caballeria_pesada: 't_caballeria_pesada', balista: 't_balista', ariete: 't_ariete', catapulta: 't_catapulta', torre_asedio: 't_torre_asedio',
+  carreta: 't_carreta', jinete: 't_jinete', caballeria_pesada: 't_caballeria_pesada', balista: 't_balista', ariete: 't_ariete', catapulta: 't_catapulta', torre_asedio: 't_torre_asedio',
   granja: 'e_granja', aserradero: 'e_aserradero', mina: 'e_mina', cantera: 'e_cantera',
   cuartel: 'e_cuartel', torre: 'e_torre', academia: 'e_academia', enfermeria: 'e_enfermeria',
   almacen: 'e_almacen', mercado: 'e_mercado', herreria: 'e_herreria', establo: 'e_establo',

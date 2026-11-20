@@ -2231,20 +2231,24 @@
     var d = document.createElement('div'); d.id = 'lupa-flota';
     d.innerHTML = '<div class="lf-caja"><span class="lf-et">X</span><input type="number" inputmode="numeric" pattern="[0-9]*" id="lupa-x" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + cx + '">' +
       '<span class="lf-et">Y</span><input type="number" inputmode="numeric" pattern="[0-9]*" id="lupa-y" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + cy + '">' +
-      '<button class="lf-ok" id="lupa-ir" aria-label="Ir">✓</button><button class="lf-no" id="lupa-cerrar" aria-label="Cerrar">✕</button></div>' +
+      '<button class="lf-ok" id="lupa-ir" aria-label="Ir">' + L('Ir', 'Go') + '</button><button class="lf-no" id="lupa-cerrar" aria-label="Cerrar">✕</button></div>' +
       '<div class="lf-pie">' + L('Del 0 al ', 'From 0 to ') + (TAM_MUNDO - 1) + ' · ' + L('tu reino: ', 'your kingdom: ') + yo.x + ', ' + yo.y + '</div>' +
       (otros.length ? '<div class="lf-reinos">' + otros.map(function (o) {
         return '<button class="lupa-reino" data-x="' + o.c.x + '" data-y="' + o.c.y + '">🏰 ' + escaparHTML(String(o.a.nombre || '?').slice(0, 12)) + ' <small>(' + o.c.x + ', ' + o.c.y + ') · ⚔️ ' + corto(o.a.poder || 0) + '</small></button>';
       }).join('') + '</div>' : '');
-    $('mundo').appendChild(d);
+    document.body.appendChild(d); // v6.92: encima de todo y fuera del mapa, para que salga el teclado
+    ['pointerdown', 'touchstart', 'mousedown', 'wheel'].forEach(function (t) { d.addEventListener(t, function (ev) { ev.stopPropagation(); }, { passive: true }); });
+    setTimeout(function () { var ix = $('lupa-x'); if (ix) { ix.focus(); ix.select(); } }, 60);
     function ir(x, y) {
-      x = Math.max(0, Math.min(TAM_MUNDO - 1, Math.round(x) || 0)); y = Math.max(0, Math.min(TAM_MUNDO - 1, Math.round(y) || 0));
+      var fuera = function (v) { return isNaN(v) || v < 0 || v > TAM_MUNDO - 1; };
+      if (fuera(x) || fuera(y)) { consejoTemporal(L('Coordenada fuera del mapa (del 0 al ', 'Coordinate off the map (0 to ') + (TAM_MUNDO - 1) + ')'); sonar('error'); return; }
+      x = Math.round(x); y = Math.round(y); M3.vel = null; M3.seguir = null;
       d.remove();
       M3.obj.copy(posCelda(x, y)); M3.zoom = { de: M3.dist, a: 20, t0: performance.now() };
       var p = posCelda(x, y); M3.sel.position.set(p.x, 0.06, p.z); M3.sel.visible = true;
       elegirCelda(x, y);
     }
-    $('lupa-ir').addEventListener('click', function () { sonar('click'); ir(+$('lupa-x').value, +$('lupa-y').value); });
+    $('lupa-ir').addEventListener('click', function () { sonar('click'); ir($('lupa-x').value === '' ? NaN : +$('lupa-x').value, $('lupa-y').value === '' ? NaN : +$('lupa-y').value); });
     $('lupa-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); });
     [$('lupa-x'), $('lupa-y')].forEach(function (inp) { inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); if (inp.id === 'lupa-x') { $('lupa-y').focus(); $('lupa-y').select(); } else $('lupa-ir').click(); } }); });
     Array.prototype.forEach.call(d.querySelectorAll('.lupa-reino'), function (b) { b.addEventListener('click', function () { sonar('click'); ir(+b.dataset.x, +b.dataset.y); }); });
@@ -5875,7 +5879,8 @@
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
     // escena con el muñeco
-    html += '<div class="tropa-escena"><div class="visor-tropa" id="visor-tropa"></div>' +
+    // v6.92: la tropa pintada (no el muñeco 3D), con el marco del color de su rango
+    html += '<div class="tropa-escena"><div class="visor-tropa pintada r' + r + '" id="visor-tropa">' + (RETRATOS_IMG[t] ? '<img src="iconos/ui/' + RETRATOS_IMG[t] + '.webp" alt="" draggable="false">' : fotoHTML(t, d.icono)) + '</div>' +
       '<div class="tropa-nombre"><h3>' + N(t) + '</h3><span class="rango-chapa r' + r + '">' + T('rango') + ' ' + ROMANO[r] + '</span></div>' +
       '<div class="tropa-cuenta"><span>👥 ' + T('esc_tienes', { n: formatoNumero(cuentaTipo(t)) }) + '</span><span>⏱ ' + T('esc_entrenando', { n: formatoNumero((infoCola().cuenta[t] || 0)) }) + '</span></div>' +
       (lista.length > 1 ? '<div class="tropa-elegir">' + lista.map(function (k) {
@@ -5908,7 +5913,7 @@
     abrirPanel(T('p_heroes'), html, { tipo: 'tropas' });
     if (!bloq) refrescarCantidad();
     $('panel').scrollTop = arriba;
-    visorTropa($('visor-tropa'), t, r);
+    if (!RETRATOS_IMG[t]) visorTropa($('visor-tropa'), t, r);
   }
   function refrescarCantidad() {
     var v = vistaTropa, t = v.tipo, n = v.n;
@@ -8004,6 +8009,7 @@
   var modoInv = 'mios', subInv = 'recursos';
   function subcatObjeto(k) {
     var o = OBJETOS[k] || {};
+    if (/^cofre/.test(k) || o.cofre || o.paquete || o.mejora || o.equipo) return 'cofre'; // v6.92: todos los cofres juntos en «Cofre»
     if (o.equipo) return 'equipo'; if (o.exp !== undefined || o.pergamino) return 'heroe'; if (o.escudo || o.portal) return 'ciudad';
     if (o.segundos || o.acelera) return 'acelerar'; if (o.tropas) return 'tropas'; if (o.da) return 'recursos'; if (o.mejora) return 'potenciador';
     if (o.cofre || o.paquete) return 'cofre'; if (o.reliquia) return 'reliquia'; if (o.intercambio) return 'intercambia'; return 'misc';
