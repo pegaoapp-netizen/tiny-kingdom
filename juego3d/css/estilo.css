@@ -1963,3 +1963,17 @@ html body #panel#panel.desde-abajo:not(.co-panel) #panel-cuerpo { flex: 1 1 auto
 html body #panel#panel.desde-abajo .cerrar, html body #panel#panel.desde-abajo #panel-cerrar { display: inline-flex !important; }
 /* la Ruleta sigue chiquita para ver la ciudad detrás */
 html body #panel#panel.desde-abajo.rul-panel { max-height: 66vh !important; }
+
+/* ===== v6.88: Ruleta: rueda de 10 casillas con dibujos grandes, premios agrupados y Vale siempre visible ===== */
+.rul-rueda { background: repeating-conic-gradient(from -18deg, #1f4a6a 0 36deg, #8a6420 36deg 72deg) !important; }
+#panel.rul-panel .rul-marco { width: min(70vw, 260px) !important; }
+#panel.rul-panel .rul-ic { top: 5% !important; }
+#panel.rul-panel .rul-ic img.ico-obj { width: 42px !important; height: 42px !important; filter: drop-shadow(0 2px 3px rgba(0,0,0,.8)); }
+#panel.rul-panel .rul-centro { width: 30% !important; }
+.az-b.gris, .az-b:disabled.rul-abrir-no { background: linear-gradient(180deg, #7a7468, #4a463e) !important; border: 1px solid #2a2620 !important; color: #d8d2c4 !important; filter: none !important; opacity: .85; margin: 4px auto; font-size: 14px; }
+#rul-premios .rp-caja { display: flex; flex-direction: column; max-height: 88vh; overflow: hidden; }
+#rul-premios .rp-rejilla { flex: 1 1 auto; overflow-y: auto; min-height: 0; padding: 4px; }
+#rul-premios .rp-bots { flex: none; padding-top: 8px; }
+#rul-premios h3 small { font-size: 14px; color: #f1e2c0; }
+.rp-ic { position: relative; display: inline-block; }
+.rp-n { position: absolute; right: -14px; bottom: -4px; background: #d8362a; color: #fff; border: 2px solid #ffe9a0; border-radius: 10px; padding: 0 5px; font: 900 13px/18px system-ui, sans-serif; }

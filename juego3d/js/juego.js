@@ -8095,7 +8095,7 @@
   };
   var EV_INICIO_UTC = 15, EV_HORAS = 11;
   // eventos sueltos (fuera del calendario): la Ruleta de estreno, del 19 de noviembre (5 pm NY) al 20 (5 am NY)
-  var EVENTOS_EXTRA = [{ k: 'ruleta', ini: Date.UTC(2026, 10, 19, 22, 0), fin: Date.UTC(2026, 10, 20, 10, 0) }];
+  var EVENTOS_EXTRA = [{ k: 'ruleta', ini: Date.UTC(2026, 10, 19, 22, 0), fin: Date.UTC(2026, 10, 24, 10, 0) }]; // v6.88: Ruleta de estreno alargada para seguir probando
   function forzarEventos() { return /[?&]eventos=1/.test(location.search); }
   // devuelve { fin, id } si el evento está activo ahora, o null
   function eventoActivo(k) {
@@ -8128,12 +8128,12 @@
   // ================= RULETA DE LA CAPITANA CORAL =================
   // 8 casillas; 2 dan llaves. Con 5 llaves se abre el Cofre del Galeón (el premio gordo).
   var RULETA = [
-    { k: 'cofre_plata', p: 26 }, { k: 'llave', p: 2 }, { k: 'acel_1h', p: 24 }, { k: 'cofre_oro', p: 8 },
-    { k: 'llave', p: 2 }, { k: 'inv_1h', p: 20 }, { k: 'caracola', p: 6 }, { k: 'libro_gra', p: 12 }
+    { k: 'cofre_plata', p: 17 }, { k: 'llave', p: 3 }, { k: 'acel_8h', p: 11 }, { k: 'cofre_oro', p: 13 },
+    { k: 'llave', p: 3 }, { k: 'inv_8h', p: 12 }, { k: 'caracola', p: 13 }, { k: 'libro_gra', p: 13 }, { k: 'estrella_mar', p: 5 }, { k: 'escudo_8h', p: 10 }
   ];
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1 }, GALEON_GEMAS = 50;
   var RUL_FICHAS = 3, RUL_GEMAS = 15;
-  function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; return r; }
+  function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; r.llaves = Math.max(0, Math.floor(+r.llaves || 0)); r.sinLlave = Math.max(0, Math.floor(+r.sinLlave || 0)); return r; }
   function htmlRueda() {
     var n = RULETA.length, paso = 360 / n;
     return '<div class="rul-marco"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda">' + RULETA.map(function (s, i) {
@@ -8149,7 +8149,7 @@
     var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + L('Necesitas: fichas o gemas', 'You need: tokens or gems') + '</small></div>' +
       htmlRueda() +
       '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre">' + (window.ICONO_FICHA ? '' : '') + '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁"></div>' +
-      (falta ? '<p>' + L('Junta ' + falta + ' llave' + (falta > 1 ? 's' : '') + ' más para el Cofre del Galeón', 'Collect ' + falta + ' more key' + (falta > 1 ? 's' : '') + ' for the Galleon Chest') + '</p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
+      (falta ? '<p>' + L('Junta ' + falta + ' llave' + (falta > 1 ? 's' : '') + ' más para el Cofre del Galeón', 'Collect ' + falta + ' more key' + (falta > 1 ? 's' : '') + ' for the Galleon Chest') + ' (' + r.llaves + '/5)</p><button class="az-b gris rul-abrir-no" disabled>🔒 ' + L('Abrir el Cofre del Galeón', 'Open the Galleon Chest') + '</button>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
       '<p class="az-tienes">' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : f) + '</b></p>' +
       '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
         var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
@@ -8173,7 +8173,9 @@
     else if (!pagar(0, RUL_GEMAS * n)) return;
     var r = estadoRuleta(a.id), ganados = [], idx = [];
     for (var i = 0; i < n; i++) {
-      var j = sortearRuleta(), s = RULETA[j]; idx.push(j);
+      var j = sortearRuleta();
+      if (RULETA[j].k !== 'llave' && r.sinLlave >= 24) j = RULETA.map(function (q) { return q.k; }).indexOf('llave'); // garantía: una llave cada 25 tiradas como mucho
+      var s = RULETA[j]; idx.push(j); r.sinLlave = s.k === 'llave' ? 0 : r.sinLlave + 1;
       if (s.k === 'llave') { r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key') }); }
       else { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
     }
@@ -8200,10 +8202,13 @@
     var v = $('rul-premios'); if (v) v.remove();
     var d = document.createElement('div'); d.id = 'rul-premios';
     var hayGordo = !!galeon;
-    d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!')) + '</h3>') +
+    // v6.88: los premios iguales se juntan en uno con su cantidad (×12)
+    var grupos = [], idxG = {}; l.forEach(function (x) { var k = x.nom; if (idxG[k] === undefined) { idxG[k] = grupos.length; grupos.push({ ico: x.ico, nom: x.nom, cat: x.cat, dest: x.dest, gordo: x.gordo, n: 0 }); } grupos[idxG[k]].n++; });
+    var total = l.length; l = grupos;
+    d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!') + ' <small>(' + total + ')</small>') + '</h3>') +
       '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) {
         var dest = x.dest || (x.cat ? '🎒 ' + L('Inventario', 'Inventory') + ' › ' + L(NOM_SUBCAT[x.cat][0], NOM_SUBCAT[x.cat][1]) : x.gordo ? '' : '🗝️ ' + L('Abajo, en la Ruleta', 'In the Wheel'));
-        return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + '</span><small>' + x.nom + '</small>' + (dest ? '<em class="rp-dest">' + dest + '</em>' : '') + '</div>'; }).join('') + '</div>' +
+        return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + (x.n > 1 ? '<b class="rp-n">×' + x.n + '</b>' : '') + '</span><small>' + x.nom + '</small>' + (dest ? '<em class="rp-dest">' + dest + '</em>' : '') + '</div>'; }).join('') + '</div>' +
       '<div class="rp-bots">' + (l.some(function (x) { return x.cat; }) ? '<button class="az-b azul" id="rp-inv">🎒 ' + L('Ver en el Inventario', 'See in Inventory') + '</button>' : '') + '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div></div>';
     var catVer = (l.filter(function (x) { return x.cat; })[0] || {}).cat;
     document.body.appendChild(d); sonar(hayGordo ? 'victoria' : 'moneda');
