@@ -7783,18 +7783,26 @@
   function abrirRegalar() {
     if (!esCuentaDueno()) { consejoTemporal(L('Solo la cuenta del dueño puede regalar.', 'Only the owner account can give gifts.')); sonar('error'); return; }
     abrirPanel('🎁 ' + L('Regalos del dueño', 'Owner gifts'), htmlRegalar(), { tipo: 'regalo' });
+    // v6.90: busca solo al escribir (y con Enter), sin depender del botón
+    var cb = $('rg-busca'), tmo = null;
+    if (cb) { cb.addEventListener('input', function () { clearTimeout(tmo); tmo = setTimeout(buscarParaRegalo, 450); }); cb.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); buscarParaRegalo(); } }); }
   }
   function buscarParaRegalo() {
     var q = ($('rg-busca') && $('rg-busca').value || '').trim();
     var limpio = function (t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); };
     $('rg-res').innerHTML = '<p class="nota">' + L('Buscando…', 'Searching…') + '</p>';
-    Promise.all([Cuentas.aldeas().catch(function () { return []; }), q ? Cuentas.buscarJugador(q).catch(function () { return []; }) : Promise.resolve([])]).then(function (r) {
+    var limite = function (pr) { return Promise.race([pr, new Promise(function (ok) { setTimeout(function () { ok([]); }, 8000); })]); };
+    if (!window.Cuentas) { $('rg-res').innerHTML = '<p class="nota">' + L('Sin conexión con la nube.', 'No cloud connection.') + '</p>'; return; }
+    Promise.all([limite(Cuentas.aldeas().catch(function () { return []; })), q ? limite(Cuentas.buscarJugador(q).catch(function () { return []; })) : Promise.resolve([])]).then(function (r) {
+      r = [r[0] || [], r[1] || []];
       var vistos = {}, yo = Cuentas.usuario() && Cuentas.usuario().uid;
       rgLista = r[1].concat(r[0].filter(function (a) { return !q || limpio(a.nombre).indexOf(limpio(q)) >= 0; }))
         .filter(function (a) { if (!a || !a.uid || vistos[a.uid] || a.uid === yo) return false; vistos[a.uid] = 1; return true; });
       if (!$('rg-res')) return;
       $('rg-res').innerHTML = rgLista.length ? htmlResultadosRegalo() : '<p class="nota">' + L('No encontré a nadie con ese nombre.', 'Nobody found with that name.') + '</p>';
-    });
+      // si solo sale uno, queda elegido de una vez
+      if (rgLista.length === 1 && (!rgElegido || rgElegido.uid !== rgLista[0].uid)) { rgElegido = { uid: rgLista[0].uid, nombre: rgLista[0].nombre }; var bq = $('rg-busca').value; abrirRegalar(); if ($('rg-busca')) $('rg-busca').value = bq; }
+    }).catch(function () { if ($('rg-res')) $('rg-res').innerHTML = '<p class="nota">' + L('No se pudo buscar. Prueba otra vez.', 'Search failed. Try again.') + '</p>'; });
   }
   function enviarRegalo() {
     if (!rgElegido || !esCuentaDueno()) return;
@@ -9733,6 +9741,10 @@
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
       estado.heridos = g.heridos || {};
+      // v6.90 ARREGLO: todo lo demás que estaba guardado vuelve tal cual (fichas, hierro, regalo diario, promos, correo…).
+      // Antes se perdía al recargar y el «Regalo del Rey» y las fichas del día se podían cobrar otra vez.
+      Object.keys(g).forEach(function (k) { if (estado[k] === undefined && ['gemasInfinitas', 'oroInfinito', 'dueno', 'idioma', 'sonido'].indexOf(k) < 0) estado[k] = g[k]; });
+      ['fichas', 'fichaDia', 'promo', 'promoRegalo', 'hierro', 'explora', 'correo', 'impuesto'].forEach(function (k) { if (g[k] !== undefined) estado[k] = g[k]; });
       var eds = (g.edificios || []).slice(), obs = (g.obras || []).slice();
       if (!g.mapa2) {
         // partidas de antes del mapa en cuadrícula: la mina vieja daba piedra (ahora es la cantera)
