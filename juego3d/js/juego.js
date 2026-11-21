@@ -1861,7 +1861,8 @@
     var sel = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.98, 4), new THREE.MeshBasicMaterial({ color: 0xffe14a, transparent: true, opacity: 0.95, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.rotation.z = Math.PI / 4; sel.position.y = 0.05; sel.visible = false; sel.renderOrder = 5; e.add(sel);
     var cosas = new THREE.Group(); e.add(cosas);
-    M3 = { sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {}, bruma: brumaM || null, domo: domoM || null, luces: ptF || null, camelot: camelotM, tPrev: performance.now() };
+    var ovM = new THREE.Scene(); ovM.add(new THREE.HemisphereLight(0xffffff, 0x6a7a50, 0.95)); var solOv = new THREE.DirectionalLight(0xffffff, 0.85); solOv.position.set(20, 40, 25); ovM.add(solOv);
+    M3 = { ov: ovM, sol: sol, r: r, e: e, cam: cam, cosas: cosas, sel: sel, obj: new V3(0, 0, 0), dist: 26, corriendo: false, celdas: {}, bruma: brumaM || null, domo: domoM || null, luces: ptF || null, camelot: camelotM, tPrev: performance.now() };
     // mover con el dedo / ratón, acercar con rueda o pellizco, tocar para elegir
     var el = r.domElement, dedos = {}, inicio = null, pell = null;
     el.style.touchAction = 'none';
@@ -1951,6 +1952,8 @@
     actualizarCarretasMundo();
     actualizarMarchasMundo();
     M3.r.render(M3.e, M3.cam);
+    // v7.26: las tropas que marchan se dibujan en una segunda pasada encima del mapa, con su propia profundidad: se ven sólidas, no transparentes
+    if (M3.ov && M3.ov.children.length > 2) { var acl = M3.r.autoClear; M3.r.autoClear = false; M3.r.clearDepth(); M3.r.render(M3.ov, M3.cam); M3.r.autoClear = acl; }
     anclarTarjetaMundo();
     requestAnimationFrame(dibujarMundo3D);
   }
@@ -4590,7 +4593,7 @@
     if (!M3) return;
     M3.columnas = M3.columnas || {};
     var ahora = Date.now(), vivos = {}, lista = [], yo = miLugar();
-    marchas.forEach(function (m) { if (m.resuelto || m.cancelado || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 12) }); });
+    marchas.forEach(function (m) { if (m.resuelto || m.cancelado || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 9) }); });
     entrantes.forEach(function (r) { if (r.resuelto || r.llega <= ahora || r.cancelado) return; var d = lugarDe(r.atacante) || (r.prueba ? { x: Math.min(98, yo.x + 18), y: Math.max(1, yo.y - 14) } : null); if (d) lista.push({ id: 'e' + r.id, de: d, a: yo, sale: r.fecha || (r.llega - 120000), llega: r.llega, color: 0xd0302a, txt: '🔥 ' + String(r.atacanteNombre || '').slice(0, 12), enemigo: true }); });
     marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven', 'Returning')) : L('Van a atacar', 'Attacking') }); });
     (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, txt: (v.botin ? '💰 ' : '🏇 ') + L('Vuelven', 'Returning'), botin: !!v.botin }); });
@@ -4606,9 +4609,11 @@
         var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color === 0x3fe05a ? 0x3fe05a : 0xff3a2a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); // v7.18: verde las tuyas, roja la que te ataca linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
         // v6.41: el destino se marca en el suelo con un aro
         var aro = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.78, 28), new THREE.MeshBasicMaterial({ color: v.enemigo ? 0xff4a3a : 0xffd36a, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthTest: !M3.camelot })); aro.rotation.x = -Math.PI / 2; aro.position.set(p1.x, 0.16, p1.z); aro.renderOrder = 7; M3.e.add(aro); linea.userData.aro = aro;
-        M3.e.add(g); M3.columnas[v.id] = g;
+        // sombra redonda debajo para que destaquen sobre el pasto
+        var somb = new THREE.Mesh(new THREE.CircleGeometry(0.6, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.38, depthWrite: false })); somb.rotation.x = -Math.PI / 2; somb.position.y = 0.02; somb.renderOrder = -1; g.add(somb);
+        (M3.ov || M3.e).add(g); M3.columnas[v.id] = g;
         // en el mapa pintado los dibujos están parados frente a la cámara: la columna se dibuja encima y un poco más grande
-        if (M3.camelot) { col.scale.setScalar(3.6); linea.material.depthTest = false; linea.renderOrder = 7; }
+        if (M3.camelot) { col.scale.setScalar(M3.ov ? 2.6 : 3.6); if (M3.ov) somb.scale.setScalar(1.6); linea.material.depthTest = false; linea.renderOrder = 7; }
       }
       g.position.set(p0.x + (p1.x - p0.x) * u, 0.06, p0.z + (p1.z - p0.z) * u);
       g.userData.col.rotation.y = Math.atan2(p1.x - p0.x, p1.z - p0.z);
@@ -4617,17 +4622,17 @@
       g.userData.col.userData.us.forEach(function (un, i) { M.animarUnidad(un, t + i * 0.37, anda, 0); });
       if (g.userData.col.userData.sprites) g.userData.col.userData.sprites.forEach(function (s, i) { s.position.y = 0.75 + Math.abs(Math.sin(t * 7 + i * 1.3)) * 0.2; });
       // las figuras llegan después de cargar: cada cuadro se revisa que todo se dibuje encima de los dibujos del mapa
-      if (M3.camelot) g.traverse(function (o) { o.frustumCulled = false; if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = false; if (o.material.emissive && (o.isSkinnedMesh || o.material.map)) { o.material.emissive.setHex(0x3a3a3a); if (o.material.map) o.material.emissiveMap = o.material.map; } o.renderOrder = 8; o.userData.encima = true; } });
+      if (M3.camelot) g.traverse(function (o) { o.frustumCulled = false; if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = !!M3.ov; o.material.transparent = o.material.transparent && o.material.opacity < 1; o.material.opacity = o.material.transparent ? o.material.opacity : 1; if (o.material.emissive && (o.isSkinnedMesh || o.material.map)) { o.material.emissive.setHex(0x3a3a3a); if (o.material.map) o.material.emissiveMap = o.material.map; } o.renderOrder = 8; o.userData.encima = true; } });
       // etiqueta con lo que falta (se cambia una vez por segundo)
       var txt = v.txt + ' · ' + fmtTiempo((v.llega - ahora) / 1000);
       if (g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) {
-        if (g.userData.et) g.remove(g.userData.et);
+        if (g.userData.et) g.remove(g.userData.et); g.children.filter(function (c) { return c.userData && c.userData.esEt; }).forEach(function (c) { g.remove(c); }); // v7.26: nunca dos carteles
         var et = M.etiquetaEdificio(txt, v.enemigo ? '🔥' : '⚔'); et.position.set(0, g.userData.col.userData.sprites ? 2.6 : 1.9, 0); et.scale.multiplyScalar(0.5); g.add(et);
-        g.userData.et = et; g.userData.txt = txt; g.userData.tEt = ahora;
+        et.userData.esEt = true; g.userData.et = et; g.userData.txt = txt; g.userData.tEt = ahora;
       }
       vivos[v.id] = true;
     });
-    for (var k in M3.columnas) if (!vivos[k]) { var lnk = M3.columnas[k].userData.linea; if (lnk && lnk.userData.aro) M3.e.remove(lnk.userData.aro); M3.e.remove(lnk); M3.e.remove(M3.columnas[k]); delete M3.columnas[k]; }
+    for (var k in M3.columnas) if (!vivos[k]) { var lnk = M3.columnas[k].userData.linea; if (lnk && lnk.userData.aro) M3.e.remove(lnk.userData.aro); M3.e.remove(lnk); M3.e.remove(M3.columnas[k]); if (M3.ov) M3.ov.remove(M3.columnas[k]); delete M3.columnas[k]; }
     for (var ka in M3.columnas) { var an = M3.columnas[ka].userData.linea && M3.columnas[ka].userData.linea.userData.aro; if (an) an.scale.setScalar(1 + 0.05 * Math.sin(t * 3)); }
   }
   function actualizarCarretasMundo() {
@@ -8034,7 +8039,14 @@
     if (resolviendo[m.id]) return; resolviendo[m.id] = true;
     var paso = m.resuelto ? Promise.resolve(m) : Cuentas.leerAldea(m.defensor).then(function (al) {
       var umT = (estado.marchaTropas || {})[m.id] || estado.ultimaMarcha || {}, esp = (al && al.espia) || {};
-      var datos = decidirAtaque(m, Math.max(1, (al && al.defensa) || m.defensa || 1), { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: esp.tropas, muralla: esp.muralla || 0 });
+      // v7.26: si el defensor no ha entrado desde mi último ataque, sus tropas muertas siguen muertas (como en KoC): se descuentan de lo publicado
+      var dDef = Math.max(1, (al && al.defensa) || m.defensa || 1), tDef = JSON.parse(JSON.stringify(esp.tropas || {}));
+      var bv = (estado.bajasDe || {})[m.defensor];
+      if (bv && al && (al.actualizado || 0) < bv.t) { for (var kb in bv.perd) if (tDef[kb]) tDef[kb] = Math.max(0, tDef[kb] - bv.perd[kb]); dDef = Math.max(1, dDef - bv.valor); }
+      else if (bv) delete estado.bajasDe[m.defensor];
+      var datos = decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, muralla: esp.muralla || 0 });
+      try { var sdf = ultimaBatalla && !ultimaBatalla.defensa ? ultimaBatalla.sim.def : null; if (sdf) { estado.bajasDe = estado.bajasDe || {}; var reg = estado.bajasDe[m.defensor] && al && (al.actualizado || 0) < estado.bajasDe[m.defensor].t ? estado.bajasDe[m.defensor] : { perd: {}, valor: 0 }; reg.t = Date.now();
+        for (var kd in sdf) { var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
       return Cuentas.resolverAtaque(m.id, datos).then(function () { for (var k in datos) m[k] = datos[k]; return m; })
         .catch(function () { return Cuentas.leerAtaque(m.id); });
     });
@@ -10738,7 +10750,7 @@
       estado.cargos = g.cargos || {}; estado.vip = g.vip || null; estado.finde = g.finde || null; estado.medallas = g.medallas || {}; // v6.80
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
-      estado.heridos = g.heridos || {}; estado.marchaTropas = g.marchaTropas || {}; estado.buffs = g.buffs || {}; estado.megafono = g.megafono || 0; estado.defensasVistas = g.defensasVistas || {};
+      estado.heridos = g.heridos || {}; estado.bajasDe = g.bajasDe || {}; estado.marchaTropas = g.marchaTropas || {}; estado.buffs = g.buffs || {}; estado.megafono = g.megafono || 0; estado.defensasVistas = g.defensasVistas || {};
       // v6.90 ARREGLO: todo lo demás que estaba guardado vuelve tal cual (fichas, hierro, regalo diario, promos, correo…).
       // Antes se perdía al recargar y el «Regalo del Rey» y las fichas del día se podían cobrar otra vez.
       Object.keys(g).forEach(function (k) { if (estado[k] === undefined && ['gemasInfinitas', 'oroInfinito', 'dueno', 'idioma', 'sonido'].indexOf(k) < 0) estado[k] = g[k]; });
