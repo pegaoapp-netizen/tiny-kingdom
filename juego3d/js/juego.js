@@ -2294,7 +2294,8 @@
   // ---------- MARCHAS a aldeas bárbaras, bestias y casillas: las tropas se ven caminando hasta el objetivo ----------
   var marchasPVE = [], idPVE = 0, llegadasPVE = [];
   function marcharA(dest, txt, alLlegar) {
-    if (marchasPVE.some(function (m) { return !m.vuelta; })) { consejoTemporal(L('Tus tropas ya van marchando: espera a que lleguen.', 'Your troops are already marching: wait for them to arrive.')); sonar('error'); return; }
+    // v7.33: varias marchas a la vez también contra aldeas, bestias y casillas (una por nivel del Punto de reunión, máximo 12)
+    if (totalMarchando() >= maxMarchas()) { consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marcha' + (maxMarchas() > 1 ? 's' : '') + ' en camino. Sube el Punto de reunión para mandar más a la vez (una por nivel).', 'You already have ' + maxMarchas() + ' march(es) out. Upgrade the Rally point to send more (one per level).')); sonar('error'); return; }
     var yo = celdaDe(miLugar().x, miLugar().y), dist = Math.hypot(dest.x - yo.x, dest.y - yo.y);
     var seg = Math.max(4, Math.min(15, 2.5 + dist * 0.45)), ahora = Date.now();
     var m = { id: 'p' + (++idPVE), de: { x: aCoord(yo.x), y: aCoord(yo.y) }, a: { x: aCoord(dest.x), y: aCoord(dest.y) }, sale: ahora, llega: ahora + seg * 1000, txt: txt, alLlegar: alLlegar, seg: seg };
@@ -4254,23 +4255,34 @@
   function pintarColas() {
     var box = $('colas-obras');
     if (!box) { box = document.createElement('div'); box.id = 'colas-obras'; document.body.appendChild(box);
-      box.addEventListener('click', function (ev) { var b = ev.target.closest('[data-acel]'); if (!b) return; sonar('click'); abrirAcelerar(b.getAttribute('data-acel')); }); }
+      box.addEventListener('click', function (ev) { var pl = ev.target.closest('[data-plegar]'); if (pl) { sonar('click'); estado.colasPlegadas = pl.getAttribute('data-plegar') === '1'; colasHTML = ''; guardar(); pintarColas(); return; }
+        var b = ev.target.closest('[data-acel]'); if (!b) return; sonar('click'); abrirAcelerar(b.getAttribute('data-acel')); }); }
     var ocultar = enMundo || enMenu || panelActual || document.body.classList.contains('panel-abierto');
     var lista = ocultar ? [] : cosasConTiempo(false);
     var vivos = {}, datos = [];
+    // v7.33: se puede plegar con la flecha (los jugadores decían que tapaba el juego); queda una pastillita con cuántas hay y la que acaba antes
+    if (estado.colasPlegadas && lista.length) {
+      var fm = Math.min.apply(null, lista.map(function (c) { return faltaDe(c.que); }));
+      var hp = '<button class="co-pliega co-abrir" data-plegar="0">⏳ ' + lista.length + ' · ' + fmtTiempo(Math.ceil(fm)) + ' ▸</button>';
+      if (hp !== colasHTML) { colasHTML = hp; box.innerHTML = hp; }
+      box.style.display = '';
+      var mi0 = $('mision'), mr0 = mi0 ? mi0.getBoundingClientRect() : null, tk0 = $('tk-arriba');
+      box.style.top = Math.round(mr0 && mr0.height > 0 && mr0.bottom < innerHeight * 0.5 && getComputedStyle(mi0).display !== 'none' && !mi0.classList.contains('oculto') ? mr0.bottom + 6 : (tk0 ? tk0.getBoundingClientRect().bottom : 60) + 8) + 'px';
+      return;
+    }
     // la caja se arma solo cuando cambia lo que hay; el tiempo y la barra se actualizan sin rehacerla (así el botón responde)
     var h = lista.slice(0, 4).map(function (c) {
       var f = faltaDe(c.que); vivos[c.que] = 1; if (!maxFalta[c.que] || f > maxFalta[c.que]) maxFalta[c.que] = f;
       datos.push({ pct: Math.max(2, Math.min(100, Math.round((1 - f / maxFalta[c.que]) * 100))), t: fmtTiempo(Math.ceil(f)) });
       return '<div class="co-fila"><span class="co-ico">' + c.ico + '</span><div class="co-dat"><b>' + escaparHTML(c.nom) + '</b><div class="co-barra"><i></i><span></span></div></div><button class="co-acel" data-acel="' + c.que + '">' + L('Acelerar', 'Speed up') + '</button></div>';
-    }).join('');
+    }).join('') + (lista.length ? '<button class="co-pliega" data-plegar="1">◂ ' + L('Ocultar', 'Hide') + '</button>' : '');
     Object.keys(maxFalta).forEach(function (k) { if (!vivos[k] && !ocultar) delete maxFalta[k]; });
     if (h !== colasHTML) { colasHTML = h; box.innerHTML = h; }
     box.querySelectorAll('.co-fila').forEach(function (fi, i) { var d = datos[i]; if (!d) return; var bi = fi.querySelector('.co-barra i'), bs = fi.querySelector('.co-barra span'); bi.style.width = d.pct + '%'; if (bs.textContent !== d.t) bs.textContent = d.t; });
     box.style.display = h ? '' : 'none';
     var mi = $('mision'), top = 0;
     var mr = mi ? mi.getBoundingClientRect() : null;
-    if (mr && mr.height > 0 && getComputedStyle(mi).display !== 'none' && !mi.classList.contains('oculto')) top = mr.bottom + 6;
+    if (mr && mr.height > 0 && mr.bottom < innerHeight * 0.5 && getComputedStyle(mi).display !== 'none' && !mi.classList.contains('oculto')) top = mr.bottom + 6; // v7.33: si la misión está abajo, la cola va arriba
     else { var tk = $('tk-arriba'); top = (tk ? tk.getBoundingClientRect().bottom : 60) + 8; }
     box.style.top = Math.round(top) + 'px';
   }
@@ -7781,6 +7793,7 @@
     return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1));
   }
   function maxMarchas() { return Math.min(12, Math.max(1, nivelRelevo())); }
+  function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length; }
   function marchasActivas() { return marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }); }
   // tropas que ya van en otra marcha (no se pueden mandar dos veces)
   function enMarcha(k) { var n = 0; marchasActivas().forEach(function (m) { var t = ((estado.marchaTropas || {})[m.id] || {}).tropas || {}; n += t[k] || 0; }); return n; }
@@ -7830,7 +7843,7 @@
         h += '<div class="mc-esc"><div class="mc-foto chica">' + fotoHTML(k, TROPAS[k].icono) + '</div><div class="mc-ed"><b>' + N(k) + '</b><small>' + L('Libres ', 'Free ') + formatoNumero(max) + (fuera ? ' · 🏇 ' + formatoNumero(fuera) + L(' en marcha', ' marching') : '') + '</small>' +
           '<input type="range" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div><input class="mc-num" type="number" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div>';
       });
-      var am = marchasActivas().length;
+      var am = totalMarchando();
       h += '</div><p class="nota mc1-info">🚩 ' + L('Punto de reunión nv ', 'Rally point lv ') + nivelRelevo() + ' · ' + L('marchas: ', 'marches: ') + am + ' / ' + maxMarchas() + (buffActivo('capMarcha') ? ' · 🚩 +25 %' : '') + '</p>';
       return h + '<p id="mc-aviso" class="mc-rojo"></p><div class="mc-botones"><button class="comprar azul" data-mc="guardar">💾 ' + L('Guardar formación', 'Save formation') + '</button><button class="comprar naranja" data-mc="marchar"' + (tt <= 0 ? ' disabled' : '') + '>⚔️ ' + L('Marchar', 'March') + '</button></div>';
     }
@@ -7946,7 +7959,7 @@
         if (total() <= 0) { consejoTemporal(L('Elige al menos una tropa.', 'Choose at least one troop.')); sonar('error'); return; }
         var f = fuerza(); b.disabled = true;
         // v7.18: varias marchas a la vez según el Punto de reunión (antes la nueva cancelaba la anterior)
-        if (marchasActivas().length >= maxMarchas()) { b.disabled = false; consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marchas en camino. Sube el Punto de reunión para mandar más a la vez.', 'You already have ' + maxMarchas() + ' marches out. Upgrade the Rally point to send more.')); sonar('error'); return; }
+        if (totalMarchando() >= maxMarchas()) { b.disabled = false; consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marchas en camino. Sube el Punto de reunión para mandar más a la vez.', 'You already have ' + maxMarchas() + ' marches out. Upgrade the Rally point to send more.')); sonar('error'); return; }
         if (total() > tamanoMarcha(sel.heroe)) { b.disabled = false; consejoTemporal(L('Te pasaste del límite de la marcha.', 'Over the march limit.')); sonar('error'); return; }
         estado.ultimaMarcha = { heroe: sel.heroe, tropas: JSON.parse(JSON.stringify(sel.tropas)) };
         cerrar(); realizarAtaque(a, f, Math.min(2, carretasLibres())); return;
@@ -8270,16 +8283,18 @@
     if (estado.burbujaHasta && !burbujaActiva()) estado.burbujaHasta = 0;
     var on = protegido() && !enMenu;
     cupulaEscudo.visible = on;
-    $('pill-escudo').classList.toggle('oculto-pill', !on);
-    $('pill-escudo').firstChild.textContent = burbujaActiva() ? '🫧' : '🛡️';
-    if (on) $('escudo-t').textContent = fmtLargo((estado.escudoHasta - Date.now()) / 1000);
+    // v7.33: sin escudo ni burbuja la pastilla sigue a la vista en rojo: «🔓 Ciudad abierta» (para que nadie olvide que lo pueden atacar)
+    $('pill-escudo').classList.toggle('oculto-pill', !!enMenu);
+    $('pill-escudo').classList.toggle('pill-abierta', !on);
+    $('pill-escudo').firstChild.textContent = !on ? '🔓' : burbujaActiva() ? '🫧' : '🛡️';
+    $('escudo-t').textContent = on ? fmtLargo((estado.escudoHasta - Date.now()) / 1000) : L('Ciudad abierta', 'City open');
     var bes = document.querySelectorAll('[data-escudo-boton]');
     if (bes.length) {
       if (!protegido()) reabrirPanel();
       else bes.forEach(function (b) { b.textContent = '🛡️ ' + T('escudo_activo_btn', { t: fmtTiempo((estado.escudoHasta - Date.now()) / 1000) }); });
     }
   }
-  $('pill-escudo').addEventListener('click', function () { consejoTemporal(burbujaActiva() ? T('burbuja_txt', { t: fmtLargo((estado.burbujaHasta - Date.now()) / 1000), n: BURBUJA.castillo }) : T('escudo_info')); });
+  $('pill-escudo').addEventListener('click', function () { if (!protegido()) { consejoTemporal(L('🔓 Tu ciudad está abierta: cualquiera te puede atacar. Pon un escudo de paz (Tienda › Combate).', '🔓 Your city is open: anyone can attack you. Use a peace shield (Shop › Combat).')); return; } consejoTemporal(burbujaActiva() ? T('burbuja_txt', { t: fmtLargo((estado.burbujaHasta - Date.now()) / 1000), n: BURBUJA.castillo }) : T('escudo_info')); });
   function subtabsHeroes(cual) {
     return '<div class="subtabs"><button data-accion="sub-tropas" class="' + (cual === 'tropas' ? 'activo' : '') + '">⚔️ ' + T('sub_tropas') + '</button>' +
       '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
@@ -10799,7 +10814,7 @@
       estado.cargos = g.cargos || {}; estado.vip = g.vip || null; estado.finde = g.finde || null; estado.medallas = g.medallas || {}; // v6.80
       ['comida', 'madera', 'piedra'].forEach(function (r) { estado[r] = typeof g[r] === 'number' ? g[r] : INICIO[r]; });
       (g.barricadas || []).forEach(function (n, i) { if (n && barricadas[i]) ponerBarricada(i, n); });
-      estado.heridos = g.heridos || {}; estado.bajasDe = g.bajasDe || {}; estado.marchaTropas = g.marchaTropas || {}; estado.buffs = g.buffs || {}; estado.megafono = g.megafono || 0; estado.defensasVistas = g.defensasVistas || {};
+      estado.heridos = g.heridos || {}; estado.bajasDe = g.bajasDe || {}; estado.colasPlegadas = !!g.colasPlegadas; estado.marchaTropas = g.marchaTropas || {}; estado.buffs = g.buffs || {}; estado.megafono = g.megafono || 0; estado.defensasVistas = g.defensasVistas || {};
       // v6.90 ARREGLO: todo lo demás que estaba guardado vuelve tal cual (fichas, hierro, regalo diario, promos, correo…).
       // Antes se perdía al recargar y el «Regalo del Rey» y las fichas del día se podían cobrar otra vez.
       Object.keys(g).forEach(function (k) { if (estado[k] === undefined && ['gemasInfinitas', 'oroInfinito', 'dueno', 'idioma', 'sonido'].indexOf(k) < 0) estado[k] = g[k]; });

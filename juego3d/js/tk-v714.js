@@ -41,6 +41,14 @@
     'body #acelerar-elegir .ac-txt b { color: #ffe9b0 !important; } body #acelerar-elegir .ac-txt span { color: #e8d8c3 !important; font-size: 12px !important; } body #acelerar-elegir .ac-txt em { color: #82e0aa !important; font-style: normal; font-weight: 700; }',
     'body #acelerar-elegir .ac-sub, body #acelerar-elegir .ac-res { color: #d9c493 !important; } body #acelerar-elegir .ac-reloj { color: #ff8a5a !important; }',
     '.tr-ir { margin-left: 6px !important; padding: 3px 9px !important; font-size: 12px !important; min-height: 0 !important; vertical-align: middle; }',
+    // v7.33: ciudad abierta, cola de obras plegable, selector de equipo oscuro y legible
+    'html body #pill-escudo.pill-abierta, html body.tema-oscuro #lateral #pill-escudo.pill-abierta, html body #lateral #pill-escudo.pill-abierta { background: linear-gradient(#b8301f, #6e140c) !important; border: 1px solid #ff8a6a !important; border-color: #ff8a6a !important; color: #fff !important; animation: tkLatido 2.4s ease-in-out infinite; }',
+    '@keyframes tkLatido { 0%,100% { box-shadow: 0 0 0 rgba(255,80,60,0); } 50% { box-shadow: 0 0 10px rgba(255,80,60,.8); } }',
+    '#colas-obras .co-pliega { display: inline-block; margin: 2px 0 0; padding: 4px 10px; border-radius: 12px; border: 1px solid #c8a764; background: rgba(28,18,8,.9); color: #ffe08a; font: 700 12px system-ui, sans-serif; }',
+    '#colas-obras .co-abrir { font-size: 13px; padding: 6px 12px; }',
+    'body #eq-elegir .ac-caja { background: linear-gradient(#2c1f14, #1d140c) !important; border: 2px solid #a8782a !important; color: #f3e6c8 !important; }',
+    'body #eq-elegir .ac-cab h3 { color: #ffe08a !important; } body #eq-elegir .eq-fila { background: rgba(0,0,0,.32) !important; border: 1px solid rgba(200,160,90,.35) !important; }',
+    'body #eq-elegir .ob-txt b { color: #ffe9b0 !important; } body #eq-elegir .ob-txt span, body #eq-elegir .ob-txt small { color: #e8d8c3 !important; font-size: 12px !important; opacity: 1 !important; } body #eq-elegir .nota { color: #d9c493 !important; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;
