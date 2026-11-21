@@ -8669,7 +8669,7 @@
   // ---------- v6.84: REGALOS DEL DUEÑO (MaikelR) A CUALQUIER JUGADOR ----------
   // Solo la cuenta del dueño puede enviarlos (lo comprueban también las reglas de la nube).
   var TOPE_REGALO = 999999999, TOPE_REGALO_REC = 999999999999; // v6.94: el dueño puede regalar hasta 999.999.999 de cada tropa y de gemas
-  var rgElegido = null, rgLista = [], rgSetCompleto = false;
+  var rgElegido = null, rgLista = [], rgSetCompleto = false, rgMaximo = false; // v7.43: rgMaximo = regalo «todo al máximo»
   var RG_TIPOS_TROPA = TROPAS_ORDEN.filter(function (t) { return TROPAS[t] && t !== 'heroe'; });
   function htmlRegalar() {
     var en = estado.idioma === 'en';
@@ -8690,7 +8690,9 @@
       '<h4>💰 ' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="rg-rejilla">' +
       ['gemas', 'oro', 'comida', 'madera', 'piedra'].map(function (r) { return '<label class="rg-celda"><span>' + ICONO_RECURSO[r] + ' ' + (r === 'gemas' ? L('Gemas', 'Gems') : T('r_' + r) || r) + '</span><input class="campo rg-r" data-r="' + r + '" type="number" min="0" max="999999999999" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<input class="campo" id="rg-nota" maxlength="120" placeholder="' + L('Mensaje (opcional)', 'Message (optional)') + '">' +
-      '<button class="comprar oro rg-enviar" data-accion="rg-enviar">🎁 ' + L('Enviar regalo', 'Send gift') + '</button></div>';
+      '<button class="comprar oro rg-enviar" data-accion="rg-enviar">🎁 ' + L('Enviar regalo', 'Send gift') + '</button>' +
+      '<button class="comprar morado" data-accion="rg-maximo" style="margin-top:8px">👑 ' + L('Poner su cuenta al máximo', 'Max out their account') + '</button>' +
+      '<p class="nota">' + L('Le sube todo al máximo (castillo, edificios, investigación, héroes, armaduras y tropas) la próxima vez que abra el juego.', 'Maxes everything (castle, buildings, research, heroes, armor and troops) next time they open the game.') + '</p></div>';
     return h;
   }
   function htmlResultadosRegalo() {
@@ -8739,7 +8741,8 @@
     if (rgSetCompleto && sj) { pz = TIPOS_EQ.map(function (t) { return { t: t, r: 'mitico', s: sj }; }); ne = 0; }
     rgSetCompleto = false;
     for (var k = 0; k < ne; k++) { var pq = { t: $('rg-eq-t').value || TIPOS_EQ[Math.floor(Math.random() * TIPOS_EQ.length)], r: sj ? 'mitico' : ($('rg-eq-r').value || 'comun') }; if (sj) pq.s = sj; pz.push(pq); }
-    if (!nt && !gemas && !pz.length && !Object.keys(rec).length) { consejoTemporal(L('Elige al menos una cosa para regalar.', 'Choose at least one thing to give.')); sonar('error'); return; }
+    var maxR = rgMaximo; rgMaximo = false;
+    if (!maxR && !nt && !gemas && !pz.length && !Object.keys(rec).length) { consejoTemporal(L('Elige al menos una cosa para regalar.', 'Choose at least one thing to give.')); sonar('error'); return; }
     var b = document.querySelector('#panel .rg-enviar'); if (b) b.disabled = true;
     var est = $('rg-estado'); if (!est && b) { est = document.createElement('p'); est.id = 'rg-estado'; est.className = 'nota'; b.parentNode.insertBefore(est, b.nextSibling); }
     function aviso(t, ok) { if (est) { est.textContent = t; est.style.color = ok ? '#7fe07a' : '#ff8a7a'; est.style.fontWeight = '700'; } consejoTemporal(t); }
@@ -8748,11 +8751,17 @@
     var listoR = false, tR = setTimeout(function () { if (listoR) return; listoR = true; if (b) b.disabled = false; rgSetCompleto = false; aviso(L('La nube no respondió. Revisa el internet y vuelve a tocar Enviar.', 'The cloud did not answer. Check the internet and tap Send again.'), false); sonar('error'); }, 15000);
     var nomDest = rgElegido.nombre;
     Cuentas.enviarRegalo({ de: Cuentas.usuario().uid, deNombre: String(Cuentas.nombrePublico()).slice(0, 30), para: rgElegido.uid, paraNombre: String(rgElegido.nombre).slice(0, 30),
-      tropas: tropasR, piezas: pz, gemas: gemas, recursos: rec, nota: String(($('rg-nota') && $('rg-nota').value) || '').slice(0, 120), fecha: Date.now() })
+      tropas: tropasR, piezas: pz, gemas: gemas, recursos: rec, nota: ((maxR ? '[MAXIMO] ' : '') + String(($('rg-nota') && $('rg-nota').value) || '')).slice(0, 120), fecha: Date.now() })
       .then(function () { if (listoR) return; listoR = true; clearTimeout(tR); sonar('magia'); abrirRegalar(); aviso('🎁 ' + L('¡Regalo enviado a ', 'Gift sent to ') + nomDest + '! ' + L('Le llega en menos de un minuto.', 'It arrives within a minute.'), true); })
       .catch(function (er) { if (listoR) return; listoR = true; clearTimeout(tR); if (b) b.disabled = false; rgSetCompleto = false; sonar('error');
         if (er && er.code === 'permission-denied') aviso(L('La nube dijo «sin permiso»: hay que publicar las reglas nuevas (firebase deploy --only firestore:rules en la carpeta nube) y entrar con la cuenta del dueño.', 'Cloud said permission denied: publish the new rules and sign in with the owner account.'), false);
         else aviso(L('No se pudo enviar (' + ((er && er.code) || '?') + '). Revisa tu internet.', 'Could not send (' + ((er && er.code) || '?') + ').'), false); });
+  }
+  function maximoPorRegalo() {
+    if (oleadaActiva || enMenu) { setTimeout(maximoPorRegalo, 5000); return; }
+    var antes = estado.dueno; estado.dueno = true;
+    try { todoAlMaximo(false); } finally { estado.dueno = antes; }
+    guardar(true);
   }
   var regalosRecibiendo = false;
   function recibirRegalos() {
@@ -8768,6 +8777,8 @@
           if ((g.piezas || []).length) partes.push((g.piezas || []).length + ' 🧰 ' + L('piezas de equipo', 'gear pieces'));
           var gm = Math.min(TOPE_REGALO, Math.floor(+g.gemas || 0)); if (gm > 0) { estado.gemas = (estado.gemas || 0) + gm; partes.push(gm + ' 💎'); }
           var r = g.recursos || {}; ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { var n = Math.min(TOPE_REGALO_REC, Math.floor(+r[k] || 0)); if (n > 0) { sumarRecurso(k, n); partes.push(n + ' ' + ICONO_RECURSO[k]); } });
+          // v7.43: regalo «todo al máximo» del dueño: se aplica en este reino (esperando a que no haya oleada)
+          var esMax = String(g.nota || '').indexOf('[MAXIMO]') === 0; if (esMax) { g.nota = String(g.nota).slice(8).trim(); partes.push(L('👑 Tu reino al máximo', '👑 Your kingdom maxed out')); maximoPorRegalo(); }
           var de = g.deNombre || 'MaikelR';
           sonar('magia'); chispas(new V3(0, 6, 0), 0xffd24a, 30, 5);
           consejoTemporal('🎁 ' + L('¡Regalo del dueño ', 'Gift from the owner ') + escaparHTML(de) + '!');
@@ -10136,6 +10147,7 @@
     if (a === 'rg-buscar') { sonar('click'); buscarParaRegalo(); return; }
     if (a === 'rg-elegir') { sonar('click'); rgElegido = { uid: b.getAttribute('data-uid'), nombre: b.getAttribute('data-nombre') }; var bq = $('rg-busca') ? $('rg-busca').value : ''; abrirRegalar(); if ($('rg-busca')) $('rg-busca').value = bq; return; }
     if (a === 'rg-enviar') { enviarRegalo(); return; }
+    if (a === 'rg-maximo') { if (!rgElegido) return; confirmarJuego('👑 ' + L('Cuenta al máximo', 'Max account'), L('¿Poner la cuenta de <b>' + escaparHTML(rgElegido.nombre) + '</b> al máximo? Se le aplica la próxima vez que abra el juego.', 'Max out <b>' + escaparHTML(rgElegido.nombre) + '</b>? It applies next time they open the game.'), L('Sí, al máximo', 'Yes, max'), function () { rgMaximo = true; enviarRegalo(); }); return; }
     if (a === 'rg-set-completo') { if (!$('rg-eq-s') || !$('rg-eq-s').value) { consejoTemporal(L('Elige primero el juego de héroe.', 'Choose the hero set first.')); sonar('error'); return; } rgSetCompleto = true; enviarRegalo(); return; }
     if (a === 'construir') {
       var tipo = b.getAttribute('data-tipo');
