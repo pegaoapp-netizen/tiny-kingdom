@@ -7356,7 +7356,7 @@
     if (e) {
       var need = expNivel(e.nivel), ex = Math.min(e.exp || 0, need), tope = topeNivel(id);
       html += '<div class="hf-nv"><b>' + T('nivel_corto') + ' ' + e.nivel + '</b><span>/ ' + tope + '</span></div>' +
-        '<div class="hf-barra"><div style="width:' + Math.round(ex / need * 100) + '%"></div><span>' + (e.nivel >= tope ? T('exp_llena') : ex + ' / ' + need + ' EXP') + '</span></div>';
+        '<div class="hf-barra"><div style="width:' + Math.round(ex / need * 100) + '%"></div><span>' + (e.nivel >= tope ? (e.estrellas >= 5 ? L('Asciende para seguir subiendo', 'Ascend to keep leveling') : T('exp_llena')) : ex + ' / ' + need + ' EXP') + '</span></div>';
     } else html += '<p class="nota">' + T('bloqueado') + '</p>';
     html += '</div></div>' +
       '<div class="subtabs hf-tabs">' + [['atrib', T('hv_atributos')], ['hab', T('hv_habilidades')], ['equipo', T('hv_equipo')]].map(function (p) { return '<button data-accion="heroe-tab" data-tab="' + p[0] + '" data-id="' + id + '" class="' + (pestanaHeroe === p[0] ? 'activo' : '') + '">' + p[1] + '</button>'; }).join('') + '</div>';

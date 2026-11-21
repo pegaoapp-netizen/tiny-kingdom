@@ -45,7 +45,7 @@ html, body { background: var(--tk-fondo) !important; color: var(--tk-txt); }
 
 /* ---------- Vidrio: paneles, cartas, menús ---------- */
 #panel, .panel-cab, #menu-edif, #ficha-ciudad, #mundo-info .carta, #consejo, #mision,
-#opciones-ataque, #acelerar-elegir, #eq-elegir, #chat-opciones, #bus-info, #barra-obra,
+#opciones-ataque, #acelerar-elegir, #eq-elegir .ac-caja, #chat-opciones, #bus-info, #barra-obra,
 #barra-colocar, #aviso-pausa, .flotante-construir, #etiqueta-hover, .fc-caja, .bp-caja,
 .nn-caja, .rc-caja, .cj-caja, .cq-carta, .car-carta, .hv-carta, .heroe-ficha, .ficha-tropa,
 .cq-ficha, .mail-cuerpo, .casilla-info {
