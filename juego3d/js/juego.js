@@ -5639,6 +5639,8 @@
     if (enMenu) return;
     mouse.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1);
     rayo.setFromCamera(mouse, camara);
+    // v7.35: el castillo va primero: en una oleada las tropas se juntan delante y tapaban el toque (abría la ficha de un soldado)
+    if (!modoColocar && rayo.intersectObjects(murallaModelo ? [castillo, murallaModelo] : [castillo], true).some(function (h) { var o = h.object; while (o && !o.userData.castillo) o = o.parent; return o && o !== murallaModelo; })) { sonar('click'); abrirPanelCastillo(); return; }
     // primero miramos si tocó una tropa o un enemigo (se ven más arriba que el suelo)
     if (!modoColocar) {
       var gente = tropasFuera().concat(enemigos);
