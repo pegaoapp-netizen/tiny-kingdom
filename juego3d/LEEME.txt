@@ -93,3 +93,9 @@ NOVEDADES VISUALES (versión 2.1) — solo cambia cómo se ve, no las reglas
   - Cámara suave con inercia; más baja al acercarse.
   - Barra de abajo propia: Frontera, Guardia, Baúl, CONSTRUIR (centro), Colmado, Hermandad, Islas.
   - Copia de los archivos de antes: ..\respaldo_visual_2026-10-26
+
+
+---- PUBLICACIÓN AUTOMÁTICA (desde la v7.15) ----
+Cada vez que llega a main un cambio de la carpeta juego3d/, GitHub publica solo en Firebase Hosting (sitio tinykingdom-pegao,
+proyecto pegao-5ac07) con .github/workflows/publicar-firebase.yml y el secreto FIREBASE_SERVICE_ACCOUNT.
+Las reglas de Firestore (carpeta nube, proyecto tiny-kingdom-pegao) se siguen publicando a mano.
