@@ -19,7 +19,7 @@ service cloud.firestore {
       allow create, update: if request.auth != null && request.auth.uid == uid
         && request.resource.data.keys().hasOnly(['usuario', 'partida', 'actualizado', 'version'])
         && request.resource.data.partida is string
-        && request.resource.data.partida.size() < 20000
+        && request.resource.data.partida.size() < 900000 // v7.40: antes 20000 y los reinos grandes no se guardaban en la nube
         && request.resource.data.actualizado is int;
       allow delete: if request.auth != null && request.auth.uid == uid;
     }

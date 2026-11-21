@@ -10735,6 +10735,17 @@
       estado.idioma = estado.idioma === 'es' ? 'en' : 'es'; guardarPreferencias(); aplicarIdioma();
     } };
   }
+  // v7.40: cuánto avanzó una partida (castillo, edificios, investigación y héroes), para no cambiar un reino grande por uno vacío
+  function progresoPartida(g) {
+    if (!g) return 0;
+    var p = (g.castillo || 1) * 30 + (g.muralla || 0) * 5 + (g.oleada || 1);
+    (g.edificios || []).forEach(function (e) { if (e && e.nivel) p += e.nivel; });
+    for (var k in (g.invest || {})) p += +g.invest[k] || 0;
+    for (var h in (g.heroes || {})) p += ((g.heroes[h] && g.heroes[h].nivel) || 0) / 5;
+    return p;
+  }
+  // v7.40: si la nube rechaza el guardado, se avisa (antes fallaba en silencio)
+  setInterval(function () { try { if (window.Cuentas && Cuentas.usuario() && Cuentas.errorGuardar && Cuentas.errorGuardar() && !enMenu) consejoTemporal(L('⚠️ No se pudo guardar tu reino en la nube. Se sigue guardando en este teléfono.', '⚠️ Your kingdom could not be saved to the cloud. It is still saved on this phone.')); } catch (e) {} }, 120000);
   function pantallaInicio() {
     pantallaModo = 'inicio';
     var nube = window.Cuentas && Cuentas.disponible();
@@ -10743,7 +10754,19 @@
     // 2) Sin sesión y sin elegir invitado: formulario de cuenta
     if (nube && !Cuentas.usuario() && !modoInvitado) { pantallaCuenta(); return; }
     var g = cargar();
-    if (window.Cuentas && Cuentas.usuario() && partidaNube && (!g || (partidaNube.actualizado || 0) > (g.actualizado || 0))) g = partidaNube;
+    // v7.40 ARREGLO: si la nube no respondió y este teléfono no tiene tu reino, NO se empieza uno nuevo (antes se guardaba encima y se perdía todo)
+    if (window.Cuentas && Cuentas.usuario() && nubeFallo && !(g && typeof g.monedas === 'number')) {
+      mostrarPantalla('⚠️', NOMBRE_JUEGO, L('No se pudo traer tu reino desde la nube. Tu reino NO se ha borrado: revisa tu internet y vuelve a intentarlo.', 'Your kingdom could not be loaded from the cloud. It has NOT been deleted: check your internet and try again.'), [
+        { texto: L('Reintentar', 'Try again'), accion: function () { alCambiarCuenta(Cuentas.usuario()); } },
+        { texto: L('Cerrar sesión', 'Sign out'), clase: 'morado', accion: function () { Cuentas.salir(); } }
+      ]);
+      return;
+    }
+    if (window.Cuentas && Cuentas.usuario() && partidaNube && (!g || (partidaNube.actualizado || 0) > (g.actualizado || 0))) {
+      // v7.40: si la copia de este teléfono va MUCHO más adelantada que la de la nube (la nube quedó vieja o se borró), se recupera la del teléfono
+      if (g && typeof g.monedas === 'number' && progresoPartida(g) > progresoPartida(partidaNube) * 1.5 + 20) { g.actualizado = Date.now(); setTimeout(function () { consejoTemporal(L('♻️ Recuperamos tu reino guardado en este teléfono.', '♻️ We restored the kingdom saved on this phone.')); }, 2500); }
+      else g = partidaNube;
+    }
     // Sin cartel de bienvenida: con la sesión lista se entra directo al reino.
     // Idioma y cerrar sesión están siempre arriba, junto a los recursos.
     var hayPartida = g && typeof g.monedas === 'number'; // v6.92 ARREGLO: antes, sin edificios hechos, cada recarga empezaba un reino nuevo (y regalaba todo otra vez)
@@ -10801,7 +10824,7 @@
   }
   // Cuando alguien entra o sale de su cuenta
   function alCambiarCuenta(u) {
-    partidaNube = null;
+    partidaNube = null; nubeFallo = false;
     if (!u) {
       if (duenoPorCuenta) { duenoPorCuenta = false; salirModoDueno(); }
       // si alguien cerró sesión de verdad, vuelve al formulario de cuenta

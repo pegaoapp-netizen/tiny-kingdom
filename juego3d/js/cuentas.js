@@ -31,6 +31,21 @@ var Cuentas = (function () {
   // v6.54: el Mundo mide MAPA_TAM × MAPA_TAM casillas y cada reino guarda su casilla exacta.
   // Los reinos guardados con el mapa viejo (coordenadas 0 a 99, sin el campo "mapa") se pasan a su lugar en el mapa nuevo.
   var MAPA_TAM = 300;
+  // v7.40: la partida en la nube no puede pasar de ~1 MB. El correo (informes de batalla con su detalle) es lo que más pesa:
+  // si la partida es muy grande, a la nube va con el correo recortado (en el teléfono se queda completo).
+  var nubeLeida = false, errorGuardar = '', TOPE_PARTIDA = 700000;
+  function partidaCorta(e) {
+    var t = JSON.stringify(e);
+    if (t.length < TOPE_PARTIDA || !Array.isArray(e.buzon)) return t;
+    var c = {}; for (var k in e) c[k] = e[k];
+    var importantes = function (m) { return m && (m.marcado || (m.premio && !m.reclamado)); };
+    c.buzon = e.buzon.filter(function (m, i) { return i < 40 || importantes(m); }).map(function (m, i) {
+      if (i < 15) return m; var x = {}; for (var j in m) x[j] = m[j]; x.cuerpo = String(m.cuerpo || '').slice(0, 300); return x;
+    });
+    t = JSON.stringify(c);
+    if (t.length >= TOPE_PARTIDA) { c.buzon = c.buzon.filter(importantes).map(function (m) { var x = {}; for (var j in m) x[j] = m[j]; x.cuerpo = ''; return x; }); t = JSON.stringify(c); }
+    return t;
+  }
   function normAldea(x) {
     if (x && x.mapa !== MAPA_TAM && typeof x.x === 'number') { x.x = Math.min(MAPA_TAM - 1, Math.floor((x.x + 0.5) * MAPA_TAM / 100)); x.y = Math.min(MAPA_TAM - 1, Math.floor((x.y + 0.5) * MAPA_TAM / 100)); }
     return x;
@@ -108,10 +123,13 @@ var Cuentas = (function () {
     // Partida en la nube
     cargarPartida: function () {
       if (!usuario) return Promise.resolve(null);
-      return db.collection('jugadores').doc(usuario.uid).get().then(function (d) {
-        if (!d.exists) return null;
+      nubeLeida = false;
+      // v7.40: { source: 'server' }: nunca se toma una copia vacía del caché como si fuera la de la nube
+      return db.collection('jugadores').doc(usuario.uid).get({ source: 'server' }).then(function (d) {
+        if (!d.exists) { nubeLeida = true; return null; }
         var x = d.data();
-        try { return { estado: JSON.parse(x.partida), actualizado: x.actualizado || 0 }; } catch (e) { return null; }
+        try { var r = { estado: JSON.parse(x.partida), actualizado: x.actualizado || 0 }; nubeLeida = true; return r; }
+        catch (e) { throw new Error('partida rota'); } // no se pisa: mejor no guardar que borrar el reino
       });
     },
     // Guarda con un poco de espera para no escribir a cada rato
@@ -125,14 +143,19 @@ var Cuentas = (function () {
     guardarYa: function () {
       clearTimeout(timer);
       if (!usuario || !pendiente) return Promise.resolve();
+      // v7.40 ARREGLO: si no se pudo leer tu reino de la nube, no se escribe encima (antes un reino nuevo podía borrar el de verdad)
+      if (!nubeLeida) return Promise.resolve();
       var e = pendiente; pendiente = null;
+      var texto = partidaCorta(e);
       return db.collection('jugadores').doc(usuario.uid).set({
         usuario: nombreDe(usuario).slice(0, 60),
-        partida: JSON.stringify(e),
+        partida: texto,
         actualizado: Math.floor(e.actualizado || Date.now()),
         version: 1
-      }).catch(function () { /* sin internet: Firestore lo reintenta solo */ });
+      }).then(function () { errorGuardar = ''; }).catch(function (err) { errorGuardar = (err && err.code) || 'error'; try { console.warn('No se pudo guardar en la nube', err); } catch (x) {} });
     },
+    nubeLeida: function () { return nubeLeida; },
+    errorGuardar: function () { return errorGuardar; },
 
     // ---------------- MAPA DEL MUNDO Y ALIANZAS ----------------
     // Nombre que ven los demás: nunca el correo completo
