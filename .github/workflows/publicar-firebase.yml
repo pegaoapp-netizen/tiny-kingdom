@@ -1,0 +1,21 @@
+# Publica el juego en Firebase Hosting (sitio tinykingdom-pegao) cada vez que algo de juego3d/ llega a main.
+# Necesita UNA VEZ el secreto FIREBASE_SERVICE_ACCOUNT (la clave JSON de la cuenta de servicio del proyecto pegao-5ac07):
+# GitHub → Settings → Secrets and variables → Actions → New repository secret.
+name: Publicar en Firebase
+on:
+  push:
+    branches: [main]
+    paths: ['juego3d/**']
+  workflow_dispatch: {}
+jobs:
+  hosting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: pegao-5ac07
+          entryPoint: juego3d
+          channelId: live
