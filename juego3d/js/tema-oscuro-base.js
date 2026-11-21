@@ -98,7 +98,7 @@
     var pt = $('pill-tropas'); if (pt) pt.title = 'Tropas · toca para entrenar';
   }
   // v6.55: el poder arriba va corto (16,3M) para que no se corte con puntos
-  function cortoNum(txt) { var n = parseInt(String(txt).replace(/[^0-9]/g, ''), 10) || 0; var c = ingles() ? '.' : ','; function f(v) { return (Math.floor(v * 10) / 10).toString().replace('.', c); } return n >= 1e9 ? f(n / 1e9) + 'B' : n >= 1e6 ? f(n / 1e6) + 'M' : n >= 1e4 ? f(n / 1e3) + 'k' : String(txt); }
+  function cortoNum(txt) { var n = parseInt(String(txt).replace(/[^0-9]/g, ''), 10) || 0; var c = ingles() ? '.' : ','; function f(v) { return (Math.floor(v * 10) / 10).toString().replace('.', c); } return n >= 1e12 ? f(n / 1e12) + 'T' : n >= 1e9 ? f(n / 1e9) + 'B' : n >= 1e6 ? f(n / 1e6) + 'M' : n >= 1e4 ? f(n / 1e3) + 'k' : String(txt); }
   // v6.57: en cada ventana, arriba a la derecha, el botón verde de gemas con "Más"
   var pcab = document.querySelector('#panel .panel-cab');
   if (pcab) { var bg = document.createElement('button'); bg.id = 'panel-gemas'; bg.innerHTML = '<span class="pg-dat"><b id="pg-n">0</b><small id="pg-mas">Más</small></span>' + GEMA_SVG.replace('tk-gema', 'tk-gema pg-gema').replace(/tkg1/g, 'pgg1').replace(/tkg2/g, 'pgg2'); var cx = pcab.querySelector('.cerrar, button'); pcab.insertBefore(bg, cx || null); bg.addEventListener('click', function () { if (window.TK_gemas) window.TK_gemas(); }); }

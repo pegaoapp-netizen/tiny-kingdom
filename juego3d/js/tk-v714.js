@@ -49,6 +49,10 @@
     'body #eq-elegir .ac-caja { background: linear-gradient(#2c1f14, #1d140c) !important; border: 2px solid #a8782a !important; color: #f3e6c8 !important; }',
     'body #eq-elegir .ac-cab h3 { color: #ffe08a !important; } body #eq-elegir .eq-fila { background: rgba(0,0,0,.32) !important; border: 1px solid rgba(200,160,90,.35) !important; }',
     'body #eq-elegir .ob-txt b { color: #ffe9b0 !important; } body #eq-elegir .ob-txt span, body #eq-elegir .ob-txt small { color: #e8d8c3 !important; font-size: 12px !important; opacity: 1 !important; } body #eq-elegir .nota { color: #d9c493 !important; }',
+    // v7.36: más contraste: misión en vino oscuro con letra blanca, texto de la barra de procesos en crema
+    'html body #mision#mision, html body.tema-oscuro #mision#mision { background: linear-gradient(#5a1a20, #3a0f14) !important; color: #ffffff !important; border: 1.5px solid #e0b44c !important; text-shadow: 0 1px 2px #000 !important; box-shadow: 0 3px 8px rgba(0,0,0,.6) !important; }',
+    'html body #mision#mision *, html body.tema-oscuro #mision#mision, html body.tema-oscuro #mision#mision * { color: #ffffff !important; text-shadow: 0 1px 2px #000 !important; }',
+    'html body #dock-procesos .dk-txt { color: #e6d5b8 !important; font-weight: 700 !important; text-shadow: 0 1px 2px #000; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;

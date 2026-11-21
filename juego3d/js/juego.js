@@ -404,6 +404,7 @@
     g.setAttribute('color', new THREE.Float32BufferAttribute(colores, 3));
     g.computeVertexNormals();
     var suelo = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ map: texturaPasto(), vertexColors: true }));
+    suelo.material.color.setRGB(0.86, 0.87, 0.82); // v7.36: pasto un poco más apagado para que los edificios resalten
     suelo.receiveShadow = true;
     escena.add(suelo);
     // v6.51: pared del acantilado con textura de roca (solo los triángulos de la caída)
@@ -3319,7 +3320,7 @@
       nu.addEventListener('change', function () { nu.value = Math.max(0, Math.min(+rg.max, Math.floor(+nu.value || 0))); total(); });
     });
   }
-  function cortoNum(n) { n = Math.floor(n || 0); return n >= 1e9 ? (Math.floor(n / 1e8) / 10) + 'b' : n >= 1e6 ? (Math.floor(n / 1e5) / 10) + 'm' : n >= 1e4 ? (Math.floor(n / 100) / 10) + 'k' : formatoNumero(n); }
+  function cortoNum(n) { n = Math.floor(n || 0); return n >= 1e12 ? (Math.floor(n / 1e11) / 10) + 't' : n >= 1e9 ? (Math.floor(n / 1e8) / 10) + 'b' : n >= 1e6 ? (Math.floor(n / 1e5) / 10) + 'm' : n >= 1e4 ? (Math.floor(n / 100) / 10) + 'k' : formatoNumero(n); }
   function cambiarTransporte(r, d, max) { var rg = $('tr-' + r); if (!rg) return; var nu = $('trn-' + r), v = max ? +rg.max : Math.max(0, Math.min(+rg.max, (Math.floor(+nu.value || 0)) + d * Math.max(1, +rg.step || 1))); rg.value = v; rg.dispatchEvent(new Event('input')); nu.value = v; nu.dispatchEvent(new Event('input')); }
   function mandarTransporte(b) {
     if (!trSel) return;
@@ -4084,8 +4085,8 @@
       var tex = new THREE.CanvasTexture(c);
       function pintar(img) {
         x.clearRect(0, 0, W, H);
-        var gf = x.createLinearGradient(0, 14, 0, 82); if (unico) { gf.addColorStop(0, 'rgba(36,74,150,.96)'); gf.addColorStop(1, 'rgba(14,32,78,.96)'); } else { gf.addColorStop(0, 'rgba(58,36,16,.94)'); gf.addColorStop(1, 'rgba(24,14,6,.94)'); }
-        x.fillStyle = gf; x.strokeStyle = '#e8b84a'; x.lineWidth = 4;
+        var gf = x.createLinearGradient(0, 14, 0, 82); if (unico) { gf.addColorStop(0, 'rgba(44,30,16,.97)'); gf.addColorStop(1, 'rgba(14,9,5,.97)'); } // v7.36: fondo oscuro sólido (antes azul) para que se lea sobre el pasto else { gf.addColorStop(0, 'rgba(58,36,16,.94)'); gf.addColorStop(1, 'rgba(24,14,6,.94)'); }
+        x.fillStyle = gf; x.strokeStyle = '#ffd35a'; x.lineWidth = 5;
         x.beginPath(); if (x.roundRect) x.roundRect(40, 18, W - 46, 60, 30); else x.rect(40, 18, W - 46, 60); x.fill(); x.stroke();
         // medallón con el dibujo
         x.beginPath(); x.arc(48, 48, 44, 0, Math.PI * 2); var gm = x.createRadialGradient(48, 40, 6, 48, 48, 44); gm.addColorStop(0, '#5a3a1e'); gm.addColorStop(1, '#1e1208'); x.fillStyle = gm; x.fill();
@@ -4093,9 +4094,9 @@
         if (img) { x.save(); x.beginPath(); x.arc(48, 48, 40, 0, Math.PI * 2); x.clip(); x.drawImage(img, 6, 4, 84, 84); x.restore(); }
         else { x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '44px sans-serif'; x.fillText((EDIFICIOS[tipo] && EDIFICIOS[tipo].icono) || '🏠', 48, 50); }
         // nombre y nivel
-        var nom = N(tipo); x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = '#fff3d0';
+        var nom = N(tipo); x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = '#ffffff'; x.shadowColor = '#000'; x.shadowBlur = 4; x.shadowOffsetY = 2;
         var fs = 30; x.font = '800 ' + fs + 'px system-ui, sans-serif'; while (x.measureText(nom).width > 150 && fs > 18) { fs -= 2; x.font = '800 ' + fs + 'px system-ui, sans-serif'; }
-        x.fillText(nom, 100, 49);
+        x.fillText(nom, 100, 49); x.shadowColor = 'transparent'; x.shadowBlur = 0; x.shadowOffsetY = 0;
         x.beginPath(); x.arc(W - 36, 48, 24, 0, Math.PI * 2); x.fillStyle = nivel >= 20 ? '#e0a23c' : nivel >= 10 ? '#7a5a2a' : '#4a3420'; x.fill(); x.lineWidth = 3; x.strokeStyle = '#ffe9a0'; x.stroke();
         x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = '900 26px system-ui, sans-serif'; x.fillText(String(nivel), W - 36, nivel > NIVEL_ESTRELLA ? 56 : 50);
         if (nivel > NIVEL_ESTRELLA) { x.fillStyle = '#ffe066'; x.font = '16px sans-serif'; x.fillText('★', W - 36, 34); }
@@ -4111,7 +4112,7 @@
       var W2 = 132, H2 = 96, c2 = document.createElement('canvas'); c2.width = W2; c2.height = H2; var y = c2.getContext('2d'), tex2 = new THREE.CanvasTexture(c2);
       var pintar2 = function (img) {
         y.clearRect(0, 0, W2, H2);
-        y.beginPath(); y.arc(48, 48, 44, 0, Math.PI * 2); var g2 = y.createRadialGradient(48, 40, 6, 48, 48, 44); g2.addColorStop(0, unico ? '#2a4a8e' : '#5a3a1e'); g2.addColorStop(1, unico ? '#0e2050' : '#1e1208'); y.fillStyle = g2; y.fill();
+        y.beginPath(); y.arc(48, 48, 44, 0, Math.PI * 2); var g2 = y.createRadialGradient(48, 40, 6, 48, 48, 44); g2.addColorStop(0, '#5a3a1e'); g2.addColorStop(1, '#1e1208'); y.fillStyle = g2; y.fill();
         y.lineWidth = 5; y.strokeStyle = '#f2c45a'; y.stroke();
         if (img) { y.save(); y.beginPath(); y.arc(48, 48, 40, 0, Math.PI * 2); y.clip(); y.drawImage(img, 6, 4, 84, 84); y.restore(); }
         else { y.textAlign = 'center'; y.textBaseline = 'middle'; y.font = '44px sans-serif'; y.fillText((EDIFICIOS[tipo] && EDIFICIOS[tipo].icono) || '🏠', 48, 50); }
@@ -4124,7 +4125,7 @@
       if (arch2) { var im2 = new Image(); im2.onload = function () { pintar2(im2); }; im2.src = 'iconos/ui/' + arch2 + '.webp'; }
       cacheChapa[k + '|chica'] = new THREE.SpriteMaterial({ map: tex2, depthTest: false, transparent: true });
     }
-    var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(8.4, 2.55, 1); else sp.scale.set(5.0, 1.52, 1); sp.renderOrder = unico ? 12 : 11;
+    var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(9.2, 2.8, 1); else sp.scale.set(5.6, 1.7, 1); sp.renderOrder = unico ? 12 : 11;
     sp.userData.grande = { m: cacheChapa[k], s: sp.scale.clone() };
     sp.userData.chica = { m: cacheChapa[k + '|chica'], s: unico ? new THREE.Vector3(3.6, 2.6, 1) : new THREE.Vector3(2.6, 1.9, 1) };
     return sp;
@@ -10418,7 +10419,8 @@
     barricadas.forEach(function (b) { p += b.nivel * 300; });
     return p + (estado.oleada - 1) * 1000;
   }
-  function corto(n) { n = Math.floor(n || 0); return n < 10000 ? '' + n : n < 1000000 ? (Math.floor(n / 100) / 10) + 'k' : (Math.floor(n / 100000) / 10) + 'M'; }
+  // v7.36: con B (miles de millones) y T (billones) para que los poderes grandes no salgan como «16326,6»
+  function corto(n) { n = Math.floor(n || 0); return n < 10000 ? '' + n : n < 1e6 ? (Math.floor(n / 100) / 10) + 'k' : n < 1e9 ? (Math.floor(n / 1e5) / 10) + 'M' : n < 1e12 ? (Math.floor(n / 1e8) / 10) + 'B' : (Math.floor(n / 1e11) / 10) + 'T'; }
   function formatoNumero(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, estado.idioma === 'en' ? ',' : '.'); }
   var consejoFijo = '', consejoHasta = 0;
   function consejoTemporal(txt) { consejoFijo = txt; consejoHasta = performance.now() + 2600; mostrarConsejo(); }
