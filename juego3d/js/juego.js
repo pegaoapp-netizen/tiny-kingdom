@@ -3987,7 +3987,8 @@
     if (repetibleCiudad(tipo)) return true;
     // v7.14: si la parcela fija de ese edificio (p. ej. la Herrería) está ocupada por otro edificio, va en cualquier parcela libre
     var sf = slots.filter(function (x) { return x.fijo === tipo; })[0], oc = sf && (sf.edificio || sf.obra);
-    if ((!sf || (oc && oc.tipo !== tipo)) && contarEdificios(tipo) < 1 && !slots.some(function (x) { return x.obra && x.obra.tipo === tipo; })) return true;
+    // v7.31: también si su parcela fija todavía está cerrada (castillo bajo): así se pueden construir todos los edificios desde el principio
+    if ((!sf || (oc && oc.tipo !== tipo) || (!oc && cerrada(sf))) && contarEdificios(tipo) < 1 && !slots.some(function (x) { return x.obra && x.obra.tipo === tipo; })) return true;
     if (tipo === 'galeria' || tipo === 'enfermeria' || tipo === 'almacen') return contarEdificios(tipo) < 1;
     return false;
   }
@@ -11385,7 +11386,8 @@
       navigator.serviceWorker.register('sw.js').then(function (reg) { try { reg.update(); } catch (e) {} setInterval(function () { try { reg.update(); } catch (e) {} }, 5 * 60 * 1000); }).catch(function () {});
     });
     var yaRecargo = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function () { if (yaRecargo) return; avisarVersionNueva(); }); // v7.25: nunca recarga sola
+    var habiaSW = !!navigator.serviceWorker.controller; // v7.32: la primera vez que se instala no es una versión nueva
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (yaRecargo || !habiaSW) return; avisarVersionNueva(); }); // v7.25: nunca recarga sola
   }
   // Mira si en internet hay una versión más nueva del juego; si la hay, avisa (o recarga si estás en el menú)
   function revisarVersion() {
