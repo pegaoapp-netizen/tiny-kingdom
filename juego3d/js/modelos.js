@@ -2140,7 +2140,7 @@ var M = (function () {
     }
     // aro rojo bajo los pies: se ve de un vistazo quién es enemigo
     var aroE = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.56, 24), new THREE.MeshBasicMaterial({ color: 0xd8281e, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
-    aroE.rotation.x = -Math.PI / 2; aroE.position.y = 0.035; cuerpo.parent ? cuerpo.parent.add(aroE) : cuerpo.add(aroE);
+    aroE.userData.noFusionar = true; aroE.rotation.x = -Math.PI / 2; aroE.position.y = 0.035; cuerpo.parent ? cuerpo.parent.add(aroE) : cuerpo.add(aroE);
   }
   function unidad(tipo, tam, armadura, look) {
     if (tipo === 'heroe' && look) return heroeModelo(look, tam);
@@ -2780,21 +2780,27 @@ var M = (function () {
   // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
-    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' }, anciano: { alto: 1.6, gira: 0, archivo: 'anciano_rig', animDe: 'aldeano' }, nino: { alto: 1.1, gira: 0, archivo: 'nino_rig', animDe: 'aldeano' },
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' }, anciano: { alto: 1.6, gira: 0, archivo: 'anciano_rig', animDe: 'aldeano' }, nino: { alto: 1.1, gira: 0, archivo: 'nino_rig', animDe: 'aldeano' }, trasgo: { alto: 1.45, gira: 0, archivo: 'trasgo_rig', animDe: 'aldeano', delta: true }, // v7.28: trasgo de Tripo (con huesos), camina con la animación del aldeano
+
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
-  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano', nino: 'nino' };
+  var FIGURA_TROPA = { trasgo: 'trasgo', caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano', nino: 'nino' };
   var figListas = {}, figPedidas = false, pendRet = {};
   // figuras con esqueleto pero sin animación: usan la de otra figura (mismos huesos, otros nombres)
   var HUESO_DIF = { Spine: 'Spine02', Spine1: 'Spine01', Spine2: 'Spine', Neck: 'neck' };
   function intentarRetarget() {
     Object.keys(pendRet).forEach(function (id) {
       var src = figListas[FIGURAS[id].animDe], dst = figListas[id]; if (!src || !src.clips || !dst) return;
-      var nombres = {}; dst.obj.traverse(function (o) { if (o.isBone) nombres[o.name] = 1; });
+      var nombres = {}, restD = {}, restS = {}; dst.obj.traverse(function (o) { if (o.isBone) { nombres[o.name] = 1; restD[o.name] = o.quaternion.clone(); } });
+      src.obj.traverse(function (o) { if (o.isBone) restS[o.name] = o.quaternion.clone(); });
       dst.clips = src.clips.map(function (c) {
         var tr = c.tracks.filter(function (t) { return /.quaternion$/.test(t.name); }).map(function (t) {
-          var b = t.name.replace(/.quaternion$/, '').replace(/^mixamorig/, ''), d = HUESO_DIF[b] || b; if (!nombres[d]) return null;
-          var nt = t.clone(); nt.name = d + '.quaternion'; return nt;
+          var b = t.name.replace(/.quaternion$/, '').replace(/^mixamorig:?/, ''), d = HUESO_DIF[b] || b; if (!nombres[d] && nombres['mixamorig' + b]) d = 'mixamorig' + b; else if (!nombres[d] && nombres['mixamorig:' + b]) d = 'mixamorig:' + b; if (!nombres[d]) return null; if (FIGURAS[id].sinCabeza && /Neck|Head/.test(b)) return null;
+          var nt = t.clone(); nt.name = d + '.quaternion';
+          // v7.28: con «delta» la animación se pasa como giro desde la pose de reposo de cada uno (sirve para huesos con otra pose base, como los de Tripo)
+          var bs = t.name.replace(/.quaternion$/, ''), rs = restS[bs], rd = restD[d];
+          if (FIGURAS[id].delta && rs && rd && !/Shoulder|Arm|Hand/.test(b)) { var inv = rs.clone().invert ? rs.clone().invert() : rs.clone().inverse(), q = new THREE.Quaternion(), v = nt.values; for (var i = 0; i < v.length; i += 4) { q.set(v[i], v[i + 1], v[i + 2], v[i + 3]); q.premultiply(inv); q.premultiply(rd); v[i] = q.x; v[i + 1] = q.y; v[i + 2] = q.z; v[i + 3] = q.w; } }
+          return nt;
         }).filter(Boolean);
         return new THREE.AnimationClip(c.name, c.duration, tr);
       });
