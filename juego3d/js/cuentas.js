@@ -252,6 +252,17 @@ var Cuentas = (function () {
       return db.collection('ataques').where('atacante', '==', usuario.uid).where('cobrado', '==', false).limit(20).get()
         .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
     },
+    // v7.39: GUERRA DE LA ALIANZA (solo el Canciller): ataques de los últimos 7 días contra los miembros y hechos por ellos
+    guerraAlianza: function (tag) {
+      if (!usuario || !tag) return Promise.resolve({ recibidos: [], hechos: [] });
+      var dias = [], ahora = Date.now();
+      for (var i = 0; i < 7; i++) dias.push(new Date(ahora - i * 86400000).toISOString().slice(0, 10));
+      function leer(campo) {
+        return db.collection('ataques').where(campo, '==', tag).where('dia', 'in', dias).limit(100).get()
+          .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+      }
+      return Promise.all([leer('alD'), leer('alA')]).then(function (r) { return { recibidos: r[0], hechos: r[1] }; });
+    },
     leerAtaque: function (id) { return db.collection('ataques').doc(id).get().then(function (d) { var x = d.data(); x.id = d.id; return x; }); },
     resolverAtaque: function (id, datos) { return db.collection('ataques').doc(id).update(datos); },
     acelerarMarcha: function (id, llega) { return db.collection('ataques').doc(id).update({ llega: llega }); },

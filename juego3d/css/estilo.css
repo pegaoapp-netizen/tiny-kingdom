@@ -2108,3 +2108,28 @@ html body #panel .tl-volver { margin: 6px 0; padding: 6px 12px; border-radius: 1
 #panel-cuerpo.hv-entra-izq { animation: hvIzq .22s ease-out; }
 @keyframes hvDer { from { transform: translateX(40px); opacity: .3; } to { transform: none; opacity: 1; } }
 @keyframes hvIzq { from { transform: translateX(-40px); opacity: .3; } to { transform: none; opacity: 1; } }
+
+/* v7.39: botón y ventana de Guerra de la alianza (solo el Canciller) */
+#btn-guerra.oculto { display: none !important; }
+#btn-guerra .gu-ico { font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
+.gu-txt { margin: 0 0 8px; }
+.gu-tabs { margin-bottom: 10px; }
+.gu-lista { display: flex; flex-direction: column; gap: 8px; }
+.gu-fila { border-radius: 12px; padding: 9px 10px; background: rgba(0,0,0,.28); border: 1px solid rgba(200,160,90,.35); border-left: 5px solid #c8a05a; }
+.gu-fila.bien { border-left-color: #4fbf5a; }
+.gu-fila.mal { border-left-color: #e0503a; }
+.gu-fila.vivo { border-left-color: #f0a030; }
+.gu-quien { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 14px; }
+.gu-quien b.enemigo { color: #ff8a70; }
+.gu-quien b.nuestro { color: #8fd0ff; }
+.gu-quien small { opacity: .75; font-weight: 600; }
+.gu-flecha { opacity: .85; }
+.gu-dat { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 5px; font-size: 12px; opacity: .92; }
+.gu-res { font-weight: 800; }
+.gu-fila.bien .gu-res { color: #7fe08a; }
+.gu-fila.mal .gu-res { color: #ff8a70; }
+.gu-est { font-style: normal; font-weight: 800; }
+.gu-est.naranja { color: #ffc060; }
+.gu-est.gris { color: #bbb; }
+.gu-vacio { text-align: center; padding: 26px 10px; opacity: .8; font-size: 34px; }
+.gu-vacio p { font-size: 14px; margin: 6px 0 0; }

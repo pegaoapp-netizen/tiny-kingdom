@@ -107,12 +107,23 @@ service cloud.firestore {
         && b.oro is int && b.oro >= 0 && b.oro <= 50000 && b.comida is int && b.comida >= 0 && b.comida <= 50000
         && b.madera is int && b.madera >= 0 && b.madera <= 50000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 50000;
     }
+    // v7.39: el Canciller (líder) de una alianza ve los ataques de sus miembros y contra ellos
+    function esCanciller(tag) {
+      return tag is string && tag.size() >= 2 && tag.size() <= 6
+        && get(/databases/$(database)/documents/alianzas/$(tag)).data.lider == request.auth.uid;
+    }
     match /ataques/{id} {
       allow read: if request.auth != null
-        && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid);
+        && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid
+          || esCanciller(resource.data.get('alD', '')) || esCanciller(resource.data.get('alA', '')));
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto', 'llega', 'resuelto', 'cobrado', 'bajas'])
+        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto', 'llega', 'resuelto', 'cobrado', 'bajas', 'alA', 'alD', 'dia'])
         && request.resource.data.atacante == request.auth.uid
+        && (!('dia' in request.resource.data) || (request.resource.data.dia is string && request.resource.data.dia.size() == 10))
+        && (!('alA' in request.resource.data) || (request.resource.data.alA is string
+            && request.resource.data.alA == get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.get('alianza', '')))
+        && (!('alD' in request.resource.data) || (request.resource.data.alD is string
+            && request.resource.data.alD == get(/databases/$(database)/documents/aldeas/$(request.resource.data.defensor)).data.get('alianza', '')))
         && request.resource.data.defensor is string
         && request.resource.data.defensor != request.auth.uid
         && request.resource.data.atacanteNombre is string && request.resource.data.atacanteNombre.size() <= 30

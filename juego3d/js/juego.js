@@ -1439,6 +1439,64 @@
     if (!estado.alianza || !hayCuenta() || !Cuentas.alianza) return;
     Cuentas.alianza(estado.alianza).then(function (al) { var nd = (al && al.diplo) || {}; if (JSON.stringify(nd) !== JSON.stringify(estado.diplo || {})) { estado.diplo = nd; if (M3 && M3.ultimaLista) ponerCosasMundo(M3.ultimaLista, M3.ultimoYo); } }).catch(function () {});
   }
+  // ================= v7.39: GUERRA DE LA ALIANZA (botón ⚔️ solo para el Canciller) =================
+  // Como en los grandes juegos de castillos: el Canciller ve a qué miembros atacan (y quién) y a quién atacan sus miembros.
+  var guerra = { canciller: false, tab: 'recibidos', datos: null, cargando: false, vistos: 0 };
+  function revisarCanciller() {
+    var btn = $('btn-guerra'); if (!btn) return;
+    if (!estado.alianza || !hayCuenta() || !Cuentas.alianza || !Cuentas.usuario()) { guerra.canciller = false; btn.classList.add('oculto'); return; }
+    Cuentas.alianza(estado.alianza).then(function (al) {
+      guerra.canciller = !!(al && al.lider === Cuentas.usuario().uid);
+      btn.classList.toggle('oculto', !guerra.canciller);
+      if (guerra.canciller) cargarGuerra(false);
+    }).catch(function () {});
+  }
+  function cargarGuerra(pintar) {
+    if (!guerra.canciller || guerra.cargando || !Cuentas.guerraAlianza) return;
+    guerra.cargando = true;
+    Cuentas.guerraAlianza(estado.alianza).then(function (d) {
+      guerra.cargando = false; guerra.datos = d; guerra.error = false;
+      var nuevos = d.recibidos.filter(function (x) { return x.fecha > (estado.guerraVisto || 0); }).length;
+      ponerBadge('badge-guerra', nuevos ? String(Math.min(99, nuevos)) : '');
+      if (pintar || (panelActual && panelActual.tipo === 'guerra')) abrirPanelGuerra();
+    }).catch(function () { guerra.cargando = false; guerra.error = true; if (pintar || (panelActual && panelActual.tipo === 'guerra')) abrirPanelGuerra(); });
+  }
+  function estadoAtaqueHTML(x) {
+    var ahora = Date.now();
+    if (x.cancelado) return '<em class="gu-est gris">' + L('Cancelado', 'Cancelled') + '</em>';
+    if (!x.resuelto && x.llega > ahora) return '<em class="gu-est naranja">⏳ ' + L('Llega en ', 'Arrives in ') + fmtTiempo(Math.ceil((x.llega - ahora) / 1000)) + '</em>';
+    if (!x.resuelto) return '<em class="gu-est naranja">⚔️ ' + L('Peleando', 'Fighting') + '</em>';
+    return '';
+  }
+  function filaGuerra(x, recibido) {
+    var ganoAtacante = !!x.gano, buena = recibido ? !ganoAtacante : ganoAtacante, res = x.resuelto && !x.cancelado;
+    var botin = x.botin ? (x.botin.oro || 0) + (x.botin.comida || 0) + (x.botin.madera || 0) + (x.botin.piedra || 0) : 0;
+    var cuando = new Date(x.fecha).toLocaleString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return '<div class="gu-fila' + (res ? (buena ? ' bien' : ' mal') : ' vivo') + '">' +
+      '<div class="gu-quien"><b class="' + (recibido ? 'enemigo' : 'nuestro') + '">' + escaparHTML(x.atacanteNombre || '?') + (x.alA ? ' <small>[' + escaparHTML(x.alA) + ']</small>' : '') + '</b>' +
+      '<span class="gu-flecha">⚔️ ➜</span><b class="' + (recibido ? 'nuestro' : 'enemigo') + '">' + escaparHTML(x.defensorNombre || '?') + (x.alD ? ' <small>[' + escaparHTML(x.alD) + ']</small>' : '') + '</b></div>' +
+      '<div class="gu-dat"><span>🕒 ' + cuando + '</span><span>💪 ' + formatoNumero(x.fuerza || 0) + '</span>' +
+      (res ? '<span class="gu-res">' + (ganoAtacante ? (recibido ? L('Nos ganaron', 'They won') : L('Victoria', 'Victory')) : (recibido ? L('Defendido', 'Defended') : L('Derrota', 'Defeat'))) + '</span>' + (ganoAtacante && botin ? '<span>💰 ' + formatoNumero(botin) + '</span>' : '') : estadoAtaqueHTML(x)) + '</div></div>';
+  }
+  function abrirPanelGuerra() {
+    var d = guerra.datos, tab = guerra.tab;
+    var html = '<p class="nota gu-txt">' + L('Solo tú como Canciller ves esto: los ataques de los últimos 7 días contra los miembros de tu alianza y los que hacen ellos.', 'Only you as Chancellor see this: attacks of the last 7 days against your alliance members and the ones they make.') + '</p>' +
+      '<div class="hl-tabs gu-tabs"><button data-accion="guerra-tab" data-t="recibidos" class="' + (tab === 'recibidos' ? 'activo' : '') + '">🛡️ ' + L('Nos atacan', 'Attacked') + (d ? ' (' + d.recibidos.length + ')' : '') + '</button>' +
+      '<button data-accion="guerra-tab" data-t="hechos" class="' + (tab === 'hechos' ? 'activo' : '') + '">⚔️ ' + L('Atacamos', 'Attacking') + (d ? ' (' + d.hechos.length + ')' : '') + '</button></div>';
+    if (!d) html += '<p class="nota">' + (guerra.error ? L('No se pudo cargar. Revisa tu internet.', 'Could not load. Check your internet.') : L('Cargando…', 'Loading…')) + '</p>';
+    else {
+      var lista = (tab === 'recibidos' ? d.recibidos : d.hechos).slice().sort(function (a, b) { return b.fecha - a.fecha; });
+      html += lista.length ? '<div class="gu-lista">' + lista.map(function (x) { return filaGuerra(x, tab === 'recibidos'); }).join('') + '</div>'
+        : '<div class="gu-vacio">🛡️<p>' + (tab === 'recibidos' ? L('Nadie ha atacado a tu alianza estos días.', 'Nobody has attacked your alliance lately.') : L('Tus miembros no han atacado a nadie estos días.', 'Your members have not attacked anyone lately.')) + '</p></div>';
+      if (guerra.error) html += '<p class="nota aviso-rojo">' + L('No se pudo actualizar. Revisa tu internet.', 'Could not refresh. Check your internet.') + '</p>';
+    }
+    html += '<button class="comprar" data-accion="guerra-recargar" style="margin-top:10px">🔄 ' + L('Actualizar', 'Refresh') + '</button>';
+    abrirPanel('⚔️ ' + L('Guerra', 'War'), html, { tipo: 'guerra' }); $('panel').classList.add('iv-panel');
+    if (d && tab === 'recibidos') { estado.guerraVisto = Date.now(); ponerBadge('badge-guerra', ''); }
+  }
+  setInterval(function () { if (guerra.canciller && hayCuenta() && !document.hidden) cargarGuerra(false); }, 60000);
+  setInterval(revisarCanciller, 5 * 60000);
+  setTimeout(revisarCanciller, 4000);
   function abrirMundo() {
     cargarDiplomacia();
     $('mundo').classList.remove('oculto');
@@ -8146,8 +8204,13 @@
     var doc = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
       gano: false, botin: { oro: bm.oro, comida: bm.comida, madera: bm.madera, piedra: bm.piedra }, fuerza: f, defensa: Math.round(a.defensa || 1),
       fecha: Date.now(), llega: Date.now() + viaje, visto: false, resuelto: false, cobrado: false, bajas: 0 };
+    // v7.39: las etiquetas de las alianzas y el día, para que los Cancilleres vean la guerra en su botón ⚔️
+    var docSin = JSON.parse(JSON.stringify(doc));
+    doc.dia = new Date().toISOString().slice(0, 10);
+    if (estado.alianza) doc.alA = estado.alianza;
+    if (a.alianza) doc.alD = a.alianza;
     sonar('cuerno');
-    Cuentas.atacar(doc).then(function (ref) {
+    Cuentas.atacar(doc).catch(function () { doc = docSin; return Cuentas.atacar(doc); }).then(function (ref) {
       doc.id = ref.id; marchas.push(doc);
       estado.marchaTropas = estado.marchaTropas || {}; estado.marchaTropas[ref.id] = JSON.parse(JSON.stringify(estado.ultimaMarcha || { tropas: miComposicion(), heroe: liderActual() }));
       estado.destinos = estado.destinos || {}; estado.destinos[ref.id] = { x: a.x, y: a.y };
@@ -10214,6 +10277,8 @@
     else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-elevar') { sonar('click'); abrirElevar(b.getAttribute('data-id')); }
     else if (a === 'heroe-libros') usarLibrosHeroe(b.getAttribute('data-id'));
+    else if (a === 'guerra-tab') { sonar('click'); guerra.tab = b.getAttribute('data-t'); abrirPanelGuerra(); }
+    else if (a === 'guerra-recargar') { sonar('click'); cargarGuerra(true); }
     else if (a === 'heroe-vecino') irHeroeVecino(b.getAttribute('data-id'), +b.getAttribute('data-paso'));
     else if (a === 'heroe-tab') { pestanaHeroe = b.getAttribute('data-tab'); sonar('click'); abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'hab-subir') subirHab(b.getAttribute('data-id'), false);
@@ -10573,6 +10638,7 @@
   setInterval(acomodarHUD, 400); window.addEventListener('resize', acomodarHUD); setTimeout(acomodarHUD, 50);
   $('mision').addEventListener('click', function () { if (!enMenu) tocarMision(); });
   $('btn-misiones').addEventListener('click', function () { if (!enMenu) { sonar('click'); abrirPanelMisiones(); } });
+  $('btn-guerra').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'guerra') { cerrarPanel(); return; } abrirPanelGuerra(); cargarGuerra(true); });
   $('btn-promos').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'promos') cerrarPanel(); else abrirPromos(); });
   $('bo-acelerar').addEventListener('click', function () { var q = $('barra-obra').dataset.que; if (q && !enMenu) { sonar('click'); abrirAcelerar(q); } });
   $('bo-txt').addEventListener('click', function () { var q = $('barra-obra').dataset.que || ''; if (enMenu) return; sonar('click'); if (q === 'castillo') { enfocar(castillo.position); abrirPanelCastillo(); } else if (q.indexOf('obra:') === 0) { var si = +q.split(':')[1]; enfocar(slots[si].pos); abrirPanelEdificio(si); } });
