@@ -39,5 +39,6 @@ jobs:
           if [ -z "$CLAVE" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT_TK: las reglas no se publicaron."; exit 1; fi
           printf '%s' "$CLAVE" > "$RUNNER_TEMP/clave.json"
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/clave.json"
+          python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('Cuenta de servicio:', d.get('client_email'), '· proyecto de la llave:', d.get('project_id'))" "$RUNNER_TEMP/clave.json"
           cd juego3d/nube
           npx --yes firebase-tools@13 deploy --only firestore:rules --project tiny-kingdom-pegao --non-interactive

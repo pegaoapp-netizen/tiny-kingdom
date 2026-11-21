@@ -1,5 +1,5 @@
 rules_version = '2';
-// v7.17: estas reglas se publican solas desde GitHub (cuenta de servicio de Tiny Kingdom con permiso de reglas)
+// v7.17: estas reglas se publican solas desde GitHub (cuenta de servicio de Tiny Kingdom)
 service cloud.firestore {
   match /databases/{database}/documents {
 
