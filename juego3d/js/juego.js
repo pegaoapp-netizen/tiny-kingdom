@@ -8110,10 +8110,11 @@
     } else if (al) { al.remove(); var oa = $('opciones-ataque'); if (oa) oa.remove(); }
     var mv = marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).sort(function (a, b) { return a.llega - b.llega; });
     var mi = $('marcha-info');
-    if (mv.length) {
+    if (false && mv.length) { // v7.24: sin barra azul flotante: la marcha se ve en la barra de Procesos (Marchar) con Acelerar y Retirar
       if (!mi) { mi = document.createElement('div'); mi.id = 'marcha-info'; document.body.appendChild(mi); }
       mi.innerHTML = T('mar_hacia', { n: escaparHTML(mv[0].defensorNombre) }) + ' · <b>' + T('mar_llega', { t: fmtTiempo((mv[0].llega - ahora) / 1000) }) + '</b>' + (mv.length > 1 ? ' · ' + T('al_mas', { n: mv.length - 1 }) : '');
     } else if (mi) mi.remove();
+    if (mv.length && typeof actualizarDock === 'function') { if (!actualizarAlertas.vioMarcha) { actualizarAlertas.vioMarcha = true; dockPest = 'marchar'; dockAbierto = true; } } else actualizarAlertas.vioMarcha = false;
     if (panelActual && panelActual.tipo === 'vigia') pintarVigia();
   }
   // El jugador decide: defender en su ciudad o usar un portal (nunca automático)
