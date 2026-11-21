@@ -1025,9 +1025,21 @@ var M = (function () {
     var t = new THREE.CanvasTexture(c); t.flipY = tex.flipY; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.encoding = tex.encoding; t.anisotropy = tex.anisotropy; t.userData.recolor = true;
     return t;
   }
+  // v7.38: aspecto del castillo según el nivel (modelos de Tripo): 1-10 el de siempre, 11 Fortaleza Real, 16 Ciudadela Dorada, 21 Castillo Imperial, 26 Fortaleza Legendaria
+  var CAST_TIER = [[26, 'castillo_t6_legendario'], [21, 'castillo_t5_imperial'], [16, 'castillo_t4_dorado'], [11, 'castillo_t3_real']], CAST_T = {}, CAST_T_CARG = {};
+  function aspectoCastillo(n) { for (var i = 0; i < CAST_TIER.length; i++) if ((n || 1) >= CAST_TIER[i][0]) return CAST_TIER[i][1]; return null; }
   function castilloTripo(n, e) {
-    if (CAST_GLB) {
-      var g = new THREE.Group(), m = CAST_GLB.clone(true);
+    var asp = aspectoCastillo(n);
+    if (asp && !CAST_T[asp] && !CAST_T_CARG[asp] && THREE.GLTFLoader) {
+      CAST_T_CARG[asp] = true;
+      new THREE.GLTFLoader().load('modelos/' + asp + '.glb?v=' + (typeof VERSION_JUEGO !== 'undefined' ? VERSION_JUEGO : ''), function (gl) {
+        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, emissive: 0x1c1c1c, emissiveMap: mp || null }); } });
+        CAST_T[asp] = gl.scene; window.dispatchEvent(new Event('castillo-glb'));
+      }, undefined, function () { CAST_T_CARG[asp] = false; });
+    }
+    var BASE = (asp && CAST_T[asp]) || CAST_GLB;
+    if (BASE) {
+      var g = new THREE.Group(), m = BASE.clone(true);
       m.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       g.add(m);
       // v6.43: chico al empezar (nivel 1) y crece parejo hasta el nivel 30
@@ -1037,21 +1049,34 @@ var M = (function () {
       g.userData.banderas = []; g.userData.etapa = e;
       // v6.56: banderas que ondean en lo alto de las torres (la más alta y la de cada esquina)
       try {
-        if (!CAST_GLB.userData.puntas) {
-          var pts = [null, null, null, null, null], bb = new THREE.Box3().setFromObject(CAST_GLB), c = bb.getCenter(new THREE.Vector3()), v = new THREE.Vector3();
-          CAST_GLB.updateMatrixWorld(true);
-          CAST_GLB.traverse(function (o) { if (!o.isMesh || !o.geometry.attributes.position) return; var pa = o.geometry.attributes.position;
+        if (!BASE.userData.puntas) {
+          var pts = [null, null, null, null, null], bb = new THREE.Box3().setFromObject(BASE), c = bb.getCenter(new THREE.Vector3()), v = new THREE.Vector3();
+          BASE.updateMatrixWorld(true);
+          BASE.traverse(function (o) { if (!o.isMesh || !o.geometry.attributes.position) return; var pa = o.geometry.attributes.position;
             for (var i = 0; i < pa.count; i += 3) { v.fromBufferAttribute(pa, i).applyMatrix4(o.matrixWorld); var q = (v.x < c.x ? 0 : 1) + (v.z < c.z ? 0 : 2) + 1;
               if (!pts[0] || v.y > pts[0].y) pts[0] = v.clone();
               if (Math.abs(v.x - c.x) > (bb.max.x - bb.min.x) * 0.22 && Math.abs(v.z - c.z) > (bb.max.z - bb.min.z) * 0.22 && (!pts[q] || v.y > pts[q].y)) pts[q] = v.clone(); } });
-          CAST_GLB.userData.puntas = pts.filter(Boolean);
+          BASE.userData.puntas = pts.filter(Boolean);
         }
         var esc = 1.35 / 15;
-        CAST_GLB.userData.puntas.forEach(function (p, i) {
+        if (BASE !== CAST_GLB) BASE.userData.puntas = BASE.userData.puntas.slice(0, 1); // los nuevos ya traen sus banderas: solo la de lo más alto
+        BASE.userData.puntas.forEach(function (p, i) {
           var b = bandera(i === 0 ? 0xc0302a : 0x2a5aa8, i === 0 ? 2.2 : 1.6); b.scale.setScalar(esc * (i === 0 ? 1.15 : 1)); b.position.copy(p); b.position.y -= 0.004;
           g.add(b); g.userData.banderas.push(b.userData.tela);
         });
       } catch (err) {}
+      // aura dorada de la Fortaleza Legendaria: anillo brillante en la base y destello que late
+      if (asp === 'castillo_t6_legendario' && BASE !== CAST_GLB) {
+        try {
+          var bb2 = new THREE.Box3().setFromObject(m), r2 = Math.max(bb2.max.x - bb2.min.x, bb2.max.z - bb2.min.z) * 0.62;
+          var aro = new THREE.Mesh(new THREE.RingGeometry(r2 * 0.92, r2, 64), new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+          aro.rotation.x = -Math.PI / 2; aro.position.y = bb2.min.y + 0.01; aro.userData.noFusionar = true; g.add(aro);
+          var cv = document.createElement('canvas'); cv.width = cv.height = 128; var cx = cv.getContext('2d'), gr = cx.createRadialGradient(64, 64, 4, 64, 64, 64); gr.addColorStop(0, 'rgba(255,225,120,.35)'); gr.addColorStop(1, 'rgba(255,200,60,0)'); cx.fillStyle = gr; cx.fillRect(0, 0, 128, 128);
+          var bri = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+          bri.scale.set(r2 * 2.2, r2 * 2.2, 1); bri.position.y = (bb2.min.y + bb2.max.y) / 2; bri.userData.noFusionar = true; g.add(bri);
+          g.userData.aura = [aro, bri];
+        } catch (e2) {}
+      }
       return g;
     }
     if (!CAST_GLB_CARGANDO) {

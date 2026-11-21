@@ -870,7 +870,7 @@
     // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
-    var metaC = 11 + 11 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8);
+    var metaC = 11 + 11 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2.5 * Math.max(0, Math.min(27, nvC) - 16) / 11; // v7.38: sigue creciendo hasta el 27 (siempre el más grande de la villa)
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
@@ -5285,7 +5285,7 @@
       if (s.modelo.userData.banderas) s.modelo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     });
     if (castillo.userData.colorPuesto !== (estado.colorBandera || 'rojo')) { castillo.userData.colorPuesto = estado.colorBandera || 'rojo'; pintarBanderasCastillo(); }
-    castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
+    castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); }); if (castillo.userData.aura) { castillo.userData.aura[0].material.opacity = 0.4 + 0.25 * Math.sin(tiempo * 2.2); castillo.userData.aura[1].material.opacity = 0.35 + 0.2 * Math.sin(tiempo * 1.6); }
 
     // ---- impuestos del castillo ----
     impuestoCd += dt;

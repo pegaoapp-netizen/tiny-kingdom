@@ -67,6 +67,7 @@
     'html body.tema-oscuro #panel#panel .iv-modos button.activo, html body.tema-oscuro #panel#panel .subtabs button.activo { background: linear-gradient(180deg, #d68910, #9c640c) !important; border-color: #f5b041 !important; color: #fff !important; text-shadow: 0 1px 2px #000; }',
     'html body.tema-oscuro #panel#panel .fila-construir, html body.tema-oscuro #panel#panel .lista .fila-construir { background: linear-gradient(180deg, #3a2a1c 0%, #231810 100%) !important; border: 1px solid #785b3a !important; border-top-color: #b08a58 !important; box-shadow: 0 3px 7px rgba(0,0,0,.6) !important; }',
     'html body.tema-oscuro #panel#panel .fila-construir b, html body.tema-oscuro #panel#panel .fila-construir h3 { color: #fff !important; text-shadow: 0 1px 2px #000; } html body.tema-oscuro #panel#panel .fila-construir .fc-txt span, html body.tema-oscuro #panel#panel .fila-construir p, html body.tema-oscuro #panel#panel .fila-construir small { color: #e2d1b4 !important; }',
+    'html body #lateral #btn-cajon { display: none !important; } /* v7.40: el menú ya está en la barra de abajo (▲) */',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;
