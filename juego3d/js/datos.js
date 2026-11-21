@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.15';
+var VERSION_JUEGO = '7.16';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -664,7 +664,10 @@ var ESCALA_TRAMO = [1, 0.84, 1, 1.14, 1.3]; // cada tramo el edificio es más gr
 var ESCALA_REINO = 1.35;
 // (v5.0: la muralla es un 20% más grande para que las parcelas tengan caminitos entre ellas)
 // v6.31: muralla redonda centrada en el castillo, con 4 puertas y caminos de piedra en cruz
-var MURALLA_FORMA = { cx: 0, cz: 0, rx: 46, rz: 46 }; // v6.86: muralla más pegada a los edificios (antes 56: mucho pasto vacío)
+var MURALLA_FORMA = { cx: 0, cz: 0, rx: 40, rz: 40 }; // v7.16: ciudad compacta (antes 46)
+// v7.16: lo que pasa de la plaza (16) hacia afuera se acerca al castillo (×0,75): parcelas y calles más juntas
+var COMPACTA = 0.75; function compactar(v) { var a = Math.abs(v); return a <= 16 ? v : (v < 0 ? -1 : 1) * (16 + (a - 16) * COMPACTA); }
+// // v6.86: muralla más pegada a los edificios (antes 56: mucho pasto vacío)
 // v6.83: la muralla es CUADRADA (con las esquinas apenas redondeadas), como las ciudades de los grandes juegos de castillos.
 // Cada ángulo t cae en el mismo rayo que antes; solo cambia la distancia: formaX/formaZ dan el punto del borde (radio 1).
 var FORMA_N = 8;

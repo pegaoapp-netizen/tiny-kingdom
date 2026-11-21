@@ -477,7 +477,7 @@
       [32, 30, ''], [32, 18, ''], [32, 6, ''], [32, -6, ''], [32, -18, 'embajada'], [32, -30, '']
     ];
     var ciudad = [], fijo = [];
-    puestos.forEach(function (p) { ciudad.push(aMundo(p[0], p[1])); fijo.push(p[2] || ''); });
+    puestos.forEach(function (p) { ciudad.push(aMundo(compactar(p[0]), compactar(p[1]))); fijo.push(p[2] || ''); }); // v7.16: más juntas
     var campos = [];
     for (var fa = -2.5; fa <= 2.5; fa++) for (var fb = -3; fb <= 3; fb++) campos.push(aMundo(CAMPOS_RECT.a + fa * 10, CAMPOS_RECT.b + fb * 10)); // v6.87: 42 parcelas
     campos.sort(function (p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); });
@@ -600,13 +600,14 @@
     losa(0, 0, 8, R_CIUDAD + 5, 0.09, AN);
     losa(0, 0, -8, -(R_CIUDAD + 5), 0.09, AN);
     // caminitos entre las 30 parcelas, sin meterse en la plaza del castillo
-    [-24, -12, 12, 24].forEach(function (p) {
-      losa(-(R_CIUDAD - 8), -16, p, p, 0.075, 1.35);
-      losa(16, R_CIUDAD - 8, p, p, 0.075, 1.35);
+    var BORDE_C = compactar(32) + 4.5; // v7.16: las calles llegan hasta las últimas parcelas
+    [-24, -12, 12, 24].map(compactar).forEach(function (p) {
+      losa(-BORDE_C, -16, p, p, 0.075, 1.35);
+      losa(16, BORDE_C, p, p, 0.075, 1.35);
     });
-    [-26, -14, 14, 26].forEach(function (p) {
-      losa(p, p, -(R_CIUDAD - 8), -16, 0.075, 1.35);
-      losa(p, p, 16, R_CIUDAD - 8, 0.075, 1.35);
+    [-26, -14, 14, 26].map(compactar).forEach(function (p) {
+      losa(p, p, -BORDE_C, -16, 0.075, 1.35);
+      losa(p, p, 16, BORDE_C, 0.075, 1.35);
     });
     // v6.83: plaza cuadrada, alineada con las calles, con un borde de piedra más oscura (como las ciudades de los grandes juegos de castillos)
     var borde = new THREE.Mesh(new THREE.PlaneGeometry(23, 23), new THREE.MeshLambertMaterial({ color: 0x8a7f6e })); borde.rotation.x = -Math.PI / 2; borde.position.y = 0.08; borde.receiveShadow = true; G.add(borde);
@@ -719,7 +720,7 @@
       if (Math.abs(Math.sqrt(formaD2(mfx, mfz)) - 1) < 0.1) return false;
       if (distCamino(x, z) < 3.4 + extra) return false;
       for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (i < PARCELAS.nCiudad ? 3.6 : 7) + extra) return false;
-      var lc = aLocal(x, z), callesB = [-24, -12, 12, 24], callesA = [-26, -14, 14, 26];
+      var lc = aLocal(x, z), callesB = [-24, -12, 12, 24].map(compactar), callesA = [-26, -14, 14, 26].map(compactar);
       for (var ci = 0; ci < callesB.length; ci++) {
         if (Math.abs(lc.a) > 15 && Math.abs(lc.a) < R_CIUDAD - 8 && Math.abs(lc.b - callesB[ci]) < 1.4) return false;
         if (Math.abs(lc.b) > 15 && Math.abs(lc.b) < R_CIUDAD - 8 && Math.abs(lc.a - callesA[ci]) < 1.4) return false;
@@ -755,7 +756,7 @@
     }
     // árboles sueltos en el pasto de la ciudad, entre las calles, lejos del castillo
     for (var ti = 0; ti < 280; ti++) {
-      var angT = rnd() * Math.PI * 2, radT = 20 + rnd() * 30;
+      var angT = rnd() * Math.PI * 2, radT = 20 + rnd() * (R_CIUDAD - 18);
       var tx = Math.cos(angT) * radT, tz = Math.sin(angT) * radT;
       if (!libre(tx, tz, 0.6)) continue;
       var u2 = rnd(), tipo2 = u2 < 0.42 ? 1 : u2 < 0.74 ? 2 : 3;
