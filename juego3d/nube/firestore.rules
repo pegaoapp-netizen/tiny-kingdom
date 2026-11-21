@@ -75,11 +75,15 @@ service cloud.firestore {
         && request.resource.data.liderNombre is string && request.resource.data.liderNombre.size() <= 30
         && request.resource.data.creada is int;
       allow delete: if request.auth != null && resource.data.lider == request.auth.uid;
-      // solo el líder cambia el idioma y la descripción
+      // solo el canciller (líder) cambia el idioma, el anuncio, los puestos (vicecanciller, mariscal, oficial) y puede ceder la cancillería
+      // v7.17: antes solo dejaba idioma y anuncio, por eso no se podía nombrar un vicecanciller ni ceder la cancillería
       allow update: if request.auth != null && resource.data.lider == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion', 'rangos', 'lider', 'liderNombre'])
         && (!('idioma' in request.resource.data) || (request.resource.data.idioma is string && request.resource.data.idioma.size() <= 12))
-        && (!('descripcion' in request.resource.data) || (request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 120));
+        && (!('descripcion' in request.resource.data) || (request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 120))
+        && (!('rangos' in request.resource.data) || (request.resource.data.rangos is map && request.resource.data.rangos.size() <= 200))
+        && request.resource.data.lider is string && request.resource.data.lider.size() > 0
+        && request.resource.data.liderNombre is string && request.resource.data.liderNombre.size() <= 30;
     }
 
     // Ataques entre jugadores: el atacante crea el reporte; el defensor lo lee y lo marca como visto.

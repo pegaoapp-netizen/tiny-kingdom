@@ -2919,16 +2919,30 @@
   function puedeDiploAl(al, uid) { var r = rangoAl(al, uid); return r === 'canciller' || r === 'vice'; }
   function hace(ms) { var d = Math.floor((Date.now() - ms) / 86400000); if (!ms) return '—'; if (d <= 0) return L('Hoy', 'Today'); if (d === 1) return L('Ayer', 'Yesterday'); return L('Hace ' + d + ' días', d + ' days ago'); }
   function nivelAlianza(p) { var n = 1, need = 500, resto = p; while (resto >= need && n < 50) { resto -= need; n++; need = Math.round(need * 1.35); } return { n: n, act: resto, need: need }; }
+  // v7.17: estandarte de la alianza (cruz azul sobre blanco con tres escudos, como en los juegos de reinos) con la etiqueta
+  function banderaAlianza(tag) {
+    var esc = function (x, y) { return '<path d="M' + x + ' ' + y + 'h14v10c0 7-7 11-7 11s-7-4-7-11z" fill="#1d4fa0" stroke="#0b2a66" stroke-width="1.2"/><path d="M' + (x + 3) + ' ' + (y + 3) + 'h8v6c0 4-4 7-4 7s-4-3-4-7z" fill="#5f8fe0"/>'; };
+    return '<svg viewBox="0 0 74 96" width="74" height="96" aria-hidden="true"><rect x="2" y="2" width="70" height="92" rx="3" fill="#f6f6f2" stroke="#c9a24a" stroke-width="3"/>' +
+      '<path d="M2 2L72 94M72 2L2 94" stroke="#1d4fa0" stroke-width="16"/>' + esc(30, 10) + esc(10, 40) + esc(50, 40) +
+      '<rect x="16" y="70" width="42" height="18" rx="4" fill="rgba(255,255,255,.92)" stroke="#c9a24a"/><text x="37" y="83.5" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="13" fill="#10264a">' + escaparHTML(tag) + '</text></svg>';
+  }
   function htmlAlianzaPestanas() {
     var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
     var total = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0);
     var h = '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
     if (alTab === 'info') {
       var nv = nivelAlianza(a.puntos || 0), soyLider = al.lider === yoU;
-      var filas = [['🌿', L('Nombre', 'Name'), escaparHTML(al.nombre)], ['👑', L('Líder', 'Leader'), escaparHTML(al.liderNombre)], ['🛡️', L('Liga', 'League'), ligaDe(total).replace(/^[^A-Za-z]+/, '')],
-        ['✴️', L('Poder', 'Power'), formatoNumero(total)], ['🌐', L('Idioma', 'Language'), IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es], ['👥', L('Miembros', 'Members'), mi.length + ' (' + L('Tu puesto: ', 'Your rank: ') + '<span class="al-azul">' + (soyLider ? L('Líder', 'Leader') : L('Miembro', 'Member')) + '</span>)']];
+      // v7.17: como Kingdoms of Camelot: Canciller, Clasificación entre todas las alianzas y tu puesto de verdad (Vicecanciller, Mariscal…)
+      var clas = '…';
+      if (alListaTodas) { var ix = alListaTodas.map(function (x) { return x.tag; }).indexOf(al.tag); clas = ix >= 0 ? String(ix + 1) : '—'; }
+      else Cuentas.alianzas().then(function (l) { alListaTodas = l || []; if (panelActual && panelActual.tipo === 'alianza' && alTab === 'info') pintarHubAlianza(); }).catch(function () {});
+      var miRango = RANGOS_AL[rangoAl(al, yoU)] || RANGOS_AL.miembro;
+      var filas = [['🌿', L('Nombre', 'Name'), escaparHTML(al.nombre)], ['👑', L('Canciller', 'Chancellor'), escaparHTML(al.liderNombre)], ['🛡️', L('Liga', 'League'), ligaDe(total).replace(/^[^A-Za-z]+/, '')],
+        ['🏆', L('Clasificación', 'Ranking'), clas],
+        ['✴️', L('Poder', 'Power'), formatoNumero(total)], ['🌐', L('Idioma', 'Language'), IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es], ['👥', L('Miembros', 'Members'), mi.length + ' (' + L('Tu puesto: ', 'Your rank: ') + '<span class="al-azul">' + L(miRango[1], miRango[2]) + '</span>)']];
       h += '<div class="al-info"><div class="al-info-dat">' + filas.map(function (q) { return '<div class="al-if"><span class="al-if-i">' + q[0] + '</span><b>' + q[1] + ':</b><span>' + q[2] + '</span></div>'; }).join('') + '</div>' +
-        '<div class="al-bandera"><span>' + escaparHTML(al.tag) + '</span></div></div>' +
+        '<div class="al-bandera kb-bandera">' + banderaAlianza(al.tag) + '</div></div>' +
+        '<div class="kb-al-links"><button data-accion="al-sec" data-sec="ajustes">' + L('Detalles', 'Details') + '</button><button data-accion="al-sec" data-sec="ajustes">' + L('Requisitos', 'Requirements') + '</button></div>' +
         (al.descripcion ? '<p class="al-desc">📢 ' + escaparHTML(al.descripcion) + '</p>' : '') +
         '<div class="al-nivel"><div class="al-nv-ic">🤝<b>' + L('Nv', 'Lv') + nv.n + '</b></div><div class="pr-barra al-nv-barra"><i style="width:' + Math.round(nv.act / nv.need * 100) + '%"></i><span>' + formatoNumero(nv.act) + ' / ' + formatoNumero(nv.need) + '</span></div></div>' +
         '<div class="al-3b"><button data-accion="al-sec" data-sec="poder">' + L('Mi mérito', 'My merit') + '</button><button data-accion="al-sec" data-sec="cajas">' + L('Regalos', 'Gifts') + (alLoc().regalos.length ? ' (' + alLoc().regalos.length + ')' : '') + '</button><button data-accion="al-sec" data-sec="ayuda">' + L('Ayudar', 'Help') + '</button></div>' +

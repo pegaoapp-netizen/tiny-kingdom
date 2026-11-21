@@ -19,3 +19,25 @@ jobs:
           projectId: pegao-5ac07
           entryPoint: juego3d
           channelId: live
+  # v7.17: las reglas de la nube (Firestore del proyecto tiny-kingdom-pegao) también se publican solas cuando cambian.
+  # Necesita el secreto FIREBASE_SERVICE_ACCOUNT_TK (clave JSON de la cuenta de servicio del proyecto Tiny Kingdom).
+  reglas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Ver si cambiaron las reglas
+        id: cambio
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || git diff --name-only HEAD~1 HEAD | grep -q '^juego3d/nube/firestore.rules$'; then echo "si=1" >> "$GITHUB_OUTPUT"; fi
+      - name: Publicar reglas de Firestore
+        if: steps.cambio.outputs.si == '1'
+        env:
+          CLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TK }}
+        run: |
+          if [ -z "$CLAVE" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT_TK: las reglas no se publicaron."; exit 1; fi
+          printf '%s' "$CLAVE" > "$RUNNER_TEMP/clave.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/clave.json"
+          cd juego3d/nube
+          npx --yes firebase-tools@13 deploy --only firestore:rules --project tiny-kingdom-pegao --non-interactive

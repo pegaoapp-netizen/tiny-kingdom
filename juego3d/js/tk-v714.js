@@ -10,6 +10,8 @@
     '.kb-rojo { color: #ff8a7a; font-weight: 700; }',
     '.kb-buffs { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 8px; } .kb-buffs span { font-size: 12px; font-weight: 700; padding: 4px 9px; border-radius: 999px; background: linear-gradient(#3e6a2a, #24401a); border: 1px solid #8fd06a; color: #eaffd8; }',
     '.kb-req { list-style: none; margin: 6px 0; padding: 0; font-size: 12.5px; } .kb-req li { padding: 2px 0; } .kb-req li.ok { color: #8fe08a; } .kb-req li.falta { color: #ff9a8a; }',
+    '.kb-bandera { background: none !important; border: 0 !important; box-shadow: 0 4px 10px rgba(0,0,0,.5); } .kb-bandera svg { display: block; }',
+    '.kb-al-links { display: flex; justify-content: space-around; margin: 2px 0 10px; } .kb-al-links button { background: none; border: 0; color: #5fb2ff; font: 600 15px Georgia, serif; text-decoration: none; cursor: pointer; padding: 4px 10px; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;
