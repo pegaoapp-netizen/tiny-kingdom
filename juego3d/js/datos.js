@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.13';
+var VERSION_JUEGO = '7.15';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -398,6 +398,33 @@ var NOMBRES = {
   inv_24h: { es: 'Arcano 24 horas', en: 'Arcane 24 hours', des_es: 'Quita 24 horas solo a una investigación.', des_en: 'Takes 24 hours off a research only.' },
   inv_3d: { es: 'Arcano 3 días', en: 'Arcane 3 days', des_es: 'Quita 3 días solo a una investigación.', des_en: 'Takes 3 days off a research only.' },
   reclutas: { es: 'Reclutas del rey', en: 'King’s recruits', des_es: '10 espadachines listos al momento, sin entrenar.', des_en: '10 swordsmen ready at once, no training.' },
+  cristal_mistico: { es: 'Cristal místico', en: 'Mystic crystal', des_es: 'Para la Ascensión de ★1 a ★4. Se gana en campamentos, bestias y aldeas bárbaras de nivel 5 o más.', des_en: 'For Ascension ★1 to ★4. Won at camps, beasts and barbarian villages level 5+.' },
+  cristal_encantado: { es: 'Cristal encantado', en: 'Enchanted crystal', des_es: 'Para la Ascensión de ★5 a ★10. Se gana en campamentos, bestias y aldeas de nivel 9 o más.', des_en: 'For Ascension ★5 to ★10. Won at level 9+ camps, beasts and villages.' },
+  cristal_arcano: { es: 'Cristal arcano', en: 'Arcane crystal', des_es: 'Para la Ascensión de ★11 a ★15. Se gana en campamentos, bestias y aldeas de nivel 13 o más.', des_en: 'For Ascension ★11 to ★15. Won at level 13+ camps, beasts and villages.' },
+  cuerno_guerra: { es: 'Cuerno de guerra', en: 'War horn', des_es: '+20 % de ataque a tus tropas durante 1 hora. Para atacar un campamento fuerte.', des_en: '+20% troop attack for 1 hour.' },
+  coraza_acero: { es: 'Coraza de acero', en: 'Steel armor', des_es: '+20 % de defensa (vida de tus tropas al defender) durante 1 hora. Úsala si te avisan de un ataque.', des_en: '+20% defense for 1 hour.' },
+  marcha_rapida: { es: 'Marcha rápida', en: 'Swift march', des_es: 'Tus marchas van un 50 % más rápido durante 1 hora.', des_en: 'Your marches go 50% faster for 1 hour.' },
+  retirada_marcha: { es: 'Retirada de marcha', en: 'March recall', des_es: 'Cancela tu marcha en camino y tus tropas vuelven al momento.', des_en: 'Cancels your march on the way; troops return at once.' },
+  ampliar_marcha: { es: 'Ampliación de marcha', en: 'March expansion', des_es: '+25 % de tropas en cada marcha durante 1 hora.', des_en: '+25% troops per march for 1 hour.' },
+  bono_comida: { es: 'Bono de comida', en: 'Food boost', des_es: '+25 % de producción de comida durante 24 horas.', des_en: '+25% food production for 24 hours.' },
+  bono_madera: { es: 'Bono de madera', en: 'Wood boost', des_es: '+25 % de producción de madera durante 24 horas.', des_en: '+25% wood production for 24 hours.' },
+  bono_piedra: { es: 'Bono de piedra', en: 'Stone boost', des_es: '+25 % de producción de piedra durante 24 horas.', des_en: '+25% stone production for 24 hours.' },
+  bono_oro: { es: 'Bono de oro', en: 'Gold boost', des_es: '+25 % de producción de oro de las minas durante 24 horas.', des_en: '+25% mine gold for 24 hours.' },
+  constructor_exp: { es: 'Constructor experto', en: 'Expert builder', des_es: 'Las obras van un 25 % más rápido durante 24 horas.', des_en: 'Builds go 25% faster for 24 hours.' },
+  cosecha_ya: { es: 'Cosecha instantánea', en: 'Instant harvest', des_es: 'Te da al momento lo que tus campos producen en 6 horas.', des_en: 'Gives you 6 hours of field production at once.' },
+  comida_2m: { es: '2.000.000 de comida', en: '2,000,000 food', des_es: 'Un granero entero.', des_en: 'A whole granary.' },
+  madera_2m: { es: '2.000.000 de madera', en: '2,000,000 wood', des_es: 'Un bosque cortado.', des_en: 'A whole cut forest.' },
+  piedra_2m: { es: '2.000.000 de piedra', en: '2,000,000 stone', des_es: 'Una cantera entera.', des_en: 'A whole quarry.' },
+  oro_1m: { es: '1.000.000 de oro', en: '1,000,000 gold', des_es: 'Un cofre real de monedas.', des_en: 'A royal coin chest.' },
+  mixto_1m: { es: 'Paquete de construcción', en: 'Building pack', des_es: '1.000.000 de oro, comida, madera y piedra.', des_en: '1,000,000 gold, food, wood and stone.' },
+  ficha_x1: { es: 'Ficha de la suerte', en: 'Luck token', des_es: '1 ficha para la Ruleta del Azar.', des_en: '1 token for the Luck wheel.' },
+  ficha_x5: { es: '5 fichas de la suerte', en: '5 luck tokens', des_es: '5 fichas para la Ruleta del Azar.', des_en: '5 tokens for the Luck wheel.' },
+  energia_heroe: { es: 'Energía de héroe', en: 'Hero energy', des_es: '+50 de experiencia para tu héroe principal.', des_en: '+50 XP for your main hero.' },
+  llave_bronce: { es: 'Llave de bronce', en: 'Bronze key', des_es: 'Abre un Cofre de plata al momento.', des_en: 'Opens a Silver chest at once.' },
+  llave_plata: { es: 'Llave de plata', en: 'Silver key', des_es: 'Abre un Cofre de oro al momento.', des_en: 'Opens a Gold chest at once.' },
+  reinicio_tal: { es: 'Reinicio de talentos', en: 'Talent reset', des_es: 'Devuelve los puntos de habilidades y talentos de tu héroe principal para repartirlos otra vez.', des_en: 'Refunds your main hero skill and talent points.' },
+  cambio_nombre: { es: 'Cambio de nombre', en: 'Name change', des_es: 'Cambia el nombre de tu reino (el que ven los demás).', des_en: 'Changes your kingdom name.' },
+  megafono: { es: 'Megáfono (x5)', en: 'Megaphone (x5)', des_es: 'Tus 5 próximos mensajes del chat Global salen destacados con 📣.', des_en: 'Your next 5 Global chat messages stand out with 📣.' },
   oro_500k: { es: '500.000 de oro', en: '500,000 gold', des_es: 'Un cofre lleno de monedas.', des_en: 'A chest full of coins.' },
   comida_500k: { es: '500.000 de comida', en: '500,000 food', des_es: 'Carros llenos de trigo y pan.', des_en: 'Carts full of wheat and bread.' },
   madera_500k: { es: '500.000 de madera', en: '500,000 wood', des_es: 'Pilas enormes de troncos.', des_en: 'Huge piles of logs.' },
@@ -468,6 +495,13 @@ var PARCELAS_INICIO = 6, PARCELAS_POR_NIVEL = 3; // v6.87: la ciudad (30 parcela
 var CAMPOS_POR_NIVEL = [0, 13, 16, 19, 22, 25, 28, 31, 34, 37, 40, 41, 42, 43, 44, 45, 46];
 // v6.87: objetos especiales para los niveles 10, 11 y 12
 var ESPECIAL_CASTILLO = { 10: 'caracola_real', 11: 'perla_rey', 12: 'corona_coral', 13: 'elevacion_sol', 14: 'estrella_rey', 15: 'estrella_rey', 16: 'estrella_rey' };
+// v7.14: cristales de ASCENSIÓN que pide cada nivel con estrella (★ = nivel − 12). El castillo pide el doble.
+function cristalesAscension(L, castillo) {
+  var st = L - 12; if (st < 1) return null;
+  var c = st <= 4 ? { k: 'cristal_mistico', n: 2 * st } : st <= 10 ? { k: 'cristal_encantado', n: 2 * (st - 4) } : { k: 'cristal_arcano', n: 2 * (st - 10) };
+  if (castillo) c.n *= 2;
+  return c;
+}
 var ESPECIAL_EDIFICIO = { 10: 'caracola', 11: 'caracola', 12: 'flor_coral', 13: 'estrella_mar', 14: 'estrella_mar', 15: 'estrella_mar', 16: 'estrella_mar' }; // un campo lleno guarda 2 horas de producción
 function esCampo(tipo) { return TIPOS_CAMPO.indexOf(tipo) >= 0; }
 // El castillo cobra impuestos: da oro cada cierto tiempo
@@ -508,7 +542,8 @@ var MURALLA = { costo: [80, 140, 220], madera: [100, 0, 0], piedra: [0, 150, 260
 // ---------------- NIVELES HASTA EL 17 ----------------
 // Los valores de los niveles 1-3 están escritos arriba; del 4 al 17 se calculan solos.
 // v6.39: los edificios y la muralla suben hasta el nivel del castillo (30). NIVEL_VIEJO marca dónde empiezan los niveles nuevos.
-var NIVEL_MAX = 16, NIVEL_VIEJO = 12; // v6.87: hasta el 12 normal; después de la ELEVACIÓN se sube del 13 al 16 (niveles con estrella)
+var NIVEL_MAX = 27, NIVEL_VIEJO = 12; // v7.14: ASCENSIÓN como Kingdoms of Camelot: después del 12 vienen ★1 a ★15 (niveles 13 al 27)
+// // v6.87: hasta el 12 normal; después de la ELEVACIÓN se sube del 13 al 16 (niveles con estrella)
 var NIVEL_ESTRELLA = 12;
 // Burbuja de protección para los que empiezan: 7 días o hasta el Castillo nivel 5 (lo primero que llegue)
 var BURBUJA = { dias: 7, castillo: 5 };
@@ -599,14 +634,15 @@ while (TRABAJOS_EDIFICIO.oleadas.length <= 30) TRABAJOS_EDIFICIO.oleadas.push(TR
 // Mejorar el castillo (nivel destino 2..12): cuesta más y tarda más cada vez.
 // Ningún edificio ni la muralla pueden pasar el nivel del castillo.
 // v6.32: el castillo sube hasta el nivel 30; v6.39: los demás edificios y la muralla también (sin pasar al castillo)
-var CASTILLO_MAX = 16;
+var CASTILLO_MAX = 27; // v7.14: hasta ★15
 var MEJORA_CASTILLO = (function () {
   var m = { costo: [0], madera: [0], piedra: [0], tiempo: [0], vida: 300, dano: 3 };
   function r5(v) { return Math.round(v / 5) * 5; }
   // el castillo es lo más caro y lento: de 5 minutos (nivel 2) a 24 horas (nivel 12)
   var TC = [0, 300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 64800, 86400, 108000, 129600, 151200, 172800, 216000];
   // del 18 al 30 cada nivel tarda un 17% más (el 30 tarda unos 13 días) y cuesta un 28% más
-  TC = TC.slice(0, 9).concat([86400, 172800, 259200, 345600, 432000, 518400, 604800]); // v6.87: 10 = 1 día ... 12 = 3 días; 13★ = 4 días ... 16★ = 7 días
+  TC = TC.slice(0, 9).concat([86400, 172800, 259200, 345600, 432000, 518400, 604800]);
+  for (var tq = 17; tq <= 27; tq++) TC.push(604800 + (tq - 16) * 43200); // v7.14: ★5 = 7,5 días … ★15 = 12,5 días // v6.87: 10 = 1 día ... 12 = 3 días; 13★ = 4 días ... 16★ = 7 días
   for (var L = 2; L <= CASTILLO_MAX; L++) {
     if (L <= 9) { m.costo.push(r5(300 * Math.pow(1.62, L - 2))); m.madera.push(r5(360 * Math.pow(1.62, L - 2))); m.piedra.push(r5(120 * Math.pow(1.65, L - 2))); }
     else if (L <= NIVEL_VIEJO) { var k0 = m.costo.length - 1; m.costo.push(r5(m.costo[k0] * 2)); m.madera.push(r5(m.madera[k0] * 2)); m.piedra.push(r5(m.piedra[k0] * 2)); }
@@ -693,6 +729,34 @@ var OBJETOS = {
   inv_24h:      { icono: '🔮', segundos: 86400, soloInv: true },
   inv_3d:       { icono: '🔮', segundos: 259200, soloInv: true },
   reclutas:     { icono: '📯', tropas: { espadachin: 10 } },
+  // v7.14: tienda nueva (Combate, Potenciador, Recursos, Reliquia, Intercambia). inv = pestaña del Inventario.
+  cristal_mistico:   { icono: '🔷', inv: 'reliquia', especial: true },
+  cristal_encantado: { icono: '💠', inv: 'reliquia', especial: true },
+  cristal_arcano:    { icono: '🔮', inv: 'reliquia', especial: true },
+  cuerno_guerra:   { icono: '📯', inv: 'combate', efecto: 'atk', horas: 1 },
+  coraza_acero:    { icono: '🛡️', inv: 'combate', efecto: 'def', horas: 1 },
+  marcha_rapida:   { icono: '🏃', inv: 'combate', efecto: 'velMarcha', horas: 1 },
+  retirada_marcha: { icono: '🏳️', inv: 'combate', efecto: 'retirada' },
+  ampliar_marcha:  { icono: '🚩', inv: 'combate', efecto: 'capMarcha', horas: 1 },
+  bono_comida:     { icono: '🌾', inv: 'potenciador', efecto: 'prod_comida', horas: 24 },
+  bono_madera:     { icono: '🪵', inv: 'potenciador', efecto: 'prod_madera', horas: 24 },
+  bono_piedra:     { icono: '🪨', inv: 'potenciador', efecto: 'prod_piedra', horas: 24 },
+  bono_oro:        { icono: '🪙', inv: 'potenciador', efecto: 'prod_oro', horas: 24 },
+  constructor_exp: { icono: '👷', inv: 'potenciador', efecto: 'obras', horas: 24 },
+  cosecha_ya:      { icono: '🧺', inv: 'potenciador', efecto: 'cosecha', horas: 6 },
+  comida_2m:       { icono: '🌾', inv: 'recursos', da: { comida: 2000000 } },
+  madera_2m:       { icono: '🪵', inv: 'recursos', da: { madera: 2000000 } },
+  piedra_2m:       { icono: '🪨', inv: 'recursos', da: { piedra: 2000000 } },
+  oro_1m:          { icono: '💰', inv: 'recursos', da: { oro: 1000000 } },
+  mixto_1m:        { icono: '🏗️', inv: 'recursos', da: { oro: 1000000, comida: 1000000, madera: 1000000, piedra: 1000000 } },
+  ficha_x1:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 1 },
+  ficha_x5:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 5 },
+  energia_heroe:   { icono: '⚡', inv: 'reliquia', efecto: 'expHeroe', n: 50 },
+  llave_bronce:    { icono: '🗝️', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_plata' },
+  llave_plata:     { icono: '🔑', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_oro' },
+  reinicio_tal:    { icono: '🔄', inv: 'intercambia', efecto: 'talentos' },
+  cambio_nombre:   { icono: '✒️', inv: 'intercambia', efecto: 'nombre' },
+  megafono:        { icono: '📣', inv: 'intercambia', efecto: 'megafono', n: 5 },
   oro_500k:     { icono: '💰', da: { oro: 500000 } },
   comida_500k:  { icono: '🌾', da: { comida: 500000 } },
   madera_500k:  { icono: '🪵', da: { madera: 500000 } },
@@ -714,14 +778,14 @@ var OBJETOS = {
 var TIENDA = [
   // Recursos
   { id: 'bolsa_oro', gemas: 5, cat: 'recursos' }, { id: 'saco_comida', gemas: 4, cat: 'recursos' }, { id: 'saco_madera', gemas: 4, cat: 'recursos' }, { id: 'saco_piedra', gemas: 5, cat: 'recursos' },
-  { id: 'oro_500k', gemas: 25, cat: 'recursos' }, { id: 'comida_500k', gemas: 10, cat: 'recursos' }, { id: 'madera_500k', gemas: 10, cat: 'recursos' }, { id: 'piedra_500k', gemas: 10, cat: 'recursos' },
+  { id: 'oro_500k', gemas: 25, cat: 'recursos' }, { id: 'comida_500k', gemas: 5, cat: 'recursos' }, { id: 'madera_500k', gemas: 5, cat: 'recursos' }, { id: 'piedra_500k', gemas: 5, cat: 'recursos' }, // v7.14: de 10 a 5
   // Acelerar (todo) y solo investigación
   { id: 'acel_1m', gemas: 1, cat: 'acelerar' }, { id: 'acel_5m', gemas: 2, cat: 'acelerar' }, { id: 'acel_15m', gemas: 5, cat: 'acelerar' }, { id: 'acel_1h', gemas: 10, cat: 'acelerar' }, { id: 'acel_2h5', gemas: 15, cat: 'acelerar' },
   { id: 'acel_8h', gemas: 30, cat: 'acelerar' }, { id: 'acel_12h', gemas: 35, cat: 'acelerar' }, { id: 'acel_15h', gemas: 40, cat: 'acelerar' }, { id: 'acel_24h', gemas: 60, cat: 'acelerar' },
   { id: 'inv_1m', gemas: 1, cat: 'acelerar' }, { id: 'inv_15m', gemas: 14, cat: 'acelerar' }, { id: 'inv_1h', gemas: 26, cat: 'acelerar' }, { id: 'inv_2h5', gemas: 50, cat: 'acelerar' },
   { id: 'inv_8h', gemas: 130, cat: 'acelerar' }, { id: 'inv_15h', gemas: 200, cat: 'acelerar' }, { id: 'inv_24h', gemas: 300, cat: 'acelerar' }, { id: 'inv_3d', gemas: 680, cat: 'acelerar' },
   // Combate
-  { id: 'portal_azar', gemas: 20, cat: 'combate' }, { id: 'portal_elegir', gemas: 30, cat: 'combate' }, { id: 'reclutas', gemas: 25, cat: 'combate' },
+  { id: 'portal_azar', gemas: 10, cat: 'combate' }, { id: 'portal_elegir', gemas: 30, cat: 'combate' }, { id: 'reclutas', gemas: 25, cat: 'combate' },
   // Cofres (con ofertas)
   { id: 'cofre_tesoro', gemas: 29, antes: 89, cat: 'cofres' }, { id: 'pack_tesoro7', gemas: 190, antes: 599, cat: 'cofres' }, { id: 'pack_tesoro15', gemas: 385, antes: 1199, cat: 'cofres' },
   { id: 'cofre_mejora4', gemas: 399, cat: 'cofres' }, { id: 'cofre_mejora3', gemas: 99, cat: 'cofres' }, { id: 'cofre_mejora2', gemas: 49, cat: 'cofres' }, { id: 'cofre_mejora1', gemas: 19, cat: 'cofres' },
@@ -731,7 +795,14 @@ var TIENDA = [
   { id: 'caracola', gemas: 45, cat: 'varios' }, { id: 'flor_coral', gemas: 55, cat: 'varios' }, { id: 'caracola_real', gemas: 150, cat: 'varios' }, { id: 'perla_rey', gemas: 200, cat: 'varios' }, { id: 'corona_coral', gemas: 220, cat: 'varios' },
   { id: 'estrella_mar', gemas: 70, cat: 'varios' }, { id: 'elevacion_sol', gemas: 300, cat: 'varios' }, { id: 'estrella_rey', gemas: 250, cat: 'varios' },
   { id: 'acelerador', gemas: 20, cat: 'acelerar' }, /* v6.54: el cofre de equipo ya no se vende: el equipo se gana jugando */ { id: 'cofre_plata', gemas: 15, cat: 'cofres' }, { id: 'cofre_oro', cat: 'cofres', gemas: 40 },
-  { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' }
+  { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' },
+  // v7.14: pestañas que estaban vacías
+  { id: 'cuerno_guerra', gemas: 15, cat: 'combate' }, { id: 'coraza_acero', gemas: 15, cat: 'combate' }, { id: 'marcha_rapida', gemas: 10, cat: 'combate' }, { id: 'retirada_marcha', gemas: 20, cat: 'combate' }, { id: 'ampliar_marcha', gemas: 35, cat: 'combate' },
+  { id: 'bono_comida', gemas: 10, cat: 'varios' }, { id: 'bono_madera', gemas: 10, cat: 'varios' }, { id: 'bono_piedra', gemas: 10, cat: 'varios' }, { id: 'bono_oro', gemas: 10, cat: 'varios' }, { id: 'constructor_exp', gemas: 25, cat: 'varios' }, { id: 'cosecha_ya', gemas: 15, cat: 'varios' },
+  { id: 'comida_2m', gemas: 25, cat: 'recursos' }, { id: 'madera_2m', gemas: 25, cat: 'recursos' }, { id: 'piedra_2m', gemas: 25, cat: 'recursos' }, { id: 'oro_1m', gemas: 30, cat: 'recursos' }, { id: 'mixto_1m', gemas: 45, cat: 'recursos' },
+  { id: 'ficha_x1', gemas: 15, cat: 'varios' }, { id: 'ficha_x5', gemas: 65, cat: 'varios' }, { id: 'energia_heroe', gemas: 10, cat: 'varios' }, { id: 'llave_bronce', gemas: 20, cat: 'varios' }, { id: 'llave_plata', gemas: 20, cat: 'varios' },
+  { id: 'cristal_mistico', gemas: 20, cat: 'varios' }, { id: 'cristal_encantado', gemas: 40, cat: 'varios' }, { id: 'cristal_arcano', gemas: 80, cat: 'varios' },
+  { id: 'reinicio_tal', gemas: 30, cat: 'varios' }, { id: 'cambio_nombre', gemas: 50, cat: 'varios' }, { id: 'megafono', gemas: 10, cat: 'varios' }
 ];
 // Investigación: 3 ramas. 'cada' = cuánto mejora cada nivel.
 // v6.86: ICONOS CON DIBUJO: cada objeto que tenga su imagen en iconos/ui/ la usa en vez del emoji.
@@ -838,6 +909,25 @@ var TROPAS = {
 // Qué hace falta para entrenar cada tropa: edificio y su nivel, y a veces otro edificio o el nivel del jugador
 // v6.81: entrenar es un 35% más rápido (un espadachín pasa de 2:00 a 1:18)
 Object.keys(TROPAS).forEach(function (k) { if (TROPAS[k].tiempo) TROPAS[k].tiempo = Math.max(10, Math.round(TROPAS[k].tiempo * 0.65)); });
+// v7.14: COMBATE POR RONDAS como Kingdoms of Camelot (2012). vida, ataque, rango (alcance en el campo) y velocidad (lo que avanza
+// por ronda). Los dos ejércitos empiezan a 1.500 de distancia; cada grupo avanza si no tiene a nadie a tiro y dispara si lo tiene.
+var COMBATE_KOC = {
+  explorador:        { vida: 50,   ataque: 5,    rango: 50,   velocidad: 1000 },
+  jinete:            { vida: 300,  ataque: 150,  rango: 200,  velocidad: 850 },
+  miliciano:         { vida: 100,  ataque: 25,   rango: 100,  velocidad: 250 },
+  arquero:           { vida: 200,  ataque: 180,  rango: 1200, velocidad: 250, distancia: true },
+  caballeria:        { vida: 500,  ataque: 250,  rango: 200,  velocidad: 750 },
+  espadachin:        { vida: 350,  ataque: 100,  rango: 150,  velocidad: 275 },
+  guardian:          { vida: 700,  ataque: 80,   rango: 150,  velocidad: 225 },
+  balista:           { vida: 400,  ataque: 350,  rango: 1300, velocidad: 150, distancia: true },
+  caballeria_pesada: { vida: 1200, ataque: 600,  rango: 200,  velocidad: 600 },
+  ariete:            { vida: 2000, ataque: 150,  rango: 100,  velocidad: 120 },
+  catapulta:         { vida: 1500, ataque: 1200, rango: 1500, velocidad: 100, distancia: true },
+  torre_asedio:      { vida: 3000, ataque: 300,  rango: 1350, velocidad: 90, distancia: true },
+  carreta:           { vida: 250,  ataque: 0,    rango: 50,   velocidad: 300 }
+};
+// % que da cada pieza de equipo según su rareza (ataque y vida), y cuánto le quita al rival (ataque y vida enemigos)
+var EQ_KOC = { comun: { pct: 20, foe: 0 }, raro: { pct: 60, foe: 0 }, legendario: { pct: 120, foe: 3 }, mitico: { pct: 300, foe: 6 } };
 var TROPA_REQ = {
   explorador: { ed: 'cuartel', n: 1 }, espadachin: { ed: 'cuartel', n: 1 }, guardian: { ed: 'cuartel', n: 1 }, miliciano: { ed: 'cuartel', n: 2 },
   arquero: { ed: 'galeria', n: 1 }, caballeria: { ed: 'establo', n: 1 }, jinete: { ed: 'establo', n: 1 }, caballeria_pesada: { ed: 'establo', n: 3, jugador: 6 },

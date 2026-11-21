@@ -45,14 +45,17 @@
     '#tk-portada .pt-espacio { flex: 1; }',
     '#tk-portada.con-foto .pt-pie { padding-top: 110px; background: linear-gradient(180deg, transparent 0%, rgba(18,10,5,.75) 45%, #120a05 75%); }',
     '@keyframes ptFoto { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }',
+    '#tk-portada .pt-pie { position: relative; }',
     '#tk-portada .pt-txt { margin-top: 8px; color: #f3dfae; font: 600 13px system-ui, sans-serif; text-shadow: 0 1px 2px #000; }'
   ].join('\n');
-  var st = document.createElement('style'); st.id = 'tk-portada-css'; st.textContent = css; document.head.appendChild(st);
+  var st = document.createElement('style'); st.id = 'tk-portada-css'; st.textContent = css; (document.head || document.documentElement).appendChild(st);
 
   var d = document.createElement('div'); d.id = 'tk-portada';
   // v7.13: la portada del dibujante (título, castillo junto al mar y Sir Sol) a pantalla completa; si no carga, sale la portada dibujada de antes
   var FOTO = 'iconos/ui/portada.jpg?v=713';
-  var PIE = '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
+  // v7.15: copia diminuta de la portada dentro del código: se ve desde el primer instante (borrosa) mientras carga la grande
+  var MINI = 'data:image/jpeg;base64,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';
+  var PIE = '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div><div id="pt-version" style="position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 6px);font:600 11px system-ui,sans-serif;color:#f3dfae;opacity:.7"></div></div>';
   function armarDibujada() {
     d.innerHTML = '<div class="pt-sala"></div><div class="pt-trono"></div><div class="pt-gradas"></div><div class="pt-dosel"></div><div class="pt-cortina izq"></div><div class="pt-cortina der"></div><div class="pt-velas"></div>' +
     '<div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Tiny Kingdom</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div>' +
@@ -60,7 +63,7 @@
     '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
   }
   d.className = 'con-foto';
-  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + ')"></div><div class="pt-espacio"></div>' + PIE;
+  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-espacio"></div>' + PIE;
   var prueba = new Image(); prueba.onerror = function () { var av = document.getElementById('pt-avance'), w = av ? av.style.width : ''; d.className = ''; armarDibujada(); var av2 = document.getElementById('pt-avance'); if (av2) av2.style.width = w; }; prueba.src = FOTO;
   (document.body || document.documentElement).appendChild(d);
 
@@ -72,6 +75,14 @@
     av = listo ? Math.min(100, av + 18) : Math.min(90, av + (90 - av) * 0.06);
     var b = document.getElementById('pt-avance'); if (b) b.style.width = av.toFixed(1) + '%';
     var tx = document.getElementById('pt-txt'); if (tx && !listo) tx.textContent = FRASES[Math.min(FRASES.length - 1, Math.floor(pasado / 2200))];
+    // v7.15: la portada se queda hasta que el juego entra a la ciudad (o hasta que la pantalla de inicio pide algo: crear cuenta, entrar…),
+    // así no sale la segunda pantalla «Cargando…» del escudo detrás
+    var pa = document.getElementById('pantalla'), pb = document.getElementById('pantalla-botones'), pf = document.getElementById('pantalla-form');
+    var pide = pa && !pa.classList.contains('oculto') && ((pb && pb.children.length) || (pf && pf.children.length));
+    var dentro = !pa || pa.classList.contains('oculto');
+    listo = listo && (dentro || pide);
+    var vv = document.getElementById('pt-version'); if (vv && typeof VERSION_JUEGO !== 'undefined' && !vv.textContent) vv.textContent = 'v' + VERSION_JUEGO;
+    if (listo && av < 90) av = 90;
     if (listo && av >= 100 && pasado >= MIN && !fin) { fin = true; clearInterval(reloj); d.classList.add('fuera'); setTimeout(function () { d.remove(); }, 700); }
     // si algo falla y nunca termina, a los 40 s se quita para dejar ver el botón de reintentar
     if (pasado > 40000 && !fin) { fin = true; clearInterval(reloj); d.classList.add('fuera'); setTimeout(function () { d.remove(); }, 700); }

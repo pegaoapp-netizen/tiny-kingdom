@@ -136,6 +136,8 @@ var Cuentas = (function () {
 
     // ---------------- MAPA DEL MUNDO Y ALIANZAS ----------------
     // Nombre que ven los demás: nunca el correo completo
+    // v7.14: cambio de nombre (objeto de la tienda)
+    cambiarNombre: function (n) { if (!usuario) return Promise.reject(new Error('sin cuenta')); return usuario.updateProfile({ displayName: String(n).slice(0, 30) }); },
     nombrePublico: function () {
       var n = nombreDe(usuario) || '';
       return (n.indexOf('@') >= 0 ? n.split('@')[0] : n).slice(0, 30) || '?';
