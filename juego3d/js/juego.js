@@ -4563,7 +4563,7 @@
         g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col = modeloColumna(v.color, tipoC); g.add(col); g.userData.col = col; col.traverse(function (o) { o.frustumCulled = false; });
         if (v.botin) { var saco = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8c45a })); saco.position.set(0, 0.25, -0.75); col.add(saco); }
         var lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p0.x, 0.14, p0.z), new THREE.Vector3(p1.x, 0.14, p1.z)]);
-        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color, dashSize: 0.45, gapSize: 0.3, transparent: true, opacity: 0.9 })); linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
+        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.enemigo ? 0xff3a2a : 0x3fe05a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); // v7.18: verde las tuyas, roja la que te ataca linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
         // v6.41: el destino se marca en el suelo con un aro
         var aro = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.8, 28), new THREE.MeshBasicMaterial({ color: v.enemigo ? 0xff4a3a : 0xffd36a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: !M3.camelot })); aro.rotation.x = -Math.PI / 2; aro.position.set(p1.x, 0.16, p1.z); aro.renderOrder = 7; M3.e.add(aro); linea.userData.aro = aro;
         M3.e.add(g); M3.columnas[v.id] = g;
@@ -7670,7 +7670,19 @@
   }
   // ================= v6.41: VENTANA MARCHA =================
   // Héroe (con Cambiar), tropas con cantidad exacta (Editar), Guardar formación, tiempo de marcha visible y Marcha.
-  function tamanoMarcha() { return Math.round((5000 + 1000 * (estado.castillo || 1)) * (buffActivo('capMarcha') ? 1.25 : 1)); }
+  // v7.18: como Kingdoms of Camelot: el Punto de reunión manda. 10.000 tropas por nivel + 250 por nivel del héroe + 1.000 por pieza de su juego;
+  // la Ampliación de marcha suma un 25 %. Sin Punto de reunión, 5.000. Marchas a la vez: una por nivel del Punto de reunión (máximo 12).
+  function nivelRelevo() { return nivelMayor('relevo') || 0; }
+  function tamanoMarcha(heroe) {
+    var h = heroe === undefined ? liderActual() : heroe, base = Math.max(5000, nivelRelevo() * 10000);
+    if (h && estado.heroes && estado.heroes[h]) base += nivelHeroe(h) * 250 + 1000 * piezasDe(h).filter(function (p) { return p.s === h; }).length;
+    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1));
+  }
+  function maxMarchas() { return Math.min(12, Math.max(1, nivelRelevo())); }
+  function marchasActivas() { return marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }); }
+  // tropas que ya van en otra marcha (no se pueden mandar dos veces)
+  function enMarcha(k) { var n = 0; marchasActivas().forEach(function (m) { var t = ((estado.marchaTropas || {})[m.id] || {}).tropas || {}; n += t[k] || 0; }); return n; }
+  function libresParaMarcha(k) { return Math.max(0, cuentaTipo(k) - enMarcha(k)); }
   function valorUnidadTipo(k) {
     var u = tropas.filter(function (x) { return x.tipo === k && !x.heroeId && !x.invocada && !x.refuerzo; })[0];
     if (u) return valorTropa(u);
@@ -7690,13 +7702,33 @@
     tiposDisponibles().forEach(function (k) { var n = (f0.tropas || {})[k]; if (n) sel.tropas[k] = Math.min(n, cuentaTipo(k)); });
     if (!f0.tropas) tiposDisponibles().forEach(function (k) { sel.tropas[k] = Math.min(cuentaTipo(k), 100); }); // primera vez: una propuesta
     if (!sel.heroe && !f0.tropas) sel.heroe = (estado.equipo || []).filter(function (k) { return estado.heroes[k]; })[0] || null;
-    var vista = 'objetivo', d = document.createElement('div'); d.id = 'marcha';
+    var vista = 'unica', d = document.createElement('div'); d.id = 'marcha'; // v7.18: una sola ventana, como Kingdoms of Camelot 2012
     document.body.appendChild(d);
     function total() { var t = 0; for (var k in sel.tropas) t += sel.tropas[k] || 0; return t; }
     function fuerza() { var f = valorHeroe(sel.heroe); for (var k in sel.tropas) if (sel.tropas[k] > 0) f += valorUnidadTipo(k) * sel.tropas[k]; return Math.round(f); }
     function guardarFormacion() { estado.formacion = { heroe: sel.heroe, tropas: JSON.parse(JSON.stringify(sel.tropas)) }; guardar(true); sonar('moneda'); consejoTemporal('💾 ' + L('Formación guardada.', 'Formation saved.')); }
     function retrato(id) { return '<div class="mc-foto">' + fotoHTML('h_' + id, '🦸') + '</div>'; }
-    function lineaHeroe(id) { var st = statsHeroe(id), bq = bonosEquipo(id); return '⚔️ ' + formatoNumero(st.dano) + ' · 🛡️ ' + Math.round((bq.def || 0) * 100) + '% · ❤️ ' + formatoNumero(st.vida); }
+    function lineaHeroe(id) { var st = statsHeroe(id); return L('Nv. ', 'Lv. ') + nivelHeroe(id) + ' · ⚔️ ' + formatoNumero(st.dano) + ' · ❤️ ' + formatoNumero(st.vida); } // v7.18: el nivel en vez del 0 % que parecía un error
+    function htmlUnica() {
+      var tipos = tiposDisponibles().filter(function (k) { return libresParaMarcha(k) > 0; }), tt = total(), cap = tamanoMarcha(sel.heroe), mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
+      var ali = estado.alianza && a.alianza === estado.alianza;
+      var h = '<div class="mc-cab"><b>' + L('Marcha', 'March') + '</b><small>→ ' + escaparHTML(a.nombre) + (a.x !== undefined ? ' · X ' + a.x + ' · Y ' + a.y : '') + '</small><button class="mc-x" data-mc="cerrar">✕</button></div>' +
+        '<div class="mc1-arriba"><label class="mc1-heroe"><span>🦸 ' + L('Héroe', 'Hero') + '</span><select id="mc-heroe"><option value="">' + L('Sin héroe', 'No hero') + '</option>' +
+        mios.map(function (id) { return '<option value="' + id + '"' + (sel.heroe === id ? ' selected' : '') + '>' + NH(id) + ' · ' + L('Nv ', 'Lv ') + nivelHeroe(id) + '</option>'; }).join('') + '</select></label>' +
+        '<div class="mc1-datos"><span>👥 <b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a) / 1000) + '</b></span></div></div>' +
+        '<div class="mc1-otros"><button class="comprar mini" data-mc="tipo" data-t="explorar">🔍 ' + L('Explorar', 'Scout') + '</button>' + (ali ? '<button class="comprar mini" data-mc="tipo" data-t="reforzar">🛡️ ' + L('Reforzar', 'Reinforce') + '</button>' : '') +
+        '<button class="comprar mini" data-mc="todo">' + L('Todas', 'All') + '</button><button class="comprar mini" data-mc="nada">' + L('Ninguna', 'None') + '</button></div>' +
+        '<div class="mc-lista">';
+      if (!tipos.length) h += '<p class="nota">' + T('at_sin_tropas') + '</p>';
+      tipos.forEach(function (k) {
+        var max = libresParaMarcha(k), n = Math.min(sel.tropas[k] || 0, max), fuera = enMarcha(k);
+        h += '<div class="mc-esc"><div class="mc-foto chica">' + fotoHTML(k, TROPAS[k].icono) + '</div><div class="mc-ed"><b>' + N(k) + '</b><small>' + L('Libres ', 'Free ') + formatoNumero(max) + (fuera ? ' · 🏇 ' + formatoNumero(fuera) + L(' en marcha', ' marching') : '') + '</small>' +
+          '<input type="range" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div><input class="mc-num" type="number" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div>';
+      });
+      var am = marchasActivas().length;
+      h += '</div><p class="nota mc1-info">🚩 ' + L('Punto de reunión nv ', 'Rally point lv ') + nivelRelevo() + ' · ' + L('marchas: ', 'marches: ') + am + ' / ' + maxMarchas() + (buffActivo('capMarcha') ? ' · 🚩 +25 %' : '') + '</p>';
+      return h + '<p id="mc-aviso" class="mc-rojo"></p><div class="mc-botones"><button class="comprar azul" data-mc="guardar">💾 ' + L('Guardar formación', 'Save formation') + '</button><button class="comprar naranja" data-mc="marchar"' + (tt <= 0 ? ' disabled' : '') + '>⚔️ ' + L('Marchar', 'March') + '</button></div>';
+    }
     function htmlMarcha() {
       var viaje = tiempoMarcha(a) / 1000, f = fuerza(), dd = a.defensa || 1, p = f / dd, tt = total();
       var h = '<div class="mc-cab"><b>' + L('Marcha', 'March') + '</b><small>→ ' + escaparHTML(a.nombre) + (a.x !== undefined ? ' · X ' + a.x + ' · Y ' + a.y : '') + '</small><button class="mc-x" data-mc="cerrar">✕</button></div>';
@@ -7768,16 +7800,17 @@
         '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
     }
     function pintar() {
-      d.innerHTML = '<div class="mc-caja">' + htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha()) + '</div>';
-      if (vista === 'escoger') {
+      d.innerHTML = '<div class="mc-caja">' + (vista === 'unica' ? htmlUnica() : htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha())) + '</div>';
+      var hs = d.querySelector('#mc-heroe'); if (hs) hs.addEventListener('change', function () { sel.heroe = this.value || null; pintar(); });
+      if (vista === 'escoger' || vista === 'unica') {
         d.querySelectorAll('[data-k]').forEach(function (inp) {
           inp.addEventListener('input', function () {
-            var k = this.dataset.k, max = cuentaTipo(k), n = Math.max(0, Math.min(max, Math.floor(+this.value || 0)));
-            var resto = total() - (sel.tropas[k] || 0), cap = tamanoMarcha(), av = '';
+            var k = this.dataset.k, max = vista === 'unica' ? libresParaMarcha(k) : cuentaTipo(k), n = Math.max(0, Math.min(max, Math.floor(+this.value || 0)));
+            var resto = total() - (sel.tropas[k] || 0), cap = tamanoMarcha(sel.heroe), av = '';
             if (resto + n > cap) { n = Math.max(0, cap - resto); av = L('Llegaste al máximo de la marcha.', 'March limit reached.'); }
             sel.tropas[k] = n;
             d.querySelectorAll('[data-k="' + k + '"]').forEach(function (o) { if (o !== inp || o.type === 'range') o.value = n; });
-            $('mc-total').textContent = formatoNumero(total()); $('mc-aviso').textContent = av;
+            $('mc-total').textContent = formatoNumero(total()); $('mc-aviso').textContent = av; var bm2 = d.querySelector('[data-mc=marchar]'); if (bm2) bm2.disabled = total() <= 0;
           });
         });
       }
@@ -7794,20 +7827,22 @@
         if (b.dataset.t === 'reforzar') { cerrar(); if (typeof cerrarMundo === 'function' && enMundo) cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); return; }
         vista = 'favoritos';
       }
+      else if (q === 'todo' || q === 'nada') { var capT = tamanoMarcha(sel.heroe), usado = 0; sel.tropas = {}; if (q === 'todo') tiposDisponibles().forEach(function (k) { var n2 = Math.min(libresParaMarcha(k), Math.max(0, capT - usado)); if (n2 > 0) { sel.tropas[k] = n2; usado += n2; } }); }
       else if (q === 'fav-guardar') { estado.favoritos = estado.favoritos || []; if (estado.favoritos.length >= 20) estado.favoritos.shift(); estado.favoritos.push({ n: String(a.nombre || '').slice(0, 30), x: a.x, y: a.y }); guardar(true); }
       else if (q === 'fav-borrar') { (estado.favoritos || []).splice(+b.dataset.i, 1); guardar(true); }
       else if (q === 'fav-ir') { var fv = (estado.favoritos || [])[+b.dataset.i]; cerrar(); if (fv) { if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(fv.x, fv.y)); elegirCelda(fv.x, fv.y); } }, 400); } return; }
       else if (q === 'cambiar') vista = 'heroes';
       else if (q === 'editar') vista = 'escoger';
-      else if (q === 'volver') vista = 'marcha';
-      else if (q === 'heroe') { sel.heroe = b.dataset.id || null; vista = 'marcha'; }
+      else if (q === 'volver') vista = 'unica';
+      else if (q === 'heroe') { sel.heroe = b.dataset.id || null; vista = 'unica'; }
       else if (q === 'guardar') { guardarFormacion(); return; }
       else if (q === 'siguiente') { if (total() <= 0) { $('mc-aviso').textContent = L('Elige al menos una tropa.', 'Choose at least one troop.'); sonar('error'); return; } vista = 'recursos'; }
       else if (q === 'marchar') {
         if (total() <= 0) { consejoTemporal(L('Elige al menos una tropa.', 'Choose at least one troop.')); sonar('error'); return; }
         var f = fuerza(); b.disabled = true;
-        var otra = marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); })[0];
-        if (otra) cancelarMarcha(otra, true);
+        // v7.18: varias marchas a la vez según el Punto de reunión (antes la nueva cancelaba la anterior)
+        if (marchasActivas().length >= maxMarchas()) { b.disabled = false; consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marchas en camino. Sube el Punto de reunión para mandar más a la vez.', 'You already have ' + maxMarchas() + ' marches out. Upgrade the Rally point to send more.')); sonar('error'); return; }
+        if (total() > tamanoMarcha(sel.heroe)) { b.disabled = false; consejoTemporal(L('Te pasaste del límite de la marcha.', 'Over the march limit.')); sonar('error'); return; }
         estado.ultimaMarcha = { heroe: sel.heroe, tropas: JSON.parse(JSON.stringify(sel.tropas)) };
         cerrar(); realizarAtaque(a, f, Math.min(2, carretasLibres())); return;
       }
@@ -7917,8 +7952,8 @@
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 60 * 1000; // v7.14: 1 min entre ataques al mismo reino (antes 10)
       guardar(true); publicarAldea(true); actualizarEscudo();
-      $('mundo-info').innerHTML = '<div class="carta"><h3>' + T('mar_salen', { n: escaparHTML(a.nombre), t: fmtTiempo(viaje / 1000) }) + '</h3><p class="nota">' + L('Mira a tus tropas caminando por la ruta. Si quieres, puedes cancelar antes de que lleguen.', 'Watch your troops walking along the route. You can cancel before they arrive.') + '</p><button class="comprar mini" id="btn-cancelar-marcha">✖ ' + L('Cancelar marcha', 'Cancel march') + '</button></div>';
-      var bcm = $('btn-cancelar-marcha'); if (bcm) bcm.addEventListener('click', function () { cancelarMarcha(doc); this.disabled = true; });
+      // v7.18: como en KoC 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
+      $('mundo-info').innerHTML = ''; consejoTemporal('🏇 ' + T('mar_salen', { n: escaparHTML(a.nombre), t: fmtTiempo(viaje / 1000) }));
       actualizarAlertas();
     }).catch(function () { $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); });
   }
@@ -7947,13 +7982,17 @@
       if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: Date.now(), llega: Date.now() + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
       else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
       if (r.gano) sumarTorneo(PUNTOS_TORNEO.ataque);
-      sumarLiquidacion(liqDeDefensa(r.defensa || 0, r.gano ? 1 : 0.25)); // v7.08
+      var liqM = liqDeDefensa(r.defensa || 0, r.gano ? 1 : 0.25); sumarLiquidacion(liqM); // v7.08
       if (estado.destinos) delete estado.destinos[r.id]; if (estado.marchaTropas) delete estado.marchaTropas[r.id];
       var um = estado.ultimaMarcha || {}, envi = 0; for (var kU in (um.tropas || {})) envi += um.tropas[kU] || 0; if (!envi) envi = tropasNormales();
       var herid = Math.round(caidas * 0.3);
+      // v7.18: con el combate por rondas se sabe todo: muertos y heridos de verdad, y las tropas de los dos lados
+      var ub = ultimaBatalla && !ultimaBatalla.defensa && Date.now() - ultimaBatalla.fecha < 8000 ? ultimaBatalla : null, defD = null, tropasAt = null, tropasDe = null;
+      if (ub) { if (ub.perdidas) herid = ub.perdidas.heridos; tropasAt = ub.sim.atk; tropasDe = ub.sim.def; envi = 0; defD = { ini: 0, perd: 0 }; for (var kA in ub.sim.atk) envi += ub.sim.atk[kA].ini; for (var kD in ub.sim.def) { defD.ini += ub.sim.def[kD].ini; defD.perd += ub.sim.def[kD].perdidos; } ub.enCorreo = true; }
       nuevoCorreo('guerras', L('Ataque a ' + r.defensorNombre + ': ', 'Attack on ' + r.defensorNombre + ': ') + (r.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), Cuentas.nombrePublico(), htmlInformeBatalla({ gano: r.gano, fecha: r.llega, lugar: destM, botin: r.gano ? r.botin : null,
-        atacante: { nombre: Cuentas.nombrePublico(), heroe: um.heroe, poder: r.fuerza, lucharon: envi, muertos: caidas - herid, heridos: herid, revivir: herid, sobreviven: Math.max(0, envi - caidas) },
-        defensor: { nombre: r.defensorNombre, poder: r.defensa || 0, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), r.gano ? { gemas: 5, objeto: 'libro_peq' } : null, { informe: true });
+        rondas: ub ? ub.sim.rondas : 0, liq: liqM,
+        atacante: { nombre: Cuentas.nombrePublico(), heroe: um.heroe, poder: r.fuerza, lucharon: envi, muertos: caidas - herid, heridos: herid, revivir: herid, sobreviven: Math.max(0, envi - caidas), tropas: tropasAt },
+        defensor: { nombre: r.defensorNombre, poder: r.defensa || 0, lucharon: defD ? defD.ini : null, sobreviven: defD ? defD.ini - defD.perd : null, muertos: defD ? defD.perd : null, heridos: null, revivir: null, tropas: tropasDe }, mejoras: { at: misMejoras() } }), r.gano ? { gemas: 5, objeto: 'libro_peq' } : null, { informe: true });
       var _infViejo = (htmlInforme([[L('Resultado', 'Result'), r.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(r.fuerza)], [L('Su defensa', 'Their defense'), formatoNumero(r.defensa || 0)], [L('Bajas', 'Losses'), caidas]], r.gano ? r.botin : null));
       Cuentas.cobrarAtaque(r.id).catch(function () {});
       guardar(true); actualizarHUD(); actualizarAlertas();
@@ -9667,11 +9706,14 @@
       function f(n) { return n === null || n === undefined ? '?' : formatoNumero(n); }
       return '<div class="ib-lado ' + cls + '"><h4>' + titulo + '</h4><b class="ib-nom">' + escaparHTML(x.nombre || '?') + '</b>' + hz +
         '<div class="ib-filas"><span>💪 ' + L('Poder', 'Power') + '</span><b>' + f(x.poder) + '</b><span>⚔️ ' + L('Lucharon', 'Fought') + '</span><b>' + f(x.lucharon) + '</b><span>✅ ' + L('Sobrevivieron', 'Survived') + '</span><b>' + f(x.sobreviven) + '</b>' +
-        '<span>☠️ ' + L('Murieron', 'Died') + '</span><b>' + f(x.muertos) + '</b><span>🩹 ' + L('Heridos', 'Wounded') + '</span><b>' + f(x.heridos) + '</b><span>✨ ' + L('Se pueden revivir', 'Can be revived') + '</span><b>' + f(x.revivir) + '</b></div></div>';
+        '<span>☠️ ' + L('Murieron', 'Died') + '</span><b>' + f(x.muertos) + '</b><span>🩹 ' + L('Heridos', 'Wounded') + '</span><b>' + f(x.heridos) + '</b><span>✨ ' + L('Se pueden revivir', 'Can be revived') + '</span><b>' + f(x.revivir) + '</b></div>' +
+        // v7.18: tropa por tropa, como el pergamino de Kingdoms of Camelot
+        (x.tropas && Object.keys(x.tropas).length ? '<div class="ib-tropas">' + Object.keys(x.tropas).map(function (k) { var q = x.tropas[k]; return '<div class="ib-tr"><span>' + (TROPAS[k] ? TROPAS[k].icono + ' ' + N(k) : k) + '</span><b>' + formatoNumero(q.ini) + '</b><b class="ib-rojo">−' + formatoNumero(q.perdidos) + '</b></div>'; }).join('') + '</div>' : '') + '</div>';
     }
     var mej = o.mejoras || {}, filasMej = [['⚔️', L('Ataque', 'Attack'), 'ataque'], ['❤️', L('Vida', 'Health'), 'vida'], ['👟', L('Velocidad', 'Speed'), 'vel'], ['📦', L('Carga', 'Load'), 'carga'], ['👥', L('Límite', 'Limit'), 'limite']];
     return '<div class="ib"><div class="ib-res ' + (o.gano ? 'si' : 'no') + '">' + (o.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')) + '</div>' +
       (o.botin ? '<p class="ib-botin">' + L('Recursos: ', 'Resources: ') + textoBotin(o.botin) + '</p>' : '') +
+      (o.rondas ? '<p class="ib-botin">⚔️ ' + L('Batalla de ', 'Battle of ') + o.rondas + ' ' + L('rondas', 'rounds') + (o.liq ? ' · 🏅 +' + formatoNumero(o.liq) + ' ' + L('Puntos de Liquidación', 'Liquidation Points') : '') + '</p>' : (o.liq ? '<p class="ib-botin">🏅 +' + formatoNumero(o.liq) + ' ' + L('Puntos de Liquidación', 'Liquidation Points') + '</p>' : '')) +
       '<div class="ib-lados">' + lado(o.atacante, L('Atacantes', 'Attackers'), 'at') + lado(o.defensor, L('Defensores', 'Defenders'), 'de') + '</div>' +
       '<h4 class="ib-tit">' + L('Mejoras', 'Bonuses') + '</h4><div class="ib-mej">' + filasMej.map(function (q) { var a = (mej.at || {})[q[2]], d = (mej.de || {})[q[2]]; return '<span>' + (a === undefined ? '?' : '+' + Math.round(a * 100) + '%') + '</span><b>' + q[0] + ' ' + q[1] + '</b><span>' + (d === undefined ? '?' : '+' + Math.round(d * 100) + '%') + '</span>'; }).join('') + '</div>' +
       '<p class="nota">' + new Date(o.fecha || Date.now()).toLocaleString() + (o.lugar ? ' · X ' + o.lugar.x + ' · Y ' + o.lugar.y : '') + '</p></div>';
