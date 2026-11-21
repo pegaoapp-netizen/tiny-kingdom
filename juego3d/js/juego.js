@@ -2784,7 +2784,10 @@
       abrirPanel(T('p_alianza'), '<div class="carta"><p>' + T('mundo_cuenta') + '</p><button class="comprar naranja" data-accion="ir-cuenta">' + T('entrar_o_crear') + '</button></div>', { tipo: 'alianza' });
       return;
     }
-    abrirPanel(T('p_alianza'), '<p class="nota">' + T('cargando') + '</p>', { tipo: 'alianza' });
+    // v7.22: si ya tengo la alianza guardada la enseño al instante (con sus pestañas) y la actualizo por detrás, sin el «Cargando…» que lo borraba todo
+    var conCache = alCache && estado.alianza && alCache.al && alCache.al.tag === estado.alianza;
+    abrirPanel(T('p_alianza'), conCache ? '' : '<p class="nota">' + T('cargando') + '</p>', { tipo: 'alianza' });
+    if (conCache) pintarHubAlianza();
     var pedido = Date.now(); abrirPanelAlianza.pedido = pedido;
     var tag = estado.alianza;
     (tag ? Cuentas.alianza(tag) : Promise.resolve(null)).then(function (al) {
@@ -2934,7 +2937,7 @@
   function htmlAlianzaPestanas() {
     var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
     var total = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0);
-    var h = '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall'], ['ranking', 'Ranking', 'Ranking']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
+    var h = htmlTabsAlianza();
     if (alTab === 'info') {
       var nv = nivelAlianza(a.puntos || 0), soyLider = al.lider === yoU;
       // v7.17: como Kingdoms of Camelot: Canciller, Clasificación entre todas las alianzas y tu puesto de verdad (Vicecanciller, Mariscal…)
@@ -3408,11 +3411,13 @@
     });
   }
 
+  function htmlTabsAlianza() { return '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall'], ['ranking', 'Ranking', 'Ranking']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>'; }
   // v7.21: ficha de cualquier alianza (como KoC): escudo, líder, miembros, poder y liquidación totales, descripción, unirse o ver miembros
   function abrirPerfilAlianza(tag, verMiembros) {
     if (!tag || !$('panel-cuerpo')) return;
     var cuerpo = $('panel-cuerpo'); abrirPerfilAlianza.desde = panelActual ? panelActual.tipo : 'alianza';
-    cuerpo.innerHTML = '<div class="carta al-perfil"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p class="nota">' + T('cargando') + '</p></div>';
+    var tabs = estado.alianza && alCache && abrirPerfilAlianza.desde === 'alianza' ? htmlTabsAlianza() : ''; // v7.22: las pestañas siguen arriba
+    cuerpo.innerHTML = tabs + '<div class="carta al-perfil"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p class="nota">' + T('cargando') + '</p></div>';
     Promise.all([Cuentas.alianza(tag), Cuentas.miembros(tag)]).then(function (r) {
       var al = r[0], mi = (r[1] || []).slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); });
       if (!$('panel-cuerpo') || !panelActual) return;
@@ -3431,10 +3436,11 @@
       if (verMiembros) h += '<div class="al-pf-lista">' + (mi.length ? mi.map(function (m, k) { return '<div class="fila-miembro"><b class="rk-pos">#' + (k + 1) + '</b><b class="rk-nom">' + escaparHTML(m.nombre || '?') + (m.uid === al.lider ? ' 👑' : '') + '</b><span class="chip">💪 ' + corto(m.poder) + '</span><span class="chip rk-kp">⚔️ ' + corto(m.kp) + '</span></div>'; }).join('') : '<p class="nota">' + L('Sin miembros.', 'No members.') + '</p>') + '</div>';
       h += '<div class="al-pf-botones">' + (!estado.alianza ? '<button class="comprar naranja" data-accion="al-unirse" data-tag="' + escaparHTML(al.tag) + '">' + L('Solicitar unirse', 'Request to join') + '</button>' : mia ? '<span class="chip">' + L('Es tu alianza', 'Your alliance') + '</span>' : '') +
         (verMiembros ? '' : '<button class="comprar" data-accion="al-perfil-miembros" data-tag="' + escaparHTML(al.tag) + '">👥 ' + L('Ver lista de miembros', 'See members') + '</button>') + '</div></div>';
-      cuerpo.innerHTML = h; cuerpo.scrollTop = 0;
+      cuerpo.innerHTML = tabs + h; cuerpo.scrollTop = 0;
     }).catch(function () { cuerpo.innerHTML = '<div class="carta"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p class="nota aviso-rojo">' + T('mundo_error') + '</p></div>'; });
   }
   function pintarListaAlianzas(lista) {
+    pintarListaAlianzas.ultima = lista;
     var h = '<div class="carta"><h3>🛡️ ' + T('al_crear') + '</h3>' +
       '<input class="campo" id="al-nombre" maxlength="24" placeholder="' + T('al_nombre') + '" style="margin-top:6px">' +
       '<input class="campo" id="al-tag" maxlength="4" placeholder="' + T('al_tag') + '" style="margin-top:6px;text-transform:uppercase">' +
@@ -10112,7 +10118,7 @@
       Cuentas.ajustesAlianza(alCache.al.tag, { diplo: nd }).then(function () { alCache.al.diplo = nd; estado.diplo = nd; guardar(true); pintarHubAlianza(); if (M3 && M3.ultimaLista) ponerCosasMundo(M3.ultimaLista, M3.ultimoYo); consejoTemporal('[' + tg + '] → ' + (vv === 'hostil' ? L('Hostil', 'Hostile') : vv === 'amiga' ? L('Amiga', 'Friendly') : L('Neutral', 'Neutral'))); }).catch(function () { consejoTemporal(L('No se pudo cambiar la diplomacia.', 'Could not change diplomacy.')); sonar('error'); });
     }
     else if (a === 'al-ver') { sonar('click'); abrirPerfilAlianza(b.getAttribute('data-tag')); }
-    else if (a === 'al-perfil-volver') { sonar('click'); if (abrirPerfilAlianza.desde === 'ranking') abrirPanelRanking('alianzas'); else if (estado.alianza && alCache) pintarHubAlianza(); else abrirPanelAlianza(); }
+    else if (a === 'al-perfil-volver') { sonar('click'); var desdeV = abrirPerfilAlianza.desde; setTimeout(function () { if (desdeV === 'ranking') abrirPanelRanking('alianzas'); else if (estado.alianza && alCache) { alTab = 'alianzas'; alSeccion = ''; pintarHubAlianza(); } else if (pintarListaAlianzas.ultima) pintarListaAlianzas(pintarListaAlianzas.ultima); else abrirPanelAlianza(); }, 0); }
     else if (a === 'al-perfil-miembros') { sonar('click'); abrirPerfilAlianza(b.getAttribute('data-tag'), true); }
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
