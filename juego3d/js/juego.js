@@ -4377,7 +4377,10 @@
   function puedeEntrenarTipo(tipo) { return !faltaTropa(tipo); }
   function avisoEdificioTropa(tipo) { return faltaTropa(tipo) || ''; }
   // recursos que el almacén protege de los saqueos
-  function proteccionAlmacen() { return edificiosDe('almacen').reduce(function (a, s) { return a + EDIFICIOS.almacen.protege[s.edificio.nivel - 1]; }, 0); }
+  // v7.31: el almacén protege un PORCENTAJE de cada recurso: 5 % por nivel (nivel 16 = 80 %). Con varios almacenes cuenta el de más nivel.
+  function pctAlmacenNivel(n) { return Math.min(80, 5 * Math.max(0, n || 0)); }
+  function pctAlmacen() { return pctAlmacenNivel(nivelMayor('almacen')); }
+  function proteccionAlmacen(k) { var p = pctAlmacen() / 100; return k ? Math.floor(cantidad(k) * p) : p; }
   // armas: +10% de daño por nivel (hasta 3), se forjan en la Herrería
   var ARMAS = { costo: [250, 600, 1400], piedra: [120, 300, 700], gemas: [25, 50, 100], herreria: [1, 4, 7], dano: 0.1, max: 3 };
   function nivelArmas(tipo) { return (estado.armas && estado.armas[tipo]) || 0; }
@@ -6286,7 +6289,7 @@
     if (d.recurso) return '<span>' + ICONO_RECURSO[d.recurso] + ' ' + T('produce_txt', { n: d.produce[i], r: T('r_' + d.recurso), s: d.cada }) + '</span><span>📦 ' + T('guarda_hasta', { n: Math.round(d.produce[i] * HORAS_ALMACEN * 3600 / d.cada) }) + '</span>';
     if (tipo === 'cuartel') return '<span>⚔️ ' + T('sin_tope') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'enfermeria') return '<span>🛏️ ' + T('camas') + ': ' + d.capacidad[i] + '</span>';
-    if (tipo === 'almacen') return '<span>🔒 ' + T('protege_txt', { n: d.protege[i] }) + '</span>';
+    if (tipo === 'almacen') return '<span>🔒 ' + L('Protege el ' + pctAlmacenNivel(nivel) + ' % de cada recurso de los saqueos', 'Protects ' + pctAlmacenNivel(nivel) + '% of each resource from raids') + '</span>';
     if (tipo === 'cabana') return '<span>👥 +' + d.poblacion[i] + ' ' + L('habitantes', 'people') + '</span>';
     if (tipo === 'vigia') return '<span>🛡️ ' + T('vig_txt', { n: Math.round(d.defensa[i] * 100) }) + '</span><span>👁️ ' + T('vig_ve') + '</span>';
     if (tipo === 'mercado') return '<span>⚖️ ' + T('tasa_txt', { n: Math.round(d.tasa[i] * 100) }) + '</span>';
@@ -6804,17 +6807,44 @@
   }
   // v7.14: con 5★ el héroe puede ASCENDER (5 veces, +10 niveles cada una, hasta el nivel 100) gastando una reliquia y cristales
   var ASC_HEROE = [{ r: 'caracola_real', c: 'cristal_mistico', n: 4 }, { r: 'perla_rey', c: 'cristal_mistico', n: 6 }, { r: 'corona_coral', c: 'cristal_encantado', n: 4 }, { r: 'elevacion_sol', c: 'cristal_encantado', n: 6 }, { r: 'estrella_rey', c: 'cristal_arcano', n: 6 }];
-  function topeNivel(id) { var e = estado.heroes[id]; var t = Math.min(HEROE_NIVEL_MAX, (e.estrellas || 1) * 10); if ((e.estrellas || 1) >= 5) t += 10 * Math.min(ASC_HEROE.length, e.asc || 0); return t; }
+  // v7.31: después de las 5 ascensiones (nivel 100) viene la MAESTRÍA: 10 pasos de +10 niveles cada uno, hasta el nivel 200
+  var MAESTRIA_MAX = 10;
+  function costoMaestria(k) { return { estrella_mar: k + 1, caracola: 2 * (k + 1) }; }
+  function topeNivel(id) { var e = estado.heroes[id]; var t = Math.min(HEROE_NIVEL_MAX, (e.estrellas || 1) * 10); if ((e.estrellas || 1) >= 5) t += 10 * Math.min(ASC_HEROE.length, e.asc || 0); if ((e.asc || 0) >= ASC_HEROE.length) t += 10 * Math.min(MAESTRIA_MAX, e.maes || 0); return t; }
   function htmlAscensionHeroe(id) {
     var e = estado.heroes[id]; if (!e || (e.estrellas || 1) < 5) return '';
     var k = e.asc || 0, tope = topeNivel(id);
-    if (k >= ASC_HEROE.length) return '<div class="hi-hab"><div class="hi-hab-c"><b>✨ ' + L('Ascensión de héroe', 'Hero ascension') + ' ' + k + '/' + ASC_HEROE.length + '</b></div><p>' + L('Ascensión completa: nivel máximo 100.', 'Ascension complete: max level 100.') + '</p></div>';
+    if (k >= ASC_HEROE.length) return htmlMaestriaHeroe(id);
+    if (false) return '<div class="hi-hab"><div class="hi-hab-c"><b>✨ ' + L('Ascensión de héroe', 'Hero ascension') + ' ' + k + '/' + ASC_HEROE.length + '</b></div><p>' + L('Ascensión completa: nivel máximo 100.', 'Ascension complete: max level 100.') + '</p></div>';
     var q = ASC_HEROE[k], tR = estado.mochila[q.r] || 0, tC = estado.mochila[q.c] || 0, okN = e.nivel >= tope, ok = okN && tR >= 1 && tC >= q.n;
     function fila(okx, txt) { return '<li class="' + (okx ? 'ok' : 'falta') + '">' + (okx ? '✓ ' : '✗ ') + txt + '</li>'; }
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>✨ ' + L('Ascensión de héroe', 'Hero ascension') + ' ' + k + '/' + ASC_HEROE.length + '</b></div>' +
       '<p>' + L('Sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + '.', 'Raises the max level from ' + tope + ' to ' + (tope + 10) + '.') + '</p><ul class="kb-req">' +
       fila(okN, L('Nivel ', 'Level ') + tope + ' (' + L('tiene ', 'has ') + e.nivel + ')') + fila(tR >= 1, OBJETOS[q.r].icono + ' ' + N(q.r) + ' ×1 (' + L('tienes ', 'you have ') + tR + ')') + fila(tC >= q.n, OBJETOS[q.c].icono + ' ' + N(q.c) + ' ×' + q.n + ' (' + L('tienes ', 'you have ') + tC + ')') + '</ul>' +
       '<button class="comprar dorado" data-accion="heroe-ascender" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>✨ ' + L('Ascender', 'Ascend') + '</button></div>';
+  }
+  function htmlMaestriaHeroe(id) {
+    var e = estado.heroes[id], m = e.maes || 0, tope = topeNivel(id);
+    if (m >= MAESTRIA_MAX) return '<div class="hi-hab"><div class="hi-hab-c"><b>👑 ' + L('Maestría', 'Mastery') + ' ' + m + '/' + MAESTRIA_MAX + '</b></div><p>' + L('Maestría completa: nivel máximo ' + tope + '.', 'Mastery complete: max level ' + tope + '.') + '</p></div>';
+    var c = costoMaestria(m), okN = e.nivel >= tope, ok = okN;
+    function fila(okx, txt) { return '<li class="' + (okx ? 'ok' : 'falta') + '">' + (okx ? '✓ ' : '✗ ') + txt + '</li>'; }
+    var filas = fila(okN, L('Nivel ', 'Level ') + tope + ' (' + L('tiene ', 'has ') + e.nivel + ')');
+    Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) ok = false; filas += fila(t >= c[k], OBJETOS[k].icono + ' ' + N(k) + ' ×' + c[k] + ' (' + L('tienes ', 'you have ') + t + ')'); });
+    return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>👑 ' + L('Maestría', 'Mastery') + ' ' + m + '/' + MAESTRIA_MAX + '</b></div>' +
+      '<p>' + L('Ascensión completa. La Maestría sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + ' (hasta 200) y con cada nivel sigue ganando poder.', 'Ascension complete. Mastery raises the max level from ' + tope + ' to ' + (tope + 10) + ' (up to 200); every level keeps adding power.') + '</p><ul class="kb-req">' + filas + '</ul>' +
+      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
+  }
+  function maestriaHeroe(id) {
+    var e = estado.heroes[id]; if (!e || (e.asc || 0) < ASC_HEROE.length) return;
+    var m = e.maes || 0; if (m >= MAESTRIA_MAX) return;
+    var c = costoMaestria(m);
+    if (!estado.dueno) {
+      if (e.nivel < topeNivel(id) || Object.keys(c).some(function (k) { return (estado.mochila[k] || 0) < c[k]; })) { consejoTemporal(L('Te falta algo para la Maestría.', 'Something is missing for Mastery.')); sonar('error'); return; }
+      Object.keys(c).forEach(function (k) { estado.mochila[k] -= c[k]; });
+    }
+    e.maes = m + 1; sonar('magia'); chispas(castilloPos.clone().setY(8), 0xffd24a, 30, 5);
+    consejoTemporal('👑 ' + NH(id) + ': ' + L('nivel máximo ', 'max level ') + topeNivel(id));
+    guardar(true); abrirPanelHeroe(id);
   }
   function ascenderHeroe(id) {
     var e = estado.heroes[id]; if (!e || (e.estrellas || 1) < 5) return;
@@ -8185,7 +8215,7 @@
           perdio = true;
           var real = {};
           ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) {
-            var q = Math.min(Math.max(0, cantidad(k) - proteccionAlmacen()), r.botin[k] || 0);
+            var q = Math.min(Math.max(0, cantidad(k) - proteccionAlmacen(k)), r.botin[k] || 0);
             if (!estado.oroInfinito) estado[claveRecurso(k)] = cantidad(k) - q;
             real[k] = q;
           });
@@ -9699,7 +9729,7 @@
       '<span>' + L('Población', 'Population') + ': ' + formatoNumero(pobMax - libre + tropas.length) + '</span><span>' + L('Felicidad', 'Happiness') + ': ' + felicidad() + '%</span>' +
       '<span>' + L('Población disponible', 'Available population') + ': ' + formatoNumero(libre) + '</span><span>' + L('Impuestos', 'Taxes') + ': ' + impuestoPct() + '%</span>' +
       '<span>' + L('Límite de población', 'Population limit') + ': ' + formatoNumero(pobMax) + '</span><span>' + L('Cap. de los campos', 'Fields capacity') + ': ' + cortoNum(capT) + '</span>' +
-      '<span class="rc-ancho">' + L('Protección del almacén', 'Warehouse protection') + ': ' + cortoNum(proteccionAlmacen()) + '</span></div><div class="rc-lista">';
+      '<span class="rc-ancho">' + L('Protección del almacén', 'Warehouse protection') + ': ' + pctAlmacen() + ' %</span></div><div class="rc-lista">';
     function fila(r, ico, lineas) {
       return '<div class="rc-fila"><div class="rc-foto">' + ico + '</div><div class="rc-dat"><b>' + T('r_' + r) + '</b>' + lineas.join('') + '</div>' +
         '<button class="comprar verde rc-mejora" data-accion="rc-mejora" data-r="' + r + '">' + L('Mejora', 'Upgrade') + '</button></div>';
@@ -10046,6 +10076,7 @@
     else if (a === 'car-entrenar') entrenarCarretas(+b.getAttribute('data-n') || 1, b.getAttribute('data-t') || 'carreta');
     else if (a === 'car-mejorar') mejorarCarretas();
     else if (a === 'heroe-ascender') ascenderHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-maestria') maestriaHeroe(b.getAttribute('data-id'));
     else if (a === 'curar-tipo') curarYa(b.getAttribute('data-tipo'));
     else if (a === 'curar-todos') curarYa(null);
     else if (a === 'ref-quitar-pedido') { b.disabled = true; Cuentas.quitarPedido().then(abrirPanelAlianza).catch(function () { b.disabled = false; }); }
