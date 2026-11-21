@@ -3669,7 +3669,7 @@
   // ------------------------------------------------------------------
   var tropas = [], enemigos = [], flechas = [], muriendo = [], particulas = [];
   var colaEntreno = [];
-  var oleadaActiva = false, colaSpawn = [], spawnCd = 0, oleadaActual = 0;
+  var oleadaActiva = false, colaSpawn = [], spawnCd = 0, oleadaActual = 0; var firmaOleada = '', quietaOleada = 0;
   var tiempo = 0, velocidad = 1, enMenu = true;
 
   // ------------------------------------------------------------------
@@ -5169,6 +5169,15 @@
   // ------------------------------------------------------------------
   //  ACTUALIZAR (cada cuadro)
   // ------------------------------------------------------------------
+  // v7.35: si una sola tropa o un enemigo da error, se salta ese y la batalla sigue (antes un error congelaba la oleada entera)
+  var yaAvisoFallo = {};
+  function avisarFallo(err) {
+    var k = String(err && err.message || err).slice(0, 80);
+    if (yaAvisoFallo[k]) return; yaAvisoFallo[k] = true;
+    try { console.error(err); } catch (x) {}
+    setTimeout(function () { throw err; }, 0); // el guardián de errores se lo muestra al dueño
+  }
+  function sinCaerse(fn) { return function (x) { try { fn(x); } catch (err) { avisarFallo(err); } }; }
   function actualizar(dt) {
     tiempo += dt;
 
@@ -5318,7 +5327,7 @@
     }
 
     // ---- tropas ----
-    tropas.slice().forEach(function (u) {
+    tropas.slice().forEach(sinCaerse(function (u) {
       var d = u.d, caminando = false;
       if (u.dentro) {
         if (oleadaActiva && u.salida !== undefined) {
@@ -5373,11 +5382,11 @@
       }
       M.animarUnidad(u.m, tiempo + u.radio * 10, caminando, u.ataque);
       if (caminando && Math.random() < dt * 2.5) bocanada(u.pos.clone().setY(0.15), true);
-    });
+    }));
 
     // ---- enemigos ----
     var afuera = tropasFuera();
-    enemigos.slice().forEach(function (e) {
+    enemigos.slice().forEach(sinCaerse(function (e) {
       var d = e.d, caminando = false, bb = null;
       if (e.aturdido > 0) { e.aturdido -= dt; if (Math.random() < dt * 5) chispas(e.pos.clone().setY(e.altoBarra + 0.2), 0xffe14a, 1, 0.8); return; }
       e.cd -= dt;
@@ -5422,9 +5431,13 @@
           caminando = true;
         }
       }
+      // v7.35: un enemigo que lleva 8 s sin moverse, sin pegar y sin recibir daño (encajado entre otros o en una esquina) avanza un tramo del camino (solo si no hay tropas tuyas cerca peleando)
+      var movE = e._px === undefined ? 1 : Math.hypot(e.pos.x - e._px, e.pos.z - e._pz); e._px = e.pos.x; e._pz = e.pos.z;
+      if (movE > 0.01 || e.ataque > 0.3 || e.vida !== e._v) { e.quieto = 0; e._v = e.vida; } else e.quieto = (e.quieto || 0) + dt;
+      if (e.quieto > 8 && !masCercano(afuera, e.pos, 15)) { e.quieto = 0; e.dist = Math.min(largoCamino, e.dist + 3); var pq = puntoCamino(e.dist).p; e.pos.x = pq.x; e.pos.z = pq.z; }
       M.animarUnidad(e.m, tiempo + e.lat * 7, caminando, e.ataque);
       if (caminando && Math.random() < dt * 1.5) bocanada(e.pos.clone().setY(0.15), true);
-    });
+    }));
 
     // ---- separar unidades para que no se encimen ----
     var todos = tropasFuera().concat(enemigos);
@@ -5494,7 +5507,24 @@
       return true;
     });
 
+    revisarFinOleada(dt);
+  }
+  // v7.35: revisa si la oleada terminó (también corre aunque algo de la batalla falle, para que nunca se quede atascada)
+  function quitarEnemigo(e) {
+    e.vida = 0;
+    try { morir(e); } catch (err) { var i = enemigos.indexOf(e); if (i >= 0) enemigos.splice(i, 1); try { escena.remove(e.barra); escena.remove(e.m.grupo); } catch (x) {} }
+  }
+  function revisarFinOleada(dt) {
     // ---- ¿terminó la oleada? ----
+    // v7.35: enemigos con la vida rota (NaN) se quitan, y si la batalla lleva 30 s sin ningún cambio (nadie pierde vida), la oleada se da por ganada
+    if (oleadaActiva) {
+      enemigos.slice().forEach(function (e) { if (!(e.vida > 0)) quitarEnemigo(e); });
+      if (!(estado.vidaCastillo >= 0)) estado.vidaCastillo = vidaMaxCastillo();
+      if (!colaSpawn.length && enemigos.length) {
+        var firma = Math.round(estado.vidaCastillo) + ':' + enemigos.length + ':' + Math.round(enemigos.reduce(function (a, e) { return a + e.vida; }, 0));
+        if (firma !== firmaOleada) { firmaOleada = firma; quietaOleada = 0; } else if ((quietaOleada += dt) > 30) { quietaOleada = 0; enemigos.slice().forEach(quitarEnemigo); }
+      } else { firmaOleada = ''; quietaOleada = 0; }
+    }
     if (oleadaActiva && !colaSpawn.length && !enemigos.length) oleadaTerminada();
   }
 
@@ -5817,9 +5847,18 @@
       else { consejoTemporal(T('ocupado')); sonar('error'); }
       return;
     }
+    // v7.35: si el campo tiene su burbuja de cosecha, el toque SOLO recolecta (sin mover la cámara ni abrir la ventana); el siguiente toque entra al edificio
+    if (s.edificio && !s.obra && esCampo(s.edificio.tipo) && (s.guardado || 0) >= Math.max(1, capacidadCampo(s) * 0.1)) {
+      if (menuEdif.slot !== null || menuEdif.castillo) cerrarMenuEdif();
+      if (panelActual) cerrarPanel();
+      recolectarCampo(s);
+      estado.avisoCosecha = (estado.avisoCosecha || 0) + 1;
+      if (estado.avisoCosecha <= 3) consejoTemporal(L('Recolectado. Toca otra vez el edificio para entrar.', 'Collected. Tap the building again to open it.'));
+      return;
+    }
     enfocar(s.pos);
     // v6.38: tocar un edificio abre su ventana directo
-    if (s.edificio || s.obra) { if (menuEdif.slot !== null || menuEdif.castillo) cerrarMenuEdif(); if (s.campo && s.edificio && (s.guardado || 0) >= 1) recolectarCampo(s); pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(i); }
+    if (s.edificio || s.obra) { if (menuEdif.slot !== null || menuEdif.castillo) cerrarMenuEdif(); if (s.edificio && esCampo(s.edificio.tipo) && (s.guardado || 0) >= 1) recolectarCampo(s); pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(i); }
     else { cerrarMenuEdif(); abrirPanelConstruir(i); }
   }
 
@@ -6962,10 +7001,43 @@
       return '<div class="hl-rama"><div class="hl-raiz">' + CLASES_HEROE[c] + ' ' + ({ infanteria: L('Infantería', 'Infantry'), arquero: L('Arqueros', 'Archers'), magia: L('Magia', 'Magic'), guardian: L('Guardianes', 'Guardians') }[c] || c) + '</div><div class="hl-hojas">' + clases[c].map(function (h) { var e = estado.heroes[h.id]; return '<button class="hl-hoja' + (e ? '' : ' bloq') + '" data-accion="heroe-ver" data-id="' + h.id + '"><span>' + fotoHTML('h_' + h.id, '🦸') + '</span><b>' + NH(h.id) + '</b><small>' + (e ? L('Nvl.', 'Lvl.') + e.nivel + ' · ' + '★'.repeat(e.estrellas || 1) : '🔒') + '</small></button>'; }).join('') + '</div></div>';
     }).join('') + '</div>';
   }
+  // v7.35: el mismo orden de la parrilla sirve para pasar de un héroe a otro deslizando
+  function ordenHeroes() {
+    var orden = { mitico: -1, legendario: 0, raro: 1, comun: 2 };
+    return HEROES.slice().sort(function (a, b) { return (estado.heroes[b.id] ? 1 : 0) - (estado.heroes[a.id] ? 1 : 0) || (orden[a.rareza] || 0) - (orden[b.rareza] || 0); });
+  }
+  function heroeVecino(id, paso) {
+    var l = ordenHeroes().map(function (h) { return h.id; }), i = l.indexOf(id);
+    if (i < 0) return null;
+    return l[(i + paso + l.length) % l.length];
+  }
+  function flechasHeroe(id) {
+    var l = ordenHeroes(), i = l.map(function (h) { return h.id; }).indexOf(id);
+    return '<div class="hv-nav"><button class="hv-flecha" data-accion="heroe-vecino" data-paso="-1" data-id="' + id + '" aria-label="' + L('Anterior', 'Previous') + '">‹</button><span>' + (i + 1) + ' / ' + l.length + ' · ' + L('desliza para ver otro héroe', 'swipe to see another hero') + '</span><button class="hv-flecha" data-accion="heroe-vecino" data-paso="1" data-id="' + id + '" aria-label="' + L('Siguiente', 'Next') + '">›</button></div>';
+  }
+  function irHeroeVecino(id, paso) {
+    var otro = heroeVecino(id, paso); if (!otro || otro === id) return;
+    if (pestanaHeroe === 'equipo' && !estado.heroes[otro]) pestanaHeroe = 'atrib';
+    sonar('click'); abrirPanelHeroe(otro);
+    var c = $('panel-cuerpo'); if (c) { c.classList.remove('hv-entra-izq', 'hv-entra-der'); void c.offsetWidth; c.classList.add(paso > 0 ? 'hv-entra-der' : 'hv-entra-izq'); }
+  }
+  (function () {
+    var ini = null;
+    document.addEventListener('touchstart', function (ev) {
+      ini = null;
+      if (!panelActual || panelActual.tipo !== 'heroe' || ev.touches.length !== 1) return;
+      var t = ev.target; if (!t.closest || !t.closest('#panel-cuerpo') || t.closest('#visor-heroe, .hf-visor, input, .hab-lista')) return; // el muñeco 3D gira con el dedo
+      ini = { x: ev.touches[0].clientX, y: ev.touches[0].clientY, t: Date.now(), id: panelActual.id };
+    }, { passive: true, capture: true });
+    document.addEventListener('touchend', function (ev) {
+      if (!ini || !panelActual || panelActual.tipo !== 'heroe' || panelActual.id !== ini.id) { ini = null; return; }
+      var p = ev.changedTouches[0], dx = p.clientX - ini.x, dy = p.clientY - ini.y, dt = Date.now() - ini.t, id = ini.id; ini = null;
+      if (Math.abs(dx) > 60 && Math.abs(dy) < Math.abs(dx) * 0.6 && dt < 800) irHeroeVecino(id, dx < 0 ? 1 : -1);
+    }, { passive: true, capture: true });
+  })();
   function abrirPanelHeroes() {
     vistos().tropasDia = hoyTexto();
-    var orden = { legendario: 0, raro: 1, comun: 2 };
-    var lista = HEROES.slice().sort(function (a, b) { return (estado.heroes[b.id] ? 1 : 0) - (estado.heroes[a.id] ? 1 : 0) || orden[a.rareza] - orden[b.rareza]; });
+    var lista = ordenHeroes();
     // v6.67: LISTA DE HÉROES como la foto del dueño: pestañas Lista / Árbol de habilidades, texto, y parrilla con retrato, corona, nivel y nombre (también los que no tienes)
     var html = subtabsHeroes('heroes') + '<div class="hl-tabs"><button data-accion="hl-tab" data-t="lista" class="' + (hlTab === 'lista' ? 'activo' : '') + '">' + L('Lista', 'List') + '</button><button data-accion="hl-tab" data-t="arbol" class="' + (hlTab === 'arbol' ? 'activo' : '') + '">' + L('Árbol de habilidades', 'Skill tree') + '</button></div>' +
       '<div class="hl-txt">' + L('Aquí ves a todos los héroes del reino, también los que todavía no tienes. Consigue más héroes reclutando y avanzando en la campaña.', 'Here you see every hero of the kingdom, even the ones you do not have yet. Get more heroes by recruiting and advancing in the campaign.') + ' <b>' + T('equipo_n', { n: estado.equipo.length }) + '</b></div>' +
@@ -7302,7 +7374,7 @@
   function abrirFichaHeroe(id) {
     var h = HEROE[id], e = estado.heroes[id], st = statsHeroe(id), hb = HB(h.hab), enEq = e && estado.equipo.indexOf(id) >= 0;
     var need = e ? expNivel(e.nivel) : 1, ex = e ? Math.min(e.exp || 0, need) : 0, tope = e ? topeNivel(id) : 1, lleno = e && e.nivel >= tope;
-    var html = '<button class="volver-mini" data-accion="sub-heroes">‹ ' + L('Héroes', 'Heroes') + '</button>' +
+    var html = '<button class="volver-mini" data-accion="sub-heroes">‹ ' + L('Héroes', 'Heroes') + '</button>' + flechasHeroe(id) +
       '<div class="hi-cab"><div class="hi-foto ' + h.rareza + '">' + fotoHTML('h_' + id, '🦸') + '<i class="hi-nv">' + (e ? e.nivel : '🔒') + '</i></div>' +
       '<div class="hi-dat"><div class="hi-nom">' + NH(id) + '</div><div class="hi-num"><span>⚔️ ' + formatoNumero(st.dano) + '</span><span>❤️ ' + formatoNumero(st.vida) + '</span><span>🎯 ' + st.alcance + '</span><span>✚ ' + st.cura + '/s</span></div>' +
       '<div class="hi-pod"><span>' + L('Poder: ', 'Power: ') + '<b>' + formatoNumero(Math.round(valorHeroe(id))) + '</b></span><span>' + L('Estrellas: ', 'Stars: ') + '<b>' + '★'.repeat(e ? e.estrellas : 0) + '</b></span></div>' +
@@ -7349,7 +7421,7 @@
   }
   function abrirPanelHeroeViejo(id) {
     var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab);
-    var html = '<button class="volver-mini" data-accion="sub-heroes">' + T('volver') + '</button>' +
+    var html = '<button class="volver-mini" data-accion="sub-heroes">' + T('volver') + '</button>' + flechasHeroe(id) +
       '<div class="hf ' + h.rareza + '"><div class="hf-foto"><div class="hf-visor" id="visor-heroe"></div>' + (pestanaHeroe === 'equipo' && e ? '<div class="hf-piezas">' + TIPOS_EQ.map(function (t) { var pz = piezasDe(id).filter(function (x) { return x.t === t; })[0]; return '<span class="hfp ' + (pz ? 'puesta ' + pz.r : '') + '" title="' + T('eq_' + t) + '">' + EQ[t].icono + '</span>'; }).join('') + '</div>' : '') + '<span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span></div>' +
       '<div class="hf-datos"><div class="hf-nombre">' + NH(id) + '</div><div class="hf-clase">' + CLASES_HEROE[h.clase] + ' ' + T('clase_' + h.clase) + '</div>' +
       '<div class="hf-est">' + estrellasHTML(e ? e.estrellas : 0) + '</div>';
@@ -7466,7 +7538,7 @@
     return de[Math.floor(Math.random() * de.length)].id;
   }
   function reclutar(n) {
-    if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
+    // v7.35: se puede reclutar también durante una oleada (antes salía «Espera a que termine la oleada»)
     var cuantos = n === '10' ? 10 : 1;
     if (n === 'gratis') { if (!reclutaGratisHoy()) return; estado.reclutaGratis = hoyTexto(); }
     else if (!pagar(0, cuantos === 10 ? RECLUTAR.diez : RECLUTAR.uno)) return;
@@ -10139,6 +10211,7 @@
     else if (a === 'heroe-estrella') subirEstrellaHeroe(b.getAttribute('data-id'));
     else if (a === 'heroe-elevar') { sonar('click'); abrirElevar(b.getAttribute('data-id')); }
     else if (a === 'heroe-libros') usarLibrosHeroe(b.getAttribute('data-id'));
+    else if (a === 'heroe-vecino') irHeroeVecino(b.getAttribute('data-id'), +b.getAttribute('data-paso'));
     else if (a === 'heroe-tab') { pestanaHeroe = b.getAttribute('data-tab'); sonar('click'); abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'hab-subir') subirHab(b.getAttribute('data-id'), false);
     else if (a === 'eq-hueco') abrirHueco(b.getAttribute('data-id'), b.getAttribute('data-t'));
@@ -11335,7 +11408,7 @@
     var dtReal = Math.min(reloj.getDelta(), 0.05);
     if (!enMenu && !pausado) {
       var dt = dtReal * velocidad;
-      actualizar(dt);
+      try { actualizar(dt); } catch (errA) { avisarFallo(errA); try { revisarFinOleada(dt); } catch (x) {} }
       moverAldeanos(dt, tiempo);
       tiempoJuego += dtReal;
     } else {
