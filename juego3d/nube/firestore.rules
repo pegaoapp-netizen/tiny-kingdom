@@ -1,5 +1,5 @@
 rules_version = '2';
-// v7.17: publicadas solas desde GitHub (secreto FIREBASE_SERVICE_ACCOUNT_TK)
+// v7.17: publicadas solas desde GitHub (secreto de la cuenta de servicio de Tiny Kingdom)
 service cloud.firestore {
   match /databases/{database}/documents {
 

@@ -34,7 +34,7 @@ jobs:
       - name: Publicar reglas de Firestore
         if: steps.cambio.outputs.si == '1'
         env:
-          CLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TK }}
+          CLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TK || secrets.IREBASE_SERVICE_ACCOUNT_TK }}
         run: |
           if [ -z "$CLAVE" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT_TK: las reglas no se publicaron."; exit 1; fi
           printf '%s' "$CLAVE" > "$RUNNER_TEMP/clave.json"
