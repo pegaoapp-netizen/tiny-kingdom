@@ -25,6 +25,11 @@
     '#marcha .mc-top { font-size: 10px; color: #ffcf4a; font-weight: 800; margin-left: 4px; }',
     '#dock-procesos:has(#dk-retirar:not([style*=none])) .dk-accion { padding: 6px 8px !important; font-size: 12px !important; min-width: 0 !important; flex: 0 0 auto !important; } #dock-procesos:has(#dk-retirar:not([style*=none])) .dk-txt { font-size: 12px !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
     '#dock-procesos .dk-rojo { background: linear-gradient(180deg, #d24a3a, #8e2418) !important; color: #fff !important; margin-left: 4px; }',
+    '.al-toca { cursor: pointer; } .al-tr.al-toca:active, .fila-miembro.al-toca:active { filter: brightness(1.25); }',
+    '.al-perfil .al-pf-cab { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; } .al-perfil .al-pf-cab b { font: 800 16px Georgia, serif; color: #ffe08a; }',
+    '.al-perfil .al-pf-desc { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: rgba(0,0,0,.28); border: 1px solid rgba(200,160,90,.35); font-size: 13px; color: #ecdcb8; }',
+    '.al-perfil .al-pf-botones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; } .al-perfil .al-pf-botones .comprar { flex: 1 1 140px; }',
+    '.al-perfil .al-kp, .rk-kp { color: #ff8a4a !important; } .al-pf-lista { max-height: 46vh; overflow-y: auto; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;

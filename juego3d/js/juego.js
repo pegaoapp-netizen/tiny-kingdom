@@ -2929,7 +2929,7 @@
   function htmlAlianzaPestanas() {
     var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
     var total = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0);
-    var h = '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
+    var h = '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall'], ['ranking', 'Ranking', 'Ranking']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>';
     if (alTab === 'info') {
       var nv = nivelAlianza(a.puntos || 0), soyLider = al.lider === yoU;
       // v7.17: como Kingdoms of Camelot: Canciller, Clasificación entre todas las alianzas y tu puesto de verdad (Vicecanciller, Mariscal…)
@@ -2980,7 +2980,7 @@
       else {
         var lf = lista.filter(function (x) { return !q || String(x.nombre).toLowerCase().indexOf(q) >= 0 || String(x.tag).toLowerCase() === q; });
         h += '<div class="al-tabla"><div class="al-th al-th3"><span>' + L('Puesto', 'Rank') + '</span><span>' + L('Alianza / Líder', 'Alliance / Leader') + '</span><span>' + L('Idioma', 'Language') + '</span><span></span></div>' + (lf.length ? lf.map(function (x, i) {
-          return '<div class="al-tr al-th3"><span><i class="al-ok">✓</i> ' + (i + 1) + '</span><span class="al-al"><b class="al-ban">' + escaparHTML(x.tag) + '</b><span>' + escaparHTML(x.nombre) + '<small>' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + escaparHTML((IDIOMAS_AL[x.idioma] || IDIOMAS_AL.es).slice(0, 3)) + '</span><span><button class="al-chev" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '">›</button></span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
+          return '<div class="al-tr al-th3 al-toca" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '"><span><i class="al-ok">✓</i> ' + (i + 1) + '</span><span class="al-al"><b class="al-ban">' + escaparHTML(x.tag) + '</b><span>' + escaparHTML(x.nombre) + '<small>' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + escaparHTML((IDIOMAS_AL[x.idioma] || IDIOMAS_AL.es).slice(0, 3)) + '</span><span><button class="al-chev" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '">›</button></span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
         }).join('') : '<p class="iv-vacio">' + L('No hay alianzas con ese nombre.', 'No alliances with that name.') + '</p>') + '</div>';
       }
     }
@@ -3403,6 +3403,32 @@
     });
   }
 
+  // v7.21: ficha de cualquier alianza (como KoC): escudo, líder, miembros, poder y liquidación totales, descripción, unirse o ver miembros
+  function abrirPerfilAlianza(tag, verMiembros) {
+    if (!tag || !$('panel-cuerpo')) return;
+    var cuerpo = $('panel-cuerpo'); abrirPerfilAlianza.desde = panelActual ? panelActual.tipo : 'alianza';
+    cuerpo.innerHTML = '<div class="carta al-perfil"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p class="nota">' + T('cargando') + '</p></div>';
+    Promise.all([Cuentas.alianza(tag), Cuentas.miembros(tag)]).then(function (r) {
+      var al = r[0], mi = (r[1] || []).slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); });
+      if (!$('panel-cuerpo') || !panelActual) return;
+      if (!al) { cuerpo.innerHTML = '<div class="carta"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p>' + T('al_borrada') + '</p></div>'; return; }
+      var poder = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0), kp = mi.reduce(function (t, m) { return t + (m.kp || 0); }, 0);
+      var ix = (alListaTodas || []).map(function (x) { return x.tag; }).indexOf(tag);
+      var filas = [['👑', L('Canciller', 'Chancellor'), escaparHTML(al.liderNombre || '')], ['👥', L('Miembros', 'Members'), mi.length + ' / 100'],
+        ['✴️', L('Poder total', 'Total power'), formatoNumero(poder)], ['⚔️', L('Liquidación total', 'Total kills'), '<b class="al-kp">' + formatoNumero(kp) + '</b>'],
+        ['🛡️', L('Liga', 'League'), ligaDe(poder).replace(/^[^A-Za-z]+/, '')], ['🌐', L('Idioma', 'Language'), IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es]];
+      if (ix >= 0) filas.splice(1, 0, ['🏆', L('Clasificación', 'Ranking'), String(ix + 1)]);
+      var mia = estado.alianza === tag;
+      var h = '<div class="carta al-perfil"><div class="al-pf-cab"><button class="comprar mini" data-accion="al-perfil-volver">◀</button><b>[' + escaparHTML(al.tag) + '] ' + escaparHTML(al.nombre) + '</b></div>' +
+        '<div class="al-info"><div class="al-info-dat">' + filas.map(function (q) { return '<div class="al-if"><span class="al-if-i">' + q[0] + '</span><b>' + q[1] + ':</b><span>' + q[2] + '</span></div>'; }).join('') + '</div>' +
+        '<div class="al-bandera kb-bandera">' + banderaAlianza(al.tag) + '</div></div>' +
+        '<div class="al-pf-desc">' + (al.descripcion ? '📢 ' + escaparHTML(al.descripcion) : L('Sin descripción pública.', 'No public description.')) + '</div>';
+      if (verMiembros) h += '<div class="al-pf-lista">' + (mi.length ? mi.map(function (m, k) { return '<div class="fila-miembro"><b class="rk-pos">#' + (k + 1) + '</b><b class="rk-nom">' + escaparHTML(m.nombre || '?') + (m.uid === al.lider ? ' 👑' : '') + '</b><span class="chip">💪 ' + corto(m.poder) + '</span><span class="chip rk-kp">⚔️ ' + corto(m.kp) + '</span></div>'; }).join('') : '<p class="nota">' + L('Sin miembros.', 'No members.') + '</p>') + '</div>';
+      h += '<div class="al-pf-botones">' + (!estado.alianza ? '<button class="comprar naranja" data-accion="al-unirse" data-tag="' + escaparHTML(al.tag) + '">' + L('Solicitar unirse', 'Request to join') + '</button>' : mia ? '<span class="chip">' + L('Es tu alianza', 'Your alliance') + '</span>' : '') +
+        (verMiembros ? '' : '<button class="comprar" data-accion="al-perfil-miembros" data-tag="' + escaparHTML(al.tag) + '">👥 ' + L('Ver lista de miembros', 'See members') + '</button>') + '</div></div>';
+      cuerpo.innerHTML = h; cuerpo.scrollTop = 0;
+    }).catch(function () { cuerpo.innerHTML = '<div class="carta"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p class="nota aviso-rojo">' + T('mundo_error') + '</p></div>'; });
+  }
   function pintarListaAlianzas(lista) {
     var h = '<div class="carta"><h3>🛡️ ' + T('al_crear') + '</h3>' +
       '<input class="campo" id="al-nombre" maxlength="24" placeholder="' + T('al_nombre') + '" style="margin-top:6px">' +
@@ -3415,7 +3441,7 @@
       '<div class="carta" style="margin-top:10px"><h3>' + (pintarListaAlianzas.busqueda ? L('Encontradas', 'Found') + ' (' + lista.length + ')' : T('al_lista')) + '</h3>';
     if (!lista.length) h += '<p>' + (pintarListaAlianzas.busqueda ? L('No hay ninguna alianza con ese nombre. Prueba con otra palabra o crea la tuya.', 'No alliance with that name. Try another word or create yours.') : T('al_ninguna')) + '</p>';
     lista.forEach(function (al) {
-      h += '<div class="fila-miembro"><span class="etiqueta-al">' + escaparHTML(al.tag) + '</span><b>' + escaparHTML(al.nombre) + '</b><span class="chip">👑 ' + escaparHTML(al.liderNombre) + '</span>' +
+      h += '<div class="fila-miembro"><span class="etiqueta-al al-toca" data-accion="al-ver" data-tag="' + escaparHTML(al.tag) + '">' + escaparHTML(al.tag) + '</span><b class="al-toca" data-accion="al-ver" data-tag="' + escaparHTML(al.tag) + '">' + escaparHTML(al.nombre) + ' ›</b><span class="chip">👑 ' + escaparHTML(al.liderNombre) + '</span>' +
         '<button class="comprar" data-accion="al-unirse" data-tag="' + escaparHTML(al.tag) + '">' + T('al_unirse') + '</button></div>';
     });
     $('panel-cuerpo').innerHTML = h + '</div>';
@@ -6057,12 +6083,24 @@
     tab = tab || abrirPanelRanking.tab || 'poder'; abrirPanelRanking.tab = tab;
     var tabs = '<div class="subtabs rk-tabs"><button class="' + (tab === 'poder' ? 'activo' : '') + '" data-accion="rk-tab" data-t="poder">💪 ' + L('Poder', 'Power') + '</button>' +
       '<button class="' + (tab === 'torneo' ? 'activo' : '') + '" data-accion="rk-tab" data-t="torneo">🏆 ' + L('Torneo semanal', 'Weekly tournament') + '</button>' +
-      '<button class="' + (tab === 'liquidacion' ? 'activo' : '') + '" data-accion="rk-tab" data-t="liquidacion">⚔️ ' + L('Liquidación', 'Kills') + '</button></div>';
+      '<button class="' + (tab === 'liquidacion' ? 'activo' : '') + '" data-accion="rk-tab" data-t="liquidacion">⚔️ ' + L('Liquidación', 'Kills') + '</button>' +
+      '<button class="' + (tab === 'alianzas' ? 'activo' : '') + '" data-accion="rk-tab" data-t="alianzas">🛡️ ' + L('Alianzas', 'Alliances') + '</button></div>';
     abrirPanel('🏆 ' + L('Ranking', 'Ranking'), tabs + '<div id="rk-cuerpo"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>', { tipo: 'ranking' });
     if (!hayCuenta()) { $('rk-cuerpo').innerHTML = '<div class="carta"><p>' + L('Crea una cuenta para aparecer en el ranking y jugar el torneo.', 'Create an account to show up in the ranking and play the tournament.') + '</p><button class="comprar" data-accion="ir-cuenta">' + T('entrar_o_crear') + '</button></div>'; return; }
     var yo = Cuentas.usuario().uid;
     function listo(html) { if (panelActual && panelActual.tipo === 'ranking' && abrirPanelRanking.tab === tab && $('rk-cuerpo')) $('rk-cuerpo').innerHTML = html; }
     function error() { listo('<p class="nota aviso-rojo">' + T('mundo_error') + '</p>'); }
+    // v7.21: alianzas ordenadas por el poder y la liquidación de sus miembros (de los 100 más fuertes y los 100 que más matan)
+    if (tab === 'alianzas') {
+      Promise.all([Cuentas.ranking(), Cuentas.rankingLiquidacion()]).then(function (r) {
+        var vistos = {}, por = {};
+        r[0].concat(r[1]).forEach(function (x) { if (!x.alianza || vistos[x.uid]) return; vistos[x.uid] = 1; var q = por[x.alianza] = por[x.alianza] || { tag: x.alianza, poder: 0, kp: 0, n: 0 }; q.poder += x.poder || 0; q.kp += x.kp || 0; q.n++; });
+        var lista = Object.keys(por).map(function (k) { return por[k]; }).sort(function (x, y) { return (y.poder + y.kp) - (x.poder + x.kp); });
+        listo('<div class="carta"><p class="nota">' + L('Las alianzas por la suma del poder y la liquidación de sus jugadores. Toca una para ver su ficha.', 'Alliances by their players\' total power and kills. Tap one to see it.') + '</p>' +
+          (lista.length ? lista.map(function (q, k) { return '<div class="fila-miembro rk-fila al-toca' + (q.tag === estado.alianza ? ' yo' : '') + '" data-accion="al-ver" data-tag="' + escaparHTML(q.tag) + '"><b class="rk-pos">' + (['🥇', '🥈', '🥉'][k] || '#' + (k + 1)) + '</b><span class="etiqueta-al">' + escaparHTML(q.tag) + '</span><span class="chip">💪 ' + corto(q.poder) + '</span><span class="chip rk-kp">⚔️ ' + corto(q.kp) + '</span></div>'; }).join('') : '<p>' + L('Todavía no hay alianzas.', 'No alliances yet.') + '</p>') + '</div>');
+      }).catch(error);
+      return;
+    }
     if (tab === 'liquidacion') {
       publicarAldea(true);
       var sem0 = semanaActual(), mT = estado.kpSem === sem0 ? (estado.kpTemp || 0) : 0;
@@ -10040,6 +10078,7 @@
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
     else if (a === 'reunion-ver') { sonar('click'); var rx = +b.getAttribute('data-x'), ry = +b.getAttribute('data-y'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(rx, ry)); elegirCelda(rx, ry); } }, 400); }
+    else if (a === 'al-tab' && b.getAttribute('data-t') === 'ranking') { sonar('click'); abrirPanelRanking('liquidacion'); }
     else if (a === 'al-tab') { sonar('click'); alTab = b.getAttribute('data-t'); alSeccion = ''; pintarHubAlianza(); }
     else if (a === 'al-submi') { sonar('click'); alSubMi = b.getAttribute('data-t'); alPag = 0; pintarHubAlianza(); }
     else if (a === 'al-pag') { sonar('click'); alPag = +b.getAttribute('data-p'); pintarHubAlianza(); }
@@ -10066,7 +10105,9 @@
       var nd = Object.assign({}, alCache.al.diplo || {}); if (vv === 'neutral') delete nd[tg]; else nd[tg] = vv;
       Cuentas.ajustesAlianza(alCache.al.tag, { diplo: nd }).then(function () { alCache.al.diplo = nd; estado.diplo = nd; guardar(true); pintarHubAlianza(); if (M3 && M3.ultimaLista) ponerCosasMundo(M3.ultimaLista, M3.ultimoYo); consejoTemporal('[' + tg + '] → ' + (vv === 'hostil' ? L('Hostil', 'Hostile') : vv === 'amiga' ? L('Amiga', 'Friendly') : L('Neutral', 'Neutral'))); }).catch(function () { consejoTemporal(L('No se pudo cambiar la diplomacia.', 'Could not change diplomacy.')); sonar('error'); });
     }
-    else if (a === 'al-ver') { sonar('click'); var tv = b.getAttribute('data-tag'), xv = (alListaTodas || []).filter(function (x) { return x.tag === tv; })[0]; if (xv) consejoTemporal('[' + xv.tag + '] ' + xv.nombre + ' · 👑 ' + (xv.liderNombre || '')); }
+    else if (a === 'al-ver') { sonar('click'); abrirPerfilAlianza(b.getAttribute('data-tag')); }
+    else if (a === 'al-perfil-volver') { sonar('click'); if (abrirPerfilAlianza.desde === 'ranking') abrirPanelRanking('alianzas'); else if (estado.alianza && alCache) pintarHubAlianza(); else abrirPanelAlianza(); }
+    else if (a === 'al-perfil-miembros') { sonar('click'); abrirPerfilAlianza(b.getAttribute('data-tag'), true); }
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
