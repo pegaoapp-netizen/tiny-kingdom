@@ -51,8 +51,17 @@
     var copia = JSON.parse(JSON.stringify(estado));
     try { localStorage.setItem(claveLocal(), JSON.stringify(copia)); } catch (e) { /* sin almacenamiento: se juega igual */ }
     // copia en la nube si hay cuenta
-    try { if (window.Cuentas && Cuentas.usuario()) Cuentas.guardarPartida(copia, ya); } catch (e) {}
+    // v7.41 SEGURO: nunca se pisa en la nube un reino avanzado con uno que parece recién empezado (por ejemplo si la nube no cargó)
+    try {
+      if (window.Cuentas && Cuentas.usuario()) {
+        if (nubeFallo) return;
+        var nMax = (window.__tkNubeMax || {})[Cuentas.usuario().uid] || 0;
+        if (nMax >= 3 && (copia.castillo || 1) < nMax - 1) { console.warn('guardado en la nube frenado: castillo', copia.castillo, '<', nMax); return; }
+        Cuentas.guardarPartida(copia, ya);
+      }
+    } catch (e) {}
   }
+  var nubeFallo = false;
   // Cada cuenta tiene su propia copia en este aparato; el invitado usa la clave base.
   function claveLocal() {
     var u = window.Cuentas && Cuentas.usuario();
@@ -10816,17 +10825,27 @@
         { texto: L('Cerrar sesión', 'Sign out'), clase: 'morado', accion: function () { Cuentas.salir(); } }
       ]);
     }, 12000);
+    nubeFallo = false;
     Cuentas.cargarPartida().then(function (p) {
       partidaNube = p ? p.estado : null;
+      try { if (partidaNube && Cuentas.usuario()) { window.__tkNubeMax = window.__tkNubeMax || {}; window.__tkNubeMax[Cuentas.usuario().uid] = partidaNube.castillo || 1; } } catch (e) {}
       if (partidaNube) partidaNube.actualizado = p.actualizado;
       // Primera vez con cuenta: se lleva la partida de invitado de este teléfono
       if (!partidaNube && !cargar() && invitado && typeof invitado.monedas === 'number') {
         partidaNube = invitado; partidaNube.actualizado = Date.now();
         Cuentas.guardarPartida(invitado, true);
       }
-    }).catch(function () { /* sin internet: se usa la copia local */ }).then(function () {
+    }).catch(function () { nubeFallo = true; }).then(function () {
       nubeHecha = true; clearTimeout(relojNube);
       cargandoNube = false;
+      // v7.41 ARREGLO: si la nube no respondió y este teléfono no tiene copia, NO se empieza un reino nuevo (antes pisaba el de verdad)
+      if (nubeFallo && !cargar() && enMenu) {
+        mostrarPantalla('📡', NOMBRE_JUEGO, L('No se pudo traer tu reino de la nube. Tu partida está a salvo: revisa tu internet y vuelve a intentarlo.', 'Could not load your kingdom from the cloud. Your game is safe: check your internet and try again.'), [
+          { texto: L('Reintentar', 'Try again'), accion: function () { alCambiarCuenta(Cuentas.usuario()); } },
+          { texto: L('Cerrar sesión', 'Sign out'), clase: 'morado', accion: function () { Cuentas.salir(); } }
+        ]);
+        return;
+      }
       if (enMenu) pantallaInicio();
     });
   }
