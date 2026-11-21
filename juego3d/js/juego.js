@@ -2558,6 +2558,17 @@
       pintarAldeas(aldeasCache); mostrarCasilla(c);
     });
   }
+  function irACampamentoCercano() {
+    irAVista('mundo');
+    setTimeout(function () {
+      if (!M3) return;
+      var yo = celdaDe(miLugar().x, miLugar().y), mej = -1, dm = 1e9;
+      CAMPAMENTOS.forEach(function (cm, i) { var c = celdaDe(cm.x, cm.y), d = Math.hypot(c.x - yo.x, c.y - yo.y) + cm.nivel * 3; if (d < dm) { dm = d; mej = i; } });
+      if (mej < 0) return;
+      var cc = celdaDe(CAMPAMENTOS[mej].x, CAMPAMENTOS[mej].y); M3.obj.copy(posCelda(cc.x, cc.y)); M3.seguir = null;
+      mostrarCampamento(mej); consejoTemporal(L('🛖 Esta es una aldea bárbara: atácala para cumplir el trabajo.', '🛖 This is a barbarian village: attack it to complete the task.'));
+    }, 1600);
+  }
   function mostrarCampamento(i) {
     var cm = CAMPAMENTOS[i], c = celdaDe(cm.x, cm.y), espera = ((estado.cdCamp || {})[i] || 0) - Date.now();
     var bmC = botinMaximo(cm.nivel);
@@ -2609,7 +2620,7 @@
     escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
     nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
-    if (res.gano) { darCristales(lv); sumarXP(10 * lv); sumarPuntosAlianza(25); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
+    if (res.gano) { darCristales(lv); sumarXP(10 * lv); sumarPuntosAlianza(25); sumarLogro('campamentos'); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdVilla = estado.cdVilla || {}; estado.cdVilla[a.uid] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
@@ -6209,7 +6220,9 @@
     if (h.indexOf('class="no"') >= 0) h = '<div class="banner-rojo">⚠️ ' + L('No cumples los requisitos para este edificio', 'You do not meet the requirements for this building') + '</div>' + h;
     return h;
   }
-  function filasTrabajos(que, L2) { return trabajosPara(que, L2).map(function (x) { var ok = x.ok || estado.dueno; return { nombre: '📋 ' + T('tr_' + x.k, { n: x.need }), pide: x.need, tiene: x.have, ok: ok }; }); }
+  // v7.27: los trabajos que faltan traen su botón «Ir» (al campamento más cercano, a los campos o a entrenar)
+  var IR_TRABAJO = { campamentos: 'tr-ir-camp', recolectas: 'tr-ir-campos', tropas: 'tr-ir-tropas' };
+  function filasTrabajos(que, L2) { return trabajosPara(que, L2).map(function (x) { var ok = x.ok || estado.dueno; return { nombre: '📋 ' + T('tr_' + x.k, { n: x.need }) + (!ok && IR_TRABAJO[x.k] ? ' <button class="comprar mini naranja tr-ir" data-accion="' + IR_TRABAJO[x.k] + '">' + L('Ir ›', 'Go ›') + '</button>' : ''), pide: x.need, tiene: x.have, ok: ok }; }); }
   // dos botones como en los juegos de reino: Construir (azul) y Construcción instantánea (verde, con gemas)
   function faltanRecursos(costo) { var f = {}, n = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var q = Math.max(0, (costo[r] || 0) - (estado.oroInfinito ? Infinity : cantidad(r))); if (q > 0) { f[r] = Math.ceil(q); n += q; } }); return n > 0 ? { f: f, n: n } : null; }
   function gemasRecursos(fr) { return fr ? Math.max(1, Math.ceil(fr.n / 400)) : 0; }
@@ -9922,6 +9935,9 @@
     if (!b || b.disabled) return;
     var a = b.getAttribute('data-accion');
     if (a === 'cerrar-panel') { cerrarPanel(); return; }
+    if (a === 'tr-ir-camp') { sonar('click'); irACampamentoCercano(); return; }
+    if (a === 'tr-ir-campos') { sonar('click'); irAVista('campos'); consejoTemporal(L('Toca un campo listo para recogerlo.', 'Tap a ready field to collect it.')); return; }
+    if (a === 'tr-ir-tropas') { sonar('click'); cerrarPanel(); abrirPanelTropas(); return; }
     if (a === 'dueno-regalar') { sonar('click'); rgElegido = null; rgLista = []; abrirRegalar(); return; }
     if (a === 'rg-buscar') { sonar('click'); buscarParaRegalo(); return; }
     if (a === 'rg-elegir') { sonar('click'); rgElegido = { uid: b.getAttribute('data-uid'), nombre: b.getAttribute('data-nombre') }; var bq = $('rg-busca') ? $('rg-busca').value : ''; abrirRegalar(); if ($('rg-busca')) $('rg-busca').value = bq; return; }

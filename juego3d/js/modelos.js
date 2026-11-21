@@ -104,7 +104,7 @@ var M = (function () {
     techoNoble: 0x7e2f22, tejaOsc: 0x7a3420, telaRoja: 0xa8322a, telaMar: 0x2e7a76, cobre: 0x5f9a88,
     piel: 0xffd3b0, metal: 0xd6dde5, metalOsc: 0x8d99a6, negro: 0x2a2320, blanco: 0xffffff,
     azul: 0x3d6fc0, azulOsc: 0x234a8a, verde: 0x5a9a48, rojo: 0xd2463a,
-    trasgo: 0x77a83c, trasgoOsc: 0x4a7424, cuero: 0x8a5a33, bruto: 0x6f8f5a, ogro: 0x9b7bc0
+    trasgo: 0x77a83c, trasgoOsc: 0x4a7424, cuero: 0x8a5a33, bruto: 0x6f8f5a, ogro: 0x7c8a58
   };
 
   // =================================================================
@@ -2128,6 +2128,8 @@ var M = (function () {
       izq.add(caja(0.07, 0.08, 0.44, hierro, -0.06, -0.36, 0.12));
       izq.add(esfera(0.07, rojo, -0.1, -0.15, 0.12, 6, 4));
     } else if (tipo === 'ogro') {
+      // manto de piel de oso sobre los hombros
+      var manto = esfera(0.42, 0x5a4330, 0, 0.82, -0.04, 10, 6); manto.scale.set(1.0, 0.34, 0.92); cuerpo.add(manto);
       // garrote enorme con pinchos y una barriga grande
       cuerpo.add(esfera(0.3, piel, 0, 0.55, 0.12, 10, 8));
       arma.add(cil(0.06, 0.14, 0.9, 7, 0x5a3a22, 0, 0.45, 0));
@@ -2257,7 +2259,13 @@ var M = (function () {
         [-1, 1].forEach(function (s) { var cu = cono(0.08, 0.4, 5, 0xf3ead8, s * 0.32, 0.38, 0); cu.rotation.z = -s * 0.6; cabeza.add(cu); });
       }
       if (tipo === 'ogro') {
-        for (var j = 0; j < 4; j++) cabeza.add(cono(0.06, 0.22, 4, C.oro, -0.2 + j * 0.13, 0.38, 0.05));
+        // v7.27: ogro jefe de verdad: piel verde oliva (antes rosa), yelmo de hierro con dos cuernos, cejas gruesas y colmillos grandes
+        cabeza.scale.setScalar(0.86);
+        cabeza.add(malla(geo('cascoO', function () { return new THREE.SphereGeometry(0.41, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2.4); }), mat(0x3e3a38), 0, 0.07, 0));
+        cabeza.add(cil(0.42, 0.42, 0.06, 12, 0x5a5048, 0, 0.1, 0));
+        [-1, 1].forEach(function (s) { var cu = cono(0.09, 0.46, 6, 0xe8dcc0, s * 0.36, 0.36, 0); cu.rotation.z = -s * 0.75; cabeza.add(cu); });
+        [-1, 1].forEach(function (s) { var ce = caja(0.17, 0.06, 0.07, 0x2e3a1e, s * 0.13, 0.12, 0.34); ce.rotation.z = s * 0.35; cabeza.add(ce); });
+        [-1, 1].forEach(function (s) { cabeza.add(cono(0.05, 0.16, 4, C.blanco, s * 0.14, -0.17, 0.3)); });
       }
     }
 

@@ -40,6 +40,7 @@
     'body #acelerar-elegir .ac-fila { background: rgba(0,0,0,.32) !important; border: 1px solid rgba(200,160,90,.35) !important; } body #acelerar-elegir .ac-fila.ac-cubre { border-color: #6ad06a !important; }',
     'body #acelerar-elegir .ac-txt b { color: #ffe9b0 !important; } body #acelerar-elegir .ac-txt span { color: #e8d8c3 !important; font-size: 12px !important; } body #acelerar-elegir .ac-txt em { color: #82e0aa !important; font-style: normal; font-weight: 700; }',
     'body #acelerar-elegir .ac-sub, body #acelerar-elegir .ac-res { color: #d9c493 !important; } body #acelerar-elegir .ac-reloj { color: #ff8a5a !important; }',
+    '.tr-ir { margin-left: 6px !important; padding: 3px 9px !important; font-size: 12px !important; min-height: 0 !important; vertical-align: middle; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;
