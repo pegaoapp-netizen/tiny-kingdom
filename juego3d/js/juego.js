@@ -9011,8 +9011,9 @@
   }
   function htmlTableroRuleta(r) {
     var tab = r.tablero || [], nl = rulNoLlaves();
-    return '<div class="rul-tablero"><div class="rul-tab-cab"><b>' + L('Tablero', 'Board') + ' ' + tab.length + '/' + nl.length + '</b><small>' + L('Cada premio sale una sola vez. Al completar el tablero:', 'Each prize comes out only once. When the board is complete:') + ' ' +
-      Object.keys(RUL_PREMIO_TABLERO).map(function (k) { return N(k); }).join(' + ') + '</small></div><div class="rul-tab-fila">' +
+    // v7.29: número de tablero aparte de los premios que ya salieron en él (antes «Tablero 4/5» y luego «0/5» confundía)
+    return '<div class="rul-tablero"><div class="rul-tab-cab"><b>' + L('Tablero n.º ', 'Board #') + ((r.tableros || 0) + 1) + ' · ' + L('premios ', 'prizes ') + tab.length + '/' + nl.length + '</b><small>' + L('Cada premio sale una vez por tablero. Completa los ' + nl.length + ' para ganar', 'Each prize comes out once per board. Collect all ' + nl.length + ' to win') + ' ' +
+      Object.keys(RUL_PREMIO_TABLERO).map(function (k) { return N(k); }).join(' + ') + L(' y empezar otro tablero.', ' and start a new board.') + '</small></div><div class="rul-tab-fila">' +
       nl.map(function (i) { var k = RULETA[i].k, ya = tab.indexOf(i) >= 0; return '<span class="rul-tab-p' + (ya ? ' ya' : '') + '" title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + (ya ? '<i>✓</i>' : '') + '</span>'; }).join('') +
       '<span class="rul-tab-p extra">' + OBJETOS.cofre_tesoro.icono + '<i>★</i></span></div></div>';
   }
@@ -9069,11 +9070,11 @@
         r.tablero = (r.tablero || []).concat([j]);
         if (rulNoLlaves().every(function (i) { return r.tablero.indexOf(i) >= 0; })) { // tablero vacío: premio extra y empieza otro
           r.tablero = []; r.tableros = (r.tableros || 0) + 1;
-          Object.keys(RUL_PREMIO_TABLERO).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + RUL_PREMIO_TABLERO[k]; ganados.push({ ico: OBJETOS[k].icono, nom: N(k), cat: subcatObjeto(k), gordo: true }); });
+          Object.keys(RUL_PREMIO_TABLERO).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + RUL_PREMIO_TABLERO[k]; ganados.push({ ico: OBJETOS[k].icono, nom: N(k), cat: subcatObjeto(k), gordo: true, extra: true }); });
         }
       }
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
-      if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true }); }
+      if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true, extra: true }); }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
       else r.sinLlave++;
     }
@@ -9102,8 +9103,8 @@
     var hayGordo = !!galeon;
     // v6.88: los premios iguales se juntan en uno con su cantidad (×12)
     var grupos = [], idxG = {}; l.forEach(function (x) { var k = x.nom; if (idxG[k] === undefined) { idxG[k] = grupos.length; grupos.push({ ico: x.ico, nom: x.nom, cat: x.cat, dest: x.dest, gordo: x.gordo, n: 0 }); } grupos[idxG[k]].n++; });
-    var total = l.length; l = grupos;
-    d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!') + ' <small>(' + total + ')</small>') + '</h3>') +
+    var total = l.length, extras = l.filter(function (x) { return x.extra; }).length, tiradas = total - extras; l = grupos;
+    d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!') + ' <small>(' + tiradas + ' ' + L('tiradas', 'spins') + (extras ? ' + ' + extras + ' ' + L('de regalo', 'bonus') : '') + ')</small>') + '</h3>') +
       '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) {
         var dest = x.dest || (x.cat ? '🎒 ' + L('Inventario', 'Inventory') + ' › ' + (NOM_SUBCAT[x.cat] ? L(NOM_SUBCAT[x.cat][0], NOM_SUBCAT[x.cat][1]) : x.cat) : x.gordo ? '' : '🗝️ ' + L('Abajo, en la Ruleta', 'In the Wheel'));
         return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + (x.n > 1 ? '<b class="rp-n">×' + x.n + '</b>' : '') + '</span><small>' + x.nom + '</small>' + (dest ? '<em class="rp-dest">' + dest + '</em>' : '') + '</div>'; }).join('') + '</div>' +
