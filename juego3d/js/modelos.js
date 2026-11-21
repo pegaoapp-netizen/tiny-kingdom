@@ -2784,7 +2784,7 @@ var M = (function () {
 
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
-  var FIGURA_TROPA = { trasgo: 'trasgo', caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano', nino: 'nino' };
+  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano', nino: 'nino' };
   var figListas = {}, figPedidas = false, pendRet = {};
   // figuras con esqueleto pero sin animación: usan la de otra figura (mismos huesos, otros nombres)
   var HUESO_DIF = { Spine: 'Spine02', Spine1: 'Spine01', Spine2: 'Spine', Neck: 'neck' };
