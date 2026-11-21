@@ -4553,7 +4553,7 @@
     marchas.forEach(function (m) { if (m.resuelto || m.cancelado || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 12) }); });
     entrantes.forEach(function (r) { if (r.resuelto || r.llega <= ahora || r.cancelado) return; var d = lugarDe(r.atacante) || (r.prueba ? { x: Math.min(98, yo.x + 18), y: Math.max(1, yo.y - 14) } : null); if (d) lista.push({ id: 'e' + r.id, de: d, a: yo, sale: r.fecha || (r.llega - 120000), llega: r.llega, color: 0xd0302a, txt: '🔥 ' + String(r.atacanteNombre || '').slice(0, 12), enemigo: true }); });
     marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven', 'Returning')) : L('Van a atacar', 'Attacking') }); });
-    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x2a6ad0, txt: (v.botin ? '💰 ' : '🏇 ') + L('Vuelven', 'Returning'), botin: !!v.botin }); });
+    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, txt: (v.botin ? '💰 ' : '🏇 ') + L('Vuelven', 'Returning'), botin: !!v.botin }); });
     var t = performance.now() / 1000;
     lista.forEach(function (v) {
       var c0 = celdaDe(v.de.x, v.de.y), c1 = celdaDe(v.a.x, v.a.y), p0 = posCelda(c0.x, c0.y), p1 = posCelda(c1.x, c1.y);
@@ -7885,6 +7885,16 @@
   // ---------- ESCENA DE BATALLA CONTRA OTRO REINO ----------
   // El resultado ya está decidido; la escena muestra a los dos ejércitos chocando.
   function escenaBatalla(a, f, d, gano, alTerminar) {
+    // v7.19: como Kingdoms of Camelot (2012): al llegar la marcha NO sale ninguna ventana. Suena la batalla, sale un aviso corto arriba
+    // y el informe completo (botín, bajas, regreso) queda en el Correo con su globo rojo.
+    if (!window.__escenaVieja) {
+      var vj = $('batalla-pvp'); if (vj) vj.remove();
+      sonar('golpe'); setTimeout(function () { sonar(gano ? 'victoria' : 'derrota'); }, 400);
+      consejoTemporal((gano ? '🏆 ' : '💔 ') + L('Informe de batalla en el Correo', 'Battle report in your Mail') + ' · ' + (a.nombre || ''));
+      try { alTerminar(function () {}); } catch (e) {}
+      try { actualizarAlertas(); } catch (e) {}
+      return;
+    }
     var viejo = $('batalla-pvp'); if (viejo) viejo.remove();
     var caja = document.createElement('div'); caja.id = 'batalla-pvp';
     var retr = estado.equipo.slice(0, 3).map(function (id) { return fotoHTML('h_' + id, ''); }).join('');
@@ -7990,7 +8000,7 @@
       var ub = ultimaBatalla && !ultimaBatalla.defensa && Date.now() - ultimaBatalla.fecha < 8000 ? ultimaBatalla : null, defD = null, tropasAt = null, tropasDe = null;
       if (ub) { if (ub.perdidas) herid = ub.perdidas.heridos; tropasAt = ub.sim.atk; tropasDe = ub.sim.def; envi = 0; defD = { ini: 0, perd: 0 }; for (var kA in ub.sim.atk) envi += ub.sim.atk[kA].ini; for (var kD in ub.sim.def) { defD.ini += ub.sim.def[kD].ini; defD.perd += ub.sim.def[kD].perdidos; } ub.enCorreo = true; }
       nuevoCorreo('guerras', L('Ataque a ' + r.defensorNombre + ': ', 'Attack on ' + r.defensorNombre + ': ') + (r.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), Cuentas.nombrePublico(), htmlInformeBatalla({ gano: r.gano, fecha: r.llega, lugar: destM, botin: r.gano ? r.botin : null,
-        rondas: ub ? ub.sim.rondas : 0, liq: liqM,
+        rondas: ub ? ub.sim.rondas : 0, liq: liqM, vuelta: r.gano && destM ? viajeV : 0,
         atacante: { nombre: Cuentas.nombrePublico(), heroe: um.heroe, poder: r.fuerza, lucharon: envi, muertos: caidas - herid, heridos: herid, revivir: herid, sobreviven: Math.max(0, envi - caidas), tropas: tropasAt },
         defensor: { nombre: r.defensorNombre, poder: r.defensa || 0, lucharon: defD ? defD.ini : null, sobreviven: defD ? defD.ini - defD.perd : null, muertos: defD ? defD.perd : null, heridos: null, revivir: null, tropas: tropasDe }, mejoras: { at: misMejoras() } }), r.gano ? { gemas: 5, objeto: 'libro_peq' } : null, { informe: true });
       var _infViejo = (htmlInforme([[L('Resultado', 'Result'), r.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(r.fuerza)], [L('Su defensa', 'Their defense'), formatoNumero(r.defensa || 0)], [L('Bajas', 'Losses'), caidas]], r.gano ? r.botin : null));
@@ -9713,6 +9723,7 @@
     var mej = o.mejoras || {}, filasMej = [['⚔️', L('Ataque', 'Attack'), 'ataque'], ['❤️', L('Vida', 'Health'), 'vida'], ['👟', L('Velocidad', 'Speed'), 'vel'], ['📦', L('Carga', 'Load'), 'carga'], ['👥', L('Límite', 'Limit'), 'limite']];
     return '<div class="ib"><div class="ib-res ' + (o.gano ? 'si' : 'no') + '">' + (o.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')) + '</div>' +
       (o.botin ? '<p class="ib-botin">' + L('Recursos: ', 'Resources: ') + textoBotin(o.botin) + '</p>' : '') +
+      (o.vuelta ? '<p class="ib-botin">🏇 ' + L('El botín llega cuando vuelvan tus tropas: ', 'The loot arrives when your troops return: ') + fmtTiempo(o.vuelta / 1000) + '</p>' : '') +
       (o.rondas ? '<p class="ib-botin">⚔️ ' + L('Batalla de ', 'Battle of ') + o.rondas + ' ' + L('rondas', 'rounds') + (o.liq ? ' · 🏅 +' + formatoNumero(o.liq) + ' ' + L('Puntos de Liquidación', 'Liquidation Points') : '') + '</p>' : (o.liq ? '<p class="ib-botin">🏅 +' + formatoNumero(o.liq) + ' ' + L('Puntos de Liquidación', 'Liquidation Points') + '</p>' : '')) +
       '<div class="ib-lados">' + lado(o.atacante, L('Atacantes', 'Attackers'), 'at') + lado(o.defensor, L('Defensores', 'Defenders'), 'de') + '</div>' +
       '<h4 class="ib-tit">' + L('Mejoras', 'Bonuses') + '</h4><div class="ib-mej">' + filasMej.map(function (q) { var a = (mej.at || {})[q[2]], d = (mej.de || {})[q[2]]; return '<span>' + (a === undefined ? '?' : '+' + Math.round(a * 100) + '%') + '</span><b>' + q[0] + ' ' + q[1] + '</b><span>' + (d === undefined ? '?' : '+' + Math.round(d * 100) + '%') + '</span>'; }).join('') + '</div>' +
