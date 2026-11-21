@@ -103,7 +103,9 @@
       if (Date.now() - ult > 60000) { try { sessionStorage.setItem('tk_recarga3d', String(Date.now())); } catch (e) {} setTimeout(function () { location.reload(); }, 600); }
     }, false);
   }
-  render.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  // v7.25: en iPhone/iPad el 3D gasta mucha memoria y Safari reinicia la página: tope de nitidez 1,5
+  var ES_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), TOPE_PX = ES_IOS ? 1.5 : 2;
+  render.setPixelRatio(Math.min(window.devicePixelRatio || 1, TOPE_PX));
   render.setSize(window.innerWidth, window.innerHeight);
   render.shadowMap.enabled = true;
   render.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -223,7 +225,7 @@
   var tamSombra = 45;
   function aplicarCalidad() {
     var alta = calidad === 'alta';
-    render.setPixelRatio(alta ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+    render.setPixelRatio(alta ? Math.min(window.devicePixelRatio || 1, TOPE_PX) : 1);
     render.setSize(window.innerWidth, window.innerHeight);
     // las sombras siempre están: en calidad baja con un mapa más chico (rápido en teléfonos)
     render.shadowMap.enabled = true;
@@ -1724,7 +1726,7 @@
   function crearMundo3D() {
     var cont = $('mundo-mapa');
     var r = new THREE.WebGLRenderer({ antialias: true });
-    r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    r.setPixelRatio(Math.min(TOPE_PX, window.devicePixelRatio || 1));
     // mapa de día (por defecto); con ?noche en la dirección vuelve el mapa nocturno
     var DIA_M = !/[?&]noche\b/.test(location.search);
     r.setClearColor(DIA_M ? 0x9cc46a : 0x070b16);
@@ -2716,6 +2718,7 @@
     });
   }
   function cerrarMundo() {
+    try { if (M3 && M3.r) { M3.r.setSize(1, 1); M3.w = 1; M3.h = 1; } } catch (e) {} // v7.25: el mapa escondido no guarda su imagen grande en memoria
     cerrarFicha(); $('mundo').classList.add('oculto'); enMundo = false; var lf = $('lupa-flota'); if (lf) lf.remove(); var ba = $('barra-acciones'); if (ba) ba.classList.add('oculto'); if (vistaActual === 'mundo') { vistaActual = 'ciudad'; pintarVista(); } }
   // volver a la ciudad desde el mapa: la cámara baja desde lo alto hasta el reino
   function entrarCiudad() {
@@ -11322,27 +11325,25 @@
       navigator.serviceWorker.register('sw.js').then(function (reg) { try { reg.update(); } catch (e) {} setInterval(function () { try { reg.update(); } catch (e) {} }, 5 * 60 * 1000); }).catch(function () {});
     });
     var yaRecargo = false;
-    navigator.serviceWorker.addEventListener('controllerchange', function () { if (yaRecargo) return; if (enMenu) { yaRecargo = true; location.reload(); } else avisarVersionNueva(); });
+    navigator.serviceWorker.addEventListener('controllerchange', function () { if (yaRecargo) return; avisarVersionNueva(); }); // v7.25: nunca recarga sola
   }
   // Mira si en internet hay una versión más nueva del juego; si la hay, avisa (o recarga si estás en el menú)
   function revisarVersion() {
     if (!/^https?:$/.test(location.protocol) || !window.fetch) return;
     fetch('js/datos.js?v=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.text(); }).then(function (txt) {
       var m = /VERSION_JUEGO = '([^']+)'/.exec(txt);
-      if (m && m[1] !== VERSION_JUEGO) { if (enMenu) location.reload(); else avisarVersionNueva(m[1]); }
+      if (m && m[1] !== VERSION_JUEGO) avisarVersionNueva(m[1]);
     }).catch(function () {});
   }
   // v6.75: el juego se actualiza solo (sin aviso que tape): guarda y recarga cuando no estás en medio de una oleada ni con una ventana abierta
   var actualizando = false;
   function avisarVersionNueva(v) {
+    // v7.25: antes recargaba sola cada vez que salía una versión (hoy muchas) y en el teléfono parecía que el juego se reiniciaba.
+    // Ahora solo sale un botoncito; la versión nueva se carga cuando lo tocas o la próxima vez que abras el juego.
     if (actualizando) return;
-    if (oleadaActiva || (panelActual && !document.hidden)) { setTimeout(function () { avisarVersionNueva(v); }, 15000); return; }
-    actualizando = true; try { guardar(true); } catch (e) {}
-    setTimeout(function () { location.reload(); }, 700);
-    return;
     if ($('aviso-version')) return;
     var d = document.createElement('button'); d.id = 'aviso-version';
-    d.textContent = '🔄 ' + T('version_nueva', { v: v || '' });
+    d.textContent = '🔄 ' + L('Nueva versión · tocar para actualizar', 'New version · tap to update');
     d.addEventListener('click', function () { try { guardar(true); } catch (e) {} setTimeout(function () { location.reload(); }, 400); });
     document.body.appendChild(d);
   }

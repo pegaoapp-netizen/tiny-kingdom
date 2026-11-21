@@ -33,6 +33,7 @@
     // v7.22: la cabecera de las ventanas ya no se sale por arriba y la ✕ queda centrada en su círculo
     'html body #panel#panel .panel-cab { margin-top: 0 !important; padding-top: calc(8px + env(safe-area-inset-top)) !important; padding-bottom: 8px !important; }',
     'html body #panel#panel .panel-cab #panel-cerrar { display: inline-flex !important; align-items: center !important; justify-content: center !important; padding: 0 !important; line-height: 1 !important; width: 38px !important; height: 38px !important; min-width: 38px !important; border-radius: 50% !important; font-size: 20px !important; text-align: center !important; }',
+    'body #aviso-version { display: block !important; position: fixed !important; left: 50% !important; transform: translateX(-50%) !important; top: calc(env(safe-area-inset-top) + 92px) !important; z-index: 70 !important; padding: 6px 12px !important; border-radius: 16px !important; border: 1px solid #c8a764 !important; background: rgba(28,18,8,.92) !important; color: #ffe08a !important; font: 700 12px system-ui, sans-serif !important; box-shadow: 0 2px 8px rgba(0,0,0,.5) !important; white-space: nowrap !important; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;
