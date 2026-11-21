@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.21';
+var VERSION_JUEGO = '7.22';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -926,7 +926,7 @@ var COMBATE_KOC = {
   caballeria_pesada: { vida: 1200, ataque: 600,  rango: 200,  velocidad: 600 },
   ariete:            { vida: 2000, ataque: 150,  rango: 100,  velocidad: 120 },
   catapulta:         { vida: 1500, ataque: 1200, rango: 1500, velocidad: 100, distancia: true },
-  torre_asedio:      { vida: 3000, ataque: 300,  rango: 1350, velocidad: 90, distancia: true },
+  torre_asedio:      { vida: 3000, ataque: 300,  rango: 1400, velocidad: 90, distancia: true },
   carreta:           { vida: 250,  ataque: 0,    rango: 50,   velocidad: 300 }
 };
 // % que da cada pieza de equipo según su rareza (ataque y vida), y cuánto le quita al rival (ataque y vida enemigos)

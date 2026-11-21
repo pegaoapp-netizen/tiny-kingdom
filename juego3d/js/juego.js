@@ -1626,8 +1626,13 @@
     for (r = 1; r <= 20; r++) {
       var va = vivos(A), vd = vivos(D); if (!va.length || !vd.length) { r--; break; }
       mover(va, vd, 1); mover(vd, va, -1);
-      var gA = [], gD = []; disparar(va, vd, gA); disparar(vd, va, gD);
-      gA.concat(gD).forEach(function (x) { x.obj.n = Math.max(0, x.obj.n - x.muertos); });
+      // v7.22: el bando con el héroe más fuerte dispara primero en cada ronda (iniciativa); si no, golpean a la vez
+      var iniA = (mA.combate || 0) > (mD.combate || 0), iniD = (mD.combate || 0) > (mA.combate || 0);
+      var gA = [], gD = [];
+      function aplicar(g) { g.forEach(function (x) { x.obj.n = Math.max(0, x.obj.n - x.muertos); }); }
+      if (iniA) { disparar(va, vd, gA); aplicar(gA); disparar(vivos(D), va, gD); aplicar(gD); }
+      else if (iniD) { disparar(vd, va, gD); aplicar(gD); disparar(vivos(A), vd, gA); aplicar(gA); }
+      else { disparar(va, vd, gA); disparar(vd, va, gD); aplicar(gA.concat(gD)); }
     }
     r = Math.min(20, r);
     var quedanA = vivos(A), quedanD = vivos(D);
@@ -7607,7 +7612,8 @@
   function textoBotin(b) { return ['oro', 'comida', 'madera', 'piedra'].filter(function (r) { return b[r]; }).map(function (r) { return '+' + b[r] + ' ' + ICONO_RECURSO[r]; }).join(', ') || '—'; }
   // ---------- FICHA DE CIUDAD: nunca atacar a ciegas ----------
   function datosEspia() {
-    var t = {}; tropas.forEach(function (u) { if (!u.heroeId && !u.refuerzo) t[u.tipo] = (t[u.tipo] || 0) + 1; });
+    // v7.22: el defensor pelea con TODAS sus tropas de la ciudad (las de reserva también); antes solo contaban las que se veían y el resto se inventaba
+    var t = {}; if (estado.tropasDefienden !== false) Object.keys(TROPAS).forEach(function (k) { var n = cuentaTipo(k); if (n > 0) t[k] = n; });
     return { nivelJ: nivelJugador(), castillo: estado.castillo || 1, muralla: estado.muralla || 0, tropas: t, heroes: (estado.equipo || []).length };
   }
   function diplomacia(a) {
@@ -10892,13 +10898,48 @@
     $('dk-retirar').addEventListener('click', function () {
       if (enMenu) return; sonar('click');
       var id = this.getAttribute('data-id'), m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m) return;
-      if (!confirm(L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'))) return;
-      cancelarMarcha(m); actualizarDock();
+      confirmarJuego('↩ ' + L('Retirar marcha', 'Recall march'), L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'), L('Retirar', 'Recall'), function () { cancelarMarcha(m); actualizarDock(); });
     });
     return d;
   }
   // v7.19: acelerar una marcha: con Marcha rápida (de la mochila) o con gemas, le quita la mitad de lo que falta
-  function acelerarMarcha(id) {
+  // v7.22: como KoC: una ventana oscura con tus relojes de la mochila (15 min resta 15 min, etc.) y la Marcha rápida (−50 %); con gemas solo si no tienes
+  function acelerarMarcha(id, resultado) {
+    var m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m || m.resuelto) return;
+    var v = $('acelerar-elegir'); if (v) v.remove();
+    var falta = (m.llega - Date.now()) / 1000, gem = estado.gemas || 0, moch = estado.mochila || {};
+    if (falta < 17) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; }
+    var lista = ['marcha_rapida'].concat(ACELERADORES.filter(function (k) { return !OBJETOS[k].soloInv; }).sort(function (a, b) { return OBJETOS[a].segundos - OBJETOS[b].segundos; }));
+    var tengo = lista.filter(function (k) { return (moch[k] || 0) > 0; });
+    var filas = (tengo.length ? tengo : lista).map(function (k) {
+      var n = moch[k] || 0, o = OBJETOS[k] || {}, it = TIENDA.filter(function (x) { return x.id === k; })[0], mitad = k === 'marcha_rapida', cubre = !mitad && o.segundos >= falta - 15;
+      return '<div class="ac-fila' + (cubre ? ' ac-cubre' : '') + '"><span class="ac-ico">' + (o.icono || '🏇') + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>' + L('Tienes ', 'Owned ') + '×' + formatoNumero(n) + ' · ' + (mitad ? '−50 %' : '−' + fmtTiempo(o.segundos)) + (cubre ? ' · <em>' + L('¡llegan ya!', 'arrive now!') + '</em>' : '') + '</span></div><div class="ac-bts">' +
+        (n > 0 ? '<button class="comprar mini naranja" data-acm="' + k + '">' + L('Usar', 'Use') + '</button>' : it ? '<button class="comprar mini verde ac-cyu" data-acm-cyu="' + k + '"' + (gem >= it.gemas ? '' : ' disabled') + '><small>' + L('Compra y usa', 'Buy & use') + '</small><span><span class="ico gema"></span>' + it.gemas + '</span></button>' : '') + '</div></div>';
+    }).join('');
+    var d = document.createElement('div'); d.id = 'acelerar-elegir';
+    d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>⚡ ' + L('Acelerar marcha', 'Speed up march') + '</h3><button class="cerrar" id="ac-cerrar">✕</button></div>' +
+      '<p class="ac-nom">🏇 → ' + escaparHTML(m.defensorNombre || '') + '</p><div class="ac-reloj" id="ac-reloj">⏱ ' + fmtTiempo(falta) + '</div>' + (resultado ? '<p class="ac-res">' + resultado + '</p>' : '') +
+      '<div class="ac-gemas">' + L('Tus gemas: ', 'Your gems: ') + '<span class="ico gema"></span><b>' + formatoNumero(gem) + '</b></div>' +
+      '<p class="ac-sub">' + (tengo.length ? L('Tus aceleradores', 'Your speed-ups') : L('No tienes aceleradores: cómpralos con gemas', 'No speed-ups: buy them with gems')) + '</p><div class="ac-lista">' + filas + '</div></div>';
+    document.body.appendChild(d);
+    var reloj = setInterval(function () { if (!document.body.contains(d) || m.resuelto) { clearInterval(reloj); if (m.resuelto) d.remove(); return; } var r = $('ac-reloj'); if (r) r.textContent = '⏱ ' + fmtTiempo(Math.max(0, (m.llega - Date.now()) / 1000)); }, 500);
+    $('ac-cerrar').addEventListener('click', function () { sonar('click'); clearInterval(reloj); d.remove(); });
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-acm],[data-acm-cyu]'); if (!b || b.disabled) return;
+      var k = b.getAttribute('data-acm') || b.getAttribute('data-acm-cyu'), compra = b.hasAttribute('data-acm-cyu');
+      var it = TIENDA.filter(function (x) { return x.id === k; })[0];
+      if (compra && (!it || (estado.gemas || 0) < it.gemas)) { sonar('error'); return; }
+      var ahoraF = m.llega - Date.now(), quita = k === 'marcha_rapida' ? ahoraF / 2 : OBJETOS[k].segundos * 1000;
+      var nueva = Math.round(Math.max(Date.now() + 16000, m.llega - quita));
+      b.disabled = true;
+      Cuentas.acelerarMarcha(id, nueva).then(function () {
+        if (compra) estado.gemas -= it.gemas; else { moch[k]--; if (moch[k] <= 0) delete moch[k]; }
+        var antes = ahoraF / 1000; m.llega = nueva; sonar('magia'); sumarLogro('acel'); guardar(true); actualizarHUD(); actualizarDock(); clearInterval(reloj);
+        acelerarMarcha(id, '⚡ ' + N(k) + ': ' + fmtTiempo(antes) + ' → ' + fmtTiempo((nueva - Date.now()) / 1000));
+      }).catch(function () { b.disabled = false; consejoTemporal(L('No se pudo acelerar. Prueba otra vez.', 'Could not speed up. Try again.')); sonar('error'); });
+    });
+  }
+  function acelerarMarchaViejo(id) {
     var m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m || m.resuelto) return;
     var falta = m.llega - Date.now(); if (falta < 25000) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; }
     var tiene = (estado.mochila || {}).marcha_rapida || 0, costo = Math.max(1, Math.ceil(falta / 120000));
