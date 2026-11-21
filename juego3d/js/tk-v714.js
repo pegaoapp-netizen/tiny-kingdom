@@ -20,6 +20,11 @@
     '#marcha .mc-rojo { min-height: 16px; margin: 4px 0 0; color: #ff8a7a; font-size: 12px; text-align: center; }',
     // informe: tropa por tropa en cada columna
     '.ib-tropas { margin-top: 6px; border-top: 1px solid rgba(201,138,26,.4); padding-top: 4px; } .ib-tr { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; font-size: 11.5px; padding: 1px 0; } .ib-rojo { color: #ff8a7a; }',
+    '#marcha .mc1-hbtn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border-radius: 8px; border: 1px solid #a8782a; background: #1e140a; color: #f6e6c0; text-align: left; min-height: 52px; }',
+    '#marcha .mc1-hbtn .mc-foto { width: 40px; height: 40px; flex: 0 0 40px; } #marcha .mc1-hn { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; } #marcha .mc1-hn b { font: 800 14px system-ui, sans-serif; color: #ffe9b0; } #marcha .mc1-hn small { font-size: 11px; color: #d9c493; line-height: 1.25; } #marcha .mc1-flecha { color: #ffb84a; font-size: 16px; }',
+    '#marcha .mc-top { font-size: 10px; color: #ffcf4a; font-weight: 800; margin-left: 4px; }',
+    '#dock-procesos:has(#dk-retirar:not([style*=none])) .dk-accion { padding: 6px 8px !important; font-size: 12px !important; min-width: 0 !important; flex: 0 0 auto !important; } #dock-procesos:has(#dk-retirar:not([style*=none])) .dk-txt { font-size: 12px !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
+    '#dock-procesos .dk-rojo { background: linear-gradient(180deg, #d24a3a, #8e2418) !important; color: #fff !important; margin-left: 4px; }',
     '.chat-m.megafono { background: linear-gradient(90deg, rgba(255,196,58,.28), rgba(255,196,58,.06)) !important; border-left: 3px solid #ffc43a !important; border-radius: 6px; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-v714'; st.textContent = css;

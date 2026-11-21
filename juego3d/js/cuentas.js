@@ -254,6 +254,7 @@ var Cuentas = (function () {
     },
     leerAtaque: function (id) { return db.collection('ataques').doc(id).get().then(function (d) { var x = d.data(); x.id = d.id; return x; }); },
     resolverAtaque: function (id, datos) { return db.collection('ataques').doc(id).update(datos); },
+    acelerarMarcha: function (id, llega) { return db.collection('ataques').doc(id).update({ llega: llega }); },
     cobrarAtaque: function (id) { return db.collection('ataques').doc(id).update({ cobrado: true }); },
     leerAldea: function (uid) { return db.collection('aldeas').doc(uid).get().then(function (d) { return d.exists ? normAldea(d.data()) : null; }); },
     // ---------------- REFUERZOS ENTRE ALIADOS ----------------

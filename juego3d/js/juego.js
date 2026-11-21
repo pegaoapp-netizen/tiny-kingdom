@@ -4563,9 +4563,9 @@
         g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col = modeloColumna(v.color, tipoC); g.add(col); g.userData.col = col; col.traverse(function (o) { o.frustumCulled = false; });
         if (v.botin) { var saco = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8c45a })); saco.position.set(0, 0.25, -0.75); col.add(saco); }
         var lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p0.x, 0.14, p0.z), new THREE.Vector3(p1.x, 0.14, p1.z)]);
-        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.enemigo ? 0xff3a2a : 0x3fe05a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); // v7.18: verde las tuyas, roja la que te ataca linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
+        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color === 0x3fe05a ? 0x3fe05a : 0xff3a2a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); // v7.18: verde las tuyas, roja la que te ataca linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
         // v6.41: el destino se marca en el suelo con un aro
-        var aro = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.8, 28), new THREE.MeshBasicMaterial({ color: v.enemigo ? 0xff4a3a : 0xffd36a, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthTest: !M3.camelot })); aro.rotation.x = -Math.PI / 2; aro.position.set(p1.x, 0.16, p1.z); aro.renderOrder = 7; M3.e.add(aro); linea.userData.aro = aro;
+        var aro = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.78, 28), new THREE.MeshBasicMaterial({ color: v.enemigo ? 0xff4a3a : 0xffd36a, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthTest: !M3.camelot })); aro.rotation.x = -Math.PI / 2; aro.position.set(p1.x, 0.16, p1.z); aro.renderOrder = 7; M3.e.add(aro); linea.userData.aro = aro;
         M3.e.add(g); M3.columnas[v.id] = g;
         // en el mapa pintado los dibujos están parados frente a la cámara: la columna se dibuja encima y un poco más grande
         if (M3.camelot) { col.scale.setScalar(3.6); linea.material.depthTest = false; linea.renderOrder = 7; }
@@ -4588,7 +4588,7 @@
       vivos[v.id] = true;
     });
     for (var k in M3.columnas) if (!vivos[k]) { var lnk = M3.columnas[k].userData.linea; if (lnk && lnk.userData.aro) M3.e.remove(lnk.userData.aro); M3.e.remove(lnk); M3.e.remove(M3.columnas[k]); delete M3.columnas[k]; }
-    for (var ka in M3.columnas) { var an = M3.columnas[ka].userData.linea && M3.columnas[ka].userData.linea.userData.aro; if (an) an.scale.setScalar(1 + 0.15 * Math.sin(t * 4)); }
+    for (var ka in M3.columnas) { var an = M3.columnas[ka].userData.linea && M3.columnas[ka].userData.linea.userData.aro; if (an) an.scale.setScalar(1 + 0.05 * Math.sin(t * 3)); }
   }
   function actualizarCarretasMundo() {
     if (!M3) return;
@@ -7708,13 +7708,16 @@
     function fuerza() { var f = valorHeroe(sel.heroe); for (var k in sel.tropas) if (sel.tropas[k] > 0) f += valorUnidadTipo(k) * sel.tropas[k]; return Math.round(f); }
     function guardarFormacion() { estado.formacion = { heroe: sel.heroe, tropas: JSON.parse(JSON.stringify(sel.tropas)) }; guardar(true); sonar('moneda'); consejoTemporal('💾 ' + L('Formación guardada.', 'Formation saved.')); }
     function retrato(id) { return '<div class="mc-foto">' + fotoHTML('h_' + id, '🦸') + '</div>'; }
+    // v7.19: el héroe más fuerte primero, con su ataque y su bono de ataque a la vista
+    function fuerzaHeroe(id) { var st = statsHeroe(id), mh = multiplicadoresHeroe(id); return (st.dano + st.vida / 5) * (1 + mh.atk / 100); }
+    function heroesOrdenados() { return Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; }).sort(function (x, y) { return fuerzaHeroe(y) - fuerzaHeroe(x); }); }
+    function lineaHeroe2(id) { var st = statsHeroe(id), mh = multiplicadoresHeroe(id); return L('Nv ', 'Lv ') + nivelHeroe(id) + ' · ⚔️ ' + formatoNumero(st.dano) + ' · +' + Math.round(mh.atk) + '% ' + L('Atq', 'Atk') + ' · +' + Math.round(mh.vida) + '% ' + L('Vida', 'HP'); }
     function lineaHeroe(id) { var st = statsHeroe(id); return L('Nv. ', 'Lv. ') + nivelHeroe(id) + ' · ⚔️ ' + formatoNumero(st.dano) + ' · ❤️ ' + formatoNumero(st.vida); } // v7.18: el nivel en vez del 0 % que parecía un error
     function htmlUnica() {
       var tipos = tiposDisponibles().filter(function (k) { return libresParaMarcha(k) > 0; }), tt = total(), cap = tamanoMarcha(sel.heroe), mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
       var ali = estado.alianza && a.alianza === estado.alianza;
       var h = '<div class="mc-cab"><b>' + L('Marcha', 'March') + '</b><small>→ ' + escaparHTML(a.nombre) + (a.x !== undefined ? ' · X ' + a.x + ' · Y ' + a.y : '') + '</small><button class="mc-x" data-mc="cerrar">✕</button></div>' +
-        '<div class="mc1-arriba"><label class="mc1-heroe"><span>🦸 ' + L('Héroe', 'Hero') + '</span><select id="mc-heroe"><option value="">' + L('Sin héroe', 'No hero') + '</option>' +
-        mios.map(function (id) { return '<option value="' + id + '"' + (sel.heroe === id ? ' selected' : '') + '>' + NH(id) + ' · ' + L('Nv ', 'Lv ') + nivelHeroe(id) + '</option>'; }).join('') + '</select></label>' +
+        '<div class="mc1-arriba"><div class="mc1-heroe"><span>🦸 ' + L('Héroe', 'Hero') + '</span><button class="mc1-hbtn" data-mc="cambiar">' + (sel.heroe ? retrato(sel.heroe) + '<span class="mc1-hn"><b>' + NH(sel.heroe) + '</b><small>' + lineaHeroe2(sel.heroe) + '</small></span>' : '<span class="mc1-hn"><b>' + L('Sin héroe', 'No hero') + '</b><small>' + (mios.length ? L('Toca para elegir', 'Tap to choose') : L('No tienes héroes', 'No heroes')) + '</small></span>') + '<span class="mc1-flecha">▾</span></button></div>' +
         '<div class="mc1-datos"><span>👥 <b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a) / 1000) + '</b></span></div></div>' +
         '<div class="mc1-otros"><button class="comprar mini" data-mc="tipo" data-t="explorar">🔍 ' + L('Explorar', 'Scout') + '</button>' + (ali ? '<button class="comprar mini" data-mc="tipo" data-t="reforzar">🛡️ ' + L('Reforzar', 'Reinforce') + '</button>' : '') +
         '<button class="comprar mini" data-mc="todo">' + L('Todas', 'All') + '</button><button class="comprar mini" data-mc="nada">' + L('Ninguna', 'None') + '</button></div>' +
@@ -7761,9 +7764,9 @@
       return h;
     }
     function htmlHeroes() {
-      var mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
+      var mios = heroesOrdenados();
       var h = '<div class="mc-cab"><b>' + L('Elige tu héroe', 'Choose your hero') + '</b><button class="mc-x" data-mc="volver">◀</button></div><div class="mc-lista">';
-      mios.forEach(function (id) { h += '<button class="mc-heroe opcion' + (sel.heroe === id ? ' activo' : '') + ' ' + HEROE[id].rareza + '" data-mc="heroe" data-id="' + id + '">' + retrato(id) + '<div class="mc-hd"><b>' + NH(id) + '</b><span>' + lineaHeroe(id) + '</span></div></button>'; });
+      mios.forEach(function (id, i) { h += '<button class="mc-heroe opcion' + (sel.heroe === id ? ' activo' : '') + ' ' + HEROE[id].rareza + '" data-mc="heroe" data-id="' + id + '">' + retrato(id) + '<div class="mc-hd"><b>' + NH(id) + (i === 0 ? ' <small class="mc-top">★ ' + L('el más fuerte', 'strongest') + '</small>' : '') + '</b><span>' + lineaHeroe2(id) + '</span></div></button>'; });
       h += '<button class="mc-heroe opcion vacio" data-mc="heroe" data-id="">' + '<div class="mc-foto">✖</div><div class="mc-hd"><b>' + L('Sin héroe', 'No hero') + '</b></div></button></div>';
       return h;
     }
@@ -7800,7 +7803,7 @@
         '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
     }
     function pintar() {
-      d.innerHTML = '<div class="mc-caja">' + (vista === 'unica' ? htmlUnica() : htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha())) + '</div>';
+      d.innerHTML = '<div class="mc-caja">' + (vista === 'unica' ? htmlUnica() : vista === 'heroes' ? htmlHeroes() : htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha())) + '</div>';
       var hs = d.querySelector('#mc-heroe'); if (hs) hs.addEventListener('change', function () { sel.heroe = this.value || null; pintar(); });
       if (vista === 'escoger' || vista === 'unica') {
         d.querySelectorAll('[data-k]').forEach(function (inp) {
@@ -7963,7 +7966,7 @@
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 60 * 1000; // v7.14: 1 min entre ataques al mismo reino (antes 10)
       guardar(true); publicarAldea(true); actualizarEscudo();
       // v7.18: como en KoC 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
-      $('mundo-info').innerHTML = ''; consejoTemporal('🏇 ' + T('mar_salen', { n: escaparHTML(a.nombre), t: fmtTiempo(viaje / 1000) }));
+      $('mundo-info').innerHTML = ''; dockPest = 'marchar'; dockAbierto = true; try { guardarDock(); actualizarDock(); } catch (e) {} sonar('cuerno'); // v7.19: la marcha se ve en la barra de abajo con Acelerar y Retirar, sin cartel encima
       actualizarAlertas();
     }).catch(function () { $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); });
   }
@@ -10824,7 +10827,7 @@
     d.innerHTML = '<div class="dk-tabs">' + [['territorios', L('Territorios', 'Territories')], ['marchar', L('Marchar', 'March')], ['tropas', L('Tropas', 'Troops')], ['procesos', L('Procesos', 'Activity')]].map(function (t) {
       return '<button data-dk="' + t[0] + '">' + t[1] + '<span class="dk-punto"></span></button>';
     }).join('') + '<button class="dk-flecha" data-dk="flecha" title="' + L('Mostrar / ocultar', 'Show / hide') + '"></button></div>' +
-      '<div class="dk-fila"><span class="dk-txt" id="dk-txt"></span><button class="dk-accion" id="dk-accion"></button></div>';
+      '<div class="dk-fila"><span class="dk-txt" id="dk-txt"></span><button class="dk-accion" id="dk-accion"></button><button class="dk-accion dk-rojo" id="dk-retirar" style="display:none">↩ ' + L('Retirar', 'Recall') + '</button></div>';
     document.body.appendChild(d);
     d.addEventListener('click', function (ev) {
       var b = ev.target.closest('[data-dk]'); if (!b || enMenu) return;
@@ -10839,16 +10842,39 @@
       if (enMenu) return; sonar('click');
       var a = this.getAttribute('data-a');
       if (a.indexOf('acel:') === 0) { abrirAcelerar(a.slice(5)); return; } // v6.93: usar relojes ahí mismo
+      if (a.indexOf('macel:') === 0) { acelerarMarcha(a.slice(6)); return; }
       if (a === 'mundo') irAlMundo();
       else if (a === 'tropas') abrirPanelTropas();
       else if (a === 'marchas') { var r = slotRelevo(); if (r) abrirReunion(r.i, 'marchas'); else irAlMundo(); }
       else if (a === 'invest') abrirArbolTalentos();
     });
+    $('dk-retirar').addEventListener('click', function () {
+      if (enMenu) return; sonar('click');
+      var id = this.getAttribute('data-id'), m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m) return;
+      if (!confirm(L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'))) return;
+      cancelarMarcha(m); actualizarDock();
+    });
     return d;
+  }
+  // v7.19: acelerar una marcha: con Marcha rápida (de la mochila) o con gemas, le quita la mitad de lo que falta
+  function acelerarMarcha(id) {
+    var m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m || m.resuelto) return;
+    var falta = m.llega - Date.now(); if (falta < 25000) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; }
+    var tiene = (estado.mochila || {}).marcha_rapida || 0, costo = Math.max(1, Math.ceil(falta / 120000));
+    var pregunta = tiene ? L('¿Usar 1 Marcha rápida? La marcha tarda la mitad (quedan ', 'Use 1 Fast march? The march takes half (') + fmtTiempo(falta / 1000) + ').' : L('¿Gastar ' + costo + ' 💎 para que la marcha tarde la mitad?', 'Spend ' + costo + ' 💎 to halve the march time?');
+    if (!confirm(pregunta)) return;
+    if (!tiene && (estado.gemas || 0) < costo) { consejoTemporal(L('No tienes gemas suficientes.', 'Not enough gems.')); sonar('error'); return; }
+    var nueva = Math.round(Date.now() + Math.max(20000, falta / 2));
+    Cuentas.acelerarMarcha(id, nueva).then(function () {
+      if (tiene) { estado.mochila.marcha_rapida--; if (estado.mochila.marcha_rapida <= 0) delete estado.mochila.marcha_rapida; } else estado.gemas -= costo;
+      m.llega = nueva; sonar('magia'); consejoTemporal('⚡ ' + L('¡Marcha acelerada!', 'March sped up!')); guardar(true); actualizarHUD(); actualizarDock();
+    }).catch(function () { consejoTemporal(L('No se pudo acelerar. Prueba otra vez.', 'Could not speed up. Try again.')); sonar('error'); });
   }
   function actualizarDock() {
     var d = crearDock();
-    var ocultar = enMenu || enMundo || !!panelActual || document.body.classList.contains('panel-abierto');
+    var hayMarchaYa = marchas.some(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }) || marchasPVE.length > 0;
+    var ocultar = enMenu || (enMundo && !hayMarchaYa) || !!panelActual || document.body.classList.contains('panel-abierto');
+    d.classList.toggle('en-mundo', !!enMundo);
     d.classList.toggle('oculto', ocultar);
     if (ocultar) return;
     // va justo encima de la barra del chat (o de la barra de abajo)
@@ -10874,8 +10900,15 @@
       btn = lleno ? L('Ver', 'View') : L('Conquistar', 'Conquer'); acc = 'mundo';
     } else if (dockPest === 'marchar') {
       lleno = activo.marchar;
-      txt = lleno ? '🏇 ' + L('Marchando', 'Marching') + ' ×' + nMarchas + ' · <b>⏱ ' + fmtTiempo(Math.ceil(tMarcha)) + '</b>' : L('No hay ninguna marcha activa.', 'No active marches.');
-      btn = lleno ? L('Ver', 'View') : L('Marchar', 'March'); acc = lleno ? 'marchas' : 'mundo';
+      // v7.19: la marcha que llega primero, con ⚡ Acelerar y ↩ Retirar (como KoC: nada flota encima del menú)
+      var prox = marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > ahora; }).sort(function (x, y) { return x.llega - y.llega; })[0];
+      if (prox) {
+        txt = '🏇 ' + (nMarchas > 1 ? '×' + nMarchas + ' · ' : '') + escaparHTML(prox.defensorNombre || '') + ' · <b>⏱ ' + fmtTiempo(Math.ceil((prox.llega - ahora) / 1000)) + '</b>';
+        btn = '⚡ ' + L('Acelerar', 'Speed up'); acc = 'macel:' + prox.id;
+      } else {
+        txt = lleno ? '🏇 ' + L('Marchando', 'Marching') + ' ×' + nMarchas + ' · <b>⏱ ' + fmtTiempo(Math.ceil(tMarcha)) + '</b>' : L('No hay ninguna marcha activa.', 'No active marches.');
+        btn = lleno ? L('Ver', 'View') : L('Marchar', 'March'); acc = lleno ? 'marchas' : 'mundo';
+      }
     } else if (dockPest === 'tropas') {
       lleno = activo.tropas;
       txt = lleno ? '⚔️ ' + L('Entrenando', 'Training') + ' ×' + colaEntreno.length + ' · <b>⏱ ' + fmtTiempo(faltaEntreno()) + '</b>' : L('No hay tropas entrenando.', 'No troops in training.');
@@ -10886,7 +10919,9 @@
       txt = lleno ? '📚 ' + (ti ? ti.icono + ' ' : '') + N('inv_' + inv.id) + ' → ' + L('Nv ', 'Lv ') + inv.nivel + ' · <b>⏱ ' + fmtTiempo(faltaInvestigacion()) + '</b>' : L('No hay ninguna investigación activa.', 'No research in progress.');
       btn = lleno ? '⏩ ' + L('Acelerar', 'Speed up') : L('Comenzar', 'Start'); acc = lleno ? 'acel:invest' : 'invest';
     }
-    var t = $('dk-txt'), b = $('dk-accion');
+    var t = $('dk-txt'), b = $('dk-accion'), b2 = $('dk-retirar');
+    var idRet = dockPest === 'marchar' && acc.indexOf('macel:') === 0 ? acc.slice(6) : '';
+    b2.style.display = idRet ? '' : 'none'; b2.setAttribute('data-id', idRet);
     if (t.dataset.h !== txt) { t.dataset.h = txt; t.innerHTML = txt; }
     if (b.textContent !== btn) b.textContent = btn;
     b.setAttribute('data-a', acc);
