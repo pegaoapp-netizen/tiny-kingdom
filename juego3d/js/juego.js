@@ -1139,6 +1139,7 @@
   // ---------- MISIÓN GUÍA arriba: siempre dice qué hacer ahora ----------
   function hayEdif(t, n) { return edificiosDe(t).length >= (n || 1); }
   var MISIONES = [
+    { es: 'Construye un Almacén en una parcela libre', en: 'Build a Storehouse on a free plot', ok: function () { return hayEdif('almacen'); }, p: { oro: 200, madera: 300 } }, // v7.78
     { es: 'Construye una Granja', en: 'Build a Farm', ok: function () { return hayEdif('granja'); }, p: { oro: 200, comida: 300 } },
     { es: 'Construye un Aserradero', en: 'Build a Sawmill', ok: function () { return hayEdif('aserradero'); }, p: { oro: 200, madera: 300 } },
     { es: 'Construye una Cantera', en: 'Build a Quarry', ok: function () { return hayEdif('cantera'); }, p: { oro: 200, piedra: 300 } },
@@ -11668,6 +11669,7 @@
       estado.ultimoPortal = g.ultimoPortal || 0;
       estado.burbujaHasta = Math.min(g.burbujaHasta || 0, Date.now() + BURBUJA.dias * 86400000); // v6.54: nunca más de 7 días
       estado.buzon = Array.isArray(g.buzon) ? g.buzon : [];
+      if (!g.misAlmacen) { g.mision = (g.mision || 0) + 1; g.misAlmacen = true; } // v7.78: la nueva primera misión (Almacén) no les hace repetir las ya hechas
       estado.mision = g.mision || 0;
       estado.misHechas = g.misHechas || {};
       estado.misDia = g.misDia || null;
@@ -11770,6 +11772,17 @@
       tropas.forEach(guardarDentro);
     }
     if (!g) { estado.burbujaHasta = Date.now() + BURBUJA.dias * 86400000; estado.escudoHasta = Math.max(estado.escudoHasta || 0, estado.burbujaHasta); }
+    if (!g) { // v7.78: como en KoC la villa nueva nunca empieza vacía: Punto de Reunión, 1 Cabaña, 1 Cuartel, muralla nv 1, 1 Granja y 1 Aserradero
+      estado.muralla = Math.max(1, estado.muralla || 0); estado.inicioKoC = true; estado.misAlmacen = true;
+      var libresC = slots.filter(function (q) { return !q.campo && !q.fijo && !q.edificio && q.orden >= 0 && q.orden < parcelasAbiertas(); }).sort(function (a, b) { return a.orden - b.orden; });
+      var rel = slots.filter(function (q) { return q.fijo === 'relevo'; })[0];
+      if (rel) ponerEdificio(rel, 'relevo', 1);
+      if (libresC[0]) ponerEdificio(libresC[0], 'cabana', 1);
+      if (libresC[1]) ponerEdificio(libresC[1], 'cuartel', 1);
+      var camposL = slots.filter(function (q) { return q.campo && !q.edificio; }).sort(function (a, b) { return a.oc - b.oc; });
+      if (camposL[0]) ponerEdificio(camposL[0], 'granja', 1);
+      if (camposL[1]) ponerEdificio(camposL[1], 'aserradero', 1);
+    }
     procesarCarretas(true);
     ponerCastillo();
     andamiosDelCastillo(!!estado.obraCastillo);

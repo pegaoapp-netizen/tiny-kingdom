@@ -1434,10 +1434,10 @@ var M = (function () {
     function plano(o) { o.castShadow = false; o.receiveShadow = true; g.add(o); return o; }
     // tierra arada (alto 0.04, centro en y = 0.02: queda al ras del césped)
     // v7.68: en la CIUDAD la parcela libre es un solar de pasto (no parece un campo de cultivo); la tierra arada queda solo en los Campos
-    plano(caja(TAM_PARCELA, 0.04, TAM_PARCELA, campo ? 0x7d5a38 : 0x8fbf5a, 0, 0.02, 0));
+    plano(caja(TAM_PARCELA, 0.04, TAM_PARCELA, 0x7d5a38, 0, 0.02, 0)); // v7.78: la parcela libre es tierra arada al ras del suelo (también en la ciudad)
     // v7.66: surcos más reales y claros: cada surco con su lomo iluminado y su canal en sombra, y unos brotes verdes en los campos
     var paso = TAM_PARCELA / 9;
-    for (var sf = -4; sf <= 4 && campo; sf++) {
+    for (var sf = -4; sf <= 4; sf++) {
       plano(caja(TAM_PARCELA - 0.5, 0.014, paso * 0.42, 0xa47a4c, 0, 0.046, sf * paso - paso * 0.12));
       plano(caja(TAM_PARCELA - 0.5, 0.01, paso * 0.22, 0x553a22, 0, 0.044, sf * paso + paso * 0.28));
       if (campo) for (var br = -3; br <= 3; br++) if ((br + sf * 3) % 2 === 0) plano(caja(0.22, 0.05, 0.22, 0x7fb04a, br * (TAM_PARCELA / 7.4) + (sf % 2) * 0.3, 0.06, sf * paso - paso * 0.12));
