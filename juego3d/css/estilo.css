@@ -2198,3 +2198,17 @@ body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !importa
 .dv-f { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
 .dv-f img { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; }
 .dv-fila .cs-switch { flex: 0 0 120px; }
+/* v7.82: varias villas */
+#tk-ciudad { position: relative; }
+#tk-villas { position: absolute; right: -4px; bottom: -10px; z-index: 3; padding: 1px 7px; border-radius: 10px; background: linear-gradient(#ffd54a, #d48a10); color: #3a2400; border: 1.5px solid #6b4206; font: 700 11px system-ui, sans-serif; white-space: nowrap; box-shadow: 0 2px 4px #0008; cursor: pointer; }
+#villa-cambio { position: fixed; inset: 0; z-index: 99999; background: #120a05ee; display: flex; align-items: center; justify-content: center; color: #f3e3c3; text-align: center; }
+#villa-cambio b { display: block; font-size: 22px; margin-bottom: 6px; }
+.vl-fila { display: flex !important; flex-direction: row !important; text-align: left; align-items: center; justify-content: space-between; gap: 8px; }
+.vl-fila.activa { border-color: #ffd54a !important; }
+.vl-dat { display: flex; flex-direction: column; gap: 2px; }
+.vl-dat small { font-size: 12px; opacity: .85; }
+.vl-aqui { font-size: 12px; font-weight: 700; color: #ffd54a; }
+.ev-grupo { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.ev-op { flex: 1 1 70px; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border-radius: 9px; border: 2px solid #6b4b2a; background: #3a2616; color: #f3e3c3; font-weight: 700; font-size: 14px; }
+.ev-op small { font-size: 11px; font-weight: 400; opacity: .85; }
+.ev-op.activo { border-color: #ffd54a; background: #5a3c12; }
