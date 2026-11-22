@@ -10179,6 +10179,63 @@
     if (p.piezas) p.piezas.forEach(function (pz) { l.push({ ico: icoPieza(pz), nom: nombrePieza(pz), n: 1 }); });
     return l;
   }
+  // v7.95: COFRE REAL DE BIENVENIDA: sale una sola vez al empezar un reino nuevo (bandera regaloBienvenidaReclamado)
+  var COFRE_BIENVENIDA = { gemas: 500, heroe: 'luna', recursos: 250000, oro: 50000, objetos: { acel_5m: 10, acel_15m: 5, portal_elegir: 1 }, fichas: 3, escudoHoras: 72 };
+  var SVG_COFRE_BIENV = '<svg viewBox="0 0 200 150" class="cb-svg" aria-hidden="true">' +
+    '<defs><radialGradient id="cbBrillo" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#ffe9a0" stop-opacity=".95"/><stop offset="1" stop-color="#ffb300" stop-opacity="0"/></radialGradient>' +
+    '<linearGradient id="cbMadera" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a5a2b"/><stop offset="1" stop-color="#5b3016"/></linearGradient></defs>' +
+    '<ellipse cx="100" cy="70" rx="95" ry="62" fill="url(#cbBrillo)"/>' +
+    '<path d="M38 66 L52 22 Q100 6 148 22 L162 66 Z" fill="url(#cbMadera)" stroke="#e8b84a" stroke-width="4"/>' +
+    '<path d="M100 10 L100 64" stroke="#e8b84a" stroke-width="5"/>' +
+    '<circle cx="78" cy="70" r="11" fill="#ffd34d" stroke="#b8860b" stroke-width="2"/><circle cx="98" cy="62" r="12" fill="#ffd34d" stroke="#b8860b" stroke-width="2"/><circle cx="120" cy="70" r="11" fill="#ffd34d" stroke="#b8860b" stroke-width="2"/>' +
+    '<path d="M62 74 l10 -16 l10 16 z" fill="#5ad1ff" stroke="#1e7fb0" stroke-width="2"/><path d="M128 76 l9 -15 l9 15 z" fill="#ff5d7a" stroke="#a3233c" stroke-width="2"/><path d="M106 72 l7 -12 l7 12 z" fill="#7dff8e" stroke="#2a8a3a" stroke-width="2"/>' +
+    '<rect x="34" y="72" width="132" height="62" rx="6" fill="url(#cbMadera)" stroke="#e8b84a" stroke-width="4"/>' +
+    '<rect x="34" y="92" width="132" height="8" fill="#e8b84a"/><rect x="88" y="86" width="24" height="26" rx="4" fill="#ffd34d" stroke="#8a5a00" stroke-width="3"/><circle cx="100" cy="98" r="3.5" fill="#5b3016"/>' +
+    '<g class="cb-chispas" fill="#fff6c8"><circle cx="30" cy="30" r="2.5"/><circle cx="172" cy="38" r="3"/><circle cx="60" cy="12" r="2"/><circle cx="150" cy="10" r="2.5"/><circle cx="20" cy="92" r="2"/><circle cx="182" cy="96" r="2.5"/></g></svg>';
+  function itemsCofreBienvenida() {
+    var c = COFRE_BIENVENIDA, R = ICONO_RECURSO;
+    return [
+      { ico: '💎', n: c.gemas, nom: L('Gemas', 'Gems') },
+      { ico: '🦸', n: 1, nom: L('Héroe ', 'Hero ') + NH(c.heroe) },
+      { ico: R.comida, n: c.recursos, nom: L('Comida', 'Food') }, { ico: R.madera, n: c.recursos, nom: L('Madera', 'Wood') },
+      { ico: R.piedra, n: c.recursos, nom: L('Piedra', 'Stone') }, { ico: R.hierro || '⛓️', n: c.recursos, nom: L('Hierro', 'Iron') },
+      { ico: R.oro, n: c.oro, nom: L('Oro', 'Gold') },
+      { ico: '⏱️', n: c.objetos.acel_5m, nom: N('acel_5m') }, { ico: '⏱️', n: c.objetos.acel_15m, nom: N('acel_15m') },
+      { ico: '🪙', n: c.fichas, nom: L('Fichas de la Ruleta', 'Wheel tokens') },
+      { ico: '✨', n: c.objetos.portal_elegir, nom: N('portal_elegir') },
+      { ico: '🛡️', n: c.escudoHoras, nom: L('horas de Escudo de Paz', 'hours of Peace Shield') }
+    ];
+  }
+  function mostrarCofreBienvenida() {
+    if (estado.regaloBienvenidaReclamado || $('cofre-bienvenida')) return;
+    var d = document.createElement('div'); d.id = 'cofre-bienvenida';
+    d.innerHTML = '<div class="cb-ventana"><div class="cb-titulo">' + L('¡Bienvenido a Tiny Kingdom!', 'Welcome to Tiny Kingdom!') + '</div>' +
+      '<div class="cb-sub">👑 ' + L('Cofre Real de Bienvenida', 'Royal Welcome Chest') + '</div>' + SVG_COFRE_BIENV +
+      '<p class="cb-txt">' + L('Un regalo del reino para que empieces con fuerza:', 'A gift from the kingdom to start strong:') + '</p>' +
+      '<div class="cb-lista">' + itemsCofreBienvenida().map(function (it) { return '<span><i>' + it.ico + '</i><b>' + formatoNumero(it.n) + '</b> ' + escaparHTML(it.nom) + '</span>'; }).join('') + '</div>' +
+      '<button class="comprar verde boton-oleada-grande cb-boton" id="cb-reclamar">🎁 ' + L('Reclamar Regalo', 'Claim Gift') + '</button></div>';
+    document.body.appendChild(d); sonar('magia');
+    $('cb-reclamar').addEventListener('click', function () { reclamarCofreBienvenida(); d.classList.add('cb-sale'); setTimeout(function () { d.remove(); }, 350); });
+  }
+  function reclamarCofreBienvenida() {
+    if (estado.regaloBienvenidaReclamado) return false;
+    estado.regaloBienvenidaReclamado = true; // primero la bandera: nunca se entrega dos veces
+    var c = COFRE_BIENVENIDA;
+    estado.gemas = (estado.gemas || 0) + c.gemas;
+    estado.heroes = estado.heroes || {};
+    if (!estado.heroes[c.heroe]) { estado.heroes[c.heroe] = { nivel: 1, estrellas: 1, frag: 0 }; try { cargarModelosHeroes(); } catch (e) {} }
+    else estado.heroes[c.heroe].frag = (estado.heroes[c.heroe].frag || 0) + 30;
+    ['comida', 'madera', 'piedra', 'hierro'].forEach(function (r) { estado[claveRecurso(r)] = (cantidad(r) || 0) + c.recursos; });
+    estado.monedas = (estado.monedas || 0) + c.oro;
+    estado.mochila = estado.mochila || {};
+    Object.keys(c.objetos).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + c.objetos[k]; });
+    estado.fichas = (estado.fichas || 0) + c.fichas;
+    estado.escudoHasta = Math.max(estado.escudoHasta || 0, Date.now() + c.escudoHoras * 3600000);
+    guardar(true); try { publicarAldea(true); } catch (e) {}
+    actualizarHUD();
+    setTimeout(function () { mostrarRecompensas(L('Cofre Real de Bienvenida', 'Royal Welcome Chest'), itemsCofreBienvenida()); }, 380);
+    return true;
+  }
   function mostrarRecompensas(titulo, items, alRecoger) {
     var v = $('recompensas'); if (v) v.remove();
     var d = document.createElement('div'); d.id = 'recompensas';
@@ -12101,6 +12158,8 @@
     if (g && typeof g.monedas !== 'number' && (progresoPartida(g) > 40 || (g.edificios || []).some(Boolean))) g.monedas = 0; // v7.91: un oro roto (NaN/null) ya no reinicia el reino
     var hayPartida = g && typeof g.monedas === 'number'; // v6.92 ARREGLO: antes, sin edificios hechos, cada recarga empezaba un reino nuevo (y regalaba todo otra vez)
     empezarPartida(hayPartida ? g : null);
+    if (!hayPartida) estado.regaloBienvenidaReclamado = false; // reino nuevo: el cofre espera aunque recargue antes de reclamarlo
+    if (!estado.regaloBienvenidaReclamado) setTimeout(mostrarCofreBienvenida, 1800); // v7.95: Cofre Real de Bienvenida, una sola vez
     if (nube && Cuentas.usuario()) consejoTemporal(T('hola', { n: Cuentas.nombre() }) + (esCuentaDueno() ? ' 👑' : ''));
     actualizarBotonSalir();
     setTimeout(function () { try { vipDia(); } catch (e) {} }, 4000); // v6.80: punto VIP del día
@@ -12388,6 +12447,7 @@
       estado.enemigos = g.enemigos || {};
       estado.villas = g.villas || null; estado.fundando = g.fundando || null; estado.envios = g.envios || []; estado.heroeDefensor = g.heroeDefensor || null; estado.villaDesde = g.villaDesde || 0; estado.villaNueva = g.villaNueva || 0; // v7.82
       estado.xp = g.xp; estado.xp2 = g.xp2; estado.talentos = g.talentos || {}; // v7.79
+      estado.regaloBienvenidaReclamado = g.regaloBienvenidaReclamado !== undefined ? !!g.regaloBienvenidaReclamado : true; // v7.95: los reinos que ya existían no lo reciben
       estado.bestias = g.bestias || {};
       estado.alLocal = g.alLocal || null;
       estado.carretas = g.carretas || { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] };
@@ -13050,7 +13110,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

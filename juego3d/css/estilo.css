@@ -2307,3 +2307,30 @@ body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !importa
 /* v7.91: volver a la villa principal */
 #villa-volver { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top, 0px) + 118px); z-index: 60; padding: 7px 14px; border-radius: 18px; border: 2px solid #7a4a00; background: linear-gradient(#ffe38a, #d48a10); color: #3a2400; font: 800 13px system-ui, sans-serif; box-shadow: 0 3px 8px #000a; white-space: nowrap; }
 body.en-batalla #villa-volver { display: none !important; }
+
+/* v7.95: Cofre Real de Bienvenida */
+#cofre-bienvenida { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 14px;
+  background: radial-gradient(circle at 50% 40%, rgba(60,35,10,.55), rgba(0,0,0,.86)); animation: cbEntra .35s ease-out; }
+#cofre-bienvenida.cb-sale { opacity: 0; transition: opacity .3s; }
+#cofre-bienvenida .cb-ventana { position: relative; width: min(420px, 100%); max-height: 92vh; overflow-y: auto; text-align: center; color: #f3e6c4;
+  padding: 18px 16px 16px; border-radius: 16px; border: 3px solid #f5c842;
+  background: linear-gradient(180deg, #2b1d12 0%, #1a110a 60%, #120b06 100%);
+  box-shadow: 0 0 0 2px #6b4a12 inset, 0 0 24px rgba(255,200,60,.65), 0 0 60px rgba(255,170,30,.35); animation: cbBrilla 2.4s ease-in-out infinite; }
+#cofre-bienvenida .cb-titulo { font-family: Georgia, 'Times New Roman', serif; font-size: 23px; font-weight: 800; color: #ffd75e;
+  text-shadow: 0 2px 0 #5a3a00, 0 0 12px rgba(255,200,60,.7); letter-spacing: .5px; }
+#cofre-bienvenida .cb-sub { font-size: 13px; color: #e8c98a; margin-top: 2px; text-transform: uppercase; letter-spacing: 1.5px; }
+#cofre-bienvenida .cb-svg { width: 190px; height: 142px; display: block; margin: 6px auto 0; filter: drop-shadow(0 6px 8px rgba(0,0,0,.6)); }
+#cofre-bienvenida .cb-chispas circle { animation: cbChispa 1.6s ease-in-out infinite alternate; }
+#cofre-bienvenida .cb-chispas circle:nth-child(2n) { animation-delay: .8s; }
+#cofre-bienvenida .cb-txt { margin: 6px 0 8px; font-size: 14px; }
+#cofre-bienvenida .cb-lista { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 14px; text-align: left; }
+#cofre-bienvenida .cb-lista span { background: rgba(255,215,94,.08); border: 1px solid rgba(245,200,66,.35); border-radius: 8px; padding: 5px 7px; font-size: 12px; line-height: 1.2; }
+#cofre-bienvenida .cb-lista i { font-style: normal; margin-right: 4px; }
+#cofre-bienvenida .cb-lista b { color: #ffd75e; }
+#cofre-bienvenida .cb-boton { width: 100%; font-size: 20px; padding: 14px; border-radius: 12px; font-weight: 800;
+  background: linear-gradient(180deg, #5fdc4f, #2e9a24); border: 2px solid #b8ff9e; color: #fff; text-shadow: 0 2px 0 #1b5e14;
+  box-shadow: 0 4px 0 #1b5e14, 0 0 16px rgba(110,255,90,.5); animation: cbLatido 1.2s ease-in-out infinite; }
+@keyframes cbEntra { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+@keyframes cbBrilla { 50% { box-shadow: 0 0 0 2px #6b4a12 inset, 0 0 34px rgba(255,215,80,.9), 0 0 80px rgba(255,170,30,.5); } }
+@keyframes cbChispa { from { opacity: .2; } to { opacity: 1; } }
+@keyframes cbLatido { 50% { transform: scale(1.04); } }
