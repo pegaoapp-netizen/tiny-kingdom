@@ -76,7 +76,7 @@ workflows:
       - name: Instalar Capacitor (con Android)
         script: |
           cd app
-          npm ci
+          npm install --no-audit --no-fund
           npm install --no-save @capacitor/android@^7.6.9
       - name: Crear el proyecto Android y copiar el juego
         script: |

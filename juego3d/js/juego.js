@@ -9877,7 +9877,7 @@
   setInterval(function () { try { if (!enMenu) vipDia(); } catch (e) {} }, 60000);
   // ---------- v6.84: REGALOS DEL DUEÑO (MaikelR) A CUALQUIER JUGADOR ----------
   // Solo la cuenta del dueño puede enviarlos (lo comprueban también las reglas de la nube).
-  var TOPE_REGALO = 999999999, TOPE_REGALO_REC = 999999999999; // v6.94: el dueño puede regalar hasta 999.999.999 de cada tropa y de gemas
+  var TOPE_REGALO = 999999999, TOPE_REGALO_REC = 1000000000000, TOPE_REGALO_GEMAS = 1000000000000; // v7.94: gemas y recursos hasta 1 billón // v6.94: el dueño puede regalar hasta 999.999.999 de cada tropa y de gemas
   var rgElegido = null, rgLista = [], rgSetCompleto = false, rgMaximo = false; // v7.43: rgMaximo = regalo «todo al máximo»
   var RG_TIPOS_TROPA = TROPAS_ORDEN.filter(function (t) { return TROPAS[t] && t !== 'heroe'; });
   function htmlRegalar() {
@@ -9889,7 +9889,7 @@
     h += '<div class="carta rg-carta" id="rg-form"' + (rgElegido ? '' : ' style="opacity:.45;pointer-events:none"') + '>' +
       '<h3>' + (rgElegido ? '👤 ' + escaparHTML(rgElegido.nombre) : L('Elige primero un jugador', 'Choose a player first')) + '</h3>' +
       '<h4>⚔️ ' + L('Tropas', 'Troops') + '</h4><div class="rg-rejilla">' +
-      RG_TIPOS_TROPA.map(function (t) { return '<label class="rg-celda"><span>' + (TROPAS[t].icono || '') + ' ' + N(t) + '</span><input class="campo rg-t" data-t="' + t + '" type="number" min="0" max="999999999999" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
+      RG_TIPOS_TROPA.map(function (t) { return '<label class="rg-celda"><span>' + (TROPAS[t].icono || '') + ' ' + N(t) + '</span><input class="campo rg-t" data-t="' + t + '" type="number" min="0" max="1000000000000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<p class="nota"><b>🐴 ' + L('Carretas de Suministro', 'Supply Wagons') + '</b></p><div class="rg-rejilla">' + SUMINISTRO_ORDEN.map(function (t) { return '<label class="rg-celda"><span>' + SUMINISTRO[t].icono + ' ' + nombreSum(t) + '</span><input class="campo rg-t" data-t="sum_' + t + '" type="number" min="0" max="100000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<h4>🧰 ' + L('Equipo de héroe', 'Hero gear') + '</h4><div class="rg-rejilla">' +
       '<label class="rg-celda"><span>' + L('Pieza', 'Piece') + '</span><select class="campo" id="rg-eq-t"><option value="">' + L('Al azar', 'Random') + '</option>' + TIPOS_EQ.map(function (t) { return '<option value="' + t + '">' + EQ[t].emoji + ' ' + T('eq_' + t) + '</option>'; }).join('') + '</select></label>' +
@@ -9898,7 +9898,7 @@
       '<label class="rg-celda"><span>' + L('Juego de héroe', 'Hero set') + '</span><select class="campo" id="rg-eq-s"><option value="">' + L('Ninguno (pieza normal)', 'None (normal piece)') + '</option>' + Object.keys(ARMADURA_HEROE).map(function (k) { return '<option value="' + k + '">' + NH(k) + ' · ' + ARMADURA_HEROE[k][en ? 'en' : 'es'] + '</option>'; }).join('') + '</select></label></div>' +
       '<button class="comprar morado" data-accion="rg-set-completo">👑 ' + L('Regalar el juego completo (6 piezas) del héroe elegido', 'Gift the full 6-piece set of the chosen hero') + '</button>' +
       '<h4>💰 ' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="rg-rejilla">' +
-      ['gemas', 'oro', 'comida', 'madera', 'piedra', 'hierro'].map(function (r) { return '<label class="rg-celda"><span>' + ICONO_RECURSO[r] + ' ' + (r === 'gemas' ? L('Gemas', 'Gems') : r === 'hierro' ? L('Mineral (hierro)', 'Ore (iron)') : T('r_' + r) || r) + '</span><input class="campo rg-r" data-r="' + r + '" type="number" min="0" max="999999999999" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
+      ['gemas', 'oro', 'comida', 'madera', 'piedra', 'hierro'].map(function (r) { return '<label class="rg-celda"><span>' + ICONO_RECURSO[r] + ' ' + (r === 'gemas' ? L('Gemas', 'Gems') : r === 'hierro' ? L('Mineral (hierro)', 'Ore (iron)') : T('r_' + r) || r) + '</span><input class="campo rg-r" data-r="' + r + '" type="number" min="0" max="1000000000000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<input class="campo" id="rg-nota" maxlength="120" placeholder="' + L('Mensaje (opcional)', 'Message (optional)') + '">' +
       '<button class="comprar oro rg-enviar" data-accion="rg-enviar">🎁 ' + L('Enviar regalo', 'Send gift') + '</button>' +
       '<button class="comprar morado" data-accion="rg-maximo" style="margin-top:8px">👑 ' + L('Poner su cuenta al máximo', 'Max out their account') + '</button>' +
@@ -9945,7 +9945,7 @@
     var tropasR = {}, nt = 0;
     document.querySelectorAll('#panel .rg-t').forEach(function (i) { var n = Math.min(TOPE_REGALO, Math.max(0, Math.floor(+i.value || 0))); if (n) { tropasR[i.getAttribute('data-t')] = n; nt += n; } });
     var rec = {}, gemas = 0;
-    document.querySelectorAll('#panel .rg-r').forEach(function (i) { var n = Math.min(TOPE_REGALO_REC, Math.max(0, Math.floor(+i.value || 0))); if (!n) return; if (i.getAttribute('data-r') === 'gemas') gemas = Math.min(TOPE_REGALO, n); else rec[i.getAttribute('data-r')] = n; });
+    document.querySelectorAll('#panel .rg-r').forEach(function (i) { var n = Math.min(TOPE_REGALO_REC, Math.max(0, Math.floor(+i.value || 0))); if (!n) return; if (i.getAttribute('data-r') === 'gemas') gemas = Math.min(TOPE_REGALO_GEMAS, n); else rec[i.getAttribute('data-r')] = n; });
     var pz = [], ne = Math.min(30, Math.max(0, Math.floor(+$('rg-eq-n').value || 0)));
     var sj = $('rg-eq-s') ? $('rg-eq-s').value : '';
     if (rgSetCompleto && sj) { pz = TIPOS_EQ.map(function (t) { return { t: t, r: 'mitico', s: sj }; }); ne = 0; }
@@ -9969,8 +9969,9 @@
   }
   function maximoPorRegalo() {
     if (oleadaActiva || enMenu) { setTimeout(maximoPorRegalo, 5000); return; }
-    var antes = estado.dueno; estado.dueno = true;
-    try { todoAlMaximo(false); } finally { estado.dueno = antes; }
+    var antes = estado.dueno, xpAntes = estado.xp || 0; estado.dueno = true;
+    try { todoAlMaximo(false); } finally { estado.dueno = antes; estado.xp = xpAntes; } // v7.94: el nivel del jugador no salta: sigue subiendo poco a poco jugando
+    actualizarHUD();
     guardar(true);
   }
   var regalosRecibiendo = false;
@@ -9985,7 +9986,7 @@
           Object.keys(t).forEach(function (k) { var n = Math.min(TOPE_REGALO, Math.floor(+t[k] || 0)); if (k.indexOf('sum_') === 0 && SUMINISTRO[k.slice(4)] && n > 0) { var cs = sumin(), ts = k.slice(4); if (ts === 'carreta') cs.n += n; else cs.tipos[ts] = (cs.tipos[ts] || 0) + n; partes.push(n + ' ' + SUMINISTRO[ts].icono + ' ' + nombreSum(ts)); return; } if (!TROPAS[k] || n <= 0) return; reserva()[k] = (reserva()[k] || 0) + n; nt += n; partes.push(n + ' ' + (TROPAS[k].icono || '') + ' ' + N(k)); });
           (g.piezas || []).slice(0, 30).forEach(function (p) { if (EQ[p.t] && MULT_RAREZA_EQ[p.r]) { var np = darPieza(p.t, p.r); if (np && p.s && ARMADURA_HEROE[p.s]) np.s = p.s; } });
           if ((g.piezas || []).length) partes.push((g.piezas || []).length + ' 🧰 ' + L('piezas de equipo', 'gear pieces'));
-          var gm = Math.min(TOPE_REGALO, Math.floor(+g.gemas || 0)); if (gm > 0) { estado.gemas = (estado.gemas || 0) + gm; partes.push(gm + ' 💎'); }
+          var gm = Math.min(TOPE_REGALO_GEMAS, Math.floor(+g.gemas || 0)); if (gm > 0) { estado.gemas = (estado.gemas || 0) + gm; partes.push(gm + ' 💎'); }
           var r = g.recursos || {}; ['oro', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (k) { var n = Math.min(TOPE_REGALO_REC, Math.floor(+r[k] || 0)); if (n > 0) { if (k === 'hierro') { estado.hierro = (estado.hierro || 0) + n; try { actualizarHUD(); } catch (e) {} } else sumarRecurso(k, n); partes.push(n + ' ' + ICONO_RECURSO[k]); } }); // v7.45: también mineral
           // v7.43: regalo «todo al máximo» del dueño: se aplica en este reino (esperando a que no haya oleada)
           var esMax = String(g.nota || '').indexOf('[MAXIMO]') === 0; if (esMax) { g.nota = String(g.nota).slice(8).trim(); partes.push(L('👑 Tu reino al máximo', '👑 Your kingdom maxed out')); maximoPorRegalo(); }
