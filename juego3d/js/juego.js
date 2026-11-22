@@ -7206,8 +7206,22 @@
   var REC_CARAVANA = ['comida', 'madera', 'piedra', 'hierro', 'oro'], envioSel = { a: -1, c: {} };
   function cantRec(r) { return r === 'hierro' ? Math.floor(estado.hierro || 0) : Math.floor(cantidad(r)); }
   function quitarRec(r, n) { if (estado.oroInfinito && r !== 'hierro') return; if (r === 'hierro') estado.hierro = Math.max(0, (estado.hierro || 0) - n); else estado[claveRecurso(r)] = cantidad(r) - n; }
-  function cargaPorCarreta() { return Math.round(capCarreta() * (1 + 0.05 * mercadoNivel())); } // el Mercado suma +5% de carga por nivel
-  function maxCaravana() { return carretasLibres() * cargaPorCarreta(); }
+  // v7.89: entre tus villas: el Mercado da una base de 100.000 por nivel y cada carreta suma su carga
+  var CARGA_VILLA = { carretilla: 5000, carreta: 25000, convoy: 100000 };
+  function usoVillaT() { var u = { carretilla: 0, carreta: 0, convoy: 0 }, ahora = Date.now(); carretas().viajes.forEach(function (v) { if (v.tipo === 'villa' && v.usoT && v.vuelve > ahora) for (var k in u) u[k] += v.usoT[k] || 0; }); return u; }
+  function libresVillaT() { var u = usoVillaT(), o = {}, libresEq = carretasLibres(); SUMINISTRO_ORDEN.forEach(function (t) { o[t] = Math.max(0, cuentaSum(t) - u[t]); });
+    // si otras marchas (ataques, aliados) ocupan carretas, se descuentan empezando por las más grandes
+    var eq = o.carretilla * SUMINISTRO.carretilla.carga + o.carreta + o.convoy * SUMINISTRO.convoy.carga, sobra = Math.floor(eq + 1e-6) - libresEq;
+    ['convoy', 'carreta', 'carretilla'].forEach(function (t) { while (sobra > 1e-6 && o[t] > 0) { o[t]--; sobra -= SUMINISTRO[t].carga; } });
+    return o; }
+  function baseMercado() { return mercadoNivel() * 100000; }
+  function maxCaravana() { var o = libresVillaT(); return baseMercado() + Object.keys(o).reduce(function (a, t) { return a + o[t] * CARGA_VILLA[t]; }, 0); }
+  // qué carretas hacen falta para la parte que no cubre el Mercado (primero las grandes)
+  function carretasParaVilla(tot) { var falta = Math.max(0, tot - baseMercado()), o = libresVillaT(), uso = { carretilla: 0, carreta: 0, convoy: 0 };
+    ['convoy', 'carreta', 'carretilla'].forEach(function (t) { while (falta > 0 && o[t] > 0) { o[t]--; uso[t]++; falta -= CARGA_VILLA[t]; } });
+    return falta > 0 ? null : uso; }
+  function eqDeUso(u) { return u.carretilla * SUMINISTRO.carretilla.carga + u.carreta + u.convoy * SUMINISTRO.convoy.carga; }
+  function velDeUso(u) { return u.convoy ? SUMINISTRO.convoy.vel : u.carreta ? SUMINISTRO.carreta.vel : u.carretilla ? SUMINISTRO.carretilla.vel : 1; }
   function otraVillaPorDefecto(sel) { var v = misVillas(); if (sel >= 0 && sel !== v.activa && v.lista[sel]) return sel; return v.activa === 0 ? 1 : 0; }
   function botonesDestino(sel, accion) {
     var v = misVillas(), aqui = lugarVilla(v.activa);
@@ -7218,29 +7232,32 @@
     if (v.lista.length < 2) { consejoTemporal(L('Primero funda otra villa.', 'Found another village first.')); sonar('error'); return; }
     if (dest !== undefined) envioSel.a = dest;
     envioSel.a = otraVillaPorDefecto(envioSel.a);
-    var hayMer = edificiosDe('mercado').length > 0, max = maxCaravana(), libres = carretasLibres(), aqui = lugarVilla(v.activa), alla = lugarVilla(envioSel.a);
+    var hayMer = edificiosDe('mercado').length > 0, max = maxCaravana(), lt = libresVillaT(), aqui = lugarVilla(v.activa), alla = lugarVilla(envioSel.a);
     var h = '<div class="carta"><b>🐴 ' + L('Caravana desde ', 'Caravan from ') + escaparHTML(nombreVilla(v.activa)) + '</b>' + botonesDestino(envioSel.a, 'ev-dest') +
-      '<p class="nota">🐴 ' + L('Carretas libres: ', 'Free carts: ') + '<b>' + libres + '</b> · ' + L('carga cada una ', 'each carries ') + formatoNumero(cargaPorCarreta()) + ' · ' + L('máximo por envío: ', 'max per shipment: ') + '<b id="ev-max">' + formatoNumero(max) + '</b>' + (hayMer ? '' : '<br>⚠️ ' + L('Necesitas un Mercado en esta villa.', 'You need a Market in this village.')) + '</p>';
+      '<div class="ev-cars"><span>🏪 ' + L('Mercado Nv ', 'Market Lv ') + mercadoNivel() + '<b>' + corto(baseMercado()) + '</b></span>' + SUMINISTRO_ORDEN.map(function (t) { return '<span>' + SUMINISTRO[t].icono + ' ' + nombreSum(t) + ' ×' + lt[t] + '<b>' + corto(CARGA_VILLA[t]) + ' c/u</b></span>'; }).join('') + '</div>' +
+      '<p class="nota">📦 ' + L('Máximo por envío: ', 'Max per shipment: ') + '<b id="ev-max">' + formatoNumero(max) + '</b>' + (hayMer ? '' : '<br>⚠️ ' + L('Necesitas un Mercado en esta villa.', 'You need a Market in this village.')) + '</p>';
     h += REC_CARAVANA.map(function (r) { var tope = Math.min(cantRec(r), max), val = Math.min(envioSel.c[r] || 0, tope);
-      return '<div class="ev-desl"><span class="ev-r">' + icoRec(r) + ' ' + (r === 'hierro' ? L('Hierro', 'Iron') : (function (x) { return x.charAt(0).toUpperCase() + x.slice(1); })(T('r_' + r))) + '</span><input type="range" class="ev-rango" data-r="' + r + '" min="0" max="' + tope + '" step="' + Math.max(1, Math.round(tope / 200)) + '" value="' + val + '"' + (tope ? '' : ' disabled') + '><b class="ev-val" data-r="' + r + '">' + formatoNumero(val) + '</b></div>'; }).join('');
+      return '<div class="ev-desl"><span class="ev-r">' + icoRec(r) + ' ' + (r === 'hierro' ? L('Hierro', 'Iron') : (function (x) { return x.charAt(0).toUpperCase() + x.slice(1); })(T('r_' + r))) + '</span><input type="range" class="ev-rango" data-r="' + r + '" min="0" max="' + tope + '" step="1" value="' + val + '"' + (tope ? '' : ' disabled') + '><b class="ev-val" data-r="' + r + '">' + corto(val) + '</b><button class="comprar mini ev-max" data-r="' + r + '"' + (tope ? '' : ' disabled') + '>' + L('Máx', 'Max') + '</button></div>'; }).join('');
     h += '<p class="nota" id="ev-resumen"></p><button class="comprar verde boton-oleada-grande" data-accion="ev-enviar" id="ev-enviar">🐴 ' + L('Enviar caravana', 'Send caravan') + '</button></div>';
     var en = (estado.envios || []).filter(function (x) { return x.llega > Date.now() && !x.tropas; });
     if (en.length) h += '<div class="carta"><b>' + L('En camino', 'On the way') + '</b>' + en.map(function (x) { return '<div class="pf-fila"><span>' + textoRecursos(x.rec || (function () { var o = {}; o[x.r] = x.n; return o; })()) + ' → ' + escaparHTML(nombreVilla(x.a)) + '</span><small>⏱ ' + fmtTiempo((x.llega - Date.now()) / 1000) + '</small></div>'; }).join('') + '</div>';
     abrirPanel('🐴 ' + L('Enviar Recursos', 'Send Resources'), h, { tipo: 'envio-villas' });
     function resumen() {
       var tot = 0; REC_CARAVANA.forEach(function (r) { tot += envioSel.c[r] || 0; });
-      var n = tot ? Math.ceil(tot / cargaPorCarreta()) : 0, seg = tot ? Math.round(segViaje(aqui, alla) * velViaje(n)) : 0, e = $('ev-resumen'), b = $('ev-enviar');
-      if (e) e.innerHTML = tot ? '📦 ' + formatoNumero(tot) + ' · 🐴 ' + n + ' ' + L('carretas', 'carts') + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Mueve las barras para elegir cuánto mandar.', 'Move the sliders to choose how much to send.');
+      var uso = carretasParaVilla(tot) || { carretilla: 0, carreta: 0, convoy: 0 }, seg = tot ? Math.round(segViaje(aqui, alla) * velDeUso(uso)) : 0, e = $('ev-resumen'), b = $('ev-enviar');
+      var txtU = SUMINISTRO_ORDEN.filter(function (t) { return uso[t]; }).map(function (t) { return SUMINISTRO[t].icono + '×' + uso[t]; }).join(' ') || L('solo el Mercado', 'Market only');
+      if (e) e.innerHTML = tot ? '📦 ' + formatoNumero(tot) + ' · ' + txtU + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Mueve las barras o toca Máx.', 'Move the sliders or tap Max.');
       if (b) b.disabled = !tot || !hayMer;
     }
     document.querySelectorAll('#panel .ev-rango').forEach(function (inp) {
       inp.addEventListener('input', function () {
         var r = inp.getAttribute('data-r'), otros = 0; REC_CARAVANA.forEach(function (q) { if (q !== r) otros += envioSel.c[q] || 0; });
         var val = Math.min(+inp.value || 0, Math.max(0, max - otros)); inp.value = val; envioSel.c[r] = val;
-        var lb = document.querySelector('#panel .ev-val[data-r="' + r + '"]'); if (lb) lb.textContent = formatoNumero(val);
+        var lb = document.querySelector('#panel .ev-val[data-r="' + r + '"]'); if (lb) lb.textContent = corto(val);
         resumen();
       });
     });
+    document.querySelectorAll('#panel .ev-max').forEach(function (bm) { bm.addEventListener('click', function (ev) { ev.stopPropagation(); var r = bm.getAttribute('data-r'), inp = document.querySelector('#panel .ev-rango[data-r="' + r + '"]'); if (!inp) return; inp.value = inp.max; inp.dispatchEvent(new Event('input')); sonar('click'); }); });
     resumen();
   }
   function enviarCaravana() {
@@ -7248,10 +7265,11 @@
     if (!v.lista[a] || a === v.activa || !edificiosDe('mercado').length) { sonar('error'); return; }
     REC_CARAVANA.forEach(function (r) { var n = Math.min(envioSel.c[r] || 0, cantRec(r)); if (n > 0) { rec[r] = n; tot += n; } });
     if (!tot || tot > maxCaravana()) { consejoTemporal(L('No tienes carretas libres para tanta carga.', 'Not enough free carts for that load.')); sonar('error'); return; }
-    var n = Math.ceil(tot / cargaPorCarreta()), aqui = lugarVilla(v.activa), alla = lugarVilla(a), seg = Math.round(segViaje(aqui, alla) * velViaje(n)), ahora = Date.now();
+    var uso = carretasParaVilla(tot); if (!uso) { consejoTemporal(L('No tienes carretas libres para tanta carga.', 'Not enough free carts for that load.')); sonar('error'); return; }
+    var n = eqDeUso(uso), aqui = lugarVilla(v.activa), alla = lugarVilla(a), seg = Math.round(segViaje(aqui, alla) * velDeUso(uso)), ahora = Date.now();
     Object.keys(rec).forEach(function (r) { quitarRec(r, rec[r]); });
     // las carretas van y vuelven vacías: tardan lo mismo de vuelta
-    carretas().viajes.push({ id: 'vv' + ahora, tipo: 'villa', de: aqui, a: alla, sale: ahora, llega: ahora + seg * 1000, vuelve: ahora + 2 * seg * 1000, n: n, nombre: nombreVilla(a) });
+    carretas().viajes.push({ id: 'vv' + ahora, tipo: 'villa', de: aqui, a: alla, sale: ahora, llega: ahora + seg * 1000, vuelve: ahora + 2 * seg * 1000, n: n, usoT: uso, nombre: nombreVilla(a) });
     estado.envios = (estado.envios || []).concat([{ a: a, rec: rec, llega: ahora + seg * 1000 }]);
     envioSel.c = {}; sonar('moneda'); consejoTemporal('🐴 ' + textoRecursos(rec) + ' → ' + nombreVilla(a) + ' · ⏱ ' + fmtTiempo(seg));
     guardar(true); actualizarHUD(); abrirEnvioVillas();
@@ -7271,8 +7289,9 @@
     var fuera = heroesFuera(), mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k] && !fuera[k]; });
     var h = '<div class="carta"><b>⚔️ ' + L('Destacar tropas desde ', 'Station troops from ') + escaparHTML(nombreVilla(v.activa)) + '</b>' + botonesDestino(destSel.a, 'dt-dest') +
       '<p class="nota">' + L('Las tropas se mudan para siempre: al llegar forman parte del ejército de esa villa (para atacar o defender desde allí).', 'Troops move for good: on arrival they join that village\'s army (to attack or defend from there).') + '</p>';
+    if (tipos.length) h += '<div class="dt-rapidos"><button class="comprar mini" data-dt="todas">' + L('Todas', 'All') + '</button><button class="comprar mini" data-dt="mitad">50%</button><button class="comprar mini" data-dt="ninguna">' + L('Ninguna', 'None') + '</button></div>';
     h += tipos.length ? tipos.map(function (k) { var mx = libresParaMarcha(k), val = Math.min(destSel.t[k] || 0, mx);
-      return '<div class="ev-desl"><span class="ev-r">' + TROPAS[k].icono + ' ' + N(k) + '</span><input type="range" class="dt-rango" data-k="' + k + '" min="0" max="' + mx + '" step="1" value="' + val + '"><b class="dt-val" data-k="' + k + '">' + formatoNumero(val) + '</b></div>'; }).join('') : '<p class="iv-vacio">' + L('No tienes tropas libres en esta villa.', 'You have no free troops in this village.') + '</p>';
+      return '<div class="dt-fila"><div class="dt-top"><span class="dt-foto">' + fotoHTML(k, TROPAS[k].icono) + '</span><span class="ev-r"><b>' + N(k) + '</b><small>' + L('Libres: ', 'Free: ') + formatoNumero(mx) + '</small></span><input type="number" inputmode="numeric" class="campo dt-num" data-k="' + k + '" min="0" max="' + mx + '" value="' + val + '"></div><input type="range" class="dt-rango" data-k="' + k + '" min="0" max="' + mx + '" step="1" value="' + val + '"></div>'; }).join('') : '<p class="iv-vacio">' + L('No tienes tropas libres en esta villa.', 'You have no free troops in this village.') + '</p>';
     h += '<div class="ev-desl"><span class="ev-r">🦸 ' + L('Héroe (opcional)', 'Hero (optional)') + '</span><select class="campo" id="dt-heroe"><option value="">' + L('Ninguno', 'None') + '</option>' + mios.map(function (k) { return '<option value="' + k + '"' + (destSel.h === k ? ' selected' : '') + '>' + escaparHTML(NH(k)) + ' (' + L('Nv ', 'Lv ') + nivelHeroe(k) + ')</option>'; }).join('') + '</select></div>' +
       '<p class="nota">' + L('El héroe queda como Héroe Defensor de la villa de destino.', 'The hero becomes the Defender Hero of the destination village.') + '</p>';
     h += '<p class="nota" id="dt-resumen"></p><button class="comprar verde boton-oleada-grande" data-accion="dt-enviar" id="dt-enviar">⚔️ ' + L('Destacar', 'Station') + '</button></div>';
@@ -7283,7 +7302,10 @@
       if (e) e.innerHTML = tot ? '⚔️ ' + formatoNumero(tot) + ' ' + L('tropas', 'troops') + ' · ⏱ ' + fmtTiempo(seg) : L('Mueve las barras para elegir las tropas.', 'Move the sliders to pick the troops.');
       if (b) b.disabled = !tot && !destSel.h;
     }
-    document.querySelectorAll('#panel .dt-rango').forEach(function (inp) { inp.addEventListener('input', function () { var k = inp.getAttribute('data-k'); destSel.t[k] = +inp.value || 0; var lb = document.querySelector('#panel .dt-val[data-k="' + k + '"]'); if (lb) lb.textContent = formatoNumero(destSel.t[k]); resumen(); }); });
+    function poner(k, n) { var rg = document.querySelector('#panel .dt-rango[data-k="' + k + '"]'), nu = document.querySelector('#panel .dt-num[data-k="' + k + '"]'); if (!rg) return; n = Math.max(0, Math.min(+rg.max, Math.floor(+n || 0))); destSel.t[k] = n; rg.value = n; if (nu && +nu.value !== n) nu.value = n; }
+    document.querySelectorAll('#panel .dt-rango').forEach(function (inp) { inp.addEventListener('input', function () { poner(inp.getAttribute('data-k'), inp.value); resumen(); }); });
+    document.querySelectorAll('#panel .dt-num').forEach(function (inp) { inp.addEventListener('input', function () { poner(inp.getAttribute('data-k'), inp.value); resumen(); }); inp.addEventListener('change', function () { poner(inp.getAttribute('data-k'), inp.value); resumen(); }); });
+    document.querySelectorAll('#panel [data-dt]').forEach(function (bq) { bq.addEventListener('click', function (ev) { ev.stopPropagation(); var q = bq.getAttribute('data-dt'); tipos.forEach(function (k) { var mx = libresParaMarcha(k); poner(k, q === 'todas' ? mx : q === 'mitad' ? Math.floor(mx / 2) : 0); }); sonar('click'); resumen(); }); });
     var sh = $('dt-heroe'); if (sh) sh.addEventListener('change', function () { destSel.h = sh.value || ''; resumen(); });
     resumen();
   }

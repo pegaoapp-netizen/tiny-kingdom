@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.88';
+var VERSION_JUEGO = '7.89';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -559,11 +559,11 @@ var BURBUJA = { dias: 7, castillo: 5 };
 // vel = cuánto tarda el viaje (1 = normal; menos es más rápido). Todas se entrenan en el Mercado (el convoy pide Mercado nivel 5).
 var SUMINISTRO = {
   carretilla: { img: 't_carretilla', icono: '🛒', carga: 0.4, vel: 0.75, costo: { oro: 15, madera: 30 }, tiempo: 25, mercado: 1,
-    es: 'Carretilla', en: 'Wheelbarrow', des_es: 'Pequeña y rápida: un aldeano la empuja. Carga poco pero llega antes.', des_en: 'Small and fast: a villager pushes it. Carries little but arrives sooner.' },
+    es: 'Carreta Ligera', en: 'Light Wagon', des_es: 'Pequeña y rápida. Entre tus villas carga 5.000 por unidad y llega antes.', des_en: 'Small and fast: a villager pushes it. Carries little but arrives sooner.' },
   carreta: { img: 't_carreta', icono: '🐴', carga: 1, vel: 1, costo: { oro: 40, madera: 80 }, tiempo: 60, mercado: 1,
-    es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: 'La carreta con caballo de siempre: carga y velocidad normales.', des_en: 'The classic horse cart: normal cargo and speed.' },
+    es: 'Carreta Pesada', en: 'Heavy Wagon', des_es: 'La carreta con caballo de siempre. Entre tus villas carga 25.000 por unidad.', des_en: 'The classic horse cart: normal cargo and speed.' },
   convoy: { img: 't_convoy', icono: '🚚', carga: 3, vel: 1.35, costo: { oro: 200, madera: 350, piedra: 120 }, tiempo: 240, mercado: 5,
-    es: 'Convoy', en: 'Convoy', des_es: 'Varias carretas con escolta: carga muchísimo pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
+    es: 'Caravana Real', en: 'Royal Caravan', des_es: 'Caravana blindada con escolta. Entre tus villas carga 100.000 por unidad, pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
 };
 var SUMINISTRO_ORDEN = ['carretilla', 'carreta', 'convoy'];
 var CARRETA = { costo: { oro: 40, madera: 80 }, tiempo: 60, inicio: 2, capacidad: [0, 1000, 2000, 3500, 6000],
