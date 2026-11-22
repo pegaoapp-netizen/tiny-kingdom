@@ -4193,7 +4193,7 @@
     if (tipo ? lado > 0.01 : lado > max) { m.scale.multiplyScalar(max / lado); m.updateMatrixWorld(true); caja.setFromObject(m); }
     var c = caja.getCenter(new V3());
     m.position.x -= c.x; m.position.z -= c.z;
-    m.position.y = 0.2;
+    m.position.y = 0.1 - caja.min.y; // v7.53: la base real del modelo toca el suelo (hundida un poco, sin aire debajo)
   }
   var cacheChapa = {};
   // v6.86: chapa con el DIBUJO del edificio, su NOMBRE y el nivel: desde arriba se sabe qué es cada cosa
@@ -4267,7 +4267,7 @@
     encajarEnParcela(s.modelo, tr, tipo, nivel);
     if (s.fijo && !s.campo && s.fijo === tipo) { // v7.44: el edificio de cada barrio se ve grande, como en la foto
       s.modelo.scale.multiplyScalar(1.6); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
-      var cjF = new THREE.Box3().setFromObject(s.modelo).getCenter(new V3()); s.modelo.position.x -= cjF.x; s.modelo.position.z -= cjF.z; s.modelo.position.y = 0.2;
+      var cjF = new THREE.Box3().setFromObject(s.modelo).getCenter(new V3()); s.modelo.position.x -= cjF.x; s.modelo.position.z -= cjF.z; s.modelo.position.y = 0; s.modelo.position.y = 0.1 - new THREE.Box3().setFromObject(s.modelo).min.y;
     }
     if (s.modelo.userData.es2D) { // v7.49: edificio 2D: tamaño fijo por parcela (no se mide la caja del dibujo)
       s.modelo.scale.setScalar(ladoEdificio(tipo, nivel) * (window.__f2D || 1.9) * (s.fijo && !s.campo && s.fijo === tipo ? 1.6 : 1) / s.modelo.userData.ancho2D); s.modelo.position.set(0, 0.15, 0);
@@ -4291,8 +4291,8 @@
     s.grupo.add(s.modelo);
     // v6.56: sombra suave y tierra apisonada debajo, para que el edificio se vea asentado en el suelo
     if (s.baseSombra) { s.grupo.remove(s.baseSombra); s.baseSombra = null; }
-    if (!s.campo && !s.modelo.userData.es2D) { // el dibujo 2D ya trae su propia base
-      s.grupo.updateMatrixWorld(true); var bxs = new THREE.Box3().setFromObject(s.modelo), tam = s.modelo.userData.es2D ? 3.2 * s.modelo.scale.x * s.modelo.userData.ancho2D / 5.6 : Math.min(4.3, Math.max(bxs.max.x - bxs.min.x, bxs.max.z - bxs.min.z) * 0.95 + 0.6);
+    if (!s.modelo.userData.es2D) { // el dibujo 2D ya trae su propia base · v7.53: sombra de contacto también en los campos
+      s.grupo.updateMatrixWorld(true); var bxs = new THREE.Box3().setFromObject(s.modelo), tam = Math.min(s.campo ? 6 : 4.6, Math.max(bxs.max.x - bxs.min.x, bxs.max.z - bxs.min.z) * 1.15);
       var bs = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), matBaseSombra()); bs.rotation.x = -Math.PI / 2; bs.scale.set(tam, tam, 1); bs.position.y = 0.125; bs.renderOrder = 1;
       s.baseSombra = bs; s.grupo.add(bs);
     }
