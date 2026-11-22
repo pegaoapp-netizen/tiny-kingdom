@@ -154,6 +154,18 @@ var Cuentas = (function () {
         version: 1
       }).then(function () { errorGuardar = ''; }).catch(function (err) { errorGuardar = (err && err.code) || 'error'; try { console.warn('No se pudo guardar en la nube', err); } catch (x) {} });
     },
+    // v7.85: COPIA DE SEGURIDAD aparte (respaldos/{uid}): solo se escribe si el reino no es mucho menor que el último respaldo
+    leerRespaldo: function () {
+      if (!usuario) return Promise.resolve(null);
+      return db.collection('respaldos').doc(usuario.uid).get({ source: 'server' }).then(function (d) {
+        if (!d.exists) return null; var x = d.data();
+        try { return { estado: JSON.parse(x.partida), progreso: x.progreso || 0, actualizado: x.actualizado || 0 }; } catch (e) { return null; }
+      });
+    },
+    guardarRespaldo: function (estado, progreso) {
+      if (!usuario || !nubeLeida) return Promise.resolve();
+      return db.collection('respaldos').doc(usuario.uid).set({ partida: partidaCorta(estado), progreso: Math.floor(progreso || 0), actualizado: Date.now() }).catch(function () {});
+    },
     nubeLeida: function () { return nubeLeida; },
     errorGuardar: function () { return errorGuardar; },
 

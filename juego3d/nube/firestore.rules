@@ -1,5 +1,5 @@
 rules_version = '2';
-// reglas v7.84: botín hasta 65.000 (Sello del Trono de Fuego +30% de saqueo)
+// reglas v7.85: copia de seguridad del reino (respaldos/{uid})
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -14,6 +14,14 @@ service cloud.firestore {
     }
 
     // Partida privada: cada jugador solo puede leer y escribir SU propia partida.
+    // v7.85: copia de seguridad del reino (solo su dueño la lee y la escribe)
+    match /respaldos/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['partida', 'progreso', 'actualizado'])
+        && request.resource.data.partida is string && request.resource.data.partida.size() < 900000
+        && request.resource.data.progreso is int && request.resource.data.actualizado is int;
+    }
     match /jugadores/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid

@@ -58,6 +58,10 @@
         if (nubeFallo) return;
         var nMax = (window.__tkNubeMax || {})[Cuentas.usuario().uid] || 0;
         if (nMax >= 3 && castilloPrincipalDe(copia) < nMax - 1) { console.warn('guardado en la nube frenado: castillo', copia.castillo, '<', nMax); return; }
+        var uidG = Cuentas.usuario().uid, pMax = (window.__tkNubeProg || {})[uidG] || 0, pAhora = progresoPartida(copia);
+        if (pMax >= 60 && pAhora < pMax * 0.5) { if (!guardar.avisoFreno) { guardar.avisoFreno = true; consejoTemporal(L('🛡️ Tu reino guardado en la nube es mucho más grande que este: no se guarda encima. Toca el ⚙️ y «Recuperar mi reino».', '🛡️ Your cloud kingdom is much bigger than this one: it is not overwritten. Tap ⚙️ and "Restore my kingdom".')); } return; } // v7.85
+        if (pAhora > pMax) { window.__tkNubeProg = window.__tkNubeProg || {}; window.__tkNubeProg[uidG] = pAhora; }
+        if (pAhora >= 40 && Date.now() - (guardar.ultRespaldo || 0) > 30 * 60000 && pAhora >= (window.__tkRespProg || 0) * 0.8) { guardar.ultRespaldo = Date.now(); window.__tkRespProg = Math.max(window.__tkRespProg || 0, pAhora); if (Cuentas.guardarRespaldo) Cuentas.guardarRespaldo(copia, pAhora); }
         Cuentas.guardarPartida(copia, ya);
       }
     } catch (e) {}
@@ -11085,6 +11089,7 @@
       '<div class="carta"><h3>' + T('idioma') + '</h3><div class="stats">' +
       '<button class="comprar' + (estado.idioma === 'es' ? '' : ' morado') + '" data-accion="idioma" data-valor="es">Español</button>' +
       '<button class="comprar' + (estado.idioma === 'en' ? '' : ' morado') + '" data-accion="idioma" data-valor="en">English</button></div></div>' +
+      (hayCuenta() ? '<div class="carta"><h3>♻️ ' + L('Copia de seguridad', 'Backup') + '</h3><p class="nota">' + (respaldo ? L('Última copia: ', 'Last backup: ') + new Date(respaldo.actualizado).toLocaleString() : L('Se hace sola cada 30 minutos mientras juegas.', 'It is made automatically every 30 minutes while you play.')) + '</p>' + (respaldo ? '<button class="comprar" data-accion="recuperar-reino">♻️ ' + L('Recuperar mi reino', 'Restore my kingdom') + '</button>' : '') + '</div>' : '') +
       '<div class="carta"><h3>' + T('sonido') + '</h3><button class="comprar" data-accion="sonido">' + (estado.sonido ? '🔊 ON' : '🔇 OFF') + '</button></div>' +
       '<div class="carta"><h3>' + T('musica') + '</h3><button class="comprar" data-accion="musica">' + (musicaOn ? '🎵 ON' : '🔇 OFF') + '</button></div>' +
       '<div class="carta"><h3>' + T('velocidad') + '</h3><button class="comprar" data-accion="velocidad">x' + velocidad + '</button></div>' +
@@ -11323,6 +11328,7 @@
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'recuperar-reino') { sonar('click'); ofrecerRecuperar(); }
     else if (a === 'villa-ir') cambiarVilla(+b.getAttribute('data-i'));
     else if (a === 'villas-enviar') { sonar('click'); abrirEnvioVillas(); }
     else if (a === 'ev-dest') { envioSel.a = +b.getAttribute('data-i'); sonar('click'); abrirEnvioVillas(); }
@@ -11762,6 +11768,32 @@
   }
   // v7.40: cuánto avanzó una partida (castillo, edificios, investigación y héroes), para no cambiar un reino grande por uno vacío
   function castilloPrincipalDe(g) { var v = g && g.villas; return v && v.activa && v.lista && v.lista[0] && v.lista[0].datos ? (v.lista[0].datos.castillo || 1) : ((g && g.castillo) || 1); }
+  // v7.85: si el reino que se cargó es mucho menor que la copia de seguridad, se ofrece recuperarla
+  var respaldo = null;
+  function revisarRespaldo() {
+    if (!window.Cuentas || !Cuentas.leerRespaldo || !Cuentas.usuario()) return;
+    var uid = Cuentas.usuario().uid;
+    Cuentas.leerRespaldo().then(function (r) {
+      if (!r || !Cuentas.usuario() || Cuentas.usuario().uid !== uid) return;
+      respaldo = r; window.__tkRespProg = r.progreso || 0;
+      setTimeout(function () {
+        var pAct = progresoPartida(estado);
+        if (r.progreso >= 60 && pAct < r.progreso * 0.5 && !enMenu) ofrecerRecuperar();
+      }, 6000);
+    }).catch(function () {});
+  }
+  function ofrecerRecuperar() {
+    if (!respaldo) { consejoTemporal(L('No hay copia de seguridad de tu reino todavía.', 'There is no backup of your kingdom yet.')); return; }
+    var g = respaldo.estado;
+    confirmarJuego('♻️ ' + L('Recuperar mi reino', 'Restore my kingdom'), L('Encontramos una copia de seguridad de tu reino del ', 'We found a backup of your kingdom from ') + new Date(respaldo.actualizado).toLocaleString() + ': 🏰 ' + L('Castillo nv ', 'Castle lv ') + castilloPrincipalDe(g) + ' · ' + (g.edificios || []).filter(Boolean).length + L(' edificios. ¿La recupero? (El reino de ahora se reemplaza.)', ' buildings. Restore it? (The current kingdom is replaced.)'), L('Recuperar', 'Restore'), function () {
+      g.actualizado = Date.now(); cambiandoVilla = true;
+      try { localStorage.setItem(claveLocal(), JSON.stringify(g)); } catch (e) {}
+      window.__tkNubeProg = {}; window.__tkNubeMax = {};
+      var listo = false; function irse() { if (listo) return; listo = true; location.reload(); }
+      try { Cuentas.guardarPartida(g, false); Cuentas.guardarYa().then(irse, irse); } catch (e) {}
+      setTimeout(irse, 5000);
+    });
+  }
   function progresoPartida(g) {
     if (!g) return 0;
     if (g.villas && g.villas.activa && g.villas.lista && g.villas.lista[0] && g.villas.lista[0].datos) { var m0 = g.villas.lista[0].datos, g2 = {}; for (var kq in g) g2[kq] = g[kq]; g2.castillo = m0.castillo; g2.muralla = m0.muralla; g2.edificios = m0.edificios; g = g2; } // v7.82: cuenta la villa principal
@@ -11878,7 +11910,8 @@
     nubeFallo = false;
     Cuentas.cargarPartida().then(function (p) {
       partidaNube = p ? p.estado : null;
-      try { if (partidaNube && Cuentas.usuario()) { window.__tkNubeMax = window.__tkNubeMax || {}; window.__tkNubeMax[Cuentas.usuario().uid] = castilloPrincipalDe(partidaNube); } } catch (e) {}
+      try { if (partidaNube && Cuentas.usuario()) { window.__tkNubeMax = window.__tkNubeMax || {}; window.__tkNubeMax[Cuentas.usuario().uid] = castilloPrincipalDe(partidaNube); window.__tkNubeProg = window.__tkNubeProg || {}; window.__tkNubeProg[Cuentas.usuario().uid] = progresoPartida(partidaNube); } } catch (e) {}
+      revisarRespaldo();
       if (partidaNube) partidaNube.actualizado = p.actualizado;
       // Primera vez con cuenta: se lleva la partida de invitado de este teléfono
       if (!partidaNube && !cargar() && invitado && typeof invitado.monedas === 'number') {
