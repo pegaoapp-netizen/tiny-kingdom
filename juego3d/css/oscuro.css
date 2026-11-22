@@ -216,3 +216,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid rgba(251, 191, 36
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, .3); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* v7.96: tarjetas «Pedir Recursos» del chat: son oscuras, así que su texto va claro (antes salía marrón sobre marrón) */
+#panel.perg .chat-lista .chat-ped, #panel.perg .chat-lista .chat-ped * { color: #f3e3c3 !important; }
+#panel.perg .chat-lista .chat-ped .cp-cab b { color: #ffd54a !important; }
+#panel.perg .chat-lista .chat-ped .ped-barra span { color: #fff !important; text-shadow: 0 1px 2px #000 !important; }
+#panel.perg .chat-lista .chat-ped .cp-ok { color: #9bff9b !important; }
+#panel.perg .chat-lista .chat-ped .cp-donar { color: #1c1206 !important; }
