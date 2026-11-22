@@ -8044,8 +8044,8 @@
   // v6.89: armaduras y armas con su dibujo (el emoji queda para las listas desplegables)
   Object.keys(EQ).forEach(function (t) { EQ[t].emoji = EQ[t].icono; EQ[t].icono = '<img class="ico-obj" src="iconos/ui/q_' + t + '.webp" alt="' + EQ[t].emoji + '" draggable="false">'; });
   // v6.90: las armaduras de cada héroe (las de torneo) con su propio dibujo: iconos/ui/q_<pieza>_<héroe>.webp
-  var EQ_SET_IMG = { sol: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, luna: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, dragon: { arma: 1, casco: 1, pechera: 1, botas: 1, amuleto: 1 } };
-  function icoPieza(p) { if (!p) return ''; if (p.s === 'dragon' && p.t === 'guantes') return '<span class="ico-obj ico-dragon">🛡️</span>'; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
+  var EQ_SET_IMG = { sol: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, luna: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 } };
+  function icoPieza(p) { if (!p) return ''; if (p.s === 'dragon') return p.t === 'guantes' ? '<span class="ico-obj ico-dragon">🛡️</span>' : '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_dragon.webp" alt="🐉" draggable="false">'; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
   // ---------- v7.84: SET DE TEMPORADA 1 · DRAGÓN IMPERIAL (calidad Temporada / Mítico) ----------
   // ranuras del juego: arma · guantes (aquí va el escudo) · casco · pechera (armadura) · botas · amuleto (anillo)
   var SET_DRAGON = { id: 'dragon', es: 'Set Dragón Imperial', en: 'Imperial Dragon Set', temporada: 1, piezas: {
