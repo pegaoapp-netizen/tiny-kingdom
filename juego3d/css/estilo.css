@@ -2334,3 +2334,20 @@ body.en-batalla #villa-volver { display: none !important; }
 @keyframes cbBrilla { 50% { box-shadow: 0 0 0 2px #6b4a12 inset, 0 0 34px rgba(255,215,80,.9), 0 0 80px rgba(255,170,30,.5); } }
 @keyframes cbChispa { from { opacity: .2; } to { opacity: 1; } }
 @keyframes cbLatido { 50% { transform: scale(1.04); } }
+
+/* v7.96: el icono de "Villa Principal ▼" queda centrado dentro de la pastilla dorada (no se sale por la izquierda) */
+#tk-villas { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 2px 9px 2px 6px; line-height: 1; }
+#tk-villas .tkv-ico { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; font-size: 12px; line-height: 1; flex: none; }
+#tk-villas .tkv-nom { line-height: 1.15; }
+#tk-villas .tkv-fl { font-style: normal; font-size: 9px; line-height: 1; flex: none; }
+/* v7.96: lista de colas de entrenamiento (hasta 10) */
+.cola-ordenes .co-cuenta { margin: 0 0 6px; }
+.cola-ordenes .co-orden { display: flex; align-items: center; gap: 8px; padding: 6px; margin-bottom: 6px; border-radius: 10px; background: rgba(0,0,0,.06); border: 1px solid rgba(120,80,20,.25); }
+.cola-ordenes .co-orden.activa { border-color: #e0a81e; box-shadow: 0 0 0 1px #e0a81e55 inset; }
+.cola-ordenes .co-num { font-weight: 800; font-size: 12px; min-width: 34px; text-align: center; }
+.cola-ordenes .co-od { flex: 1; min-width: 0; }
+.cola-ordenes .co-od b { display: block; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cola-ordenes .co-od .ped-barra { margin: 0; }
+.cola-ordenes .co-orden > button { flex: none; }
+/* v7.96: altavoz rápido en la barra de arriba */
+#btn-mute-rapido { align-self: flex-end; margin: 2px 0; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #6b4206; background: rgba(30,18,8,.72); color: #fff; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; box-shadow: 0 2px 4px #0008; }
