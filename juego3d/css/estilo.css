@@ -2133,3 +2133,14 @@ html body #panel .tl-volver { margin: 6px 0; padding: 6px 12px; border-radius: 1
 .gu-est.gris { color: #bbb; }
 .gu-vacio { text-align: center; padding: 26px 10px; opacity: .8; font-size: 34px; }
 .gu-vacio p { font-size: 14px; margin: 6px 0 0; }
+
+/* v7.73: brújula de la cámara libre (giro 360°): marco dorado como los botones redondos del juego */
+#brujula-cam { position: fixed; left: 10px; top: 46%; z-index: 60; width: 46px; height: 46px; padding: 0; border-radius: 50%;
+  border: 2px solid #d9a441; background: radial-gradient(circle at 35% 30%, #4a2f17, #1d1108 70%);
+  box-shadow: 0 3px 8px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,220,140,.18); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+#brujula-cam:active { transform: scale(.92); }
+#brujula-cam .bruj-rosa { position: absolute; inset: 4px; border-radius: 50%; display: block; will-change: transform;
+  background: repeating-conic-gradient(from 0deg, rgba(255,215,130,.28) 0 2deg, transparent 2deg 45deg); }
+#brujula-cam .bruj-aguja { position: absolute; left: 50%; top: 50%; width: 8px; height: 30px; margin: -15px 0 0 -4px;
+  background: linear-gradient(#e8483a 0 50%, #f1e2bd 50% 100%); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); filter: drop-shadow(0 1px 1px #000); }
+#brujula-cam .bruj-n { position: absolute; left: 50%; top: -3px; transform: translateX(-50%); font: 900 9px Cinzel, Georgia, serif; color: #ffd76a; font-style: normal; text-shadow: 0 1px 1px #000; }

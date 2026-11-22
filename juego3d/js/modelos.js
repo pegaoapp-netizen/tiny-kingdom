@@ -590,7 +590,8 @@ var M = (function () {
   var MODELOS_TRIPO = {};
   // v7.47: tejados de color según el tipo de edificio (así no se confunden) y muros de piedra más claros
   // v7.71 PROTOTIPO 3D (?proto3d=1): todos los edificios con modelo 3D real, tejado azul y piedra clara como el castillo
-  var PROTO3D = /[?&]proto3d=1/.test(location.search); window.__proto3d = PROTO3D; if (PROTO3D) window.__sin2D = true;
+  // v7.73: el 3D pasa a ser la vista normal (edificios con volumen de verdad y cámara que gira 360°). Con ?clasico=1 se ven los dibujos 2D de antes.
+  var PROTO3D = !/[?&](clasico|proto3d=0)\b/.test(location.search); window.__proto3d = PROTO3D; if (PROTO3D) window.__sin2D = true;
   var TEJADO = { herreria: [204, 0.62], cuartel: [5, 0.62], establo: [5, 0.62], galeria: [5, 0.62], academia: [204, 0.62], embajada: [204, 0.62], mercado: [48, 0.85], almacen: [48, 0.85], enfermeria: [48, 0.85], cabana: [22, 0.58] };
   if (PROTO3D) ['establo', 'galeria', 'academia', 'embajada', 'mercado', 'almacen', 'enfermeria', 'cabana', 'relevo', 'vigia'].forEach(function (k) { TEJADO[k] = [212, 0.72]; });
   function hsl2rgb(h, s2, l) { var C = (1 - Math.abs(2 * l - 1)) * s2, X = C * (1 - Math.abs((h / 60) % 2 - 1)), m = l - C / 2, r = 0, g = 0, b = 0, k = Math.floor(h / 60) % 6;
@@ -619,7 +620,7 @@ var M = (function () {
       e.cargando = true;
       var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
       new THREE.GLTFLoader().load('modelos/' + archivo + v, function (gl) {
-        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? 0x4a4a4a : 0x000000, emissiveMap: mp || null }); o.castShadow = true; o.receiveShadow = true; } });
+        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? (PROTO3D ? 0x2c2c2c : 0x4a4a4a) : 0x000000, emissiveMap: mp || null }); o.castShadow = true; o.receiveShadow = true; } });
         var tipoT = String(archivo).split('_tripo')[0];
         if (TEJADO[tipoT]) try { gl.scene.traverse(function (o) { if (o.isMesh && o.material && o.material.map && !o.material.map.userData.recolor) { var nt = recolorTejado(o.material.map, tipoT); o.material.map = nt; if (o.material.emissiveMap) o.material.emissiveMap = nt; } }); } catch (er) {}
         e.escena = gl.scene; window.dispatchEvent(new Event(evento));
@@ -660,6 +661,32 @@ var M = (function () {
     var g = new THREE.Group(); g.add(sp); g.userData.noFusionar = true; g.userData.tripo = true; g.userData.es2D = true; g.userData.adelanto2D = adelanto; g.userData.alto2D = alto; g.userData.ancho2D = cfg.ancho; g.userData.alturaDisparo = alto * 0.6;
     return g;
   }
+  // v7.73: BASE DE PIEDRA bajo cada edificio 3D: losa de adoquines claros con bordillo (la sombra de contacto ya la pone juego.js).
+  // Una textura y dos materiales compartidos por todos los edificios (barato en Android).
+  var BASE_PIEDRA = null;
+  function materialesBase() {
+    if (BASE_PIEDRA) return BASE_PIEDRA;
+    var c = document.createElement('canvas'); c.width = c.height = 256; var x = c.getContext('2d'), rr = 7;
+    function rnd() { rr = (rr * 9301 + 49297) % 233280; return rr / 233280; }
+    x.fillStyle = '#9c9180'; x.fillRect(0, 0, 256, 256);
+    for (var fy = 0; fy < 8; fy++) for (var fx = -1; fx < 9; fx++) {
+      var px = fx * 32 + (fy % 2) * 16 + (rnd() - 0.5) * 3, py = fy * 32 + (rnd() - 0.5) * 3, l = 70 + rnd() * 14, h = 34 + rnd() * 8;
+      x.fillStyle = 'hsl(' + h + ',' + (14 + rnd() * 10) + '%,' + l + '%)';
+      x.beginPath(); if (x.roundRect) x.roundRect(px + 1.5, py + 1.5, 29, 29, 6); else x.rect(px + 1.5, py + 1.5, 29, 29); x.fill();
+      x.fillStyle = 'rgba(255,255,255,.18)'; x.fillRect(px + 4, py + 3, 22, 3);
+    }
+    var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4;
+    BASE_PIEDRA = { tex: t, losa: new THREE.MeshLambertMaterial({ map: t, color: 0xf2ead8 }), bordillo: new THREE.MeshLambertMaterial({ color: 0xb9ad94 }) };
+    return BASE_PIEDRA;
+  }
+  function basePiedra(bb) {
+    var mt = materialesBase(), g = new THREE.Group(), w = (bb.max.x - bb.min.x) * 0.92 + 0.5, d = (bb.max.z - bb.min.z) * 0.92 + 0.5, cx = (bb.max.x + bb.min.x) / 2, cz = (bb.max.z + bb.min.z) / 2, alto = 0.16, y0 = bb.min.y;
+    var gl = new THREE.BoxGeometry(w, alto, d), uv = gl.attributes.uv; for (var i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * w / 2.4, uv.getY(i) * d / 2.4);
+    var losa = new THREE.Mesh(gl, [mt.bordillo, mt.bordillo, mt.losa, mt.bordillo, mt.bordillo, mt.bordillo]); losa.position.set(cx, y0 - alto / 2 + 0.03, cz); losa.receiveShadow = true;
+    var bord = new THREE.Mesh(new THREE.BoxGeometry(w + 0.22, alto * 0.7, d + 0.22), mt.bordillo); bord.position.set(cx, y0 - alto * 0.65, cz); bord.receiveShadow = true;
+    g.add(bord, losa); g.userData.noFusionar = true; g.userData.base = true;
+    return g;
+  }
   function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
     var s2 = edificio2D(tipo, nivel); if (s2) return s2;
@@ -669,6 +696,8 @@ var M = (function () {
     if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior
     if (!t) return null;
     var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(esc); gT.add(mT); gT.userData.noFusionar = true; gT.userData.tripo = true; gT.userData.alturaDisparo = 3;
+    // v7.73: cada edificio de la villa se apoya en una base de piedra con sombra de contacto (ya no parece puesto encima del césped)
+    if (PROTO3D && !ES_CAMPO_T[tipo]) { mT.updateMatrixWorld(true); var bP = new THREE.Box3().setFromObject(mT); gT.add(basePiedra(bP)); }
     // v7.72 prototipo: estandarte medieval azul y oro en lo alto de cada edificio
     if (PROTO3D && !ES_CAMPO_T[tipo]) { mT.updateMatrixWorld(true); var bB = new THREE.Box3().setFromObject(mT), hB = bB.max.y - bB.min.y, k = Math.max(0.5, hB / 4);
       var fl = new THREE.Group(); fl.position.set(bB.min.x + (bB.max.x - bB.min.x) * 0.3, bB.max.y - hB * 0.12, bB.min.z + (bB.max.z - bB.min.z) * 0.35); fl.scale.setScalar(k);
@@ -1148,7 +1177,7 @@ var M = (function () {
       var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
       new THREE.GLTFLoader().load('modelos/castillo_tripo.glb' + v, function (gl) {
         // mismos colores y luz que el resto del juego
-        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? 0x4a4a4a : 0x000000, emissiveMap: mp || null }); } });
+        gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? (PROTO3D ? 0x2c2c2c : 0x4a4a4a) : 0x000000, emissiveMap: mp || null }); } });
         // v6.82: castillo con otro color: muros de piedra blanca y techos azul real (los demás edificios tienen techo naranja)
         try { gl.scene.traverse(function (o) { if (o.isMesh && o.material && o.material.map && o.material.map.image && !o.material.map.userData.recolor) o.material.map = recolorCastillo(o.material.map); }); } catch (e) {}
         CAST_GLB = gl.scene; window.dispatchEvent(new Event('castillo-glb'));
@@ -3241,9 +3270,12 @@ var M = (function () {
     });
   }
   var TEJAS = [0xb24a32, 0xa6402c, 0x3f6fae, 0x8a5636, 0xb85a3a, 0x4a76b4], CALES = [0xf0e6cf, 0xe8dcc0, 0xdccfae, 0xf3ecdc];
+  var TEJAS_3D = [0x2f64b8, 0x3a72c4, 0x2a5aa6, 0x4580cc, 0x35609e, 0x2f64b8], CALES_3D = [0xf2ead6, 0xebe1c8, 0xf6f0e2, 0xe4d8bc];
   function casaMedieval(r) {
     var g = new THREE.Group(), W = 2.6 + r() * 1.6, D = 2.2 + r() * 1.2, pisos = r() < 0.45 ? 2 : 1, H = 1.35 * pisos + 0.2;
     var teja = TEJAS[Math.floor(r() * TEJAS.length)], cal = CALES[Math.floor(r() * CALES.length)], MAD = 0x5a3a22, PIE = 0x9a9488;
+    // v7.73: en 3D las casas siguen el estilo del reino: piedra caliza clara, esquinas de sillar y tejas azules en varios tonos (antes naranja y vigas oscuras: desentonaban)
+    if (PROTO3D) { teja = TEJAS_3D[Math.floor(r() * TEJAS_3D.length)]; cal = CALES_3D[Math.floor(r() * CALES_3D.length)]; MAD = 0xc9bb9a; PIE = 0xa99d86; }
     function cuerpo(w, d, h, x, z) {
       var c = new THREE.Group(); c.position.set(x, 0, z);
       c.add(caja(w + 0.12, 0.42, d + 0.12, PIE, 0, 0.21, 0));
@@ -3255,7 +3287,8 @@ var M = (function () {
       // tejado a dos aguas con alero
       var th = Math.min(w, d) * 0.62 + 0.4, tj = new THREE.Mesh(prisma(d + 0.5, th, w + 0.45), mat(teja));
       tj.rotation.y = Math.PI / 2; tj.position.set(0, 0.42 + h, 0); tj.castShadow = true; tj.receiveShadow = true; c.add(tj);
-      var cumb = caja(w + 0.5, 0.12, 0.16, 0x6a3a26, 0, 0.42 + h + th, 0); c.add(cumb);
+      var cumb = caja(w + 0.5, 0.12, 0.16, PROTO3D ? 0x1d3f78 : 0x6a3a26, 0, 0.42 + h + th, 0); c.add(cumb);
+      if (PROTO3D) { c.add(caja(w + 0.22, 0.1, d + 0.22, 0xe8dfc8, 0, 0.42 + h - 0.02, 0)); } // cornisa clara bajo el tejado
       return { g: c, h: h, th: th };
     }
     var a = cuerpo(W, D, H, 0, 0); g.add(a.g);

@@ -198,7 +198,11 @@
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
   var GIRO_DIAG = Math.PI / 5; // v7.55: como en KoC, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
   var GIRO_PROTO = 0; // v7.71 prototipo 3D: la cámara se puede girar un poco
-  function azVista() { return AZ_CAM + GIRO_DIAG + GIRO_PROTO; } // v6.76: Ciudad, Campos y Mundo con el mismo ángulo: solo se aleja la cámara
+  // v7.73 CÁMARA LIBRE: con los edificios en 3D la cámara gira 360° (dos dedos girando) y se inclina (dos dedos arriba/abajo).
+  // giro: vueltas que dio el jugador; grados: inclinación elegida (al acercar baja un poco sola, como en los juegos de estrategia modernos)
+  var GIRO_LIBRE = !!window.__sin2D;
+  var CAMV = { giro: 0, giroMeta: 0, giroVel: 0, grados: VISTA.grados, gradosMeta: VISTA.grados, GMIN: 26, GMAX: 64 };
+  function azVista() { return AZ_CAM + GIRO_DIAG + GIRO_PROTO + CAMV.giro; } // v6.76: Ciudad, Campos y Mundo con el mismo ángulo: solo se aleja la cámara
   var CENTRO_REINO = new V3(0, 0, 0);
   // ---------- DISEÑO v6.31: ciudad redonda con 4 caminos de piedra en cruz, y los campos en un recinto amurallado ----------
   // El eje U mira hacia la cámara (abajo en la pantalla) y el eje V va de lado a lado.
@@ -5891,7 +5895,15 @@
     if (arrastre || cam.vel.lengthSq() > 0) cam.objetivo.copy(cam.meta);
     else cam.objetivo.lerp(cam.meta, kp);
     // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
-    cam.polar = Math.PI / 2 - VISTA.grados * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
+    // v7.73: giro e inclinación libres, suaves y con un poco de inercia al soltar
+    if (!pellizco && !giroRaton) { CAMV.giroMeta += CAMV.giroVel * dt; CAMV.giroVel *= Math.exp(-dt * 4); if (Math.abs(CAMV.giroVel) < 0.01) CAMV.giroVel = 0; }
+    var kg = 1 - Math.exp(-dt * 14);
+    CAMV.giro += (CAMV.giroMeta - CAMV.giro) * kg;
+    CAMV.grados += (CAMV.gradosMeta - CAMV.grados) * kg;
+    // al acercarse la cámara baja un poco (se ven más las fachadas); de lejos queda la vista de maqueta
+    var zAcerca = Math.max(0, Math.min(1, (zoomBase() - cam.dist) / Math.max(1, zoomBase() - zoomMin())));
+    var gradosVer = Math.max(CAMV.GMIN - 4, CAMV.grados - 9 * zAcerca);
+    cam.polar = Math.PI / 2 - gradosVer * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
     escena.fog.near = cam.dist * (ISO_K + 0.8); escena.fog.far = cam.dist * (ISO_K + 3) + 140;
     var o = cam.objetivo, s = Math.sin(cam.polar);
@@ -5923,21 +5935,55 @@
     if (ids.length === 1) { arrastre = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, t: performance.now(), movio: false }; cam.vel.set(0, 0, 0); cam.meta.copy(cam.objetivo); camVueltaCorta(); } // v7.61: el dedo agarra el mapa donde está, sin salto
     if (ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
-      pellizco = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.distMeta };
+      // v7.73: con dos dedos: separar/juntar = zoom · girar = rotar 360° · subir/bajar los dos juntos = inclinar
+      pellizco = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.distMeta, ang: Math.atan2(b.y - a.y, b.x - a.x), cy: (a.y + b.y) / 2, giro0: CAMV.giroMeta, grados0: CAMV.gradosMeta, modo: '', t: performance.now(), ultAng: null };
+      CAMV.giroVel = 0;
       arrastre = null;
     }
   });
+  var giroRaton = null;
+  function difAngulo(a, b) { var d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; }
+  function moverPellizco() {
+    var ids = Object.keys(punteros), a = punteros[ids[0]], b = punteros[ids[1]];
+    var d = Math.hypot(a.x - b.x, a.y - b.y), ang = Math.atan2(b.y - a.y, b.x - a.x), cy = (a.y + b.y) / 2;
+    var dAng = difAngulo(ang, pellizco.ang), dy = cy - pellizco.cy, esc = Math.abs(Math.log(Math.max(20, d) / Math.max(20, pellizco.d)));
+    // el gesto se decide al principio (así no se mezclan sin querer): inclinar si los dos dedos van juntos arriba o abajo
+    if (!pellizco.modo) {
+      if (GIRO_LIBRE && Math.abs(dy) > 14 && esc < 0.08 && Math.abs(dAng) < 0.12) pellizco.modo = 'inclinar';
+      else if (esc > 0.06 || Math.abs(dAng) > 0.1) pellizco.modo = 'zoom';
+    }
+    if (pellizco.modo === 'inclinar') {
+      CAMV.gradosMeta = Math.max(CAMV.GMIN, Math.min(CAMV.GMAX, pellizco.grados0 + dy * 0.12));
+    } else if (pellizco.modo === 'zoom') {
+      cam.distMeta = Math.max(zoomMin(), Math.min(zoomMax(), pellizco.dist * pellizco.d / Math.max(20, d)));
+      if (GIRO_LIBRE) {
+        CAMV.giroMeta = pellizco.giro0 - dAng;
+        var ahora = performance.now();
+        if (pellizco.ultAng !== null) { var dtG = Math.max(8, ahora - pellizco.tG) / 1000; CAMV.giroVel = CAMV.giroVel * 0.6 + (-difAngulo(ang, pellizco.ultAng) / dtG) * 0.4; }
+        pellizco.ultAng = ang; pellizco.tG = ahora;
+      }
+    }
+    camSigue = false;
+  }
+  function girarCamara(rad) { if (!GIRO_LIBRE) return; CAMV.giroMeta += rad; CAMV.giroVel = 0; }
+  function inclinarCamara(gr) { CAMV.gradosMeta = Math.max(CAMV.GMIN, Math.min(CAMV.GMAX, CAMV.gradosMeta + gr)); }
+  function camaraDeFrente() { CAMV.giroMeta = Math.round((CAMV.giroMeta) / (2 * Math.PI)) * 2 * Math.PI; CAMV.giroVel = 0; CAMV.gradosMeta = VISTA.grados; }
+  // ratón: botón derecho (o Mayús + arrastrar) gira e inclina
+  lienzo.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+  lienzo.addEventListener('pointerdown', function (ev) {
+    if (ev.pointerType === 'mouse' && (ev.button === 2 || ev.shiftKey)) { giroRaton = { x: ev.clientX, y: ev.clientY }; arrastre = null; delete punteros[ev.pointerId]; }
+  });
+  window.addEventListener('pointermove', function (ev) {
+    if (!giroRaton) return;
+    girarCamara((ev.clientX - giroRaton.x) * 0.008); inclinarCamara(-(ev.clientY - giroRaton.y) * 0.15);
+    giroRaton.x = ev.clientX; giroRaton.y = ev.clientY;
+  });
+  window.addEventListener('pointerup', function () { giroRaton = null; });
   lienzo.addEventListener('pointermove', function (ev) {
     if (!punteros[ev.pointerId]) return;
     punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var ids = Object.keys(punteros);
-    if (pellizco && ids.length === 2) {
-      var a = punteros[ids[0]], b = punteros[ids[1]];
-      var d = Math.hypot(a.x - b.x, a.y - b.y);
-      cam.distMeta = Math.max(zoomMin(), Math.min(zoomMax(), pellizco.dist * pellizco.d / Math.max(20, d)));
-      camSigue = false;
-      return;
-    }
+    if (pellizco && ids.length === 2) { moverPellizco(); return; }
     if (!arrastre) return;
     var dx = ev.clientX - arrastre.x, dy = ev.clientY - arrastre.y;
     if (Math.hypot(ev.clientX - arrastre.sx, ev.clientY - arrastre.sy) > 7) arrastre.movio = true;
@@ -5976,6 +6022,11 @@
   }, { passive: false });
   window.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') { if (enMundo) cerrarMundo(); else if (modoColocar) salirModoColocar(); else { cerrarMenuEdif(); cerrarPanel(); } }
+    // v7.73: teclado: Q/E giran, R/F inclinan
+    if (!enMenu && !/INPUT|TEXTAREA/.test((document.activeElement || {}).tagName)) {
+      var kq = ev.key.toLowerCase();
+      if (kq === 'q') girarCamara(-0.26); else if (kq === 'e') girarCamara(0.26); else if (kq === 'r') inclinarCamara(4); else if (kq === 'f') inclinarCamara(-4);
+    }
   });
 
   var rayo = new THREE.Raycaster(), mouse = new THREE.Vector2();
@@ -11917,14 +11968,19 @@
   $('btn-ranking').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'ranking') cerrarPanel(); else abrirPanelRanking(); });
   $('btn-chat').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'chat') cerrarPanel(); else abrirPanelChat(); });
   // v7.71 PROTOTIPO 3D: botones para girar un poco la cámara (±30°) y un cartel que avisa que es la prueba
-  if (window.__proto3d) (function () {
-    var d = document.createElement('div'); d.id = 'proto3d-giro';
-    d.innerHTML = '<span>Prototipo 3D</span><button data-g="-1" aria-label="Girar a la izquierda">⟲</button><button data-g="1" aria-label="Girar a la derecha">⟳</button>';
-    d.style.cssText = 'position:fixed;left:8px;top:44%;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;font:700 11px Georgia,serif;color:#ffd76a;text-shadow:0 1px 2px #000';
+  // v7.73: BRÚJULA de la cámara libre: la aguja muestra hacia dónde mira la cámara; al tocarla vuelve la vista de frente.
+  // (antes, v7.71: dos botones de prueba que giraban solo ±30°)
+  var brujula = null;
+  if (GIRO_LIBRE) (function () {
+    var d = document.createElement('button'); d.id = 'brujula-cam'; d.setAttribute('aria-label', L('Vista de frente', 'Reset view'));
+    d.innerHTML = '<span class="bruj-rosa"><i class="bruj-n">N</i><i class="bruj-aguja"></i></span>';
     document.body.appendChild(d);
-    d.querySelectorAll('button').forEach(function (b) { b.style.cssText = 'width:42px;height:42px;border-radius:50%;border:2px solid #c9902a;background:#2a180b;color:#f3e2bb;font-size:22px'; b.addEventListener('click', function () { GIRO_PROTO = Math.max(-0.55, Math.min(0.55, GIRO_PROTO + (+b.getAttribute('data-g')) * 0.18)); sonar('click'); }); });
+    brujula = d.querySelector('.bruj-rosa');
+    d.addEventListener('click', function () { if (enMenu) return; sonar('click'); camaraDeFrente(); });
+    // la primera vez se explica cómo se mueve la cámara
+    try { if (!localStorage.getItem('tk_ayuda_cam')) setTimeout(function () { if (!enMenu) { consejoTemporal(L('🧭 Dos dedos: gira para rotar, súbelos o bájalos para inclinar, pellizca para acercar.', '🧭 Two fingers: twist to rotate, slide up/down to tilt, pinch to zoom.')); localStorage.setItem('tk_ayuda_cam', '1'); } }, 7000); } catch (e) {}
   })();
-  $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); vistaActual = 'ciudad'; pintarVista(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); });
+  $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); vistaActual = 'ciudad'; pintarVista(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); camaraDeFrente(); });
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
     requestAnimationFrame(bucle);
@@ -11941,7 +11997,8 @@
       cam.az = AZ_CAM + GIRO_DIAG + Math.sin(tiempo * 0.15) * 0.25;
       castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     }
-    if (!enMenu) cam.az += (azVista() - cam.az) * Math.min(1, dtReal * 3);
+    if (!enMenu) cam.az += (azVista() - cam.az) * Math.min(1, dtReal * (pellizco || giroRaton ? 30 : 6));
+    if (brujula) brujula.style.transform = 'rotate(' + ((CAMV.giro + GIRO_PROTO) * 180 / Math.PI).toFixed(1) + 'deg)';
     if (window.__proto3d) DETALLES_LOD.visible = cam.dist < zoomBase() * 0.85; // v7.71 prototipo: detalle según el zoom
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
