@@ -631,7 +631,7 @@ var M = (function () {
   function etapaEdificio(nivel) { return nivel >= 20 ? 3 : nivel >= 10 ? 2 : 1; }
   var CON_HUMO = { herreria: 1, cabana: 1, granja: 1, enfermeria: 1, almacen: 1, establo: 1 };
   // v7.49: prueba 2D: edificio dibujado (PNG con fondo transparente) puesto de pie en el mapa, mirando a la cámara
-  var SPRITES_2D = {} // se llena cuando lleguen los dibujos de Tripo (p. ej. cuartel: { ancho: 5.6, base: { cuartel: 0.27 } }), TEX_2D = {};
+  var SPRITES_2D = { cuartel: { ancho: 5.6, base: 0.162 }, almacen: { ancho: 5.6, base: 0.152 }, academia: { ancho: 5.6, base: 0.162 }, establo: { ancho: 5.6, base: 0.211 }, embajada: { ancho: 5.6, base: 0.143 }, mercado: { ancho: 5.6, base: 0.196 }, enfermeria: { ancho: 5.6, base: 0.206 }, cabana: { ancho: 4.8, base: 0.149 }, galeria: { ancho: 5.6, base: 0.161 } }, TEX_2D = {};
   function tex2D(nombre) {
     var e = TEX_2D[nombre];
     if (!e) {
