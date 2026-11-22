@@ -5679,7 +5679,7 @@
     }
     cam.objetivo.lerp(cam.meta, kp);
     // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
-    cam.polar = Math.PI / 3; // v6.48: isométrica clásica: la cámara mira 30 grados hacia abajo
+    cam.polar = Math.PI / 2 - 35 * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
     escena.fog.near = cam.dist * (ISO_K + 0.8); escena.fog.far = cam.dist * (ISO_K + 3) + 140;
     var o = cam.objetivo, s = Math.sin(cam.polar);
