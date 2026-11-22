@@ -188,7 +188,7 @@
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = Math.PI; // v7.44: alineado con la muralla cuadrada (antes 3.55)
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
-  var GIRO_DIAG = 0; // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
+  var GIRO_DIAG = Math.PI / 5; // v7.55: como en KoC, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
   function azVista() { return AZ_CAM + GIRO_DIAG; } // v6.76: Ciudad, Campos y Mundo con el mismo ángulo: solo se aleja la cámara
   var CENTRO_REINO = new V3(0, 0, 0);
   // ---------- DISEÑO v6.31: ciudad redonda con 4 caminos de piedra en cruz, y los campos en un recinto amurallado ----------
@@ -196,6 +196,15 @@
   var EJE_U = { x: Math.cos(AZ_CAM), z: Math.sin(AZ_CAM) }, EJE_V = { x: -Math.sin(AZ_CAM), z: Math.cos(AZ_CAM) };
   function aMundo(a, b) { return [EJE_U.x * a + EJE_V.x * b, EJE_U.z * a + EJE_V.z * b]; }
   function aLocal(x, z) { return { a: x * EJE_U.x + z * EJE_U.z, b: x * EJE_V.x + z * EJE_V.z }; }
+  // v7.55: COLINA DEL CASTILLO (como en KoC): el castillo va arriba de una meseta de roca rodeada por un foso, y una rampa baja hacia la villa
+  var COLINA = { r: 20, alto: 3.2, foso0: 21, foso1: 25, rampa: 29, anchoRampa: 3 };
+  function alturaCiudad(x, z) {
+    var l = aLocal(x, z), r = Math.hypot(l.a, l.b);
+    if (r <= COLINA.r) return COLINA.alto;
+    if (l.a > 0 && Math.abs(l.b) < COLINA.anchoRampa && l.a < COLINA.rampa) return COLINA.alto * (1 - (l.a - COLINA.r) / (COLINA.rampa - COLINA.r));
+    return 0;
+  }
+  (function () { var p = aMundo(14, 0); CENTRO_REINO.set(p[0], 0, p[1]); })(); // v7.55: la cámara mira entre la colina y la villa
   var R_CIUDAD = MURALLA_FORMA.rx;
   // recinto de los campos: detrás de la ciudad, al otro lado del río (centro y medio fondo / medio ancho)
   var CAMPOS_RECT = { a: -(R_CIUDAD + 55), b: 0, ha: 33, hb: 47 }; // v6.87: 6 × 7 parcelas
@@ -203,8 +212,8 @@
   function enCampos(x, z, m) { var l = aLocal(x, z); return Math.abs(l.a - CAMPOS_RECT.a) < CAMPOS_RECT.ha + (m || 0) && Math.abs(l.b - CAMPOS_RECT.b) < CAMPOS_RECT.hb + (m || 0); }
   // las oleadas entran derecho por la puerta de delante hasta el castillo
   // v7.44: entra por la puerta de delante, rodea la fuente de la plaza y llega a la puerta del castillo
-  CAMINO = [[92, 0], [78, 0], [64, 0], [50, 0], [36, 0], [24, 0], [19, -3.6], [14, -4.6], [9.5, -2.6], [7.4, 0]].map(function (q) { return aMundo(q[0], q[1]); });
-  (function () { var p = aMundo(25, 0); PUNTO_REUNION[0] = p[0]; PUNTO_REUNION[1] = p[1]; })();
+  CAMINO = [[92, 0], [78, 0], [64, 0], [50, 0], [41, 0], [37.5, -5], [33, -6.6], [28.5, -5], [26.5, 0], [22, 0], [16, 0], [11, 0]].map(function (q) { return aMundo(q[0], q[1]); });
+  (function () { var p = aMundo(42, 0); PUNTO_REUNION[0] = p[0]; PUNTO_REUNION[1] = p[1]; })();
   // distancia a los 4 brazos de la cruz de piedra (delante y atrás hasta los campos; a los lados hasta las puertas)
   function distCruz(x, z) {
     var l = aLocal(x, z);
@@ -307,7 +316,7 @@
   // ------------------------------------------------------------------
   //  CAMINO
   // ------------------------------------------------------------------
-  var curva = new THREE.CatmullRomCurve3(CAMINO.map(function (p) { return new V3(p[0], 0, p[1]); }), false, 'centripetal');
+  var curva = new THREE.CatmullRomCurve3(CAMINO.map(function (p) { return new V3(p[0], alturaCiudad(p[0], p[1]), p[1]); }), false, 'centripetal');
   var largoCamino = curva.getLength();
   var muestras = curva.getSpacedPoints(400);
   function distCamino(x, z) {
@@ -486,10 +495,10 @@
     // v7.44: CIUDAD POR BARRIOS (como la foto del dueño): el castillo con su plaza y fuente en el centro,
     // 4 barrios atrás y 4 delante (un edificio grande cada uno), y a los lados el barrio de las Cabañas y el de los Cuarteles.
     // Cada índice conserva su edificio fijo de antes, así las partidas guardadas no cambian.
-    var FIJO_POS = { herreria: [-33, 37], establo: [-33, 13], relevo: [-33, -13], academia: [-33, -37], vigia: [33, 37], embajada: [33, 13], torre: [33, -13], mercado: [33, -37] };
+    var FIJO_POS = { herreria: [20, 30], establo: [-8, 30], relevo: [32, -18], academia: [20, -30], vigia: [-8, -30], embajada: [32, 18], torre: [44, -18], mercado: [44, 18] }; // v7.55: la villa abajo de la colina, en filas
     var FIJOS_IDX = { 0: 'herreria', 5: 'vigia', 10: 'establo', 13: 'academia', 17: 'relevo', 18: 'torre', 22: 'mercado', 28: 'embajada' };
     var barrioL = [], barrioR = [];
-    [-14.5, -6.5, 6.5, 14.5].forEach(function (a) { [24, 34, 44].forEach(function (b) { if (!(a === -14.5 && b === 44)) { barrioL.push([a, b]); barrioR.push([a, -b]); } }); });
+    [[32, 30], [44, 30], [8, 30], [-20, 30], [32, 42], [20, 42], [44, 42], [8, 42], [-8, 42], [-32, 30], [-20, 42]].forEach(function (q) { barrioL.push([q[0], q[1]]); barrioR.push([q[0], -q[1]]); });
     barrioL.sort(function (p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); }); barrioR.sort(function (p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); });
     var puestos = [], nG = 0;
     for (var ip = 0; ip < 30; ip++) {
@@ -511,15 +520,19 @@
   // v7.44: los barrios (para setos, calles, árboles y la fuente). a = hacia la puerta de delante, b = hacia la izquierda de la pantalla
   var BARRIOS = (function () {
     var lista = [];
-    [-33, 33].forEach(function (a) { [37, 13, -13, -37].forEach(function (b) { lista.push({ a: a, b: b, ha: 10.5, hb: 10.2, lado: false }); }); });
-    [34, -34].forEach(function (b) { lista.push({ a: 0, b: b, ha: 19.5, hb: 14.5, lado: true }); });
-    var calles = [
+    var calles = [ // v7.55: calles rectas entre las filas de la villa (abajo de la colina)
+      [38, 38, -47, 47, 1.5], [-38, -38, -47, 47, 1.5], [26, 26, -47, -8, 1.5], [26, 26, 8, 47, 1.5], [-26, -26, -47, -24, 1.5], [-26, -26, 24, 47, 1.5],
+      [14, 14, -47, -24, 1.5], [14, 14, 24, 47, 1.5], [-14, -14, -47, -24, 1.5], [-14, -14, 24, 47, 1.5],
+      [8, 47, 24, 24, 1.5], [8, 47, -24, -24, 1.5], [-47, -8, 24, 24, 1.5], [-47, -8, -24, -24, 1.5], [-47, 47, 36, 36, 1.5], [-47, 47, -36, -36, 1.5],
+      [26, 47, 12, 12, 1.5], [26, 47, -12, -12, 1.5], [-47, -26, 12, 12, 1.5], [-47, -26, -12, -12, 1.5]
+    ];
+    var callesViejas = [
       [-21, -21, -47, 47, 1.6], [21, 21, -47, 47, 1.6],           // anillo de delante y de atrás
       [-21, 21, 18.5, 18.5, 1.6], [-21, 21, -18.5, -18.5, 1.6],   // anillo de los lados
       [-47, -21, 25, 25, 1.5], [-47, -21, -25, -25, 1.5],          // entre los barrios de atrás
       [21, 47, 25, 25, 1.5], [21, 47, -25, -25, 1.5]               // entre los barrios de delante
     ];
-    return { lista: lista, calles: calles, plaza: 16.5, fuente: [14, 0] };
+    return { lista: lista, calles: calles, plaza: COLINA.r - 1.2, fuente: [33, 0] };
   })();
   function enCalleCiudad(a, b, m) {
     for (var i = 0; i < BARRIOS.calles.length; i++) {
@@ -636,15 +649,34 @@
     var AN = 4.6, CA = CAMPOS_RECT.a, HA = CAMPOS_RECT.ha, HB = CAMPOS_RECT.hb;
     // la cruz de la ciudad: delante hasta fuera de la puerta, detrás hasta la puerta de los campos, a los lados hasta las puertas
     losa(8, R_CIUDAD + 16, 0, 0, 0.09, AN);
-    losa(CA + HA - 1, -8, 0, 0, 0.09, AN);
-    losa(0, 0, 8, R_CIUDAD + 5, 0.09, AN);
-    losa(0, 0, -8, -(R_CIUDAD + 5), 0.09, AN);
+    losa(CA + HA - 1, -COLINA.foso1, 0, 0, 0.09, AN);
+    losa(0, 0, COLINA.foso1, R_CIUDAD + 5, 0.09, AN);
+    losa(0, 0, -COLINA.foso1, -(R_CIUDAD + 5), 0.09, AN);
     // v7.44: CALLES DE LA CIUDAD POR BARRIOS: anillo alrededor de la plaza y calles entre los barrios
     BARRIOS.calles.forEach(function (c) { losa(c[0], c[1], c[2], c[3], 0.075, c[4]); });
     // plaza del castillo: octágono de piedra con borde oscuro, y la fuente delante del castillo
-    var borde = new THREE.Mesh(new THREE.CircleGeometry(BARRIOS.plaza + 1.1, 8), new THREE.MeshLambertMaterial({ color: 0x8a7f6e })); borde.rotation.x = -Math.PI / 2; borde.rotation.z = Math.PI / 8; borde.position.y = 0.08; borde.receiveShadow = true; G.add(borde);
+    var borde = new THREE.Mesh(new THREE.CircleGeometry(BARRIOS.plaza + 1.1, 8), new THREE.MeshLambertMaterial({ color: 0x8a7f6e })); borde.rotation.x = -Math.PI / 2; borde.rotation.z = Math.PI / 8; borde.position.y = COLINA.alto + 0.08; borde.receiveShadow = true; G.add(borde);
     var gePl = new THREE.CircleGeometry(BARRIOS.plaza, 8), uvP = gePl.attributes.uv; for (var iu = 0; iu < uvP.count; iu++) uvP.setXY(iu, uvP.getX(iu) * BARRIOS.plaza / 2, uvP.getY(iu) * BARRIOS.plaza / 2);
-    var plaza = new THREE.Mesh(gePl, matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.rotation.z = Math.PI / 8; plaza.position.y = 0.088; plaza.receiveShadow = true; G.add(plaza);
+    var plaza = new THREE.Mesh(gePl, matPiedra); plaza.rotation.x = -Math.PI / 2; plaza.rotation.z = Math.PI / 8; plaza.position.y = COLINA.alto + 0.088; plaza.receiveShadow = true; G.add(plaza);
+    // v7.55: la colina de roca, el foso con agua, la rampa de piedra hacia la villa y una placita abajo con la fuente
+    (function colina() {
+      var gR = new THREE.CylinderGeometry(COLINA.r + 0.2, COLINA.r + 1.0, COLINA.alto + 0.6, 8, 1, true), posR = gR.attributes.position;
+      for (var i = 0; i < posR.count; i++) { var px = posR.getX(i), pz = posR.getZ(i), py = posR.getY(i), k = 1 + ruido(px * 0.7, pz * 0.7) * 0.04 + (py < 0 ? 0.03 : 0); posR.setXYZ(i, px * k, py, pz * k); }
+      gR.computeVertexNormals();
+      var roca = new THREE.Mesh(gR, new THREE.MeshLambertMaterial({ color: 0x7d766c, side: THREE.DoubleSide })); roca.rotation.y = Math.PI / 8; roca.position.y = (COLINA.alto + 0.6) / 2 - 0.6; roca.castShadow = true; roca.receiveShadow = true; G.add(roca);
+      var tapa = new THREE.Mesh(new THREE.CircleGeometry(COLINA.r + 0.25, 8), new THREE.MeshLambertMaterial({ color: 0x7f9a4e })); tapa.rotation.x = -Math.PI / 2; tapa.rotation.z = Math.PI / 8; tapa.position.y = COLINA.alto + 0.04; tapa.receiveShadow = true; G.add(tapa);
+      var lecho = new THREE.Mesh(new THREE.RingGeometry(COLINA.foso0 - 0.6, COLINA.foso1 + 0.6, 8, 1), new THREE.MeshLambertMaterial({ color: 0x8a7a5a })); lecho.rotation.x = -Math.PI / 2; lecho.rotation.z = Math.PI / 8; lecho.position.y = 0.05; G.add(lecho);
+      var foso = new THREE.Mesh(new THREE.RingGeometry(COLINA.foso0, COLINA.foso1, 8, 1), materialAgua(0.92, 0x2e86c1)); foso.rotation.x = -Math.PI / 2; foso.rotation.z = Math.PI / 8; foso.position.y = 0.11; G.add(foso);
+      // rampa de piedra (puente sobre el foso) que baja de la colina hacia la villa
+      var lar = COLINA.rampa - COLINA.r + 0.6, ang = Math.atan2(COLINA.alto, COLINA.rampa - COLINA.r);
+      var rampa = M.caja(COLINA.anchoRampa * 2, 0.5, lar / Math.cos(ang), 0xc9c1b0, 0, 0, 0), am = (COLINA.r + COLINA.rampa) / 2, pr = aMundo(am, 0);
+      var gr = new THREE.Group(); gr.add(rampa); rampa.rotation.x = ang; gr.position.set(pr[0], COLINA.alto / 2 - 0.15, pr[1]); gr.rotation.y = Math.atan2(EJE_U.x, EJE_U.z); G.add(gr);
+      [-1, 1].forEach(function (sd) { var bar = M.caja(0.35, 0.7, lar / Math.cos(ang), 0x8f877a, sd * (COLINA.anchoRampa + 0.1), 0.55, 0); bar.rotation.x = ang; gr.add(bar); });
+      // puentecitos a los lados y atrás (para las puertas de los costados y la de los campos)
+      [[0, COLINA.foso0 - 0.5, 0, COLINA.foso1 + 0.5], [0, -(COLINA.foso0 - 0.5), 0, -(COLINA.foso1 + 0.5)], [-(COLINA.foso0 - 0.5), 0, -(COLINA.foso1 + 0.5), 0]].forEach(function (q) { losa(q[0], q[2], q[1], q[3], 0.2, 3.2); });
+      // placita de abajo con la fuente
+      var gP = new THREE.CircleGeometry(6.2, 8), pp = aMundo(33, 0), pl = new THREE.Mesh(gP, matPiedra); pl.rotation.x = -Math.PI / 2; pl.rotation.z = Math.PI / 8; pl.position.set(pp[0], 0.095, pp[1]); pl.receiveShadow = true; G.add(pl);
+    })();
     (function fuente() {
       var f = new THREE.Group(), A = BARRIOS.fuente[0], B = BARRIOS.fuente[1];
       f.add(M.cil(2.9, 3.1, 0.7, 20, 0xb9b2a4, 0, 0.35, 0));
@@ -790,7 +822,7 @@
       for (var i = 0; i < PARCELAS.todas.length; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < (i < PARCELAS.nCiudad ? 3.6 : 7) + extra) return false;
       var lc = aLocal(x, z);
       if (Math.abs(lc.a) < R_CIUDAD && Math.abs(lc.b) < R_CIUDAD && enCalleCiudad(lc.a, lc.b, 0.6)) return false; // v7.44: calles de los barrios
-      if (Math.hypot(lc.a, lc.b) < BARRIOS.plaza + 1.5) return false;
+      if (Math.hypot(lc.a, lc.b) < COLINA.foso1 + 2) return false; if (lc.a > COLINA.r - 2 && lc.a < 40 && Math.abs(lc.b) < 8) return false;
       for (var ri = 0; ri < BARRIOS.lista.length; ri++) { var rr = BARRIOS.lista[ri]; if (Math.abs(Math.abs(lc.a - rr.a) - rr.ha) < 0.9 && Math.abs(lc.b - rr.b) < rr.hb + 0.5) return false; if (Math.abs(Math.abs(lc.b - rr.b) - rr.hb) < 0.9 && Math.abs(lc.a - rr.a) < rr.ha + 0.5) return false; }
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 1.5) return false;
       if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 6) return false;
@@ -937,6 +969,7 @@
     // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
     var metaC = 1.44 * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
+    castillo.position.y = COLINA.alto; // v7.55: arriba de su colina
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
@@ -953,7 +986,7 @@
     andamiosCastillo.forEach(function (a) { escena.remove(a); }); andamiosCastillo = [];
     if (barraCastillo) { escena.remove(barraCastillo); barraCastillo = null; }
     if (!mostrar) return;
-    [[-3.8, -3.8], [3.8, -3.8], [-3.8, 3.8], [3.8, 3.8]].forEach(function (q) { var a = M.andamio(); a.scale.setScalar(1.25); a.position.set(q[0], 0, q[1]); escena.add(a); andamiosCastillo.push(a); });
+    [[-3.8, -3.8], [3.8, -3.8], [-3.8, 3.8], [3.8, 3.8]].forEach(function (q) { var a = M.andamio(); a.scale.setScalar(1.25); a.position.set(q[0], COLINA.alto, q[1]); escena.add(a); andamiosCastillo.push(a); });
     barraCastillo = M.barraVida(false, 4); barraCastillo.position.set(0, altoCastillo + 0.6, 0); escena.add(barraCastillo);
   }
   // ---------- TRABAJOS: además de pagar, para subir de nivel hay que haber jugado ----------
@@ -4251,7 +4284,7 @@
     var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(0.0106, 0.0032, 1); else sp.scale.set(0.0074, 0.00225, 1); // v7.54: chapas chicas y del mismo tamaño en pantalla con cualquier zoom sp.renderOrder = unico ? 12 : 11;
     sp.userData.grande = { m: cacheChapa[k], s: sp.scale.clone() }; sp.userData.unico = unico;
     sp.userData.chica = { m: cacheChapa[k + '|chica'], s: unico ? new THREE.Vector3(0.0044, 0.0032, 1) : new THREE.Vector3(0.0031, 0.00225, 1) };
-    if (tipo === 'cabana') { var nm = numeroChico(nivel); sp.material = nm; sp.scale.set(0.0024, 0.0024, 1); sp.userData.grande = sp.userData.chica = { m: nm, s: sp.scale.clone() }; } // v7.54: las cabañas solo llevan un numerito
+    if (true) { /* v7.55: solo el número de nivel (el nombre sale al tocar el edificio) */ var nm = numeroChico(nivel); sp.material = nm; sp.scale.set(0.003, 0.003, 1); sp.userData.grande = sp.userData.chica = { m: nm, s: sp.scale.clone() }; } // v7.54: las cabañas solo llevan un numerito
     return sp;
   }
   // con la cámara lejos, las chapas pasan a ser chicas (dibujo + nivel); de cerca, con el nombre
@@ -4288,6 +4321,11 @@
       s.modelo.children[0].position.set(dirC.x, 0.05, dirC.z);
     }
     if (tipo === 'embajada') s.modelo.scale.multiplyScalar(0.525); else if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.75); else if (tipo === 'cuartel') s.modelo.scale.multiplyScalar(0.75); // v7.54: ninguno compite con el castillo // v7.52: que no le hagan sombra al castillo
+    if (!s.campo) { // v7.55: tope de ancho para que no se toquen (la cuadrícula es de 12: centro a centro 1.5 veces el ancho)
+      var TOPE = 8;
+      if (s.modelo.userData.es2D) { var wS = s.modelo.scale.x * s.modelo.userData.ancho2D; if (wS > TOPE) s.modelo.scale.multiplyScalar(TOPE / wS); }
+      else { s.modelo.updateMatrixWorld(true); var bxT = new THREE.Box3().setFromObject(s.modelo), lT = Math.max(bxT.max.x - bxT.min.x, bxT.max.z - bxT.min.z); if (lT > TOPE) { s.modelo.scale.multiplyScalar(TOPE / lT); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true); var bT = new THREE.Box3().setFromObject(s.modelo), cT = bT.getCenter(new V3()); s.modelo.position.set(-cT.x, 0.1 - bT.min.y, -cT.z); } }
+    }
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
@@ -5066,7 +5104,7 @@
     var dx = x - u.pos.x, dz = z - u.pos.z, d = Math.hypot(dx, dz);
     if (d < 0.05) return true;
     var paso = Math.min(d, vel * dt);
-    u.pos.x += dx / d * paso; u.pos.z += dz / d * paso;
+    u.pos.x += dx / d * paso; u.pos.z += dz / d * paso; u.pos.y = alturaCiudad(u.pos.x, u.pos.z);
     encararHacia(u, x, z, dt);
     return false;
   }
