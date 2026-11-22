@@ -38,7 +38,7 @@ workflows:
       - name: Instalar Capacitor
         script: |
           cd app
-          npm install --no-audit --no-fund
+          npm ci
       - name: Copiar el juego dentro de la app
         script: |
           cd app
