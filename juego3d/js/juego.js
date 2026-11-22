@@ -4219,17 +4219,20 @@
   // v6.50: tamaño por importancia (el castillo manda; medianos llenan su parcela; cabaña y campos chiquitos)
   // y cada edificio crece un poco EN CADA NIVEL, del 1 al 30
   // v6.86: más grandes para que desde arriba se vean y se distingan (las parcelas miden 12)
-  var TAM_TIPO = { cuartel: 8.4, almacen: 8.2, embajada: 8.2, academia: 8.0, relevo: 7.6, mercado: 7.6, herreria: 7.4, establo: 7.6, enfermeria: 7.2, galeria: 7.4,
-    cabana: 4.6, granja: 5.2, aserradero: 5.2, mina: 5.2, cantera: 5.2, torre: 6.4, vigia: 5.6 };
-  // v6.82: empiezan chiquitos (45% al nivel 1) y crecen en cada nivel hasta su tamaño completo en el 30; el más grande (5,6) sigue siendo más chico que el castillo de nivel 1 (7)
-  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.4) * (0.6 + 0.4 * Math.pow((Math.min(16, n) - 1) / 15, 0.6)); }
+  var TAM_TIPO = { // v7.59: tamaños equilibrados (del dueño)
+    cuartel: 8.6, almacen: 8.6, embajada: 8.8, academia: 8.6, relevo: 8.4,
+    mercado: 8.6, herreria: 8.2, establo: 8.4, enfermeria: 8.2, galeria: 8.4,
+    cabana: 5.8, granja: 6.2, aserradero: 6.2, mina: 6.2, cantera: 6.2,
+    torre: 6.6, vigia: 6.0
+  };
+  function ladoEdificio(tipo, nivel) { var n = Math.max(1, Math.min(30, nivel || 1)); return (TAM_TIPO[tipo] || 6.8) * (0.65 + 0.35 * Math.pow((Math.min(16, n) - 1) / 15, 0.6)); }
   function encajarEnParcela(m, tr, tipo, nivel) {
     m.position.set(0, 0, 0); m.updateMatrixWorld(true);
-    var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6);
+    var caja = new THREE.Box3().setFromObject(m), tam = caja.getSize(new V3()), lado = Math.max(tam.x, tam.z), max = tipo ? ladoEdificio(tipo, nivel) : (MAX_EDIFICIO[tr] || 6.5);
     if (tipo ? lado > 0.01 : lado > max) { m.scale.multiplyScalar(max / lado); m.updateMatrixWorld(true); caja.setFromObject(m); }
     var c = caja.getCenter(new V3());
     m.position.x -= c.x; m.position.z -= c.z;
-    m.position.y = 0.1 - caja.min.y; // v7.53: la base real del modelo toca el suelo (hundida un poco, sin aire debajo)
+    m.position.y = 0.08 - caja.min.y; // v7.53: la base real del modelo toca el suelo (hundida un poco, sin aire debajo)
   }
   var cacheChapa = {};
   // v6.86: chapa con el DIBUJO del edificio, su NOMBRE y el nivel: desde arriba se sabe qué es cada cosa
@@ -4307,26 +4310,34 @@
     var tr = tramoNivel(nivel);
     crearModeloBase.nivel = nivel; s.modelo = crearModelo(tipo, tr); crearModeloBase.nivel = 0;
     // dentro de cada tramo el edificio también crece un poco por nivel: cada mejora se nota
-    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (nivel > 12 ? 1.1 + 0.04 * (Math.min(nivel, 16) - 12) + 0.015 * Math.max(0, nivel - 16) : 1 + 0.05 * ((nivel - 1) % 3)));
+    // v7.59: escalas del dueño
+    // 1. escala base por nivel
+    s.modelo.scale.setScalar(ESCALA_EDIFICIO * ESCALA_TRAMO[tr] * (nivel > 12 ? 1.1 + 0.03 * (Math.min(nivel, 16) - 12) + 0.01 * Math.max(0, nivel - 16) : 1 + 0.05 * ((nivel - 1) % 3)));
     encajarEnParcela(s.modelo, tr, tipo, nivel);
-    if (s.fijo && !s.campo && s.fijo === tipo) { // v7.44: el edificio de cada barrio se ve grande, como en la foto
-      s.modelo.scale.multiplyScalar(1.6); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
-      var cjF = new THREE.Box3().setFromObject(s.modelo).getCenter(new V3()); s.modelo.position.x -= cjF.x; s.modelo.position.z -= cjF.z; s.modelo.position.y = 0; s.modelo.position.y = 0.1 - new THREE.Box3().setFromObject(s.modelo).min.y;
+    var esFijo = s.fijo && !s.campo && s.fijo === tipo;
+    // 2. el edificio principal de cada barrio un poco más grande (la embajada ya no se encoge)
+    if (esFijo && !s.modelo.userData.es2D) {
+      s.modelo.scale.multiplyScalar(1.35); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
+      var bxF = new THREE.Box3().setFromObject(s.modelo), cjF = bxF.getCenter(new V3()); s.modelo.position.set(-cjF.x, 0.08 - bxF.min.y, -cjF.z);
     }
-    if (s.modelo.userData.es2D) { // v7.49: edificio 2D: tamaño fijo por parcela (no se mide la caja del dibujo)
-      s.modelo.scale.setScalar(ladoEdificio(tipo, nivel) * (window.__f2D || 1.9) * (s.fijo && !s.campo && s.fijo === tipo ? 1.6 : 1) / s.modelo.userData.ancho2D); s.modelo.position.set(0, 0.15, 0);
-      // adelanta el dibujo hacia la cámara en coordenadas del mundo (cada barrio tiene la parcela girada distinto)
+    // 3. edificios 2D (blancos/azules): ancho fijo que llena el cuadro de césped
+    if (s.modelo.userData.es2D) {
+      var anchoObjetivo = esFijo ? 9.4 : 7.8;
+      s.modelo.scale.setScalar(anchoObjetivo / s.modelo.userData.ancho2D); s.modelo.position.set(0, 0.12, 0);
+      // se mantiene el adelanto hacia la cámara: sin él la base del dibujo queda detrás del centro y el edificio se ve flotando
       s.grupo.updateMatrixWorld(true); var qI = new THREE.Quaternion(); s.grupo.getWorldQuaternion(qI); qI.invert();
       var dirC = new V3(Math.cos(azVista()), 0, Math.sin(azVista())).applyQuaternion(qI).multiplyScalar(s.modelo.userData.adelanto2D);
       s.modelo.children[0].position.set(dirC.x, 0.05, dirC.z);
+      // voltear el dibujo en el lado derecho para que la puerta mire a la calle
+      var lcS = aLocal(s.pos.x, s.pos.z); s.modelo.children[0].scale.x = Math.abs(s.modelo.children[0].scale.x) * (lcS.b < 0 ? -1 : 1);
     }
-    if (tipo === 'embajada') s.modelo.scale.multiplyScalar(0.525); else if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.75); else if (tipo === 'cuartel') s.modelo.scale.multiplyScalar(0.75); // v7.54: ninguno compite con el castillo // v7.52: que no le hagan sombra al castillo
-    if (!s.campo) { // v7.55: tope de ancho para que no se toquen (la cuadrícula es de 12: centro a centro 1.5 veces el ancho)
-      var TOPE = 8;
-      if (s.modelo.userData.es2D) { var wS = s.modelo.scale.x * s.modelo.userData.ancho2D; if (wS > TOPE) s.modelo.scale.multiplyScalar(TOPE / wS); s.modelo.scale.multiplyScalar(Math.min(1.4, 9.2 / (s.modelo.scale.x * s.modelo.userData.ancho2D))); // v7.56: los blancos/azules llenan su parcela · v7.57: sin salirse a la calle
-        // v7.56: el dibujo se voltea en el lado derecho de la villa para que la entrada mire hacia la calle del centro
-        var lcS = aLocal(s.pos.x, s.pos.z); if (lcS.b < 0) { s.modelo.children[0].scale.x = -Math.abs(s.modelo.children[0].scale.x); } }
-      else { s.modelo.updateMatrixWorld(true); var bxT = new THREE.Box3().setFromObject(s.modelo), lT = Math.max(bxT.max.x - bxT.min.x, bxT.max.z - bxT.min.z); if (lT > TOPE) { s.modelo.scale.multiplyScalar(TOPE / lT); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true); var bT = new THREE.Box3().setFromObject(s.modelo), cT = bT.getCenter(new V3()); s.modelo.position.set(-cT.x, 0.1 - bT.min.y, -cT.z); } }
+    // 4. solo la torre se achica un poco para no tapar el castillo
+    if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.78);
+    // 5. tope para los modelos 3D: nunca invaden el camino
+    if (!s.campo && !s.modelo.userData.es2D) {
+      var TOPE = 9.4; s.modelo.updateMatrixWorld(true);
+      var bxT = new THREE.Box3().setFromObject(s.modelo), lT = Math.max(bxT.max.x - bxT.min.x, bxT.max.z - bxT.min.z);
+      if (lT > TOPE) { s.modelo.scale.multiplyScalar(TOPE / lT); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true); var bT = new THREE.Box3().setFromObject(s.modelo), cT = bT.getCenter(new V3()); s.modelo.position.set(-cT.x, 0.08 - bT.min.y, -cT.z); }
     }
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
@@ -4335,10 +4346,8 @@
     if (s.insignia) s.grupo.remove(s.insignia);
     // v6.82: chapa siempre visible con el icono del edificio y su nivel, para saber cuál es cuál de un vistazo
     if (s.chapa) { s.grupo.remove(s.chapa); s.chapa = null; }
-    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, (s.modelo.userData.es2D ? s.modelo.userData.alto2D * s.modelo.scale.y * 0.92 : Math.max(1.6, bxc.max.y - s.grupo.position.y)) + 0.35, 0); s.grupo.add(s.chapa); }
-    s.insignia = M.etiquetaEdificio(N(tipo), nivel);
-    s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
-    s.grupo.add(s.insignia);
+    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, (s.modelo.userData.es2D ? s.modelo.userData.alto2D * s.modelo.scale.y * 0.88 : Math.max(1.8, bxc.max.y - s.grupo.position.y)) + 0.25, 0); s.grupo.add(s.chapa); }
+    s.insignia = null; // v7.59: una sola etiqueta (la chapa del nivel)
     s.grupo.add(s.modelo);
     // v6.56: sombra suave y tierra apisonada debajo, para que el edificio se vea asentado en el suelo
     if (s.baseSombra) { s.grupo.remove(s.baseSombra); s.baseSombra = null; }
