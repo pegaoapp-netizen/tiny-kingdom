@@ -231,17 +231,23 @@
     var giro = clamp(envolver((e.yawObj === undefined ? yaw : e.yawObj) - yaw), -0.9, 0.9);
     var lean = lerp(0.04, 0.17, g) * wl, respira = Math.sin(t * 2 * PI / 3.6), inclinaGiro = clamp(-yawRate * v * 0.045 / esc, -0.22, 0.22);
     var twist = clamp(-0.25 * (PL.rel.z - PR.rel.z) / esc, -0.18, 0.18) * wl;
-    A.pelvis.set(0.05 * g * wl, twist, 0);
-    A.columna.set(lean * 0.6 + 0.01 * respira, -twist * 0.5 + giro * 0.1, inclinaGiro * 0.6);
-    A.pecho.set(lean * 0.4 + 0.02 * respira, -twist * 1.1 + giro * 0.2, inclinaGiro * 0.4);
+    // peso: se inclina al acelerar y se echa atrás al frenar
+    var acel = dt > 0 ? (v - (this.vAnt || 0)) / dt : 0; this.vAnt = v; this.acel = (this.acel || 0) + (acel - (this.acel || 0)) * Math.min(1, dt * 6);
+    lean += clamp(this.acel * 0.035 / esc, -0.14, 0.18);
+    // la cadera baja hacia la pierna que va por el aire y el torso lo compensa
+    var vueloL = PL.apoyo ? 0 : Math.sin(PI * clamp(PL.vu.prog || 0, 0, 1)), vueloR = PR.apoyo ? 0 : Math.sin(PI * clamp(PR.vu.prog || 0, 0, 1));
+    var roll = -0.07 * (1 - 0.5 * g) * wl * (vueloL - vueloR);
+    A.pelvis.set(0.05 * g * wl, twist, roll);
+    A.columna.set(lean * 0.6 + 0.01 * respira, -twist * 0.6 + giro * 0.1, inclinaGiro * 0.6 - roll * 0.8);
+    A.pecho.set(lean * 0.4 + 0.02 * respira, -twist * 1.5 + giro * 0.2, inclinaGiro * 0.4 - roll * 0.3);
     var mira = (1 - wl) * 0.16 * Math.sin(t * 0.37) * Math.sin(t * 0.13 + 1);
     A.cuello.set(-lean * 0.3, giro * 0.2 + mira * 0.4, 0);
-    A.cabeza.set(-lean * 0.5 - 0.01 * respira, giro * 0.25 + mira * 0.6, -inclinaGiro * 0.5);
+    A.cabeza.set(-lean * 0.5 - 0.01 * respira + 0.03 * wl * Math.sin(4 * PI * this.fase), giro * 0.25 + mira * 0.6 + twist * 0.5, -inclinaGiro * 0.5 + roll * 0.4);
     var amp = lerp(0.32, 0.85, g) * wl;
     [[PL, 'L', 1, nzR], [PR, 'R', -1, nzL]].forEach(function (x) {
       var l = x[1], s = x[2], nz = x[3], idle = 1 - wl;
       var px = -amp * nz - 0.25 * g * wl + idle * 0.03 * Math.sin(t * 1.1 + s);
-      A['brazo.' + l].set(px, 0, s * (0.09 + 0.08 * g * wl));
+      A['brazo.' + l].set(px, -s * 0.15 * nz * amp, s * (0.09 + 0.08 * g * wl + 0.04 * Math.abs(nz) * wl));
       A['antebrazo.' + l].set(-lerp(0.18, 1.45, g) * wl - 0.14 * idle - 0.3 * Math.max(0, -px) * wl, 0, 0);
       A['mano.' + l].set(-0.1, 0, 0);
       A['clavicula.' + l].set(0, 0, s * 0.04 * respira * idle);
@@ -276,6 +282,9 @@
         pelvis.z -= 0.08 * esc * en; pelvis.y -= 0.04 * esc * en; pelvis.x -= 0.03 * esc * ld * en;
       }
     }
+
+    // ---------- 3b) INERCIA: torso, brazos y cabeza siguen al cuerpo con algo de retraso y rebote ----------
+    this._muelles(dt);
 
     // ---------- 4) PELVIS: la altura se limita para que los pies lleguen siempre ----------
     qE(_qp, A.pelvis.x, A.pelvis.y, A.pelvis.z);
@@ -341,6 +350,20 @@
     return this.pose;
   };
 
+  var MUELLE = { columna: 16, pecho: 13, cuello: 15, cabeza: 11, 'clavicula.L': 15, 'clavicula.R': 15, 'brazo.L': 11, 'brazo.R': 11, 'antebrazo.L': 9, 'antebrazo.R': 9, 'mano.L': 8, 'mano.R': 8 };
+  Animador.prototype._muelles = function (dt) {
+    var A = this.A, M = this.mu || (this.mu = {}), rapido = (this.ataque >= 0 || this.golpe >= 0) ? 2 : 1;
+    for (var n in MUELLE) {
+      var a = A[n], s = M[n];
+      if (!s || dt <= 0) { if (!s) M[n] = { x: a.clone(), v: new V3() }; continue; }
+      var w = MUELLE[n] * rapido, z = 0.72, pasos = Math.ceil(dt * 120), h = dt / pasos;
+      for (var k = 0; k < pasos; k++) { // muelle amortiguado (en pasos pequeños para que sea estable con pocos fps)
+        s.v.x += (w * w * (a.x - s.x.x) - 2 * z * w * s.v.x) * h; s.v.y += (w * w * (a.y - s.x.y) - 2 * z * w * s.v.y) * h; s.v.z += (w * w * (a.z - s.x.z) - 2 * z * w * s.v.z) * h;
+        s.x.addScaledVector(s.v, h);
+      }
+      a.copy(s.x);
+    }
+  };
   // IK de dos huesos: cadera → rodilla → tobillo, con la rodilla hacia donde mira el pie
   var _H = new V3(), _T = new V3(), _dir = new V3(), _pole = new V3(), _n = new V3(), _td = new V3(), _sd = new V3(), _kn = new V3(), _qt = new Q(), _qs = new Q(), _qf = new Q(), _qinv = new Q();
   function baseQ(out, abajo, adelante) { // eje -Y del hueso = «abajo», +Z ≈ «adelante»
