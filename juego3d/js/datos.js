@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.96';
+var VERSION_JUEGO = '7.97';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -92,7 +92,7 @@ var TEXTOS = {
     e_general: 'No se pudo. Inténtalo otra vez.', e_repetir: 'Las contraseñas no son iguales.',
     e_sin_nube: 'Las cuentas no están disponibles ahora (sin internet).',
     gemas_inf: 'Gemas infinitas',
-    r_oro: 'oro', r_comida: 'comida', r_madera: 'madera', r_piedra: 'piedra', r_hierro: 'hierro', r_gemas: 'gemas',
+    r_oro: 'oro', r_comida: 'comida', r_madera: 'madera', r_piedra: 'piedra', r_hierro: 'hierro', r_gemas: 'gemas', r_amatista: 'Amatista rúnica',
     falta: 'Te falta {r}.', costo: 'Cuesta', produce_txt: 'Produce {n} {r} cada {s} s',
     comen: 'Tus tropas comen {n} de comida por minuto.', sin_comida: '🍞 Comida en 0: tus tropas pelean igual al 100%. Construye Granjas o manda comida desde otra villa.',
     impuesto: 'El castillo cobra {n} de oro cada {s} s.', recursos_inf: 'Recursos infinitos',
@@ -234,7 +234,7 @@ var TEXTOS = {
     e_general: 'Something went wrong. Try again.', e_repetir: 'Passwords do not match.',
     e_sin_nube: 'Accounts are not available right now (no internet).',
     gemas_inf: 'Infinite gems',
-    r_oro: 'gold', r_comida: 'food', r_madera: 'wood', r_piedra: 'stone', r_hierro: 'iron', r_gemas: 'gems',
+    r_oro: 'gold', r_comida: 'food', r_madera: 'wood', r_piedra: 'stone', r_hierro: 'iron', r_gemas: 'gems', r_amatista: 'Runic amethyst',
     falta: 'You need more {r}.', costo: 'Costs', produce_txt: 'Makes {n} {r} every {s} s',
     comen: 'Your troops eat {n} food per minute.', sin_comida: '🍞 Food at 0: your troops still fight at 100%. Build Farms or send food from another village.',
     impuesto: 'The castle collects {n} gold every {s} s.', recursos_inf: 'Infinite resources',
@@ -403,6 +403,8 @@ var NOMBRES = {
   reclutas: { es: 'Reclutas del rey', en: 'King’s recruits', des_es: '10 espadachines listos al momento, sin entrenar.', des_en: '10 swordsmen ready at once, no training.' },
   cristal_mistico: { es: 'Cristal místico', en: 'Mystic crystal', des_es: 'Para la Ascensión de ★1 a ★4. Se gana en campamentos, bestias y aldeas bárbaras de nivel 5 o más.', des_en: 'For Ascension ★1 to ★4. Won at camps, beasts and barbarian villages level 5+.' },
   cristal_encantado: { es: 'Cristal encantado', en: 'Enchanted crystal', des_es: 'Para la Ascensión de ★5 a ★10. Se gana en campamentos, bestias y aldeas de nivel 9 o más.', des_en: 'For Ascension ★5 to ★10. Won at level 9+ camps, beasts and villages.' },
+  amatista_100: { es: 'Amatista rúnica ×100', en: 'Runic amethyst ×100', des_es: '100 Amatistas rúnicas para las investigaciones de nivel 11 o más. Solo se ganan en eventos y combates.', des_en: '100 Runic amethysts for level 11+ research. Only won in events and battles.' },
+  amatista_500: { es: 'Amatista rúnica ×500', en: 'Runic amethyst ×500', des_es: '500 Amatistas rúnicas para las investigaciones de nivel 11 o más. Solo se ganan en eventos y combates.', des_en: '500 Runic amethysts for level 11+ research. Only won in events and battles.' },
   cristal_arcano: { es: 'Cristal arcano', en: 'Arcane crystal', des_es: 'Para la Ascensión de ★11 a ★15. Se gana en campamentos, bestias y aldeas de nivel 13 o más.', des_en: 'For Ascension ★11 to ★15. Won at level 13+ camps, beasts and villages.' },
   cuerno_guerra: { es: 'Cuerno de guerra', en: 'War horn', des_es: '+20 % de ataque a tus tropas durante 1 hora. Para atacar un campamento fuerte.', des_en: '+20% troop attack for 1 hour.' },
   coraza_acero: { es: 'Coraza de acero', en: 'Steel armor', des_es: '+20 % de defensa (vida de tus tropas al defender) durante 1 hora. Úsala si te avisan de un ataque.', des_en: '+20% defense for 1 hour.' },
@@ -451,8 +453,8 @@ var NOMBRES = {
   cofre_acel: { es: 'Cofre de aceleradores', en: 'Speed-up chest', des_es: '10 de 15 min, 5 de 1 hora, 2 de 8 horas y 1 de 24 horas.', des_en: '10× 15 min, 5× 1 hour, 2× 8 hours and 1× 24 hours.' },
   cofre_mejora1: { es: 'Cofre de mejora I', en: 'Upgrade chest I', des_es: '2 piezas de equipo comunes para tus héroes.', des_en: '2 common gear pieces for your heroes.' },
   cofre_mejora2: { es: 'Cofre de mejora II', en: 'Upgrade chest II', des_es: '1 pieza rara y 1 común.', des_en: '1 rare and 1 common piece.' },
-  cofre_mejora3: { es: 'Cofre de mejora III', en: 'Upgrade chest III', des_es: '3 piezas raras.', des_en: '3 rare pieces.' },
-  cofre_mejora4: { es: 'Cofre de mejora IV', en: 'Upgrade chest IV', des_es: '1 pieza legendaria y 2 raras.', des_en: '1 legendary and 2 rare pieces.' },
+  cofre_mejora3: { es: 'Cofre de mejora III', en: 'Upgrade chest III', des_es: '3 piezas raras y 100 Amatistas rúnicas.', des_en: '3 rare pieces and 100 Runic amethysts.' },
+  cofre_mejora4: { es: 'Cofre de mejora IV', en: 'Upgrade chest IV', des_es: '1 pieza legendaria, 2 raras y 500 Amatistas rúnicas.', des_en: '1 legendary, 2 rare pieces and 500 Runic amethysts.' },
   libro_peq:    { es: 'Libro de experiencia', en: 'Experience book', des_es: 'Da 300 de experiencia a un héroe. Úsalo en el panel del héroe.', des_en: 'Gives a hero 300 experience. Use it in the hero panel.' },
   libro_gra:    { es: 'Tomo de experiencia', en: 'Experience tome', des_es: 'Da 1500 de experiencia a un héroe. Úsalo en el panel del héroe.', des_en: 'Gives a hero 1500 experience. Use it in the hero panel.' },
   cofre_equipo: { es: 'Cofre de equipo', en: 'Gear chest', des_es: 'Trae una pieza de equipo rara o legendaria para tus héroes.', des_en: 'Holds a rare or legendary gear piece for your heroes.' },
@@ -632,7 +634,7 @@ while (TRABAJOS_EDIFICIO.oleadas.length <= 30) TRABAJOS_EDIFICIO.oleadas.push(TR
   }
   var reglas = {
     costo: ['x', 1.35], madera: ['x', 1.35], piedra: ['x', 1.35], tiempo: ['+', 2],
-    produce: ['x', 1.25], capacidad: ['+', 3], poblacion: ['+', 50], rapidez: ['+', 0.15], dano: ['x', 1.2], alcance: ['+', 0.4, 19], tope: ['=', 6], protege: ['x', 1.35], tasa: ['+', 0.025, 0.8], defensa: ['+', 0.03, 0.36]
+    produce: ['x', 1.25], capacidad: ['+', 3], poblacion: ['+', 50], rapidez: ['+', 0.15], dano: ['x', 1.2], alcance: ['+', 0.4, 19], tope: ['+', 1, 15], protege: ['x', 1.35], tasa: ['+', 0.025, 0.8], defensa: ['+', 0.03, 0.36]
   };
   for (var t in EDIFICIOS) for (var c in reglas) if (Array.isArray(EDIFICIOS[t][c])) extender(EDIFICIOS[t][c], reglas[c]);
   extender(MURALLA.costo, ['x', 1.3]); extender(MURALLA.madera, ['=', 0]); extender(MURALLA.piedra, ['x', 1.3]);
@@ -760,6 +762,8 @@ var OBJETOS = {
   oro_1m:          { icono: '💰', inv: 'recursos', da: { oro: 1000000 } },
   mixto_1m:        { icono: '🏗️', inv: 'recursos', da: { oro: 1000000, comida: 1000000, madera: 1000000, piedra: 1000000 } },
   ficha_x1:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 1 },
+  amatista_100:    { icono: '🔮', inv: 'recursos', efecto: 'amatista', n: 100 }, // v7.97
+  amatista_500:    { icono: '🔮', inv: 'recursos', efecto: 'amatista', n: 500 },
   ficha_x5:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 5 },
   energia_heroe:   { icono: '⚡', inv: 'reliquia', efecto: 'expHeroe', n: 50 },
   carreta_sum:     { icono: '🐴', inv: 'tropas', efecto: 'carreta', n: 1 }, // v7.86
@@ -785,8 +789,8 @@ var OBJETOS = {
   cofre_acel:   { icono: '⏩', paquete: { acel_15m: 10, acel_1h: 5, acel_8h: 2, acel_24h: 1 } },
   cofre_mejora1: { icono: '🧰', mejora: ['comun', 'comun'] },
   cofre_mejora2: { icono: '🧰', mejora: ['raro', 'comun'] },
-  cofre_mejora3: { icono: '🧰', mejora: ['raro', 'raro', 'raro'] },
-  cofre_mejora4: { icono: '🧰', mejora: ['legendario', 'raro', 'raro'] }
+  cofre_mejora3: { icono: '🧰', mejora: ['raro', 'raro', 'raro'], extra: { amatista_100: 1 } }, // v7.97: trae Amatista rúnica
+  cofre_mejora4: { icono: '🧰', mejora: ['legendario', 'raro', 'raro'], extra: { amatista_500: 1 } }
 };
 // Tienda: se paga con gemas (las compras con dinero real llegarán con la App Store)
 var TIENDA = [
@@ -861,21 +865,21 @@ Object.keys(ICONOS_IMG).forEach(function (k) {
 var INVESTIGACION = {
   crecimiento: [
     { id: 'obras', icono: '🔨', max: 6, cada: 0.08 },     // obras más rápidas
-    { id: 'cuarteles', icono: '⚔️', max: 5, cada: 2 },    // +2 de capacidad
-    { id: 'entreno', icono: '⏱️', max: 6, cada: 0.1 }     // entrenar más rápido
+    { id: 'cuarteles', icono: '⚔️', max: 15, cada: 2 },    // +2 de capacidad
+    { id: 'entreno', icono: '⏱️', max: 15, cada: 0.1 }     // entrenar más rápido
   ],
   economia: [
-    { id: 'cosecha', icono: '🌾', max: 6, cada: 0.1 },
-    { id: 'lenadores', icono: '🪵', max: 6, cada: 0.1 },
-    { id: 'canteros', icono: '🪨', max: 6, cada: 0.1 },
-    { id: 'impuestos', icono: '🪙', max: 6, cada: 0.1 },
-    { id: 'carga', icono: '📦', max: 6, cada: 0.1 }       // las carretas cargan más (y roban más)
+    { id: 'cosecha', icono: '🌾', max: 15, cada: 0.1 },
+    { id: 'lenadores', icono: '🪵', max: 15, cada: 0.1 },
+    { id: 'canteros', icono: '🪨', max: 15, cada: 0.1 },
+    { id: 'impuestos', icono: '🪙', max: 15, cada: 0.1 },
+    { id: 'carga', icono: '📦', max: 15, cada: 0.1 }       // las carretas cargan más (y roban más)
   ],
   batalla: [
-    { id: 'espadas', icono: '🗡️', max: 6, cada: 0.05 },   // tropas pegan más
-    { id: 'escudos', icono: '🛡️', max: 6, cada: 0.05 },   // tropas con más vida
-    { id: 'flechas', icono: '🏹', max: 6, cada: 0.1 },    // torres pegan más
-    { id: 'muros', icono: '🧱', max: 6, cada: 0.1 }       // muralla y barricadas con más vida
+    { id: 'espadas', icono: '🗡️', max: 15, cada: 0.05 },   // tropas pegan más
+    { id: 'escudos', icono: '🛡️', max: 15, cada: 0.05 },   // tropas con más vida
+    { id: 'flechas', icono: '🏹', max: 15, cada: 0.1 },    // torres pegan más
+    { id: 'muros', icono: '🧱', max: 15, cada: 0.1 }       // muralla y barricadas con más vida
   ]
 };
 // Rama "Tropas": Ataque, Vida, Defensa y Velocidad para cada tipo de tropa (v5.1)
@@ -885,7 +889,7 @@ INVESTIGACION.tropas = [];
 ['espadachin', 'arquero', 'guardian', 'caballeria'].forEach(function (tp) {
   STATS_TROPA.forEach(function (s) {
     var id = 't_' + tp + '_' + s[0];
-    INVESTIGACION.tropas.push({ id: id, icono: s[1], max: 6, cada: s[2], tropa: tp, stat: s[0] });
+    INVESTIGACION.tropas.push({ id: id, icono: s[1], max: 15, cada: s[2], tropa: tp, stat: s[0] });
     NOMBRES['inv_' + id] = {
       es: NOMBRE_STAT[s[0]][0], en: NOMBRE_STAT[s[0]][1],
       des_es: '+{v}% ' + NOMBRE_STAT[s[0]][2] + ' para ' + NOMBRES[tp].es, des_en: '+{v}% ' + NOMBRE_STAT[s[0]][3] + ' for ' + NOMBRES[tp].en
@@ -893,8 +897,16 @@ INVESTIGACION.tropas = [];
   });
 });
 // Costo y tiempo del nivel L (1, 2, 3...): investigar toma tiempo de verdad
-function costoInvestigacion(L) { return { oro: 120 * L + 60 * L * L, madera: 100 * L + 45 * L * L, piedra: L >= 2 ? 40 * L * L : 0 }; }
-var TIEMPO_INV = [0, 120, 420, 1200, 3600, 10800, 28800];
+function costoInvestigacion(L) {
+  if (L <= 6) return { oro: 120 * L + 60 * L * L, madera: 100 * L + 45 * L * L, piedra: L >= 2 ? 40 * L * L : 0 };
+  // v7.97: niveles 7 a 15: piden los 5 recursos y cada nivel cuesta el doble que el anterior
+  var m = Math.pow(2, L - 6);
+  return { oro: (120 * L + 60 * L * L) * m, comida: 150 * L * L * m, madera: (100 * L + 45 * L * L) * m, piedra: 40 * L * L * m, hierro: 60 * L * L * m };
+}
+// v7.97: AMATISTA RÚNICA: recurso raro que piden las investigaciones desde el nivel 11 (no la dan las minas: solo eventos y combate)
+var AMATISTA_INV = { 11: 100, 12: 250, 13: 500, 14: 1500, 15: 5000 };
+function amatistaInvestigacion(L) { return AMATISTA_INV[L] || 0; }
+var TIEMPO_INV = [0, 120, 420, 1200, 3600, 10800, 28800, 43200, 57600, 72000, 86400, 115200, 144000, 172800, 216000, 259200]; // v7.97: hasta el nivel 15
 function tiempoInvestigacion(L) { return TIEMPO_INV[Math.min(L, TIEMPO_INV.length - 1)]; }
 // Poder que da cada nivel investigado y cada nivel de una pieza de equipo
 var PODER_INVEST = 250, PODER_PIEZA = 60;

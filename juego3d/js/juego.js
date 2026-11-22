@@ -2517,6 +2517,10 @@
   function bestiaMuerta(b) { return ((estado.bestias || {})[b.id] || 0) > Date.now(); }
   function nombreBestia(b) { var t = TIPOS_BESTIA[b.tipo]; return t.icono + ' ' + (estado.idioma === 'en' ? t.en : t.es); }
   function defensaBestia(n) { return Math.round(450 * Math.pow(n, 1.75)); }
+  // v7.97: AMATISTA RÚNICA (recurso raro de las investigaciones nv 11+). Los paquetes que se ganan pasan solos a la reserva
+  function sumarAmatista(n) { estado.amatista = (estado.amatista || 0) + Math.max(0, Math.floor(n || 0)); }
+  function cobrarAmatista() { var m = estado.mochila; if (!m) return; ['amatista_100', 'amatista_500'].forEach(function (k) { if (m[k] > 0) { sumarAmatista(m[k] * OBJETOS[k].n); m[k] = 0; } }); }
+  function darAmatistaBotin(k, espera) { estado.mochila[k] = (estado.mochila[k] || 0) + 1; setTimeout(function () { consejoTemporal('🔮 ' + L('¡Botín raro! ', 'Rare loot! ') + N(k)); }, espera || 2000); }
   // v7.14: cristales de ascensión que da ganar en el mapa (campamentos, bestias y aldeas bárbaras) según su nivel
   function darCristales(nv) {
     var k = nv >= 13 ? 'cristal_arcano' : nv >= 9 ? 'cristal_encantado' : nv >= 5 ? 'cristal_mistico' : null;
@@ -2532,6 +2536,7 @@
     if (n >= 6 && r < 0.35) p.objeto = 'libro_gra'; else if (r < 0.55) p.objeto = 'libro_peq'; else if (r < 0.8) p.objeto = n >= 5 ? 'acel_1h' : 'acel_15m';
     if (Math.random() < 0.25) p.pieza = rarezaAlAzar(n * 2);
     darCristales(n); // v7.14
+    if (n >= 6 && Math.random() < 0.06 * n) darAmatistaBotin(n >= 9 && Math.random() < 0.25 ? 'amatista_500' : 'amatista_100', 2400); // v7.97: botín raro de las bestias fuertes
     return p;
   }
   function modeloBestia(b) {
@@ -2895,6 +2900,7 @@
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { botin[r] = Math.floor(bm[r] * res.margen); });
     var premioCamp = { oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra, gemas: gemasCampamento(cm.nivel), objetos: { libro_gra: 1, acel_15m: 1 } };
     if (res.gano) { var crCm = darCristales(cm.nivel); if (crCm) premioCamp.objetos[crCm.k] = crCm.n; }
+    if (res.gano && cm.nivel >= 5 && Math.random() < Math.min(0.6, 0.05 * cm.nivel)) { var amC = cm.nivel >= 10 && Math.random() < 0.25 ? 'amatista_500' : 'amatista_100'; estado.mochila[amC] = (estado.mochila[amC] || 0) + 1; premioCamp.objetos[amC] = 1; } // v7.97: botín raro de campaña
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
@@ -6852,6 +6858,7 @@
         if (pr.piezas) items.push({ ico: '🐉', n: pr.piezas, nom: N('cofre_dragon') });
         if (pr.fichas) items.push({ ico: '🎟️', n: pr.fichas, nom: N('ficha_x1') });
         if (pr.cofres) items.push({ ico: '🧰', n: pr.cofres, nom: N('cofre_equipo') });
+        if (pr.amatista) items.push({ ico: '🔮', n: pr.amatista, nom: L('Amatista rúnica', 'Runic amethyst') });
       } else {
         items.push({ ico: '🪙', n: TT.CONFIG.consuelo.oro, nom: T('r_oro') });
         TT.CONFIG.consuelo.objetos.forEach(function (o) { items.push({ ico: (OBJETOS[o[0]] || {}).icono || '🎁', n: o[1], nom: N(o[0]) }); });
@@ -6865,6 +6872,7 @@
           if (pr.piezas) estado.mochila.cofre_dragon = (estado.mochila.cofre_dragon || 0) + pr.piezas; // v7.84: cofres de selección del Set Dragón Imperial
           if (pr.fichas) estado.mochila.ficha_x1 = (estado.mochila.ficha_x1 || 0) + pr.fichas;
           if (pr.cofres) estado.mochila.cofre_equipo = (estado.mochila.cofre_equipo || 0) + pr.cofres;
+          if (pr.amatista) sumarAmatista(pr.amatista);
           if (pr.extra === 'titulo') estado.tituloTemporada = id;
         } else {
           sumarRecurso('oro', TT.CONFIG.consuelo.oro);
@@ -8837,6 +8845,7 @@
     civil: [['obras'], ['cosecha', 'lenadores', 'canteros'], ['impuestos', 'carga', 'entreno'], ['cuarteles']]
   };
   function abrirArbolTalentos() {
+    cobrarAmatista();
     var aca = academiaLista(), tope = aca ? EDIFICIOS.academia.tope[aca.edificio.nivel - 1] : 0, inv = estado.investigando;
     var html = '<div class="cafe-tabs ve-tabs"><button data-accion="cafe-det" data-slot="' + (aca ? aca.i : '') + '">' + L('Detalles', 'Details') + '</button><button class="activo">' + L('Dominar', 'Master') + '</button></div>' +
       '<div class="al-sub ta-sub"><button data-accion="arbol-rama" data-r="militar" class="' + (ramaArbol === 'militar' ? 'activo' : '') + '">' + L('Militar', 'Military') + '</button><button data-accion="arbol-rama" data-r="civil" class="' + (ramaArbol === 'civil' ? 'activo' : '') + '">' + L('Civil', 'Civil') + '</button></div>';
@@ -8854,10 +8863,11 @@
         (lvn ? '<p>' + T('inv_ahora') + ': ' + textoTec(tn, lvn) + '</p>' : '') + (lvn < tn.max ? '<p>' + T('inv_siguiente') + ': ' + textoTec(tn, sig) + '</p>' : '<p>' + L('Has alcanzado el máximo nivel', 'Max level reached') + '</p>');
       if (lvn < tn.max) {
         if (aca && sig > tope) html += '<p class="nota aviso-rojo">' + T('inv_tope', { n: tope }) + '</p>';
-        else html += botonCosto(costoInvestigacion(sig), 'investigar', 'data-id="' + tn.id + '"' + (!aca || inv ? ' disabled' : ''), T('investigar') + ' ⏱' + fmtTiempo(tiempoInvestigacion(sig)) + ' ');
+        else html += botonInvestigar(sig, tn.id, !aca || inv, T('investigar') + ' ⏱' + fmtTiempo(tiempoInvestigacion(sig)) + ' ');
       }
       html += '</div>';
     } else html += '<p class="ta-ayuda">' + L('Toca un talento para ver qué da y aprenderlo.', 'Tap a talent to see what it gives and learn it.') + '</p>';
+    html += '<div class="inv-amatista saldo">🔮 ' + L('Amatista rúnica: ', 'Runic amethyst: ') + '<b>' + formatoNumero(estado.amatista || 0) + '</b> <small>' + L('(desde el nivel 11)', '(from level 11)') + '</small></div>';
     html += '<button class="ta-lista" data-accion="arbol-lista">' + L('Ver todas las investigaciones', 'See all research') + ' ›</button>';
     abrirPanel(N('academia') + (aca ? ' (' + L('Nvl.', 'Lvl.') + aca.edificio.nivel + ')' : ''), html, { tipo: 'investigacion', rama: ramaInv });
     ponerCafe();
@@ -8889,17 +8899,27 @@
         (lv < t.max ? '<span>' + T('inv_siguiente') + ': ' + textoTec(t, sig) + '</span>' : '<span>' + T('nivel_max') + '</span>') + '</div>';
       if (lv < t.max) {
         if (aca && sig > tope) html += '<span class="nota aviso-rojo" style="grid-area:boton">' + T('inv_tope', { n: tope }) + '</span>';
-        else html += botonCosto(costoInvestigacion(sig), 'investigar', 'data-id="' + t.id + '"' + (!aca || inv ? ' disabled' : ''), T('investigar') + ' ⏱' + fmtTiempo(tiempoInvestigacion(sig)) + ' · ' + T('poder_sube', { n: PODER_INVEST }) + ' ');
+        else html += botonInvestigar(sig, t.id, !aca || inv, T('investigar') + ' ⏱' + fmtTiempo(tiempoInvestigacion(sig)) + ' · ' + T('poder_sube', { n: PODER_INVEST }) + ' ');
       }
       html += '</div>';
     });
     abrirPanel(T('p_investigar'), html + '</div>', { tipo: 'investigacion', rama: ramaInv, lista: true });
   }
+  // v7.97: botón Investigar con la Amatista rúnica que pide el nivel (desde el 11); sin bastante, bloqueado y dice cuánto falta
+  function botonInvestigar(sig, id, bloq, txt) {
+    cobrarAmatista();
+    var am = amatistaInvestigacion(sig), tengo = estado.amatista || 0, falta = am && !estado.gemasInfinitas ? Math.max(0, am - tengo) : 0;
+    var lin = am ? '<div class="inv-amatista' + (falta ? ' falta' : '') + '">🔮 ' + L('Amatista rúnica: ', 'Runic amethyst: ') + '<b>' + formatoNumero(tengo) + ' / ' + formatoNumero(am) + '</b>' + (falta ? ' · ' + L('te faltan ', 'missing ') + '<b>' + formatoNumero(falta) + '</b>' : ' ✅') + '</div>' : '';
+    return lin + botonCosto(costoInvestigacion(sig), 'investigar', 'data-id="' + id + '"' + (bloq || falta ? ' disabled' : ''), falta ? '🔒 ' + L('Falta Amatista', 'Need Amethyst') + ' ' : txt);
+  }
   function empezarInvestigacion(id) {
+    cobrarAmatista();
     if (estado.investigando) { consejoTemporal(T('inv_ocupada')); sonar('error'); return; }
     if (!academiaLista()) { consejoTemporal(T('inv_necesitas')); sonar('error'); return; }
-    var sig = (estado.invest[id] || 0) + 1;
+    var sig = (estado.invest[id] || 0) + 1, am = amatistaInvestigacion(sig);
+    if (am && (estado.amatista || 0) < am && !estado.gemasInfinitas) { consejoTemporal('🔮 ' + L('Te faltan ' + formatoNumero(am - (estado.amatista || 0)) + ' de Amatista rúnica. Se gana en torneos, cofres de mejora III/IV, la Ruleta y combates de nivel alto.', 'You need ' + formatoNumero(am - (estado.amatista || 0)) + ' more Runic amethyst. Win it in tournaments, upgrade chests III/IV, the Wheel and high-level battles.')); sonar('error'); return; }
     if (!pagar(costoInvestigacion(sig))) return;
+    if (am && !estado.gemasInfinitas) estado.amatista -= am; // v7.97
     estado.investigando = { id: id, nivel: sig, t: 0, total: tiempoInvestigacion(sig) };
     sonar('martillo');
     guardar(true);
@@ -10378,6 +10398,7 @@
     return '<div class="iv-fila"><span class="iv-ico" title="' + escaparHTML(info || '') + '"' + (k && OBJETOS[k] ? ' data-accion="obj-info" data-k="' + k + '"' : '') + '>' + icono + '<i class="iv-i">i</i></span><span class="iv-dat"><b>' + nombre + '</b><small>' + sub + '</small></span>' + boton + '</div>';
   }
   function abrirPanelMochila(tab) {
+    cobrarAmatista();
     if (tab === 'tienda' || tab === 'mios') modoInv = tab; else if (tab && SUBCAT_INV.indexOf(tab) >= 0) subInv = tab; else if (tab === 'ingresos') subInv = 'cofre';
     var v = vistos();
     // al entrar al inventario todo cuenta como visto (el número de abajo se borra)
@@ -10394,8 +10415,8 @@
       });
       if (!filas) filas = '<p class="iv-vacio">' + (subInv === 'equipo' || subInv === 'heroe' ? L('El equipo y los libros se ganan jugando: oleadas, campamentos, bestias, torneos y cofres.', 'Gear and books are earned by playing: waves, camps, beasts, tournaments and chests.') : L('No hay nada para comprar aquí por ahora.', 'Nothing to buy here for now.')) + '</p>';
     } else {
-      if (subInv === 'recursos') [['oro', 'monedas', '🪙'], ['comida', 'comida', '🍞'], ['madera', 'madera', '🪵'], ['piedra', 'piedra', '🪨'], ['hierro', 'hierro', '🔩'], ['gemas', 'gemas', '💎']].forEach(function (r) {
-        if (estado[r[1]] === undefined) return;
+      if (subInv === 'recursos') [['oro', 'monedas', '🪙'], ['comida', 'comida', '🍞'], ['madera', 'madera', '🪵'], ['piedra', 'piedra', '🪨'], ['hierro', 'hierro', '🔩'], ['gemas', 'gemas', '💎'], ['amatista', 'amatista', '🔮']].forEach(function (r) {
+        if (estado[r[1]] === undefined && r[0] !== 'amatista') return;
         filas += filaInv(r[2], T('r_' + r[0]) === 'r_' + r[0] ? r[0] : T('r_' + r[0]), L('Tienes: ', 'Owned: ') + formatoNumero(estado[r[1]] || 0), '', '');
       });
       if (subInv === 'cofre' && diarioDisponible()) filas += '<div class="iv-diario">' + htmlDiario() + '</div>';
@@ -10590,6 +10611,8 @@
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
       if (Math.random() < 0.12) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; ganados.push({ ico: OBJETOS.vip_100.icono, nom: N('vip_100'), cat: 'reliquia', extra: true }); } // v7.79
       if (Math.random() < 0.1) { estado.mochila.carreta_sum = (estado.mochila.carreta_sum || 0) + 1; ganados.push({ ico: OBJETOS.carreta_sum.icono, nom: N('carreta_sum'), cat: 'tropas', extra: true }); } // v7.86
+      var rAm = Math.random(), kAm = rAm < 0.02 ? 'amatista_500' : rAm < 0.1 ? 'amatista_100' : null; // v7.97: Amatista rúnica en la Ruleta Élite
+      if (kAm) { estado.mochila[kAm] = (estado.mochila[kAm] || 0) + 1; ganados.push({ ico: OBJETOS[kAm].icono, nom: N(kAm), cat: 'recursos', gordo: kAm === 'amatista_500', extra: true }); }
       if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true, extra: true }); }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
       else r.sinLlave++;
@@ -10757,6 +10780,7 @@
     else if (e === 'carreta') { sumin().n += o.n; msg = '🐴 +' + o.n + ' ' + L('Carretas de Suministro', 'Supply Wagons') + ' · ' + L('libres: ', 'free: ') + carretasLibres(); }
     else if (e === 'vip') { vipSumar(o.n); msg = '👑 VIP +' + o.n + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
     else if (e === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n; msg = '🪙 +' + o.n + ' ' + L('fichas', 'tokens'); }
+    else if (e === 'amatista') { sumarAmatista(o.n); msg = '🔮 +' + o.n + ' ' + L('Amatista rúnica', 'Runic amethyst'); }
     else if (e === 'expHeroe') { var h = liderActual() || Object.keys(estado.heroes || {})[0]; if (!h) { consejoTemporal(L('Todavía no tienes héroes.', 'You have no heroes yet.')); sonar('error'); return; } darExp(h, o.n); msg = '⚡ ' + NH(h) + ' +' + o.n + ' EXP'; }
     else if (e === 'abrirCofre') { gastar1(k); estado.mochila[o.cofre] = (estado.mochila[o.cofre] || 0) + 1; guardar(true); usarObjeto(o.cofre, true); return; }
     else if (e === 'talentos') {
@@ -10817,7 +10841,7 @@
       consejoTemporal(T('acelerador_usado'));
     } else if (o.da) { premio = o.da; }
     else if (o.paquete) { estado.mochila[k]--; Object.keys(o.paquete).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.paquete[q]; }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ objetos: o.paquete })); return; }
-    else if (o.mejora) { estado.mochila[k]--; var pzs = o.mejora.map(function (r) { return darPieza(null, r); }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: pzs })); return; }
+    else if (o.mejora) { estado.mochila[k]--; var pzs = o.mejora.map(function (r) { return darPieza(null, r); }); Object.keys(o.extra || {}).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.extra[q]; }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: pzs, objetos: o.extra })); return; }
     else if (o.tropas) { var nt = 0; Object.keys(o.tropas).forEach(function (t) { for (var q = 0; q < o.tropas[t]; q++) { if (tropasOcupadas() >= capacidad()) break; crearTropa(t, puertaCuartel()); nt++; } }); if (!nt) { consejoTemporal(T('sin_espacio')); sonar('error'); return; } estado.mochila[k]--; sonar('cuerno'); consejoTemporal(L('¡Llegaron ' + nt + ' reclutas!', nt + ' recruits arrived!')); actualizarHUD(); guardar(true); reabrirPanel(); return; }
     else if (o.equipo) { estado.mochila[k]--; var pz1 = darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: [pz1] })); return; }
     else if (o.cofre) {
@@ -10866,6 +10890,7 @@
       if (o.da) Object.keys(o.da).forEach(function (r) { tot[r] = (tot[r] || 0) + o.da[r]; });
       if (o.paquete) Object.keys(o.paquete).forEach(function (q) { objs[q] = (objs[q] || 0) + o.paquete[q]; });
       if (o.mejora) o.mejora.forEach(function (r) { pzs.push(darPieza(null, r)); });
+      if (o.extra) Object.keys(o.extra).forEach(function (q) { objs[q] = (objs[q] || 0) + o.extra[q]; }); // v7.97
       if (o.equipo) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'));
       if (TROPAS_COFRE[k]) { var tq = TROPAS_COFRE[k][Math.floor(Math.random() * TROPAS_COFRE[k].length)]; tot.tropas = tot.tropas || {}; tot.tropas[tq[0]] = (tot.tropas[tq[0]] || 0) + tq[1]; }
       (EXTRA_COFRE[k] || []).forEach(function (e) { if (Math.random() >= e[2]) return; if (e[0] === 'pieza') pzs.push(darPieza(null, e[1])); else objs[e[0]] = (objs[e[0]] || 0) + e[1]; });
@@ -10892,6 +10917,7 @@
     if (o.cofre) Object.keys(o.cofre).forEach(function (r) { l.push([r === 'gemas' ? '💎' : ICONO_RECURSO[r], r === 'gemas' ? L('Gemas', 'Gems') : T('r_' + r), rangoTxt(o.cofre[r])]); });
     if (o.paquete) Object.keys(o.paquete).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.paquete[q]]); });
     if (o.mejora) o.mejora.forEach(function (r) { l.push(['🧰', L('Pieza de equipo ', 'Equipment piece ') + T('eq_r_' + r), '×1']); });
+    if (o.extra) Object.keys(o.extra).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.extra[q]]); });
     if (o.equipo) l.push(['🧰', L('Pieza de equipo rara (20% legendaria)', 'Rare equipment piece (20% legendary)'), '×1']);
     if (TROPAS_COFRE[k]) l.push(['⚔️', L('Tropas: ', 'Troops: ') + TROPAS_COFRE[k].map(function (x) { return x[1] + ' ' + N(x[0]); }).join(L(' o ', ' or ')), L('siempre una', 'always one')]);
     (EXTRA_COFRE[k] || []).forEach(function (e) { var pr = Math.round(e[2] * 100) + '%'; if (e[0] === 'pieza') l.push([EQ.pechera.icono, L('Armadura o arma ', 'Armor or weapon ') + nomRarezaEq(e[1]), L('a veces ', 'sometimes ') + pr]); else if (OBJETOS[e[0]]) l.push([OBJETOS[e[0]].icono, N(e[0]) + (e[1] > 1 ? ' ×' + e[1] : ''), L('a veces ', 'sometimes ') + pr]); });
@@ -11837,6 +11863,7 @@
   //  HUD Y CONSEJOS
   // ------------------------------------------------------------------
   function actualizarHUD() {
+    cobrarAmatista(); // v7.97
     try { pintarSelectorVillas(); } catch (e) {} // v7.82
     $('monedas').textContent = estado.oroInfinito ? '∞' : corto(estado.monedas);
     ['comida', 'madera', 'piedra', 'hierro'].forEach(function (r) { if ($(r)) $(r).textContent = estado.oroInfinito ? '∞' : corto(estado[r] || 0); });
@@ -12524,7 +12551,7 @@
       // v6.90 ARREGLO: todo lo demás que estaba guardado vuelve tal cual (fichas, hierro, regalo diario, promos, correo…).
       // Antes se perdía al recargar y el «Regalo del Rey» y las fichas del día se podían cobrar otra vez.
       Object.keys(g).forEach(function (k) { if (estado[k] === undefined && ['gemasInfinitas', 'oroInfinito', 'dueno', 'idioma', 'sonido'].indexOf(k) < 0) estado[k] = g[k]; });
-      ['fichas', 'fichaDia', 'promo', 'promoRegalo', 'hierro', 'explora', 'correo', 'impuesto'].forEach(function (k) { if (g[k] !== undefined) estado[k] = g[k]; });
+      ['fichas', 'amatista', 'fichaDia', 'promo', 'promoRegalo', 'hierro', 'explora', 'correo', 'impuesto'].forEach(function (k) { if (g[k] !== undefined) estado[k] = g[k]; });
       var eds = (g.edificios || []).slice(), obs = (g.obras || []).slice();
       if (!g.mapa2) {
         // partidas de antes del mapa en cuadrícula: la mina vieja daba piedra (ahora es la cantera)
@@ -13168,7 +13195,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

@@ -2351,3 +2351,9 @@ body.en-batalla #villa-volver { display: none !important; }
 .cola-ordenes .co-orden > button { flex: none; }
 /* v7.96: altavoz rápido en la barra de arriba */
 #btn-mute-rapido { align-self: flex-end; margin: 2px 0; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #6b4206; background: rgba(30,18,8,.72); color: #fff; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; box-shadow: 0 2px 4px #0008; }
+/* v7.97: Amatista rúnica en la Academia */
+.inv-amatista { margin: 6px 0 4px; padding: 5px 8px; border-radius: 8px; font-size: 13px; background: rgba(140,70,200,.14); border: 1px solid rgba(150,80,210,.55); color: inherit; }
+.inv-amatista b { color: #b46ef0; }
+.inv-amatista.falta { background: rgba(200,40,40,.12); border-color: rgba(200,50,50,.6); }
+.inv-amatista.falta b { color: #e2483d; }
+.inv-amatista.saldo { text-align: center; }

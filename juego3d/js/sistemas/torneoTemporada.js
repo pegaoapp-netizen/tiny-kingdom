@@ -17,17 +17,17 @@
     hitos: [
       { puntos: 100000, premio: [['acel_1h', 5]] },
       { puntos: 300000, premio: [['ficha_x5', 1], ['carretas_x10', 1]] },
-      { puntos: 600000, premio: [['estrella_mar', 15]] },
+      { puntos: 600000, premio: [['estrella_mar', 15], ['amatista_100', 1]] },
       { puntos: 1000000, premio: [['pergamino', 10]] },
-      { puntos: 1500000, premio: [['ficha_x5', 2], ['acel_8h', 1]] },
-      { puntos: 2500000, premio: [['cofre_equipo', 1]] }
+      { puntos: 1500000, premio: [['ficha_x5', 2], ['acel_8h', 1], ['amatista_100', 2]] },
+      { puntos: 2500000, premio: [['cofre_equipo', 1], ['amatista_500', 1]] } // v7.97: Amatista rúnica
     ],
     // premios del ranking (las piezas del Set solo si cumple el mínimo). Sin gemas: en Tiny Kingdom las gemas solo se compran
     ranking: [
-      { hasta: 1, piezas: 6, oro: 1000000, extra: 'titulo' },
-      { hasta: 3, piezas: 4, oro: 500000, fichas: 10 },
-      { hasta: 10, piezas: 2, oro: 250000 },
-      { hasta: 25, piezas: 1, cofres: 2 }
+      { hasta: 1, piezas: 6, oro: 1000000, extra: 'titulo', amatista: 2000 },
+      { hasta: 3, piezas: 4, oro: 500000, fichas: 10, amatista: 1000 },
+      { hasta: 10, piezas: 2, oro: 250000, amatista: 500 },
+      { hasta: 25, piezas: 1, cofres: 2, amatista: 200 }
     ],
     // consuelo para los del top 25 que no llegan al mínimo
     consuelo: { oro: 100000, objetos: [['acel_1h', 5]] }
