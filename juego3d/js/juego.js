@@ -2757,7 +2757,7 @@
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
-    if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
+    if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); darBlasones(3 + 2 * cm.nivel); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
@@ -2778,7 +2778,7 @@
     escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
     nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
-    if (res.gano) { darCristales(lv); sumarXP(10 * lv); sumarPuntosAlianza(25); sumarLogro('campamentos'); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
+    if (res.gano) { darCristales(lv); sumarXP(10 * lv); sumarPuntosAlianza(25); sumarLogro('campamentos'); darBlasones(3 + 2 * lv); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdVilla = estado.cdVilla || {}; estado.cdVilla[a.uid] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
@@ -5907,7 +5907,9 @@
     mouse.set(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1);
     rayo.setFromCamera(mouse, camara);
     // v7.35: el castillo va primero: en una oleada las tropas se juntan delante y tapaban el toque (abría la ficha de un soldado)
-    if (!modoColocar && rayo.intersectObjects(murallaModelo ? [castillo, murallaModelo] : [castillo], true).some(function (h) { var o = h.object; while (o && !o.userData.castillo) o = o.parent; return o && o !== murallaModelo; })) { sonar('click'); abrirPanelCastillo(); return; }
+    // v7.63: el castillo solo gana el toque si está DELANTE del edificio tocado (antes, un edificio con el castillo detrás abría el Castillo)
+    var dSlotT = (function () { var hs = rayo.intersectObjects(slots.filter(function (q) { return q.edificio || q.obra; }).map(function (q) { return q.grupo; }), true); return hs.length ? hs[0].distance : Infinity; })();
+    if (!modoColocar && rayo.intersectObjects(murallaModelo ? [castillo, murallaModelo] : [castillo], true).some(function (h) { var o = h.object; while (o && !o.userData.castillo) o = o.parent; return o && o !== murallaModelo && !h.object.isSprite && h.distance <= dSlotT; })) { sonar('click'); abrirPanelCastillo(); return; }
     // primero miramos si tocó una tropa o un enemigo (se ven más arriba que el suelo)
     if (!modoColocar) {
       var gente = tropasFuera().concat(enemigos);
@@ -5925,6 +5927,7 @@
       while (o && o.userData.slot === undefined && !o.userData.castillo && o.userData.barricada === undefined) o = o.parent;
       if (!o) continue;
       if (o.userData.barricada !== undefined) { tocarBarricada(o.userData.barricada); return; }
+      if (o.userData.castillo && hits[i].object.isSprite) continue; // v7.63: los letreros y brillos flotantes del castillo no tapan a los edificios de al lado
       if (o.userData.castillo) { if (modoColocar) continue; sonar('click'); abrirPanelCastillo(); return; } // v6.82: como en los grandes juegos de castillos, abre directo su ventana con pestañas
       tocarSlot(o.userData.slot);
       return;
@@ -6982,8 +6985,8 @@
         html += tablaVentana(costoE, requisitosObra(tipo, nivel + 1).concat(filasTrabajos('edificio', nivel + 1)));
       } else html += '<div class="ve-max">' + L('Has alcanzado el máximo nivel', 'You have reached the max level') + '</div>'; // v6.64: como las fotos del dueño
     }
-    // v6.64: dos botones rojos lado a lado: Demoler (quita el edificio) y Derribar (le baja un nivel)
-    if (s.edificio && !oleadaActiva) html += '<div class="ve-rojos"><button class="ve-rojo" data-accion="demoler-panel" data-slot="' + i + '">' + L('Demoler', 'Demolish') + '</button><button class="ve-rojo" data-accion="derribar-panel" data-slot="' + i + '">' + L('Derribar', 'Downgrade') + '</button></div>';
+    // v7.63: un solo botón rojo, Demoler (antes salían Demoler y Derribar, que parecían iguales)
+    if (s.edificio && !oleadaActiva) html += '<div class="ve-rojos uno"><button class="ve-rojo" data-accion="demoler-panel" data-slot="' + i + '">' + L('Demoler', 'Demolish') + '</button></div>';
     html += '</div>';
     abrirPanel(N(tipo) + ' (' + L('Nvl.', 'Lvl.') + nivel + ')', pestanasVentana(i, tipo) + html, { tipo: 'edificio', slot: i });
     ponerCafe();
@@ -7009,13 +7012,14 @@
     tabs = tabs.replace(/<button class="" data-accion="reunion-pest" data-p="(\w+)" data-act="1"/, '<button class="activo" data-accion="reunion-pest" data-p="$1"');
     var h = '<div class="ru-caja">';
     if (p === 'tropas') {
-      var casa = {}, pod = {}, heridos = totalHeridos();
-      tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; casa[u.tipo] = (casa[u.tipo] || 0) + 1; pod[u.tipo] = (pod[u.tipo] || 0) + valorTropa(u); });
-      var ref = tropas.filter(function (u) { return u.refuerzo; }).length;
-      h += '<table class="ru-tabla"><tr><th>' + L('Tropa', 'Troop') + '</th><th>' + L('En casa', 'Home') + '</th><th>' + L('Poder', 'Power') + '</th></tr>' + Object.keys(TROPAS).filter(function (k) { return casa[k]; }).map(function (k) {
-        return '<tr><td>' + TROPAS[k].icono + ' ' + N(k) + '</td><td>' + formatoNumero(casa[k]) + '</td><td>' + formatoNumero(Math.round(pod[k] || 0)) + '</td></tr>';
-      }).join('') + (Object.keys(casa).length ? '' : '<tr><td colspan="3">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</td></tr>') + '</table>' +
-        '<div class="ru-res"><span>🛡️ ' + L('Refuerzos de tu alianza: ', 'Alliance reinforcements: ') + '<b>' + ref + '</b></span><span>💚 ' + L('Heridos: ', 'Wounded: ') + '<b>' + heridos + '</b></span></div>';
+      // v7.63: MIS TROPAS como en la referencia: tarjetas grandes en 2 columnas (dibujo pintado, nombre y cantidad) y Marchar fijo abajo
+      var heridos = totalHeridos(), ref = tropas.filter(function (u) { return u.refuerzo; }).length;
+      var tiposCasa = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; });
+      h += tiposCasa.length ? '<div class="ru-rejilla">' + tiposCasa.map(function (k) {
+        return '<div class="ru-tarjeta"><div class="ru-dibujo">' + fotoHTML(k, '<span class="ru-emoji">' + TROPAS[k].icono + '</span>') + '</div><b class="ru-nom">' + N(k) + '</b><span class="ru-cant">' + formatoNumero(cuentaTipo(k)) + '</span></div>';
+      }).join('') + '</div>' : '<p class="iv-vacio">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</p>';
+      h += '<div class="ru-res"><span>🛡️ ' + L('Refuerzos de tu alianza: ', 'Alliance reinforcements: ') + '<b>' + ref + '</b></span><span>💚 ' + L('Heridos: ', 'Wounded: ') + '<b>' + heridos + '</b></span></div>';
+      h += '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (tiposCasa.length ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
     } else {
       var ahora = Date.now(), l = [];
       marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Volviendo', 'Returning') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
@@ -7028,6 +7032,94 @@
     abrirPanel(N('relevo') + ' (' + L('Nvl.', 'Lvl.') + s.edificio.nivel + ')', tabs + h, { tipo: 'edificio', slot: i, reunion: p });
     ponerCafe();
   }
+  // v7.63: MARCHAR desde Mis tropas: se eligen las coordenadas y se abre la ventana de Marcha con todas las tropas de casa
+  function marcharDesdeReunion() {
+    var tipos = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; });
+    if (!tipos.length) { consejoTemporal(T('at_sin_tropas')); sonar('error'); return; }
+    var f = estado.formacion || {}; f.tropas = {}; tipos.forEach(function (k) { f.tropas[k] = cuentaTipo(k); }); estado.formacion = f;
+    var v = $('rm-caja'); if (v) v.remove();
+    var yo = celdaDe(miLugar().x, miLugar().y), d = document.createElement('div'); d.id = 'rm-caja';
+    d.innerHTML = '<div class="rm-ventana"><div class="mc-cab"><b>' + L('Marchar', 'March') + '</b><small>' + L('¿A dónde van tus tropas?', 'Where do your troops go?') + '</small><button class="mc-x" data-accion="rm-cerrar">✕</button></div>' +
+      '<p class="rm-txt">' + L('Escribe las coordenadas del lugar. Ahí se abre la Marcha con tus tropas de casa.', 'Type the coordinates of the place. The March opens there with your troops at home.') + '</p>' +
+      '<div class="rm-xy"><label>X <input id="rm-x" type="number" inputmode="numeric" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + yo.x + '"></label><label>Y <input id="rm-y" type="number" inputmode="numeric" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + yo.y + '"></label></div>' +
+      '<button class="ru-marchar" data-accion="rm-ir">' + L('Ir y marchar', 'Go and march') + '</button></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) { var bt = ev.target.closest('[data-accion]'); if (!bt) { if (ev.target === d) d.remove(); return; } ev.stopPropagation(); var ac = bt.getAttribute('data-accion'); if (ac === 'rm-cerrar') { sonar('click'); d.remove(); } else if (ac === 'rm-ir') { sonar('click'); irAMarcharA(+$('rm-x').value, +$('rm-y').value); } });
+  }
+  function irAMarcharA(x, y) {
+    var d = $('rm-caja'); if (d) d.remove();
+    cerrarPanel();
+    if (!enMundo) irAlMundo();
+    var intentos = 0;
+    (function probar() {
+      if (!M3) { if (++intentos < 30) setTimeout(probar, 200); return; }
+      if (intentos === 0 || !probar.ido) { probar.ido = true; if (irACoordenadas(x, y) === false) return; }
+      var sel = '#camp-atacar,#btn-atacar,#bestia-atacar,#cas-conquistar,#fc-atacar,#libre-mover', bt = document.querySelector('#mundo-info ' + sel.split(',').join(',#mundo-info ')) || document.querySelector('#fc-atacar');
+      if (bt && !bt.disabled) { bt.click(); return; }
+      if (++intentos < 15) { setTimeout(probar, 250); return; }
+      consejoTemporal(L('Aquí no hay a dónde marchar. Toca un lugar del mapa y elige Atacar.', 'Nowhere to march here. Tap a place on the map and choose Attack.'));
+    })();
+  }
+  // v7.63: TORRE DEL HOMENAJE: guarda los blasones que se ganan al vencer campamentos y aldeas, y los canjea por objetos
+  var TORRE_ARTEFACTOS = {
+    equipo: { es: 'Equipo', en: 'Gear', l: [['cofre_equipo', 40], ['coraza_acero', 60], ['cofre_mejora1', 80], ['cofre_mejora2', 160]] },
+    heroe: { es: 'Héroe', en: 'Hero', l: [['libro_peq', 15], ['energia_heroe', 30], ['libro_gra', 45], ['elevacion_sol', 120]] },
+    ciudad: { es: 'Ciudad', en: 'City', l: [['constructor_exp', 50], ['escudo_8h', 70], ['portal_azar', 90], ['cambio_nombre', 100]] },
+    obras: { es: 'Obras', en: 'Works', l: [['acel_1h', 20], ['cosecha_ya', 40], ['acel_8h', 90], ['acel_24h', 220]] }
+  };
+  var TORRE_PROMOS = {
+    misiones: { es: 'Misiones', en: 'Quests', l: [['pergamino', 25], ['reclutas', 60]] },
+    reliquias: { es: 'Reliquias', en: 'Relics', l: [['cristal_mistico', 35], ['cristal_encantado', 70]] },
+    heroe: { es: 'Héroe', en: 'Hero', l: [['llave_bronce', 50], ['llave_plata', 110]] },
+    joyas: { es: 'Joyas', en: 'Jewels', l: [['perla_rey', 80], ['estrella_rey', 150]] },
+    varios: { es: 'Varios', en: 'Misc', l: [['ficha_x5', 40], ['megafono', 30]] },
+    evento: { es: 'Evento', en: 'Event', l: [['cuerno_guerra', 60], ['cofre_tesoro', 120]] }
+  };
+  var torreSub = { artefactos: 'equipo', promos: 'misiones' };
+  function promosTorreN() { var n = 0; for (var k in TORRE_PROMOS) n += TORRE_PROMOS[k].l.filter(function (q) { return OBJETOS[q[0]]; }).length; return n; }
+  function blasones() { return estado.blasones || 0; }
+  function darBlasones(n) { if (!(n > 0)) return; estado.blasones = blasones() + n; consejoTemporal('🛡️ +' + n + ' ' + L('blasones (guárdalos en la Torre del homenaje)', 'crests (kept in the Keep)')); }
+  function finPromosTorre() { return ((semanaActual() + 1) * 7 - 3) * 86400000; }
+  function abrirTorre(i, p) {
+    var s = slots[i]; if (!s || !s.edificio) return;
+    var tabs = pestanasVentana(i, 'torre').replace('class="activo" data-accion="cafe-det"', 'class="" data-accion="cafe-det"').replace('class="" data-accion="torre-pest" data-p="' + p + '"', 'class="activo" data-accion="torre-pest" data-p="' + p + '"');
+    var tabla = p === 'promos' ? TORRE_PROMOS : TORRE_ARTEFACTOS, sub = torreSub[p] in tabla ? torreSub[p] : Object.keys(tabla)[0];
+    var h = '<div class="tr-caja"><div class="tr-blasones"><span class="tr-escudo">🛡️</span>' + L('Tus blasones: ', 'Your crests: ') + '<b>' + formatoNumero(blasones()) + '</b><small>' + L('Se ganan venciendo campamentos y aldeas bárbaras', 'Earned by beating camps and barbarian villages') + '</small></div>';
+    h += '<div class="tr-subs">' + Object.keys(tabla).map(function (k) { return '<button class="' + (k === sub ? 'activo' : '') + '" data-accion="torre-sub" data-p="' + p + '" data-s="' + k + '" data-slot="' + i + '">' + (estado.idioma === 'en' ? tabla[k].en : tabla[k].es) + '</button>'; }).join('') + '</div>';
+    var fin = (finPromosTorre() - Date.now()) / 1000;
+    h += '<div class="tr-lista">' + tabla[sub].l.filter(function (q) { return OBJETOS[q[0]]; }).map(function (q) {
+      var o = OBJETOS[q[0]], ok = blasones() >= q[1];
+      return '<div class="tr-obj"><span class="tr-ico">' + (o.icono || '🎁') + '</span><div class="tr-dat"><b>' + N(q[0]) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(estado.mochila[q[0]] || 0) + (p === 'promos' ? ' · ⏱ ' + L('Fin: ', 'Ends: ') + fmtTiempo(fin) : '') + '</small><span class="tr-costo">🛡️ ' + formatoNumero(q[1]) + '</span></div>' +
+        '<button class="comprar ' + (ok ? 'verde' : '') + ' tr-aceptar" data-accion="torre-canje" data-p="' + p + '" data-id="' + q[0] + '" data-slot="' + i + '"' + (ok ? '' : ' disabled') + '>' + L('Aceptar', 'Accept') + '</button></div>';
+    }).join('') + '</div></div>';
+    abrirPanel(N('torre') + ' (' + L('Nvl.', 'Lvl.') + s.edificio.nivel + ')', tabs + h, { tipo: 'edificio', slot: i, torre: p });
+    ponerCafe();
+  }
+  function canjeTorre(i, p, id) {
+    var tabla = p === 'promos' ? TORRE_PROMOS : TORRE_ARTEFACTOS, q = null;
+    for (var k in tabla) tabla[k].l.forEach(function (x) { if (x[0] === id) q = x; });
+    if (!q || !OBJETOS[id]) return;
+    if (blasones() < q[1]) { consejoTemporal(L('Te faltan blasones: vence campamentos y aldeas bárbaras.', 'Not enough crests: beat camps and barbarian villages.')); sonar('error'); return; }
+    estado.blasones = blasones() - q[1];
+    estado.mochila[id] = (estado.mochila[id] || 0) + 1;
+    sonar('moneda'); consejoTemporal('🛡️ −' + q[1] + ' · +1 ' + N(id));
+    guardar(true); abrirTorre(i, p);
+  }
+  // v7.63: EMBAJADA: los refuerzos que te mandaron tus aliados, con su dibujo, nombre, cantidad y de quién son
+  function abrirEmbajada(i) {
+    var s = slots[i]; if (!s || !s.edificio) return;
+    var tabs = pestanasVentana(i, 'embajada').replace('class="activo" data-accion="cafe-det"', 'class="" data-accion="cafe-det"').replace('class="" data-accion="emb-pest"', 'class="activo" data-accion="emb-pest"');
+    var grupos = {};
+    tropas.forEach(function (u) { if (!u.refuerzo) return; var k = u.refuerzo + '|' + u.tipo; (grupos[k] = grupos[k] || { tipo: u.tipo, de: u.deNombre || '?', n: 0 }).n++; });
+    var l = Object.keys(grupos).map(function (k) { return grupos[k]; }).sort(function (a, b) { return a.de < b.de ? -1 : a.de > b.de ? 1 : b.n - a.n; });
+    var h = '<div class="ru-caja">';
+    h += l.length ? '<p class="ru-nota">' + L('Estas tropas defienden tu ciudad si te atacan.', 'These troops defend your city if you are attacked.') + '</p><div class="ru-rejilla">' + l.map(function (g) {
+      return '<div class="ru-tarjeta"><div class="ru-dibujo">' + fotoHTML(g.tipo, '<span class="ru-emoji">' + (TROPAS[g.tipo] ? TROPAS[g.tipo].icono : '🛡️') + '</span>') + '</div><b class="ru-nom">' + N(g.tipo) + '</b><span class="ru-cant">' + formatoNumero(g.n) + '</span><small class="ru-de">' + L('De ', 'From ') + escaparHTML(g.de) + '</small></div>';
+    }).join('') + '</div>' : '<p class="iv-vacio emb-vacio">' + L('No hay aliados acampados', 'No encamped allies') + '</p>';
+    h += '</div>';
+    abrirPanel(N('embajada') + ' (' + L('Nvl.', 'Lvl.') + s.edificio.nivel + ')', tabs + h, { tipo: 'edificio', slot: i, embajada: 1 });
+    ponerCafe();
+  }
   function pestanasVentana(i, tipo) {
     var t = [['cafe-det', L('Detalles', 'Details'), true]];
     if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
@@ -7036,6 +7128,8 @@
     else if (tipo === 'mercado') t.push(['abrir-mercado', T('mb_comerciar')]);
     else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
+    else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + ' <span class="mail-n">' + promosTorreN() + '</span>']); }
+    else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
     return '<div class="cafe-tabs ve-tabs">' + t.map(function (q) { return '<button class="' + (q[2] ? 'activo' : '') + '" data-accion="' + q[0] + '" data-slot="' + i + '">' + q[1] + '</button>'; }).join('') + '</div>';
   }
   // ---------- VENTANA CAFÉ (v6.33): foto grande, descripción, siguiente nivel, Mejorando... con reloj, botones y tabla ----------
@@ -8011,7 +8105,9 @@
     torresPuerta.forEach(function () { d += (TORRES_PUERTA.dano + estado.muralla * TORRES_PUERTA.danoNivel) * 6; });
     slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'torre') d += EDIFICIOS.torre.dano[s.edificio.nivel - 1] * (1 + bono('flechas')) * 6; });
     barricadas.forEach(function (b) { if (b.nivel) d += b.max / 10; });
+    // v7.63: los aliados acampados en la Embajada siempre pelean en tu defensa (aunque tus tropas no defiendan)
     if (estado.tropasDefienden !== false) d += fuerzaEjercito() * 0.8;
+    else d += tropas.reduce(function (a, u) { return a + (u.refuerzo ? valorTropa(u) : 0); }, 0) * 0.8;
     return Math.round(d * (1 + vigiaBono() + 0.04 * tecAl('defensa') + (buffActivo('def') ? 0.2 : 0)));
   }
   function botinMaximo(nivel) {
@@ -10534,6 +10630,11 @@
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'reunion-marchar') { sonar('click'); marcharDesdeReunion(); }
+    else if (a === 'torre-pest') { sonar('click'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'torre-sub') { sonar('click'); torreSub[b.getAttribute('data-p')] = b.getAttribute('data-s'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'torre-canje') canjeTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p'), b.getAttribute('data-id'));
+    else if (a === 'emb-pest') { sonar('click'); abrirEmbajada(+b.getAttribute('data-slot')); }
     else if (a === 'reunion-ver') { sonar('click'); var rx = +b.getAttribute('data-x'), ry = +b.getAttribute('data-y'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(rx, ry)); elegirCelda(rx, ry); } }, 400); }
     else if (a === 'al-tab' && b.getAttribute('data-t') === 'ranking') { sonar('click'); abrirPanelRanking('liquidacion'); }
     else if (a === 'al-tab') { sonar('click'); alTab = b.getAttribute('data-t'); alSeccion = ''; pintarHubAlianza(); }

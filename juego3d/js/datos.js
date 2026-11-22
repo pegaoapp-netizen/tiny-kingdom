@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.62';
+var VERSION_JUEGO = '7.63';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -335,7 +335,7 @@ var NOMBRES = {
   vigia:      { es: 'Torre de vigilancia', en: 'Watchtower',
                 des_es: 'Vigila el horizonte: muestra la fuerza de quien te ataca y da defensa extra al reino.', des_en: 'Watches the horizon: shows the strength of attackers and gives the kingdom extra defense.' },
   embajada:   { es: 'Embajada',     en: 'Embassy',
-                des_es: 'La casa de tu ciudad ante las demás. Solo puede haber una.', des_en: 'Your city\'s house before the others. There can be only one.' },
+                des_es: 'Te permite crear una alianza o unirte a una, y alberga los refuerzos que te mandan tus aliados: esas tropas pelean en tu defensa si te atacan. Solo puede haber una.', des_en: 'Lets you create or join an alliance and houses the reinforcements your allies send you: those troops fight in your defense if you are attacked. There can be only one.' },
   relevo:     { es: 'Punto de reunión', en: 'Rally point',
                 des_es: 'Aquí se reúnen tus tropas antes de marchar y aquí ves tus marchas. Solo puede haber uno.', des_en: 'Your troops gather here before marching, and here you see your marches. There can be only one.' },
   cabana:     { es: 'Cabaña',       en: 'Cottage',
@@ -357,7 +357,7 @@ var NOMBRES = {
   cuartel:    { es: 'Cuartel',      en: 'Barracks',
                 des_es: 'Permite entrenar caballeros.', des_en: 'Lets you train knights.' },
   torre:      { es: 'Torre del homenaje', en: 'Keep',
-                des_es: 'Dispara flechas a los enemigos.', des_en: 'Shoots arrows at enemies.' },
+                des_es: 'Custodia los blasones que ganas al vencer campamentos y aldeas bárbaras. Con los blasones consigues objetos especiales en Artefactos y Promociones. También dispara flechas a los enemigos.', des_en: 'Guards the crests you win by beating camps and barbarian villages. Trade crests for special items in Artifacts and Promotions. It also shoots arrows at enemies.' },
   enfermeria: { es: 'Enfermería',   en: 'Infirmary',
                 des_es: 'Las tropas que caen se curan aquí y vuelven al terminar la oleada.', des_en: 'Fallen troops heal here and come back when the wave ends.' },
   muralla:    { es: 'Muralla',      en: 'Wall',
