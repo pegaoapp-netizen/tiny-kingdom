@@ -844,15 +844,18 @@ var M = (function () {
   }
   // Hace ondear la tela (se llama cada cuadro)
   var cacheInsignia = {};
+  function dibujarEscudo(x, n) { // v7.56: escudo compacto dorado, igual para todos los niveles
+      x.clearRect(0, 0, 64, 64);
+      x.beginPath(); x.moveTo(10, 8); x.lineTo(54, 8); x.lineTo(54, 30); x.quadraticCurveTo(54, 50, 32, 60); x.quadraticCurveTo(10, 50, 10, 30); x.closePath();
+      var g = x.createLinearGradient(0, 8, 0, 60); g.addColorStop(0, '#5a3a1c'); g.addColorStop(1, '#25160a'); x.fillStyle = g; x.fill();
+      x.lineWidth = 4; x.strokeStyle = '#f2c45a'; x.stroke();
+      x.fillStyle = '#ffe9a6'; x.font = '900 ' + (n >= 100 ? 20 : 26) + 'px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 32, 31);
+    }
   function insigniaNivel(n) {
     if (!cacheInsignia[n]) {
       var c = document.createElement('canvas'); c.width = c.height = 64;
       var x = c.getContext('2d');
-      x.fillStyle = n >= 9 ? '#f5c542' : n >= 5 ? '#6f8fb5' : '#3a2414';
-      x.beginPath(); x.arc(32, 32, 28, 0, Math.PI * 2); x.fill();
-      x.lineWidth = 5; x.strokeStyle = '#ffe9b0'; x.stroke();
-      x.fillStyle = n >= 9 ? '#3a2414' : '#ffffff'; x.font = 'bold 32px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-      x.fillText(String(n), 32, 34);
+      dibujarEscudo(x, n);
       var tx = new THREE.CanvasTexture(c);
       cacheInsignia[n] = new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true });
     }
@@ -3582,7 +3585,7 @@ var M = (function () {
     barraVida: barraVida, ponerVida: ponerVida, flecha: flecha,
     bosque: bosque, roca: roca, arbustos: arbustos, matasPasto: matasPasto, nube: nube, flor: flor, moneda: moneda,
     animal: animal, animarAnimal: animarAnimal, luzNoche: luzNoche, matNube: matNube, antorcha: antorcha, barril: barril, cajas: cajas,
-    ondear: ondear, insigniaNivel: insigniaNivel, fusionar: fusionar, adornosNivel: adornosNivel,
+    ondear: ondear, dibujarEscudo: dibujarEscudo, insigniaNivel: insigniaNivel, fusionar: fusionar, adornosNivel: adornosNivel,
     heroe: function (h, nivel) { return glbListos[h.id] ? heroeGLB(h, nivel) : heroeModelo2(h.look, undefined, nivel, h.rareza); },
     cargarHeroesGLB: cargarHeroesGLB, cargarFiguras: cargarFiguras, crecerEdificio: crecerEdificio, ponerFiguraAnimal: ponerFiguraAnimal, figura: figura, figuraLista: function (id) { return !!figListas[id]; }, FIGURA_TROPA: FIGURA_TROPA, tieneGLB: function (id) { return !!glbListos[id]; }, tierHeroe: tierHeroe, etapaArmadura: etapaArmadura
   };
