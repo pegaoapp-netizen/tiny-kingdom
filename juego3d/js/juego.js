@@ -405,6 +405,8 @@
       var rrA = Math.min(Math.hypot(x, z) - 76, fueraCampos(x, z) - 14);
       if (rrA > 0.5 && rrA < 13) { var kr = Math.min(1, (rrA - 0.5) / 2) * Math.min(1, (13 - rrA) / 2.5); c.lerp(ruido(x * 2.3, z * 2.1) > 0 ? roca : rocaOsc, kr * 0.9); }
       if (n > 0) c.lerp(seco, Math.min(1, n * 1.3)); else c.lerp(humedo, Math.min(1, -n * 1.3));
+      var n2 = ruido(x * 3.1 + 17, z * 2.7 - 9); c.lerp(n2 > 0 ? seco : humedo, Math.min(0.35, Math.abs(n2) * 0.6)); // v7.54: el pasto ya no es una alfombra lisa
+      var n3 = ruido(x * 0.9 - 40, z * 0.9 + 25); if (n3 > 0.45 && Math.hypot(x, z) < 70) c.lerp(tierra, Math.min(0.4, (n3 - 0.45) * 1.6));
       var dc = distCamino(x, z);
       if (dc < 4.2) c.lerp(tierra, (1 - dc / 4.2) * 0.55);
       if (Math.hypot(x, z) < 11) c.lerp(tierra, 0.25 * (1 - Math.hypot(x, z) / 11));
@@ -933,7 +935,7 @@
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
     // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
-    var metaC = 1.15 * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
+    var metaC = 1.44 * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
@@ -4226,7 +4228,7 @@
       pintar(null);
       var arch = typeof RETRATOS_IMG !== 'undefined' && RETRATOS_IMG[tipo];
       if (arch) { var im = new Image(); im.onload = function () { pintar(im); }; im.src = 'iconos/ui/' + arch + '.webp'; }
-      cacheChapa[k] = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+      cacheChapa[k] = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, sizeAttenuation: false });
     }
     // v7.15: chapa CHICA (solo el dibujo y el nivel) para cuando la cámara está lejos: así no tapan la ciudad
     if (!cacheChapa[k + '|chica']) {
@@ -4244,14 +4246,23 @@
       pintar2(null);
       var arch2 = typeof RETRATOS_IMG !== 'undefined' && RETRATOS_IMG[tipo];
       if (arch2) { var im2 = new Image(); im2.onload = function () { pintar2(im2); }; im2.src = 'iconos/ui/' + arch2 + '.webp'; }
-      cacheChapa[k + '|chica'] = new THREE.SpriteMaterial({ map: tex2, depthTest: false, transparent: true });
+      cacheChapa[k + '|chica'] = new THREE.SpriteMaterial({ map: tex2, depthTest: false, transparent: true, sizeAttenuation: false });
     }
-    var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(9.2, 2.8, 1); else sp.scale.set(5.6, 1.7, 1); sp.renderOrder = unico ? 12 : 11;
+    var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(0.0106, 0.0032, 1); else sp.scale.set(0.0074, 0.00225, 1); // v7.54: chapas chicas y del mismo tamaño en pantalla con cualquier zoom sp.renderOrder = unico ? 12 : 11;
     sp.userData.grande = { m: cacheChapa[k], s: sp.scale.clone() }; sp.userData.unico = unico;
-    sp.userData.chica = { m: cacheChapa[k + '|chica'], s: unico ? new THREE.Vector3(3.6, 2.6, 1) : new THREE.Vector3(2.6, 1.9, 1) };
+    sp.userData.chica = { m: cacheChapa[k + '|chica'], s: unico ? new THREE.Vector3(0.0044, 0.0032, 1) : new THREE.Vector3(0.0031, 0.00225, 1) };
+    if (tipo === 'cabana') { var nm = numeroChico(nivel); sp.material = nm; sp.scale.set(0.0024, 0.0024, 1); sp.userData.grande = sp.userData.chica = { m: nm, s: sp.scale.clone() }; } // v7.54: las cabañas solo llevan un numerito
     return sp;
   }
   // con la cámara lejos, las chapas pasan a ser chicas (dibujo + nivel); de cerca, con el nombre
+  var cacheNum = {};
+  function numeroChico(n) {
+    if (cacheNum[n]) return cacheNum[n];
+    var c = document.createElement('canvas'); c.width = c.height = 64; var x = c.getContext('2d');
+    x.beginPath(); x.arc(32, 32, 26, 0, Math.PI * 2); x.fillStyle = 'rgba(20,14,8,.55)'; x.fill();
+    x.fillStyle = 'rgba(255,255,255,.9)'; x.font = '800 30px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(n), 32, 34);
+    return (cacheNum[n] = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true, sizeAttenuation: false }));
+  }
   function chapaSegunZoom(sp) {
     if (!sp || !sp.userData.chica) return;
     var lejos = cam.dist > distInicial() * 1.12 && !sp.userData.unico, q = lejos ? sp.userData.chica : sp.userData.grande; // v7.47: los edificios únicos siempre muestran su nombre
@@ -4276,7 +4287,7 @@
       var dirC = new V3(Math.cos(azVista()), 0, Math.sin(azVista())).applyQuaternion(qI).multiplyScalar(s.modelo.userData.adelanto2D);
       s.modelo.children[0].position.set(dirC.x, 0.05, dirC.z);
     }
-    if (tipo === 'embajada') s.modelo.scale.multiplyScalar(0.7); else if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.75); // v7.52: que no le hagan sombra al castillo
+    if (tipo === 'embajada') s.modelo.scale.multiplyScalar(0.525); else if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.75); else if (tipo === 'cuartel') s.modelo.scale.multiplyScalar(0.75); // v7.54: ninguno compite con el castillo // v7.52: que no le hagan sombra al castillo
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
@@ -4284,7 +4295,7 @@
     if (s.insignia) s.grupo.remove(s.insignia);
     // v6.82: chapa siempre visible con el icono del edificio y su nivel, para saber cuál es cuál de un vistazo
     if (s.chapa) { s.grupo.remove(s.chapa); s.chapa = null; }
-    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, (s.modelo.userData.es2D ? s.modelo.userData.alto2D * s.modelo.scale.y * 0.92 : Math.max(1.6, bxc.max.y - s.grupo.position.y)) + 0.9, 0); s.grupo.add(s.chapa); }
+    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, (s.modelo.userData.es2D ? s.modelo.userData.alto2D * s.modelo.scale.y * 0.92 : Math.max(1.6, bxc.max.y - s.grupo.position.y)) + 0.35, 0); s.grupo.add(s.chapa); }
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
     s.grupo.add(s.insignia);
@@ -11696,7 +11707,7 @@
     if (actualizando) return;
     if ($('aviso-version')) return;
     var d = document.createElement('button'); d.id = 'aviso-version';
-    d.textContent = '🔄 ' + L('Nueva versión · tocar para actualizar', 'New version · tap to update');
+    d.textContent = '🔄 ' + L('Actualizar', 'Update');
     d.addEventListener('click', function () { try { guardar(true); } catch (e) {} setTimeout(function () { location.reload(); }, 400); });
     document.body.appendChild(d);
   }
