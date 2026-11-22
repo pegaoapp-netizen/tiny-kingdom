@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.86';
+var VERSION_JUEGO = '7.87';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -373,6 +373,9 @@ var NOMBRES = {
   carreta: { es: 'Carretas', en: 'Carts', des_es: 'Llevan los recursos a tu alianza y desde tus casillas. Se entrenan en el Mercado.', des_en: 'Carry resources to your alliance and from your tiles. Trained at the Market.' },
   espadachin: { es: 'Espadachín',   en: 'Swordsman',
                 des_es: 'Rápido y valiente. Pelea cuerpo a cuerpo.', des_en: 'Fast and brave. Fights up close.' },
+  ballestero: { es: 'Ballestero', en: 'Crossbowman', des_es: 'Su ballesta atraviesa armaduras. Más vida y daño que el arquero, pero más lento.', des_en: 'His crossbow pierces armor. More health and damage than the archer, but slower.' },
+  arquero_largo: { es: 'Arquero Largo', en: 'Longbowman', des_es: 'Arco largo de tejo: dispara desde más lejos que nadie.', des_en: 'Yew longbow: shoots from farther than anyone.' },
+  tirador_elite: { es: 'Tirador Élite', en: 'Elite Marksman', des_es: 'Lo mejor del Campo de Tiro: mucho daño a gran distancia.', des_en: 'The best of the Archery Range: heavy damage at long range.' },
   arquero:    { es: 'Arquero',      en: 'Archer',
                 des_es: 'Dispara desde lejos. Poca vida.', des_en: 'Shoots from afar. Low health.' },
   cofre_madera: { es: 'Cofre de madera', en: 'Wooden chest', des_es: 'Trae oro, comida y madera.', des_en: 'Gives gold, food and wood.' },
@@ -839,7 +842,7 @@ var ICONOS_IMG = {
 var RETRATOS_IMG = {
   h_sol: 'h_sol', h_luna: 'h_luna', h_ancla: 'h_ancla', h_brisa: 'h_brisa', h_chispa: 'h_chispa', h_roble: 'h_roble', // v6.89: retratos pintados de los héroes
   h_trueno: 'h_trueno', h_pluma: 'h_pluma', h_leon: 'h_leon', h_fenix: 'h_fenix', h_titan: 'h_titan', h_aguila: 'h_aguila',
-  espadachin: 't_espadachin', arquero: 't_arquero', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano',
+  espadachin: 't_espadachin', arquero: 't_arquero', ballestero: 't_ballestero', arquero_largo: 't_arquero_largo', tirador_elite: 't_tirador_elite', caballeria: 't_caballeria', guardian: 't_guardian', explorador: 't_explorador', miliciano: 't_miliciano',
   carreta: 't_carreta', jinete: 't_jinete', caballeria_pesada: 't_caballeria_pesada', balista: 't_balista', ariete: 't_ariete', catapulta: 't_catapulta', torre_asedio: 't_torre_asedio',
   granja: 'e_granja', aserradero: 'e_aserradero', mina: 'e_mina', cantera: 'e_cantera',
   cuartel: 'e_cuartel', torre: 'e_torre', academia: 'e_academia', enfermeria: 'e_enfermeria',
@@ -912,6 +915,10 @@ var TROPAS = {
   miliciano:  { costo: 12, comida: 20, tiempo: 60, vida: 110, dano: 10, alcance: 1.2, vel: 3.0, ritmo: 1.0, icono: '🪓' },
   jinete:     { costo: 45, comida: 40, tiempo: 180, vida: 150, dano: 16, alcance: 1.5, vel: 6.0, ritmo: 0.9, icono: '🏇' },
   caballeria_pesada: { costo: 110, comida: 80, tiempo: 440, vida: 380, dano: 30, alcance: 1.7, vel: 4.2, ritmo: 1.1, icono: '🐴' },
+  // v7.87: más tropas del Campo de Tiro
+  ballestero: { costo: 50, comida: 40, tiempo: 220, vida: 110, dano: 17, alcance: 7, vel: 2.8, ritmo: 1.3, distancia: true, icono: '🏹' },
+  arquero_largo: { costo: 75, comida: 50, tiempo: 300, vida: 100, dano: 20, alcance: 9.5, vel: 2.9, ritmo: 1.2, distancia: true, icono: '🏹' },
+  tirador_elite: { costo: 140, comida: 80, tiempo: 520, vida: 160, dano: 34, alcance: 10, vel: 3.1, ritmo: 1.1, distancia: true, icono: '🎯' },
   balista:    { costo: 120, comida: 40, tiempo: 480, vida: 180, dano: 55, alcance: 10, vel: 1.6, ritmo: 2.6, distancia: true, icono: '🎯' },
   ariete:     { costo: 150, comida: 30, tiempo: 600, vida: 600, dano: 40, alcance: 1.6, vel: 1.4, ritmo: 2.2, icono: '🪵' },
   catapulta:  { costo: 220, comida: 50, tiempo: 800, vida: 260, dano: 90, alcance: 12, vel: 1.2, ritmo: 3.4, distancia: true, icono: '☄️' },
@@ -931,6 +938,9 @@ var COMBATE_KOC = {
   espadachin:        { vida: 350,  ataque: 100,  rango: 150,  velocidad: 275 },
   guardian:          { vida: 700,  ataque: 80,   rango: 150,  velocidad: 225 },
   balista:           { vida: 400,  ataque: 350,  rango: 1300, velocidad: 150, distancia: true },
+  ballestero:        { vida: 280,  ataque: 260,  rango: 1100, velocidad: 230, distancia: true },
+  arquero_largo:     { vida: 240,  ataque: 300,  rango: 1450, velocidad: 240, distancia: true },
+  tirador_elite:     { vida: 450,  ataque: 520,  rango: 1500, velocidad: 260, distancia: true },
   caballeria_pesada: { vida: 1200, ataque: 600,  rango: 200,  velocidad: 600 },
   ariete:            { vida: 2000, ataque: 150,  rango: 100,  velocidad: 120 },
   catapulta:         { vida: 1500, ataque: 1200, rango: 1500, velocidad: 100, distancia: true },
@@ -941,11 +951,11 @@ var COMBATE_KOC = {
 var EQ_KOC = { comun: { pct: 20, foe: 0 }, raro: { pct: 60, foe: 0 }, legendario: { pct: 120, foe: 3 }, mitico: { pct: 300, foe: 6 } };
 var TROPA_REQ = {
   explorador: { ed: 'cuartel', n: 1 }, espadachin: { ed: 'cuartel', n: 1 }, guardian: { ed: 'cuartel', n: 1 }, miliciano: { ed: 'cuartel', n: 2 },
-  arquero: { ed: 'galeria', n: 1 }, caballeria: { ed: 'establo', n: 1 }, jinete: { ed: 'establo', n: 1 }, caballeria_pesada: { ed: 'establo', n: 3, jugador: 6 },
+  arquero: { ed: 'galeria', n: 1 }, ballestero: { ed: 'galeria', n: 3 }, arquero_largo: { ed: 'galeria', n: 5, otro: ['herreria', 2] }, tirador_elite: { ed: 'galeria', n: 8, jugador: 10 }, caballeria: { ed: 'establo', n: 1 }, jinete: { ed: 'establo', n: 1 }, caballeria_pesada: { ed: 'establo', n: 3, jugador: 6 },
   balista: { ed: 'cuartel', n: 4, otro: ['herreria', 1] }, ariete: { ed: 'cuartel', n: 5 }, catapulta: { ed: 'cuartel', n: 6, otro: ['herreria', 3] }, torre_asedio: { ed: 'cuartel', n: 8, jugador: 10 }
 };
 // Orden de la lista del cuartel (de la tropa ligera a las máquinas de asedio)
-var TROPAS_ORDEN = ['explorador', 'jinete', 'miliciano', 'arquero', 'carreta', 'caballeria', 'espadachin', 'guardian', 'balista', 'caballeria_pesada', 'ariete', 'catapulta', 'torre_asedio'];
+var TROPAS_ORDEN = ['explorador', 'jinete', 'miliciano', 'arquero', 'ballestero', 'arquero_largo', 'tirador_elite', 'carreta', 'caballeria', 'espadachin', 'guardian', 'balista', 'caballeria_pesada', 'ariete', 'catapulta', 'torre_asedio'];
 var INVOCAR = { tres: 10, heroe: 30 }; // precio en gemas
 // Armaduras: cada nivel (hasta 3) da +20% de vida y +10% de defensa (recibe menos daño)
 // La armadura se puede mejorar con oro y piedra, o comprar al momento con gemas (precio de cada nivel)

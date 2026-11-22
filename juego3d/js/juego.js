@@ -2624,7 +2624,7 @@
     escenaBatalla({ nombre: estado.idioma === 'en' ? TIPOS_BESTIA[b.tipo].en : TIPOS_BESTIA[b.tipo].es, nivel: b.nivel, emoji: TIPOS_BESTIA[b.tipo].icono }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas), premio = null;
     if (res.gano) {
-      premio = premioBestia(b.nivel); sumarXP(8 * b.nivel); sumarTemporada('campana', b.nivel);
+      premio = premioBestia(b.nivel); sumarXP(Math.max(8 * b.nivel, defensaBestia(b.nivel) * 0.05)); // v7.87: cazar da más EXP sumarTemporada('campana', b.nivel);
       estado.bestias = estado.bestias || {}; estado.bestias[b.id] = Date.now() + 30 * 60 * 1000;
       if (estado.alianza) regaloAlianza('bestia');
       sonar('victoria');
@@ -3412,7 +3412,7 @@
     return n;
   }
   // nivel del caballero: el número de la corona de tu perfil
-  var TROPA_RANGO_ESTRELLAS = { explorador: 1, miliciano: 1, espadachin: 1, guardian: 2, arquero: 1, jinete: 1, caballeria: 2, caballeria_pesada: 3, balista: 3, ariete: 3, catapulta: 4, torre_asedio: 4 };
+  var TROPA_RANGO_ESTRELLAS = { ballestero: 2, arquero_largo: 3, tirador_elite: 4, explorador: 1, miliciano: 1, espadachin: 1, guardian: 2, arquero: 1, jinete: 1, caballeria: 2, caballeria_pesada: 3, balista: 3, ariete: 3, catapulta: 4, torre_asedio: 4 };
   // el nivel del jugador sube con la experiencia: construir, mejorar, ganar oleadas, misiones y batallas
   // v7.79: nivel sin techo. Para pasar del nivel n al n+1 hacen falta floor(100 · n^2.2) EXP (los primeros suben rápido; después del 60 es prestigio)
   var XP_ACUM = [0, 0];
@@ -5286,6 +5286,7 @@
     while (i < colaEntreno.length && seg > 0) { var c = colaEntreno[i], f = c.total - c.t; if (seg >= f) { seg -= f; i++; } else { c.t += seg; seg = 0; } }
     if (!i) return;
     var listas = colaEntreno.splice(0, i), libres = Math.max(0, TOPE_VISIBLE - visiblesNormales()), r = reserva();
+    var pxE = 0; listas.forEach(function (q) { var dq = TROPAS[q.tipo]; if (dq) pxE += (dq.vida * 2 + dq.dano * 25) * 0.1; }); if (pxE) sumarXP(pxE, true); // v7.87: entrenar da EXP (10% del poder)
     for (var k = 0; k < listas.length; k++) { var t = listas[k].tipo; if (k < libres) crearTropa(t, typeof lugar === 'function' ? lugar() : lugar); else r[t] = (r[t] || 0) + 1; }
   }
   function sumarTropa(tipo, desde) {
@@ -6583,7 +6584,7 @@
     if (id === 'carreta' || id === 'caballo') fotoCarreta();
     // los aldeanos que caminan por el pueblo cambian a la figura nueva
     if (id === 'aldeano' || id === 'aldeana' || id === 'anciano' || id === 'nino') aldeanos.forEach(function (al2) { if ((al2.tipo || 'aldeano') !== id) return; var vie = al2.m, nue = M.unidad(al2.tipo || 'aldeano'); nue.grupo.position.copy(vie.grupo.position); nue.grupo.rotation.copy(vie.grupo.rotation); escena.remove(vie.grupo); escena.add(nue.grupo); al2.m = nue; });
-    var FAM_FIG = { espadachin: ['espadachin', 'miliciano'], arquero: ['arquero', 'explorador'], guardian: ['guardian'], caballero: ['caballeria', 'jinete', 'caballeria_pesada'] };
+    var FAM_FIG = { espadachin: ['espadachin', 'miliciano'], arquero: ['arquero', 'explorador', 'ballestero', 'arquero_largo', 'tirador_elite'], guardian: ['guardian'], caballero: ['caballeria', 'jinete', 'caballeria_pesada'] };
     if (FAM_FIG[id]) fotosTropas(FAM_FIG[id]);
     if ((id === 'carreta' || id === 'caballo') && M3 && M3.carros) { Object.keys(M3.carros).forEach(function (k) { M3.e.remove(M3.carros[k]); }); M3.carros = {}; }
   }
@@ -7399,7 +7400,7 @@
   // ------------------------------------------------------------------
   //  PANTALLA DE TROPAS: muñeco 3D grande que gira, rangos, barra de cantidad
   // ------------------------------------------------------------------
-  var PESTANAS_TROPA = { cuartel: ['explorador', 'miliciano', 'espadachin', 'guardian', 'balista', 'ariete', 'catapulta', 'torre_asedio'], establo: ['jinete', 'caballeria', 'caballeria_pesada'], tiro: ['arquero'] };
+  var PESTANAS_TROPA = { cuartel: ['explorador', 'miliciano', 'espadachin', 'guardian', 'balista', 'ariete', 'catapulta', 'torre_asedio'], establo: ['jinete', 'caballeria', 'caballeria_pesada'], tiro: ['arquero', 'ballestero', 'arquero_largo', 'tirador_elite'] };
   var ICONO_PESTANA = { cuartel: '🏰', establo: '🐎', tiro: '🏹' };
   var ROMANO = ['I', 'II', 'III', 'IV', 'V'];
   var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1, modo: 'lista' }; // v6.94: modo lista (cada tropa en su fila) o detalle
@@ -7579,12 +7580,42 @@
   }
   function gemasEntreno() { return gemasParaTerminar(faltaEntreno()); }
 
+  // v7.87: ALTAR DE INVOCACIÓN: Normal ×1 / ×10 y Élite (tropas élite + fragmentos de héroe)
+  var ALTAR = {
+    normal: { gemas: 10, n: 3, tipos: [['miliciano', 25], ['espadachin', 25], ['arquero', 25], ['guardian', 15], ['caballeria', 10]] },
+    diez: { gemas: 90, n: 30, tipos: null },
+    elite: { gemas: 30, n: 5, tipos: [['caballeria_pesada', 30], ['ballestero', 25], ['tirador_elite', 15], ['balista', 15], ['guardian', 15]], frag: [5, 12], pFrag: 70 }
+  };
+  function tipoAlAzar(l) { var t = l.reduce(function (a, x) { return a + x[1]; }, 0), r = Math.random() * t; for (var i = 0; i < l.length; i++) { r -= l[i][1]; if (r <= 0) return l[i][0]; } return l[0][0]; }
+  function invocarAltar(cual) {
+    var a = ALTAR[cual]; if (!a) return;
+    if (!pagar(0, a.gemas)) return;
+    var lista = a.tipos || ALTAR.normal.tipos, salen = {}, fr = '';
+    for (var i = 0; i < a.n; i++) {
+      var tipo = tipoAlAzar(lista), p = reunion.clone().add(new V3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3));
+      if (visiblesNormales() < TOPE_VISIBLE) { crearTropa(tipo, p, true); if (i < 12) chispas(p.clone().setY(0.8), cual === 'elite' ? 0xffd24a : 0xd59bff, 10, 3); } else reserva()[tipo] = (reserva()[tipo] || 0) + 1;
+      salen[tipo] = (salen[tipo] || 0) + 1;
+    }
+    if (a.frag && Math.random() * 100 < a.pFrag) {
+      var mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
+      if (mios.length) { var h = mios[Math.floor(Math.random() * mios.length)], nf = a.frag[0] + Math.floor(Math.random() * (a.frag[1] - a.frag[0] + 1)); estado.heroes[h].frag = (estado.heroes[h].frag || 0) + nf; fr = { h: h, n: nf }; }
+    }
+    sonar('magia'); actualizarHUD(); guardar();
+    var items = Object.keys(salen).map(function (k) { return { ico: fotoHTML(k, TROPAS[k].icono), n: salen[k], nom: N(k) }; });
+    if (fr) items.push({ ico: fotoHTML('h_' + fr.h, '🦸'), n: fr.n, nom: L('Fragmentos de ', 'Shards of ') + NH(fr.h) });
+    mostrarRecompensas('✨ ' + L('Altar de Invocación', 'Summoning Altar'), items);
+  }
   function abrirPanelInvocar() {
-    var d = TROPAS.heroe;
-    var html = subtabsHeroes('invocar') + '<div class="lista">' +
-      '<div class="carta compacta"><div class="cab"><div class="foto">✨</div><div><h3>' + T('invocar3') + '</h3><p>' + T('invocar3_txt') + '</p></div></div>' +
-      botonGemas(INVOCAR.tres, 'invocar3', '', T('p_invocar')) + '</div>' +
-      '</div>';
+    function prob(l) { var t = l.reduce(function (a, x) { return a + x[1]; }, 0); return l.map(function (x) { return '<span class="al-p"><span class="al-f">' + fotoHTML(x[0], TROPAS[x[0]].icono) + '</span><small>' + N(x[0]) + '</small><b>' + Math.round(x[1] / t * 100) + '%</b></span>'; }).join(''); }
+    var g = estado.gemasInfinitas ? Infinity : (estado.gemas || 0);
+    function boton(cual, txt) { var a = ALTAR[cual]; return '<button class="al-btn ' + cual + '" data-accion="altar" data-t="' + cual + '"' + (g >= a.gemas ? '' : ' disabled') + '><b>' + txt + '</b><span><span class="ico gema"></span>' + a.gemas + '</span></button>'; }
+    var html = subtabsHeroes('invocar') +
+      '<div class="al-banner"><div class="al-luz"></div><div class="al-runa">✨</div><h3>' + L('Altar de Invocación', 'Summoning Altar') + '</h3><p>' + L('Las tropas invocadas aparecen al momento y pelean en tu próxima batalla.', 'Summoned troops appear at once and fight in your next battle.') + '</p></div>' +
+      '<div class="carta al-caja"><div class="al-cab"><b>🔮 ' + L('Invocación Normal', 'Normal Summon') + '</b><small>' + L('3 tropas por tirada', '3 troops per summon') + '</small></div><div class="al-probs">' + prob(ALTAR.normal.tipos) + '</div>' +
+      '<div class="al-bts">' + boton('normal', L('Invocar ×1', 'Summon ×1')) + boton('diez', L('Invocar ×10', 'Summon ×10') + ' <i>−10%</i>') + '</div></div>' +
+      '<div class="carta al-caja elite"><div class="al-cab"><b>👑 ' + L('Invocación Élite', 'Elite Summon') + '</b><small>' + L('5 tropas élite · ', '5 elite troops · ') + ALTAR.elite.pFrag + L('% de 5–12 fragmentos de un héroe', '% chance of 5–12 hero shards') + '</small></div><div class="al-probs">' + prob(ALTAR.elite.tipos) + '</div>' +
+      '<div class="al-bts">' + boton('elite', L('Invocación Élite', 'Elite Summon')) + '</div></div>' +
+      '<p class="nota">💎 ' + L('Tus gemas: ', 'Your gems: ') + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</p>';
     abrirPanel(T('p_heroes'), html, { tipo: 'invocar' });
   }
 
@@ -7607,7 +7638,7 @@
   // ---------- FICHA DE TROPA dentro del cuartel: datos, Entrenar y Relevar ----------
   var tropaDetalle = null, pestDetalle = 'entrenar', cantDetalle = 1;
   var CARGA_TROPA = { explorador: 40, miliciano: 30, espadachin: 20, guardian: 25, arquero: 20, jinete: 50, caballeria: 40, caballeria_pesada: 35, balista: 40, ariete: 0, catapulta: 10, torre_asedio: 0 };
-  var FAMILIA = { explorador: 'inf', miliciano: 'inf', espadachin: 'inf', guardian: 'inf', arquero: 'dist', balista: 'dist', jinete: 'cab', caballeria: 'cab', caballeria_pesada: 'cab', ariete: 'ase', catapulta: 'ase', torre_asedio: 'ase' };
+  var FAMILIA = { explorador: 'inf', miliciano: 'inf', espadachin: 'inf', guardian: 'inf', arquero: 'dist', ballestero: 'dist', arquero_largo: 'dist', tirador_elite: 'dist', balista: 'dist', jinete: 'cab', caballeria: 'cab', caballeria_pesada: 'cab', ariete: 'ase', catapulta: 'ase', torre_asedio: 'ase' };
   function contraDe(t) {
     var f = FAMILIA[t];
     if (f === 'inf') return [L('arqueros', 'archers'), L('caballería', 'cavalry')];
@@ -7974,7 +8005,7 @@
   // v7.14: con 5★ el héroe puede ASCENDER (5 veces, +10 niveles cada una, hasta el nivel 100) gastando una reliquia y cristales
   var ASC_HEROE = [{ r: 'caracola_real', c: 'cristal_mistico', n: 4 }, { r: 'perla_rey', c: 'cristal_mistico', n: 6 }, { r: 'corona_coral', c: 'cristal_encantado', n: 4 }, { r: 'elevacion_sol', c: 'cristal_encantado', n: 6 }, { r: 'estrella_rey', c: 'cristal_arcano', n: 6 }];
   // v7.31: después de las 5 ascensiones (nivel 100) viene la MAESTRÍA: 10 pasos de +10 niveles cada uno, hasta el nivel 200
-  var MAESTRIA_MAX = 10;
+  var MAESTRIA_MAX = 1000; // v7.87: después del nivel 100 la Maestría sigue sin techo (+10 niveles cada paso)
   function costoMaestria(k) { return { estrella_mar: k + 1, caracola: 2 * (k + 1) }; }
   function topeNivel(id) { var e = estado.heroes[id]; var t = Math.min(HEROE_NIVEL_MAX, (e.estrellas || 1) * 10); if ((e.estrellas || 1) >= 5) t += 10 * Math.min(ASC_HEROE.length, e.asc || 0); if ((e.asc || 0) >= ASC_HEROE.length) t += 10 * Math.min(MAESTRIA_MAX, e.maes || 0); return t; }
   function htmlAscensionHeroe(id) {
@@ -7997,7 +8028,7 @@
     var filas = fila(okN, L('Nivel ', 'Level ') + tope + ' (' + L('tiene ', 'has ') + e.nivel + ')');
     Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) ok = false; filas += fila(t >= c[k], OBJETOS[k].icono + ' ' + N(k) + ' ×' + c[k] + ' (' + L('tienes ', 'you have ') + t + ')'); });
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>👑 ' + L('Maestría', 'Mastery') + ' ' + m + '/' + MAESTRIA_MAX + '</b></div>' +
-      '<p>' + L('Ascensión completa. La Maestría sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + ' (hasta 200) y con cada nivel sigue ganando poder.', 'Ascension complete. Mastery raises the max level from ' + tope + ' to ' + (tope + 10) + ' (up to 200); every level keeps adding power.') + '</p><ul class="kb-req">' + filas + '</ul>' +
+      '<p>' + L('Ascensión completa. La Maestría sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + ' (sin techo) y con cada nivel sigue ganando poder.', 'Ascension complete. Mastery raises the max level from ' + tope + ' to ' + (tope + 10) + ' (no limit 200); every level keeps adding power.') + '</p><ul class="kb-req">' + filas + '</ul>' +
       '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
   }
   function maestriaHeroe(id) {
@@ -9580,7 +9611,7 @@
         return '<div class="salon-fila ' + h.rareza + '"><div class="salon-foto">' + fotoHTML('h_' + h.id, '🦸') + '</div><div class="salon-dat"><b>' + NH(h.id) + '</b>' +
           '<div class="salon-st"><span>' + T('nivel_corto') + ' ' + e.nivel + '</span><span>⚔ ' + formatoNumero(s.dano) + '</span><span>❤ ' + formatoNumero(s.vida) + '</span><span>🛡 ' + piezasDe(h.id).length + '/6</span></div>' +
           '<div class="hf-barra salon-exp"><div style="width:' + (lleno ? 100 : Math.round(ex / need * 100)) + '%"></div><span>' + (lleno ? T('exp_llena') : ex + ' / ' + need) + '</span></div></div>' +
-          '<div class="salon-bts"><button class="comprar mini verde" data-accion="salon-exp" data-id="' + h.id + '"' + (lleno || !libros ? ' disabled' : '') + '>+EXP</button><button class="comprar mini naranja" data-accion="salon-equipar" data-id="' + h.id + '">' + L('Equipar', 'Equip') + '</button></div></div>';
+          '<div class="salon-bts">' + (lleno ? '<button class="comprar mini dorado" data-accion="heroe-ver" data-id="' + h.id + '">' + ((e.estrellas || 1) < 5 ? '⭐ ' + L('Estrella', 'Star') : (e.asc || 0) < ASC_HEROE.length ? '✨ ' + L('Ascender', 'Ascend') : '👑 ' + L('Maestría', 'Mastery')) + '</button>' : '<button class="comprar mini verde" data-accion="salon-exp" data-id="' + h.id + '"' + (!libros ? ' disabled' : '') + '>+EXP</button>') + '<button class="comprar mini naranja" data-accion="salon-equipar" data-id="' + h.id + '">' + L('Equipar', 'Equip') + '</button></div></div>';
       }).join('') : '<p class="nota">' + L('Todavía no tienes caballeros: recluta en la pestaña Héroes.', 'You have no knights yet: recruit in the Heroes tab.') + '</p>') + '</div>';
     abrirPanel(L('Salón de Caballeros', 'Knights Hall'), html, { tipo: 'salon' });
   }
@@ -9597,7 +9628,7 @@
   function cargos() { if (!estado.cargos) estado.cargos = {}; return estado.cargos; }
   // v7.14: como en KoC, el caballero con cargo gana experiencia cada hora (10 por nivel del castillo)
   setInterval(function () { if (enMenu || !estado.heroes) return; var c = cargos(); Object.keys(c).forEach(function (k) { if (c[k] && estado.heroes[c[k]]) darExp(c[k], 10 * (estado.castillo || 1) / 60); }); }, 60000);
-  function bonoCargoDe(heroeId) { var e = heroeId && estado.heroes[heroeId]; return e ? Math.min(0.25, 0.02 * (e.estrellas || 1) + 0.002 * (e.nivel || 1)) : 0; }
+  function bonoCargoDe(heroeId) { var e = heroeId && estado.heroes[heroeId]; return e ? Math.min(0.6, 0.02 * (e.estrellas || 1) + 0.002 * (e.nivel || 1)) : 0; } // v7.87: hasta +60% con héroes de nivel alto
   function cargoDeHeroe(heroeId) { var c = cargos(); for (var k in c) if (c[k] === heroeId) return k; return ''; }
   function bonoExtra(id) {
     var b = 0, c = cargos();
@@ -9617,9 +9648,21 @@
           return '<option value="' + h.id + '"' + (h.id === hid ? ' selected' : '') + '>' + NH(h.id) + ' · ' + T('nivel_corto') + ' ' + e.nivel + ' · ' + (e.estrellas || 1) + '★' + (otro && otro !== x.id ? ' (' + L('ya es ', 'already ') + L(cargoX(otro).es[0], cargoX(otro).en[0]) + ')' : '') + '</option>';
         }).join('');
         return '<div class="carta cg-fila"><div class="cg-ico">' + x.ico + '</div><div class="cg-dat"><b>' + L(x.es[0], x.en[0]) + '</b><small>' + L(x.es[1], x.en[1]) + (hid ? ': <b class="cg-pct">+' + pct + '%</b>' : '') + '</small>' +
-          '<select class="campo cg-sel" data-cargo="' + x.id + '">' + opciones + '</select></div></div>';
+          '<button class="cg-elegir" data-accion="cg-elegir" data-cargo="' + x.id + '">' + (hid ? '<span class="cg-foto">' + fotoHTML('h_' + hid, '🦸') + '</span><span><b>' + NH(hid) + '</b><small>' + T('nivel_corto') + ' ' + estado.heroes[hid].nivel + ' · ' + (estado.heroes[hid].estrellas || 1) + '★</small></span>' : '<span class="cg-foto vacio">＋</span><span><b>' + L('Elegir caballero', 'Pick a knight') + '</b><small>' + L('Vacío', 'Empty') + '</small></span>') + '<i>▾</i></button></div></div>'; // v7.87
       }).join('') + '</div>';
     abrirPanel(L('Cargos de caballeros', 'Knight posts'), html, { tipo: 'cargos' });
+  }
+  function elegirCargo(cargo) {
+    var v = $('cg-pick'); if (v) v.remove();
+    var x = cargoX(cargo), c = cargos(), mios = HEROES.filter(function (h) { return estado.heroes[h.id]; }).sort(function (a, b) { return bonoCargoDe(b.id) - bonoCargoDe(a.id); });
+    var d = document.createElement('div'); d.id = 'cg-pick';
+    d.innerHTML = '<div class="dg-ventana"><div class="mc-cab"><b>' + x.ico + ' ' + L(x.es[0], x.en[0]) + '</b><small>' + L(x.es[1], x.en[1]) + '</small><button class="mc-x" data-cg="x">✕</button></div><div class="dg-lista">' +
+      '<button class="dg-pieza" data-cg=""><span class="dg-ico">🚫</span><span class="dg-txt"><b>' + L('Dejar vacío', 'Leave empty') + '</b></span></button>' +
+      mios.map(function (h) { var e = estado.heroes[h.id], otro = cargoDeHeroe(h.id), act = c[cargo] === h.id;
+        return '<button class="dg-pieza' + (act ? ' activo' : '') + '" data-cg="' + h.id + '"><span class="dg-ico cg-foto">' + fotoHTML('h_' + h.id, '🦸') + '</span><span class="dg-txt"><b>' + NH(h.id) + (act ? ' ✅' : '') + '</b><small>' + T('nivel_corto') + ' ' + e.nivel + ' · ' + (e.estrellas || 1) + '★' + (otro && otro !== cargo ? ' · ' + L('ya es ', 'already ') + L(cargoX(otro).es[0], cargoX(otro).en[0]) : '') + '</small><em>+' + Math.round(bonoCargoDe(h.id) * 100) + '% ' + L(x.es[1], x.en[1]).toLowerCase() + '</em></span></button>'; }).join('') +
+      (mios.length ? '' : '<p class="nota">' + L('Todavía no tienes caballeros.', 'You have no knights yet.') + '</p>') + '</div></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) { var b = ev.target.closest('[data-cg]'); if (!b) { if (ev.target === d) d.remove(); return; } var q = b.getAttribute('data-cg'); if (q === 'x') { d.remove(); return; } d.remove(); ponerCargo(cargo, q); });
   }
   function cargoX(id) { return CARGOS.filter(function (x) { return x.id === id; })[0]; }
   function ponerCargo(cargo, heroeId) {
@@ -10964,7 +11007,8 @@
     var nuevos = false;
     HEROES.forEach(function (h) {
       if (!estado.heroes[h.id]) { estado.heroes[h.id] = { nivel: 1, estrellas: 1, frag: 0 }; nuevos = true; }
-      var e = estado.heroes[h.id]; e.estrellas = 5; e.nivel = HEROE_NIVEL_MAX; e.hab = Math.max(e.hab || 1, topeHab(h.id)); e.tal = Math.max(e.tal || 0, topeTal(h.id));
+      var e = estado.heroes[h.id]; e.estrellas = 5; e.asc = Math.max(e.asc || 0, ASC_HEROE.length); e.maes = Math.max(e.maes || 0, 10); e.nivel = Math.max(e.nivel || 1, topeNivel(h.id)); // v7.87: el dueño llega al 200 y puede seguir con la Maestría
+       e.hab = Math.max(e.hab || 1, topeHab(h.id)); e.tal = Math.max(e.tal || 0, topeTal(h.id));
     });
     if (!estado.equipo || !estado.equipo.length) estado.equipo = HEROES.slice(0, 3).map(function (h) { return h.id; });
     estado.xp = Math.max(estado.xp || 0, xpParaNivel(60));
@@ -11010,7 +11054,7 @@
   function capacidadDe(r) { var c = 0; slots.forEach(function (sl) { if (sl.edificio && esCampo(sl.edificio.tipo) && EDIFICIOS[sl.edificio.tipo].recurso === r) c += capacidadCampo(sl); }); return Math.round(c); }
   function oroImpuestoHora() { return Math.round(IMPUESTO.oro * (impuestoPct() / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada); }
   // v7.00: MANTENIMIENTO: TODAS tus tropas comen cada hora (las del mapa y las guardadas), más las grandes y las de asedio
-  var COMIDA_HORA_TROPA = { explorador: 1, miliciano: 2, espadachin: 3, arquero: 4, guardian: 4, jinete: 5, caballeria: 6, caballeria_pesada: 15, balista: 30, ariete: 40, catapulta: 60, torre_asedio: 80 };
+  var COMIDA_HORA_TROPA = { explorador: 1, miliciano: 2, espadachin: 3, arquero: 4, ballestero: 5, arquero_largo: 7, tirador_elite: 12, guardian: 4, jinete: 5, caballeria: 6, caballeria_pesada: 15, balista: 30, ariete: 40, catapulta: 60, torre_asedio: 80 };
   function comidaTropasHora() { return Object.keys(COMIDA_HORA_TROPA).reduce(function (a, k) { return a + cuentaTipo(k) * COMIDA_HORA_TROPA[k]; }, 0); }
   function abrirPanelRecursos() {
     var l = miLugar(), cl = celdaDe(l.x, l.y), nom = hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino');
@@ -11454,6 +11498,8 @@
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'cg-elegir') { sonar('click'); elegirCargo(b.getAttribute('data-cargo')); }
+    else if (a === 'altar') { invocarAltar(b.getAttribute('data-t')); }
     else if (a === 'recuperar-reino') { sonar('click'); ofrecerRecuperar(); }
     else if (a === 'villa-ir') cambiarVilla(+b.getAttribute('data-i'));
     else if (a === 'villas-enviar') { sonar('click'); abrirEnvioVillas(); }
@@ -12883,7 +12929,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { estado: function () { return estado; }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { estado: function () { return estado; }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
