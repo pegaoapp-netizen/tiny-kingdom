@@ -1,5 +1,5 @@
 rules_version = '2';
-// reglas v7.85: copia de seguridad del reino (respaldos/{uid})
+// reglas v7.92: compras/{id} (las crea solo el servidor; el jugador las marca como cobradas)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -14,6 +14,14 @@ service cloud.firestore {
     }
 
     // Partida privada: cada jugador solo puede leer y escribir SU propia partida.
+    // v7.92: compras de dinero real. Solo las crea el servidor (Cloud Functions con el recibo verificado);
+    // el jugador lee las suyas y solo puede marcarlas como cobradas (una vez).
+    match /compras/{id} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if request.auth != null && resource.data.uid == request.auth.uid
+        && resource.data.cobrada == false && request.resource.data.cobrada == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cobrada', 'cobradaEn']);
+    }
     // v7.85: copia de seguridad del reino (solo su dueño la lee y la escribe)
     match /respaldos/{uid} {
       allow read: if request.auth != null && request.auth.uid == uid;

@@ -10843,7 +10843,7 @@
     return '<div class="iv-modos tg-tabs">' + [['paquetes', L('Paquetes', 'Bundles')], ['gemas', L('Gemas', 'Gems')], ['objetos', L('Objetos', 'Items')]].map(function (t) { return '<button data-accion="tienda-tab" data-t="' + t[0] + '" class="' + (act === t[0] ? 'activo' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
   }
   var PAQUETES_OFERTA = [
-    { id: 'constructor', ico: '🔨', nombre: ['Paquete del Constructor', "Builder's bundle"], gemas: 600, cosas: [['acel_1h', 3], ['madera_500k', 1], ['piedra_500k', 1]], precio: '4,99', valor: 5 },
+    { id: 'constructor', ico: '🔨', nombre: ['Paquete del Constructor', "Builder's bundle"], gemas: 600, cosas: [['acel_1h', 3], ['madera_500k', 1], ['piedra_500k', 1]], precio: '2,99', valor: 5 }, // v7.92: tk_pack_constructor
     { id: 'guerrero', ico: '⚔️', nombre: ['Paquete del Guerrero', "Warrior's bundle"], gemas: 1200, cosas: [['reclutas', 3], ['cofre_plata', 2], ['escudo_8h', 1]], precio: '9,99', valor: 6 },
     { id: 'pirata', ico: '🏴‍☠️', nombre: ['Tesoro del Pirata', "Pirate's treasure"], gemas: 2600, cosas: [['cofre_oro', 2], ['libro_gra', 2], ['acel_8h', 2], ['portal_elegir', 1]], precio: '19,99', valor: 8 }
   ];
@@ -10914,8 +10914,43 @@
     h += '</div><p class="nota" style="opacity:.8">💳 ' + L('Las compras con dinero real todavía no están activas: no se cobra nada.', 'Real-money purchases are not active yet: nothing is charged.') + '</p>';
     abrirPanel(L('Tienda', 'Shop'), h, { tipo: 'gemas' }); $('panel').classList.add('iv-panel', 'tg-panel');
   }
+  // v7.92: dinero real por Pagos (Google Play / App Store en la app, Stripe en la web). La entrega llega por compras/{id}.
+  var SKU_GEMAS = ['tk_gemas_100', 'tk_gemas_550', 'tk_gemas_1200', 'tk_gemas_2600', 'tk_gemas_7000', 'tk_gemas_15000'], SKU_OFERTA = { constructor: 'tk_pack_constructor', guerrero: 'tk_pack_guerrero', pirata: 'tk_pack_pirata' };
+  function pagoReal(sku, titulo) {
+    if (!window.Pagos || !Pagos.activo()) return false;
+    if (!hayCuenta()) { consejoTemporal(L('Necesitas una cuenta para comprar.', 'You need an account to buy.')); sonar('error'); return true; }
+    var pr = Pagos.CATALOGO[sku];
+    confirmarJuego('💳 ' + titulo, L('Precio: ', 'Price: ') + '<b>US$ ' + pr.usd + '</b><br><small>' + L('El pago lo hace ', 'Payment by ') + ({ ios: 'App Store', android: 'Google Play', web: 'Stripe' })[Pagos.detectarPlataformaPago()] + '</small>', L('Comprar', 'Buy'), function () {
+      Pagos.comprarProducto(sku, Cuentas.usuario().uid).then(function (r) { if (!r.redirige) { consejoTemporal('✅ ' + L('Pago recibido. Entregando…', 'Payment received. Delivering…')); setTimeout(cobrarCompras, 1500); } })
+        .catch(function (e) { if (!/cancel/i.test(String(e && e.message))) { consejoTemporal('⚠️ ' + L('No se completó la compra. No se cobró nada.', 'The purchase did not complete. Nothing was charged.')); sonar('error'); } });
+    });
+    return true;
+  }
+  var cobrandoCompras = false;
+  function cobrarCompras() {
+    if (!hayCuenta() || !Cuentas.comprasPendientes || cobrandoCompras) return;
+    cobrandoCompras = true;
+    Cuentas.comprasPendientes().then(function (l) {
+      cobrandoCompras = false;
+      estado.comprasCobradas = estado.comprasCobradas || {};
+      l.forEach(function (c) {
+        if (estado.comprasCobradas[c.id]) { Cuentas.marcarCompra(c.id).catch(function () {}); return; }
+        Cuentas.marcarCompra(c.id).then(function () {
+          estado.comprasCobradas[c.id] = Date.now();
+          var items = [];
+          if (c.gemas > 0) { estado.gemas = (estado.gemas || 0) + c.gemas; items.push({ ico: '💎', n: c.gemas, nom: L('gemas', 'gems') }); }
+          Object.keys(c.objetos || {}).forEach(function (k) { if (!OBJETOS[k]) return; estado.mochila[k] = (estado.mochila[k] || 0) + c.objetos[k]; items.push({ ico: OBJETOS[k].icono, n: c.objetos[k], nom: N(k) }); });
+          vipSumar(Math.round((c.gemas || 0) / 10)); // las compras también suben el VIP (1 punto por cada 10 gemas)
+          guardar(true); actualizarHUD(); sonar('gemas');
+          mostrarRecompensas('💳 ' + L('¡Gracias por tu compra!', 'Thanks for your purchase!'), items);
+        }).catch(function () {});
+      });
+    }).catch(function () { cobrandoCompras = false; });
+  }
+  setInterval(function () { if (!enMenu) cobrarCompras(); }, 60000);
   function comprarPaquete(i) {
     var p = PAQUETES_GEMAS[i]; if (!p) return;
+    if (pagoReal(SKU_GEMAS[i], p.nombre[estado.idioma === 'en' ? 1 : 0])) return;
     confirmarJuego('💎 ' + p.nombre[estado.idioma === 'en' ? 1 : 0], L('Recibirías ', 'You would get ') + '<b>' + formatoNumero(p.gemas) + ' 💎</b> ' + L('por', 'for') + ' <b>US$ ' + p.precio + '</b>.', L('Comprar', 'Buy'), function () {
       confirmarJuego('💳 ' + L('Todavía no', 'Not yet'), L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {});
     });
@@ -11551,7 +11586,7 @@
     else if (a === 'azar-modo') { sonar('click'); abrirAzar(b.getAttribute('data-m')); }
     else if (a === 'promo-reclamar') reclamarPromo(b.getAttribute('data-id'));
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
-    else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
+    else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po && pagoReal(SKU_OFERTA[po.id], po.nombre[estado.idioma === 'en' ? 1 : 0])) return; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
     else if (a === 'chat-pedir') { sonar('click'); pedidoDesdeChat = true; abrirNuevoPedido('recursos'); }
     else if (a === 'chat-donar') { if (!b.disabled) { b.disabled = true; donarDesdeChat(b.getAttribute('data-id')); } }
@@ -12487,7 +12522,7 @@
     if (typeof estado.pobRegalo !== 'number') { estado.pobRegalo = Math.max(0, tropasOcupadas() + 200 - POB_BASE); guardar(); }
     setTimeout(actualizarHUD, 300);
     setTimeout(cofreAlEntrar, 2200);
-    setTimeout(revisarTorneo, 4000); setTimeout(revisarTemporada, 6000);
+    setTimeout(revisarTorneo, 4000); setTimeout(revisarTemporada, 6000); setTimeout(cobrarCompras, 5000); // v7.92: compras pagadas pendientes de entregar
     if (estado.fundando) setTimeout(completarFundacion, Math.max(2500, (estado.fundando.llega || 0) - Date.now())); // v7.82: los colonos llegan aunque se haya cerrado el juego
   }
 

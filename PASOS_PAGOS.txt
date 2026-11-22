@@ -1,0 +1,65 @@
+PAGOS CON DINERO REAL EN TINY KINGDOM (v7.92)
+===============================================
+El código ya está listo; los pagos están APAGADOS hasta que termines estos pasos.
+Mientras tanto la tienda sigue diciendo «todavía no» y no se cobra nada.
+
+Cómo funciona
+-------------
+- El juego llama a Pagos.comprarProducto('tk_gemas_550')   (archivo juego3d/js/sistemas/pagos.js).
+- En la app de iPhone cobra la App Store; en la de Android, Google Play (las dos a través de RevenueCat).
+  En la web (tinykingdom-pegao.web.app) cobra Stripe. Stripe NUNCA se usa dentro de la app (Apple y Google lo prohíben).
+- El teléfono no se entrega nada a sí mismo: la Cloud Function «verificarCompraNativa» (o el webhook de Stripe)
+  comprueba el pago de verdad y crea compras/{transacción}. El juego lo lee, entrega las gemas una sola vez
+  y lo marca como cobrado. Así no hay fraude ni compras repetidas.
+
+Los 9 productos (mismo ID en Google Play Console, App Store Connect, RevenueCat y Stripe)
+---------------------------------------------------------------------------------------
+  tk_gemas_100      US$ 0.99    100 gemas
+  tk_gemas_550      US$ 4.99    550 gemas
+  tk_gemas_1200     US$ 9.99    1.200 gemas
+  tk_gemas_2600     US$ 19.99   2.600 gemas
+  tk_gemas_7000     US$ 49.99   7.000 gemas
+  tk_gemas_15000    US$ 99.99   15.000 gemas
+  tk_pack_constructor  US$ 2.99   600 gemas + 3 aceleradores 1h + 500k madera + 500k piedra
+  tk_pack_guerrero     US$ 9.99   1.200 gemas + 3 reclutas + 2 cofres de plata + escudo 8h
+  tk_pack_pirata       US$ 19.99  2.600 gemas + 2 cofres de oro + 2 libros + 2 aceleradores 8h + portal elegido
+  (Todos son «consumibles» / «In-app product», NO suscripciones.)
+
+PASO 1 — Tiendas
+  a) App Store Connect → tu app → Compras dentro de la app → (+) Consumible, con cada ID de arriba.
+     Hace falta haber firmado el acuerdo de «Apps de pago» (Acuerdos, impuestos y banca) con PEGAO APP LLC.
+  b) Google Play Console → tu app → Monetizar → Productos integrados en la aplicación → crea los 9 IDs.
+
+PASO 2 — RevenueCat (revenuecat.com, gratis hasta US$ 2.500 al mes)
+  a) Crea el proyecto «Tiny Kingdom» y añade la app de iOS (com.pegao.tinykingdom) y la de Android.
+  b) Conecta la clave de App Store Connect y la cuenta de servicio de Google Play.
+  c) Importa los 9 productos.
+  d) Copia las claves PÚBLICAS (appl_… y goog_…) y la clave SECRETA (sk_…).
+
+PASO 3 — Cloud Functions (necesita el plan Blaze de Firebase en el proyecto tiny-kingdom-pegao)
+  En tu PC, dentro de juego3d\nube:
+     cd functions && npm install && cd ..
+     firebase functions:secrets:set REVENUECAT_SECRET        (pega la sk_ de RevenueCat)
+     firebase functions:secrets:set STRIPE_SECRET            (pega la sk_live_ de Stripe)
+     firebase functions:secrets:set STRIPE_WEBHOOK_SECRET    (pega la whsec_ del webhook, paso 4)
+     firebase deploy --only functions --project tiny-kingdom-pegao
+  Nunca pegues estas claves en el chat ni en el código.
+
+PASO 4 — Stripe (solo la web)
+  a) Crea un Payment Link por producto. En cada uno, en «Metadata», pon  producto = tk_gemas_550  (su ID).
+  b) Developers → Webhooks → añade la dirección de la función webhookStripe
+     (https://us-central1-tiny-kingdom-pegao.cloudfunctions.net/webhookStripe) con el evento checkout.session.completed.
+
+PASO 5 — Plugin en la app (con internet, en tu PC)
+     cd app
+     npm install @revenuecat/purchases-capacitor
+     npx cap sync
+  (Sube el package.json y package-lock.json nuevos; Codemagic usa «npm ci».)
+
+PASO 6 — Encender
+  En juego3d/js/sistemas/pagos.js, dentro de CONFIG:
+     activo: true,
+     revenuecat: { ios: 'appl_…', android: 'goog_…' },
+     stripe: { tk_gemas_100: 'https://buy.stripe.com/…', … }
+  (Las claves appl_ y goog_ son públicas: pueden ir en el código. Las sk_ y whsec_ NO.)
+  O pídeselo a Claude pasándole solo las claves públicas y los enlaces de Stripe.

@@ -154,6 +154,13 @@ var Cuentas = (function () {
         version: 1
       }).then(function () { errorGuardar = ''; }).catch(function (err) { errorGuardar = (err && err.code) || 'error'; try { console.warn('No se pudo guardar en la nube', err); } catch (x) {} });
     },
+    // v7.92: compras verificadas por el servidor que aún no se entregaron
+    comprasPendientes: function () {
+      if (!usuario) return Promise.resolve([]);
+      return db.collection('compras').where('uid', '==', usuario.uid).where('cobrada', '==', false).limit(20).get()
+        .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
+    },
+    marcarCompra: function (id) { return db.collection('compras').doc(id).update({ cobrada: true, cobradaEn: Date.now() }); },
     // v7.85: COPIA DE SEGURIDAD aparte (respaldos/{uid}): solo se escribe si el reino no es mucho menor que el último respaldo
     leerRespaldo: function () {
       if (!usuario) return Promise.resolve(null);
