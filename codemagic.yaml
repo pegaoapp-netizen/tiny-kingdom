@@ -104,6 +104,10 @@ workflows:
           npx cap sync android
           # Google Play (protección automática) exige minSdk 24 o más; Capacitor trae 23
           sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/' android/variables.gradle
+          # Google Play exige targetSdk 36 (Android 16)
+          sed -i 's/compileSdkVersion = [0-9]*/compileSdkVersion = 36/; s/targetSdkVersion = [0-9]*/targetSdkVersion = 36/' android/variables.gradle
+          grep -q suppressUnsupportedCompileSdk android/gradle.properties || echo 'android.suppressUnsupportedCompileSdk=36' >> android/gradle.properties
+          cat android/variables.gradle
           grep -n minSdkVersion android/variables.gradle
       - name: Icono y pantalla de carga
         script: |
