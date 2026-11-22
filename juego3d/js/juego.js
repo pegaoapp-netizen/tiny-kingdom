@@ -1652,11 +1652,11 @@
     var ganoAtacante = !!x.gano, buena = recibido ? !ganoAtacante : ganoAtacante, res = x.resuelto && !x.cancelado;
     var botin = x.botin ? (x.botin.oro || 0) + (x.botin.comida || 0) + (x.botin.madera || 0) + (x.botin.piedra || 0) : 0;
     var cuando = new Date(x.fecha).toLocaleString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-    return '<div class="gu-fila' + (res ? (buena ? ' bien' : ' mal') : ' vivo') + '">' +
+    return '<div class="gu-fila' + (res ? '' : ' vivo') + '">' +
       '<div class="gu-quien"><b class="' + (recibido ? 'enemigo' : 'nuestro') + '">' + escaparHTML(x.atacanteNombre || '?') + (x.alA ? ' <small>[' + escaparHTML(x.alA) + ']</small>' : '') + '</b>' +
       '<span class="gu-flecha">⚔️ ➜</span><b class="' + (recibido ? 'nuestro' : 'enemigo') + '">' + escaparHTML(x.defensorNombre || '?') + (x.alD ? ' <small>[' + escaparHTML(x.alD) + ']</small>' : '') + '</b></div>' +
       '<div class="gu-dat"><span>🕒 ' + cuando + '</span><span>💪 ' + formatoNumero(x.fuerza || 0) + '</span>' +
-      (res ? '<span class="gu-res">' + (ganoAtacante ? (recibido ? L('Nos ganaron', 'They won') : L('Victoria', 'Victory')) : (recibido ? L('Defendido', 'Defended') : L('Derrota', 'Defeat'))) + '</span>' + (ganoAtacante && botin ? '<span>💰 ' + formatoNumero(botin) + '</span>' : '') : estadoAtaqueHTML(x)) + '</div></div>';
+      (res ? '<span class="gu-res">📬 ' + L('Informe en el Correo', 'Report in Mail') + '</span>' : estadoAtaqueHTML(x)) /* v7.76: el botín y el resultado solo en el Correo */ + '</div></div>';
   }
   function abrirPanelGuerra() {
     var d = guerra.datos, tab = guerra.tab;
@@ -2564,7 +2564,7 @@
     escenaBatalla({ nombre: estado.idioma === 'en' ? TIPOS_BESTIA[b.tipo].en : TIPOS_BESTIA[b.tipo].es, nivel: b.nivel, emoji: TIPOS_BESTIA[b.tipo].icono }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas), premio = null;
     if (res.gano) {
-      premio = premioBestia(b.nivel); sumarXP(8 * b.nivel);
+      premio = premioBestia(b.nivel); sumarXP(8 * b.nivel); sumarTemporada('campana', b.nivel);
       estado.bestias = estado.bestias || {}; estado.bestias[b.id] = Date.now() + 30 * 60 * 1000;
       if (estado.alianza) regaloAlianza('bestia');
       sonar('victoria');
@@ -2837,7 +2837,7 @@
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
-    var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
+    var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', cm.nivel);
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); darBlasones(3 + 2 * cm.nivel); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
@@ -2858,7 +2858,7 @@
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
-    var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25));
+    var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', lv);
     nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano) { darCristales(lv); sumarXP(10 * lv); sumarPuntosAlianza(25); sumarLogro('campamentos'); darBlasones(3 + 2 * lv); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdVilla = estado.cdVilla || {}; estado.cdVilla[a.uid] = Date.now() + 20 * 60 * 1000;
@@ -4954,7 +4954,7 @@
     marchas.forEach(function (m) { if (m.resuelto || m.cancelado || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 9) }); });
     entrantes.forEach(function (r) { if (r.resuelto || r.llega <= ahora || r.cancelado) return; var d = lugarDe(r.atacante) || (r.prueba ? { x: Math.min(98, yo.x + 18), y: Math.max(1, yo.y - 14) } : null); if (d) lista.push({ id: 'e' + r.id, de: d, a: yo, sale: r.fecha || (r.llega - 120000), llega: r.llega, color: 0xd0302a, txt: '🔥 ' + String(r.atacanteNombre || '').slice(0, 12), enemigo: true }); });
     marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven', 'Returning')) : L('Van a atacar', 'Attacking') }); });
-    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, txt: (v.botin ? '💰 ' : '🏇 ') + L('Vuelven', 'Returning'), botin: !!v.botin }); });
+    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, txt: '🏇 ' + L('Regresando a la villa', 'Returning home'), botin: false }); });
     var t = performance.now() / 1000;
     lista.forEach(function (v) {
       var c0 = celdaDe(v.de.x, v.de.y), c1 = celdaDe(v.a.x, v.a.y), p0 = posCelda(c0.x, c0.y), p1 = posCelda(c1.x, c1.y);
@@ -5384,7 +5384,7 @@
     var tu = tiempoUnidadLote(tipo, n);
     for (var k = 0; k < n; k++) colaEntreno.push({ tipo: tipo, t: 0, total: tu });
     var hechas = n;
-    sumarLogro('tropas', hechas);
+    sumarLogro('tropas', hechas); sumarTemporada('entrenar', hechas, (TT && TT.NIVEL_TROPA[tipo]) || 1);
     if (hechas > 1) consejoTemporal(T('entrenando_n', { n: hechas }));
     sonar('click');
     actualizarHUD();
@@ -5492,7 +5492,7 @@
     nuevoCorreo('informes', L('Informe de batalla: oleada ' + n + ' superada', 'Battle report: wave ' + n + ' won'), L('Defensa del reino', 'Kingdom defense'), htmlInforme([[L('Resultado', 'Result'), '🏆 ' + L('Victoria', 'Victory')], [L('Oleada', 'Wave'), n], [L('Gemas', 'Gems'), '💎 ' + g], [L('Vida del castillo', 'Castle health'), Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo()]]));
     estado.histOleadas = (estado.histOleadas || []).concat([{ n: n, f: Date.now(), v: Math.round(estado.vidaCastillo / vidaMaxCastillo() * 100) }]).slice(-20); // v7.03: historial para la Campaña
     estado.oleada = n + 1;
-    sumarTorneo(PUNTOS_TORNEO.oleada);
+    sumarTorneo(PUNTOS_TORNEO.oleada); sumarTemporada('campana', n);
     estado.vidaCastillo = vidaMaxCastillo();
     setTimeout(function () { guardar(true); }, 50);
     // las tropas heridas se curan
@@ -6615,13 +6615,118 @@
       });
     }).catch(function () { revisarTorneo.andando = false; });
   }
+  // ---------- v7.76: TORNEO DE TEMPORADA (14 días, 4 fases; reglas en js/sistemas/torneoTemporada.js) ----------
+  var TT = window.TorneoTemporada;
+  function temporada() {
+    var id = TT.idTemporada();
+    if (!estado.temporada) estado.temporada = { id: id, puntos: 0, liq: 0, hitos: {}, cobrada: -1 };
+    var t = estado.temporada; if (!t.hitos) t.hitos = {};
+    return t;
+  }
+  var timerTemporada = null;
+  function sumarTemporada(accion, valor, nivelTropa) {
+    if (!TT) return;
+    var t = temporada();
+    if (t.id !== TT.idTemporada()) { revisarTemporada(); t = temporada(); if (t.id !== TT.idTemporada()) return; }
+    var n = TT.puntos(accion, valor, nivelTropa); if (!(n > 0)) return;
+    t.puntos += n; if (accion === 'liquidacion') t.liq += n;
+    if (!timerTemporada) timerTemporada = setTimeout(function () { timerTemporada = null; publicarTemporada(); }, 15000);
+  }
+  function publicarTemporada() {
+    var t = temporada();
+    if (!hayCuenta() || !Cuentas.puntosTemporada || t.id !== TT.idTemporada() || !(t.puntos > 0)) return;
+    Cuentas.puntosTemporada(t.id, { nombre: Cuentas.nombrePublico(), puntos: Math.round(t.puntos), liq: Math.round(Math.min(t.liq, t.puntos)), alianza: estado.alianza || null, actualizado: Date.now() }).catch(function () {});
+  }
+  // fase 1: el poder que subes cuenta (se revisa cada 20 s)
+  setInterval(function () {
+    if (!TT || !estado || TT.faseActual().accion !== 'poder') return;
+    var t = temporada(), p = Math.round(calcularPoder());
+    if (t.ultPoder === undefined || t.fasePoder !== t.id) { t.ultPoder = p; t.fasePoder = t.id; return; }
+    if (p > t.ultPoder + 99) { var sube = p - t.ultPoder; sumarTemporada('poder', sube); t.ultPoder += Math.floor(sube / 100) * 100; }
+    else if (p < t.ultPoder) t.ultPoder = p; // si baja (pierdes tropas) no se cobra dos veces lo mismo
+  }, 20000);
+  // al terminar la temporada: busca tu puesto y te da el premio (una sola vez)
+  function revisarTemporada() {
+    if (!TT) return;
+    var t = temporada(), id = t.id, hoy = TT.idTemporada();
+    if (id === hoy) { if (t.puntos > 0) publicarTemporada(); return; }
+    var reiniciar = function () { estado.temporada = { id: hoy, puntos: 0, liq: 0, hitos: {}, cobrada: id }; guardar(true); };
+    if (!(t.puntos > 0) || t.cobrada === id) return reiniciar();
+    if (!hayCuenta() || revisarTemporada.andando) return;
+    revisarTemporada.andando = true;
+    Cuentas.topTemporada(id, 25).then(function (lista) {
+      revisarTemporada.andando = false;
+      var yo = Cuentas.usuario().uid, i = lista.map(function (x) { return x.uid; }).indexOf(yo), pos = i >= 0 ? i + 1 : 0;
+      var pts = t.puntos, liq = t.liq, pr = pos ? TT.premioRanking(pos) : null, cumple = TT.cumpleMinimo(pts, liq);
+      reiniciar();
+      if (!pr) return;
+      var items = [];
+      if (cumple) {
+        if (pr.oro) items.push({ ico: '🪙', n: pr.oro, nom: T('r_oro') });
+        for (var k = 0; k < pr.piezas; k++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza del Set de Temporada', 'Season Set piece') });
+        if (pr.fichas) items.push({ ico: '🎟️', n: pr.fichas, nom: N('ficha_x1') });
+        if (pr.cofres) items.push({ ico: '🧰', n: pr.cofres, nom: N('cofre_equipo') });
+      } else {
+        items.push({ ico: '🪙', n: TT.CONFIG.consuelo.oro, nom: T('r_oro') });
+        TT.CONFIG.consuelo.objetos.forEach(function (o) { items.push({ ico: (OBJETOS[o[0]] || {}).icono || '🎁', n: o[1], nom: N(o[0]) }); });
+      }
+      nuevoCorreo('sistema', '👑 ' + L('Temporada terminada: puesto ', 'Season over: place ') + pos, L('Torneo de Temporada', 'Season Tournament'),
+        htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(pts)], [L('Liquidación', 'Kills'), formatoNumero(liq)], [L('Puesto', 'Place'), '#' + pos],
+          [L('Mínimo para el Set', 'Set minimum'), cumple ? '✅ ' + L('Cumplido', 'Reached') : '❌ ' + L('No llegaste: solo premio de consuelo', 'Not reached: consolation prize only')]]));
+      mostrarRecompensas('👑 ' + L('Temporada · puesto ', 'Season · place ') + pos, items, function () {
+        if (cumple) {
+          if (pr.oro) sumarRecurso('oro', pr.oro);
+          for (var q = 0; q < pr.piezas; q++) darPiezaHeroe();
+          if (pr.fichas) estado.mochila.ficha_x1 = (estado.mochila.ficha_x1 || 0) + pr.fichas;
+          if (pr.cofres) estado.mochila.cofre_equipo = (estado.mochila.cofre_equipo || 0) + pr.cofres;
+          if (pr.extra === 'titulo') estado.tituloTemporada = id;
+        } else {
+          sumarRecurso('oro', TT.CONFIG.consuelo.oro);
+          TT.CONFIG.consuelo.objetos.forEach(function (o) { estado.mochila[o[0]] = (estado.mochila[o[0]] || 0) + o[1]; });
+        }
+        guardar(true);
+      });
+    }).catch(function () { revisarTemporada.andando = false; });
+  }
+  function cobrarHitoTemporada(i) {
+    var t = temporada(), h = TT.CONFIG.hitos[i];
+    if (!h || t.id !== TT.idTemporada() || t.hitos[i] || t.puntos < h.puntos) { sonar('error'); return; }
+    t.hitos[i] = 1;
+    var items = h.premio.map(function (o) { estado.mochila[o[0]] = (estado.mochila[o[0]] || 0) + o[1]; return { ico: (OBJETOS[o[0]] || {}).icono || '🎁', n: o[1], nom: N(o[0]) }; });
+    guardar(true); mostrarRecompensas('👑 ' + L('Cofre de temporada', 'Season chest'), items, function () { abrirPanelRanking('temporada'); });
+  }
+  function htmlTemporada(lista, yo) {
+    var t = temporada(), f = TT.faseActual(), es = estado.idioma !== 'en', C = TT.CONFIG;
+    var misP = t.id === TT.idTemporada() ? Math.round(t.puntos) : 0, misL = t.id === TT.idTemporada() ? Math.round(t.liq) : 0;
+    var i = lista.map(function (x) { return x.uid; }).indexOf(yo);
+    var fases = C.fases.map(function (q) { var act = q.fase === f.fase, ya = q.fase < f.fase;
+      return '<div class="fila-miembro' + (act ? ' yo' : '') + '" style="' + (ya ? 'opacity:.5' : '') + '"><b>' + q.icono + ' ' + (es ? q.es : q.en) + '</b><span class="chip">' + L('Días ', 'Days ') + q.diaInicio + '–' + q.diaFin + '</span>' + (act ? '<span class="chip">⏳ ' + fmtTiempo(Math.max(0, TT.finFase() - Date.now()) / 1000) + '</span>' : '') + '</div>' +
+        (act ? '<p class="nota" style="margin:2px 0 6px">' + (es ? q.como_es : q.como_en) + '</p>' : ''); }).join('');
+    var max = C.hitos[C.hitos.length - 1].puntos, pct = Math.min(100, misP / max * 100);
+    var hitos = '<div class="cola"><div class="barra"><div style="width:' + pct.toFixed(1) + '%"></div></div></div>' +
+      C.hitos.map(function (h, k) { var ya = !!t.hitos[k], puede = !ya && misP >= h.puntos;
+        return '<div class="fila-miembro"><b>' + (ya ? '✅' : puede ? '🎁' : '🔒') + ' ' + formatoNumero(h.puntos) + '</b><span class="chip" style="white-space:normal;text-align:right">' + h.premio.map(function (o) { return ((OBJETOS[o[0]] || {}).icono || '🎁') + ' ' + N(o[0]) + ' ×' + o[1]; }).join(' · ') + '</span>' +
+          (puede ? '<button class="comprar verde" data-accion="tm-hito" data-i="' + k + '">' + L('Cobrar', 'Claim') + '</button>' : '') + '</div>'; }).join('');
+    var premios = [['🥇 1', L('Set completo (6 piezas) + 1M 🪙 + título', 'Full set (6 pieces) + 1M 🪙 + title')], ['🥈🥉 2–3', L('4 piezas + 500k 🪙 + 10 fichas', '4 pieces + 500k 🪙 + 10 tokens')], ['4 – 10', L('2 piezas + 250k 🪙', '2 pieces + 250k 🪙')], ['11 – 25', L('1 pieza + 2 cofres de equipo', '1 piece + 2 gear chests')]];
+    return '<div class="carta rk-tuyo"><b>👑 ' + (es ? C.nombre.es : C.nombre.en) + '</b><span class="chip">' + L('Día ', 'Day ') + TT.dia() + '/14</span>' +
+      '<p class="reloj-panel">⏳ ' + L('La temporada termina en ', 'Season ends in ') + fmtTiempo(Math.max(0, TT.fin(TT.idTemporada()) - Date.now()) / 1000) + '</p>' +
+      '<p><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b> · ' + L('Liquidación: ', 'Kills: ') + formatoNumero(misL) + ' · ' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</p>' +
+      '<p class="nota">' + (TT.cumpleMinimo(misP, misL) ? '✅ ' + L('Ya cumples el mínimo para el Set.', 'You reach the Set minimum.') : '🎯 ' + L('Para el Set necesitas ', 'For the Set you need ') + formatoNumero(C.umbralMinimoPuntos) + L(' puntos y ', ' points and ') + formatoNumero(C.umbralMinimoLiquidacion) + L(' de liquidación.', ' from kills.')) + '</p></div>' +
+      '<div class="carta" style="margin-top:8px"><h3>' + L('Fases', 'Phases') + '</h3><p class="nota">' + L('Solo suma la acción de la fase de hoy.', 'Only today\'s phase action scores.') + '</p>' + fases + '</div>' +
+      '<div class="carta" style="margin-top:8px"><h3>' + L('Cofres de progreso', 'Progress chests') + '</h3>' + hitos + '</div>' +
+      '<div class="carta" style="margin-top:8px"><h3>' + L('Premios al terminar', 'End prizes') + '</h3>' + premios.map(function (q) { return '<div class="fila-miembro"><b>' + q[0] + '</b><span class="chip">' + q[1] + '</span></div>'; }).join('') +
+      '<p class="nota">' + L('Si no llegas al mínimo, aunque quedes #1 solo recibes oro y aceleradores, no el Set.', 'If you don\'t reach the minimum, even at #1 you only get gold and speed-ups, not the Set.') + '</p></div>' +
+      '<div class="carta" style="margin-top:8px"><h3>' + L('Clasificación', 'Standings') + '</h3>' +
+      (lista.length ? lista.map(function (a, k) { var ok = TT.cumpleMinimo(a.puntos, a.liq); return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span><span class="chip">' + (ok ? '✅ Set' : '❌') + '</span>', a.uid === yo); }).join('') : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>';
+  }
   function filaRanking(pos, nombre, al, extra, yo) {
     return '<div class="fila-miembro rk-fila' + (yo ? ' yo' : '') + '"><b class="rk-pos">' + (['🥇', '🥈', '🥉'][pos - 1] || '#' + pos) + '</b>' +
       (al ? '<span class="etiqueta-al">' + escaparHTML(al) + '</span>' : '') + '<b class="rk-nom">' + escaparHTML(nombre || '?') + (yo ? ' · ' + L('Tú', 'You') : '') + '</b>' + extra + '</div>';
   }
   function abrirPanelRanking(tab) {
-    tab = tab || abrirPanelRanking.tab || 'poder'; abrirPanelRanking.tab = tab;
+    tab = tab || abrirPanelRanking.tab || 'temporada'; abrirPanelRanking.tab = tab;
     var tabs = '<div class="subtabs rk-tabs"><button class="' + (tab === 'poder' ? 'activo' : '') + '" data-accion="rk-tab" data-t="poder">💪 ' + L('Poder', 'Power') + '</button>' +
+      '<button class="' + (tab === 'temporada' ? 'activo' : '') + '" data-accion="rk-tab" data-t="temporada">👑 ' + L('Temporada', 'Season') + '</button>' +
       '<button class="' + (tab === 'torneo' ? 'activo' : '') + '" data-accion="rk-tab" data-t="torneo">🏆 ' + L('Torneo semanal', 'Weekly tournament') + '</button>' +
       '<button class="' + (tab === 'liquidacion' ? 'activo' : '') + '" data-accion="rk-tab" data-t="liquidacion">⚔️ ' + L('Liquidación', 'Kills') + '</button>' +
       '<button class="' + (tab === 'alianzas' ? 'activo' : '') + '" data-accion="rk-tab" data-t="alianzas">🛡️ ' + L('Alianzas', 'Alliances') + '</button></div>';
@@ -6639,6 +6744,11 @@
         listo('<div class="carta"><p class="nota">' + L('Las alianzas por la suma del poder y la liquidación de sus jugadores. Toca una para ver su ficha.', 'Alliances by their players\' total power and kills. Tap one to see it.') + '</p>' +
           (lista.length ? lista.map(function (q, k) { return '<div class="fila-miembro rk-fila al-toca' + (q.tag === estado.alianza ? ' yo' : '') + '" data-accion="al-ver" data-tag="' + escaparHTML(q.tag) + '"><b class="rk-pos">' + (['🥇', '🥈', '🥉'][k] || '#' + (k + 1)) + '</b><span class="etiqueta-al">' + escaparHTML(q.tag) + '</span><span class="chip">💪 ' + corto(q.poder) + '</span><span class="chip rk-kp">⚔️ ' + corto(q.kp) + '</span></div>'; }).join('') : '<p>' + L('Todavía no hay alianzas.', 'No alliances yet.') + '</p>') + '</div>');
       }).catch(error);
+      return;
+    }
+    if (tab === 'temporada') {
+      publicarTemporada();
+      Cuentas.topTemporada(TT.idTemporada(), 50).then(function (lista) { listo(htmlTemporada(lista, yo)); }).catch(function () { listo(htmlTemporada([], yo)); });
       return;
     }
     if (tab === 'liquidacion') {
@@ -7214,8 +7324,9 @@
       h += '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (tiposCasa.length ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
     } else {
       var ahora = Date.now(), l = [];
-      marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Volviendo', 'Returning') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
+      marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Regresando a la villa · informe en el Correo', 'Returning home · report in Mail') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
       marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).forEach(function (m) { l.push({ ico: '⚔️', dest: m.defensorNombre || '', x: m.x, y: m.y, est: L('Atacando', 'Attacking'), t: (m.llega - ahora) / 1000 }); });
+      (estado.regresos || []).filter(function (v) { return v.llega > ahora; }).forEach(function (v) { l.push({ ico: '↩️', dest: v.nombre || '', est: L('Regresando a la villa · informe en el Correo', 'Returning home · report in Mail'), t: (v.llega - ahora) / 1000 }); }); // v7.76: sin decir si ganaste
       h += '<p class="ru-nota">' + L('Marchas a la vez: ', 'Marches at once: ') + '<b>1</b> · ' + L('Mejora el Punto de reunión para enviar ejércitos más grandes.', 'Upgrade the Rally point to send bigger armies.') + '</p>';
       h += l.length ? l.map(function (q) { return '<div class="ru-marcha"><span class="ru-ic">' + q.ico + '</span><div class="ru-dat"><b>' + escaparHTML(q.dest) + '</b><small>' + q.est + (q.x !== undefined ? ' · X ' + q.x + ' · Y ' + q.y : '') + '</small></div><span class="ru-t">⏱ ' + fmtTiempo(Math.ceil(q.t)) + '</span>' + (q.x !== undefined ? '<button class="iv-boton" data-accion="reunion-ver" data-x="' + q.x + '" data-y="' + q.y + '">' + L('Ver', 'View') + '</button>' : '') + '</div>'; }).join('')
         : '<p class="iv-vacio">' + L('No tienes marchas ahora. Ve al Mundo, toca un lugar y elige Marchar.', 'No marches right now. Go to the World, tap a place and choose March.') + '</p>';
@@ -8640,8 +8751,8 @@
     // y el informe completo (botín, bajas, regreso) queda en el Correo con su globo rojo.
     if (!window.__escenaVieja) {
       var vj = $('batalla-pvp'); if (vj) vj.remove();
-      sonar('golpe'); setTimeout(function () { sonar(gano ? 'victoria' : 'derrota'); }, 400);
-      consejoTemporal((gano ? '🏆 ' : '💔 ') + L('Informe de batalla en el Correo', 'Battle report in your Mail') + ' · ' + (a.nombre || ''));
+      sonar('golpe'); // v7.76: el aviso no dice si ganaste (como KoC): el resultado está en el informe
+      consejoTemporal('⚔️ ' + L('Batalla terminada · informe en el Correo', 'Battle over · report in your Mail') + ' · ' + (a.nombre || ''));
       try { alTerminar(function () {}); } catch (e) {}
       try { actualizarAlertas(); } catch (e) {}
       return;
@@ -8755,7 +8866,7 @@
       if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: Date.now(), llega: Date.now() + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
       else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
       if (r.gano) sumarTorneo(PUNTOS_TORNEO.ataque);
-      var liqM = liqDeDefensa(r.defensa || 0, r.gano ? 1 : 0.25); sumarLiquidacion(liqM); // v7.08
+      var liqM = liqDeDefensa(r.defensa || 0, r.gano ? 1 : 0.25); sumarLiquidacion(liqM); sumarTemporada('liquidacion', liqM); // v7.08
       if (estado.destinos) delete estado.destinos[r.id]; if (estado.marchaTropas) delete estado.marchaTropas[r.id];
       var um = estado.ultimaMarcha || {}, envi = 0; for (var kU in (um.tropas || {})) envi += um.tropas[kU] || 0; if (!envi) envi = tropasNormales();
       var herid = Math.round(caidas * 0.3);
@@ -10707,6 +10818,7 @@
     else if (a === 'al-buscar') { sonar('click'); buscarAlianza(); }
     else if (a === 'al-buscar-limpiar') { sonar('click'); buscarAlianza(''); }
     else if (a === 'rk-tab') { sonar('click'); abrirPanelRanking(b.getAttribute('data-t')); }
+    else if (a === 'tm-hito') { sonar('gemas'); cobrarHitoTemporada(+b.getAttribute('data-i')); }
     else if (a === 'al-salir') salirAlianza(b);
     else if (a === 'al-sec') { alSeccion = b.getAttribute('data-sec') || ''; sonar('click'); pintarHubAlianza(); var pc = $('panel-cuerpo'); if (pc) pc.scrollTop = 0; if (alSeccion === 'territorio') Cuentas.casillas().then(function (cs) { cs.forEach(function (q) { casillasNube[q.id] = q; }); if (alSeccion === 'territorio') pintarHubAlianza(); }).catch(function () {}); }
     else if (a === 'al-reclamar') reclamarRegalos(b.getAttribute('data-id'));
@@ -11685,7 +11797,7 @@
     if (typeof estado.pobRegalo !== 'number') { estado.pobRegalo = Math.max(0, tropasOcupadas() + 200 - POB_BASE); guardar(); }
     setTimeout(actualizarHUD, 300);
     setTimeout(cofreAlEntrar, 2200);
-    setTimeout(revisarTorneo, 4000);
+    setTimeout(revisarTorneo, 4000); setTimeout(revisarTemporada, 6000);
   }
 
   // ------------------------------------------------------------------

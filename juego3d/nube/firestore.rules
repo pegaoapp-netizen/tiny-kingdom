@@ -1,5 +1,5 @@
 rules_version = '2';
-// reglas v7.45: regalos con mineral (hierro)
+// reglas v7.76: torneo de temporada (temporadas/{id}/puntos)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -61,6 +61,18 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['nombre', 'puntos', 'alianza', 'actualizado'])
         && request.resource.data.nombre is string && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
         && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 100000000
+        && (request.resource.data.alianza == null || request.resource.data.alianza is string)
+        && request.resource.data.actualizado is int;
+    }
+    // v7.76: torneo de temporada (14 días). Cada jugador escribe solo sus puntos.
+    match /temporadas/{temp}/puntos/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && temp.matches('^[0-9]{3,6}$')
+        && request.resource.data.keys().hasOnly(['nombre', 'puntos', 'liq', 'alianza', 'actualizado'])
+        && request.resource.data.nombre is string && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
+        && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 1000000000000
+        && request.resource.data.liq is int && request.resource.data.liq >= 0 && request.resource.data.liq <= request.resource.data.puntos
         && (request.resource.data.alianza == null || request.resource.data.alianza is string)
         && request.resource.data.actualizado is int;
     }

@@ -236,6 +236,16 @@ var Cuentas = (function () {
         return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
       });
     },
+    // v7.76: torneo de temporada (14 días)
+    puntosTemporada: function (id, datos) {
+      if (!usuario) return Promise.resolve();
+      return db.collection('temporadas').doc(String(id)).collection('puntos').doc(usuario.uid).set(datos);
+    },
+    topTemporada: function (id, n) {
+      return db.collection('temporadas').doc(String(id)).collection('puntos').orderBy('puntos', 'desc').limit(n || 50).get().then(function (q) {
+        return q.docs.map(function (d) { var x = d.data(); x.uid = d.id; return x; });
+      });
+    },
     alianza: function (tag) {
       return db.collection('alianzas').doc(tag).get().then(function (d) { return d.exists ? d.data() : null; });
     },
