@@ -2172,3 +2172,15 @@ html body #panel .tl-volver { margin: 6px 0; padding: 6px 12px; border-radius: 1
 @keyframes vcEntra { from { opacity: 0; transform: scale(1.08); } }
 @keyframes vcGira { to { transform: translateX(-50%) rotate(360deg); } }
 body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !important; } /* en la batalla solo se ve lo de la batalla */
+/* v7.79: VIP, talentos */
+#bo-acelerar.bo-gratis { background: linear-gradient(#ffd54a, #e09a12); border-color: #8a5a06; color: #3a2400; }
+.ac-gratis { background: linear-gradient(#ffd54a, #e09a12) !important; color: #3a2400 !important; margin-bottom: 6px; }
+.ac-gratis small { font-weight: 700; opacity: .8; }
+.pf-tal { margin-top: 8px; position: relative; }
+.pf-vip-l { display: flex; flex-direction: column; gap: 3px; margin-top: 8px; font-size: 12px; }
+.pf-vip-l b { font-size: 12.5px; color: #8a5a06; }
+.pf-vip-l.sig { opacity: .85; }
+.pf-vip-l.sig b { color: #6b4b2a; }
+.tal-cab { display: flex; flex-direction: column; gap: 2px; }
+.tal-bts { display: flex; gap: 6px; justify-content: flex-end; }
+.tal-bts .comprar { min-width: 52px; }

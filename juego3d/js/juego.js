@@ -1124,7 +1124,7 @@
     setTimeout(function () { var nc = camposAbiertos(o.nivel) - camposAbiertos(o.nivel - 1); consejoTemporal('🌾 +' + nc + L(' parcelas en los campos', ' field plots')); }, 2500);
     chispas(new V3(0, 6, 0), 0xffe14a, 30, 5);
     sonar('listo'); sonar('victoria');
-    consejoTemporal(T('castillo_listo', { n: o.nivel })); sumarXP(40 * o.nivel);
+    consejoTemporal(T('castillo_listo', { n: o.nivel })); sumarXP(40 * o.nivel + 80); // v7.79: +10% del poder ganado
     actualizarHUD();
     guardar(true); publicarAldea(true);
     if (panelActual && panelActual.tipo === 'castillo') reabrirPanel();
@@ -1268,7 +1268,7 @@
     if (!t) MIS_DIA.forEach(function (x) { if (x.id === id) { t = x; dia = true; } });
     if (!t || !misLista(t, dia)) return;
     if (dia) misDia().hechas[id] = 1; else { estado.misHechas = estado.misHechas || {}; estado.misHechas[id] = 1; }
-    darPremio(t.p); sumarXP(dia ? 10 : 20);
+    darPremio(t.p); sumarXP((dia ? 10 : 20) * (1 + nivelJugador() / 5)); // v7.79: crece con el nivel
     sonar('victoria'); guardar(true); actualizarMision();
     if (panelActual && panelActual.tipo === 'misiones') abrirPanelMisiones();
     mostrarRecompensas(L('Misión cumplida', 'Quest complete') + ': ' + (estado.idioma === 'en' ? t.en : t.es), premioAItems(t.p));
@@ -1288,7 +1288,7 @@
     var m = MISIONES[estado.mision || 0];
     if (!m || !m.ok()) { sonar('click'); abrirPanelMisiones(); return; }
     darPremio(m.p);
-    estado.mision = (estado.mision || 0) + 1; sumarXP(30);
+    estado.mision = (estado.mision || 0) + 1; sumarXP(30 * (1 + nivelJugador() / 5));
     sonar('victoria'); actualizarHUD(); guardar(true); actualizarMision();
     if (panelActual && panelActual.tipo === 'misiones') abrirPanelMisiones();
     mostrarRecompensas(L('Misión cumplida', 'Quest complete') + ': ' + (estado.idioma === 'en' ? m.en : m.es), premioAItems(m.p));
@@ -1309,6 +1309,8 @@
     b.classList.remove('oculto'); b.dataset.que = r.o.que;
     var t = '🔨 ' + r.o.nombre + ' (' + L('Nv ', 'Lv ') + r.o.nivel + ') ' + fmtTiempo(r.o.falta) + (r.mas ? ' · +' + r.mas : '');
     if ($('bo-txt').textContent !== t) $('bo-txt').textContent = t;
+    var gr = r.o.falta <= vipMinGratis() * 60, ba = $('bo-acelerar'), bt = gr ? '🆓 ' + L('Gratis', 'Free') : '⏩'; // v7.79: VIP
+    if (ba.textContent !== bt) { ba.textContent = bt; ba.classList.toggle('bo-gratis', gr); }
   }
   var castilloPos = new V3(0, 0, 0), RADIO_CASTILLO = 4.6;
   var castilloCd = 0, impuestoCd = 0, comidaCd = 0, hambre = false;
@@ -1396,7 +1398,7 @@
     murallaRebote = 0;
     var fc = formaMuralla(); [0, 1.6, 3.1, 4.7].forEach(function (ta) { chispas(new V3(fc.cx + formaX(ta) * fc.rx, 1.5, fc.cz + formaZ(ta) * fc.rz), 0xd8c49a, 12, 4); });
     sonar('listo');
-    consejoTemporal(T('muralla_lista', { n: o.nivel })); sumarXP(25 * o.nivel);
+    consejoTemporal(T('muralla_lista', { n: o.nivel })); sumarXP(25 * o.nivel + 60);
     actualizarHUD();
     guardar();
   }
@@ -2846,6 +2848,7 @@
     escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', cm.nivel);
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
+    if (res.gano && Math.random() < 0.15) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; setTimeout(function () { consejoTemporal('👑 ' + L('El cofre del campamento traía ', 'The camp chest had ') + N('vip_100')); }, 3500); } // v7.79
     if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); darBlasones(3 + 2 * cm.nivel); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
@@ -2867,6 +2870,7 @@
     escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', lv);
     nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
+    if (res.gano && Math.random() < 0.15) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; setTimeout(function () { consejoTemporal('👑 ' + L('El cofre de la villa traía ', 'The village chest had ') + N('vip_100')); }, 3500); } // v7.79
     if (res.gano) { darCristales(lv); sumarXP(10 * lv); sumarPuntosAlianza(25); sumarLogro('campamentos'); darBlasones(3 + 2 * lv); ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { if (botin[rr]) sumarRecurso(rr, botin[rr]); }); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(lv)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdVilla = estado.cdVilla || {}; estado.cdVilla[a.uid] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
@@ -3336,14 +3340,67 @@
   // nivel del caballero: el número de la corona de tu perfil
   var TROPA_RANGO_ESTRELLAS = { explorador: 1, miliciano: 1, espadachin: 1, guardian: 2, arquero: 1, jinete: 1, caballeria: 2, caballeria_pesada: 3, balista: 3, ariete: 3, catapulta: 4, torre_asedio: 4 };
   // el nivel del jugador sube con la experiencia: construir, mejorar, ganar oleadas, misiones y batallas
-  function xpParaNivel(L2) { return 25 * (L2 - 1) * L2; }
-  function nivelJugador() { var x = estado.xp || 0, n = 1; while (n < 60 && x >= xpParaNivel(n + 1)) n++; return n; }
-  function sumarXP(n) {
-    if (!n) return;
-    var antes = nivelJugador(); estado.xp = (estado.xp || 0) + Math.round(n);
+  // v7.79: nivel sin techo. Para pasar del nivel n al n+1 hacen falta floor(100 · n^2.2) EXP (los primeros suben rápido; después del 60 es prestigio)
+  var XP_ACUM = [0, 0];
+  function xpParaNivel(L2) { while (XP_ACUM.length <= L2) { var k = XP_ACUM.length - 1; XP_ACUM.push(XP_ACUM[k] + Math.floor(100 * Math.pow(k, 2.2))); } return XP_ACUM[L2]; }
+  function nivelJugador() { var x = estado.xp || 0, n = 1; while (n < 5000 && x >= xpParaNivel(n + 1)) n++; return n; }
+  // los requisitos de nivel de jugador se pensaron con la curva vieja: se pasan a la nueva con la misma EXP (×3, porque ahora se gana más)
+  var reqCache = {};
+  function nivelReq(viejo) { if (!viejo || viejo <= 1) return viejo || 0; if (reqCache[viejo]) return reqCache[viejo]; var x = 75 * (viejo - 1) * viejo, n = 1; while (xpParaNivel(n + 1) <= x) n++; return (reqCache[viejo] = Math.max(2, n)); }
+  function sumarXP(n, sinHUD) {
+    if (!(n > 0)) return;
+    var antes = nivelJugador(); estado.xp = (estado.xp || 0) + n;
     var ahora = nivelJugador();
-    if (ahora > antes) { sonar('victoria'); consejoTemporal('⭐ ' + L('¡Subiste a nivel ' + ahora + '!', 'You reached level ' + ahora + '!')); }
-    actualizarHUD();
+    if (ahora > antes) {
+      var oro = 0, en = 0;
+      for (var lv = antes + 1; lv <= ahora; lv++) { oro += 1000 * lv; en += 2; }
+      estado.mochila.energia_heroe = (estado.mochila.energia_heroe || 0) + en; sumarRecurso('oro', oro);
+      sonar('victoria');
+      consejoTemporal('⭐ ' + L('¡Subiste a nivel ' + ahora + '! +' + 2 * (ahora - antes) + ' puntos de talento · ⚡×' + en + ' · 💰' + formatoNumero(oro), 'You reached level ' + ahora + '! +' + 2 * (ahora - antes) + ' talent points · ⚡×' + en + ' · 💰' + formatoNumero(oro)));
+      guardar();
+    }
+    if (!sinHUD || ahora > antes) actualizarHUD();
+  }
+  // ---------- v7.79: TALENTOS del rey (2 puntos por nivel) ----------
+  var TALENTOS_REY = [
+    { id: 'guerra', ico: '⚔️', es: 'Guerra', en: 'War', b: { espadas: 0.005, escudos: 0.005, marcha: 0.01 }, txt: [['Ataque', 'Attack', 'espadas'], ['Vida', 'HP', 'escudos'], ['Capacidad de marcha', 'March size', 'marcha']] },
+    { id: 'economia', ico: '💰', es: 'Economía', en: 'Economy', b: { cosecha: 0.01, lenadores: 0.01, canteros: 0.01, impuestos: 0.01, obras: 0.005 }, txt: [['Producción de recursos', 'Resource production', 'cosecha'], ['Velocidad de obras', 'Build speed', 'obras']] },
+    { id: 'desarrollo', ico: '📜', es: 'Desarrollo', en: 'Development', b: { entreno: 0.01, enfermeria: 0.02 }, txt: [['Velocidad de entrenamiento', 'Training speed', 'entreno'], ['Capacidad de Enfermería', 'Infirmary capacity', 'enfermeria']] }
+  ];
+  var TAL_MAX = 50;
+  function talentos() { if (!estado.talentos) estado.talentos = {}; return estado.talentos; }
+  function talentosGastados() { var t = talentos(), n = 0; TALENTOS_REY.forEach(function (r) { n += t[r.id] || 0; }); return n; }
+  function puntosTalento() { return Math.max(0, 2 * (nivelJugador() - 1) - talentosGastados()); }
+  function bonoTalento(id) { var t = estado.talentos, b = 0; if (!t) return 0; TALENTOS_REY.forEach(function (r) { if (r.b[id] && t[r.id]) b += r.b[id] * t[r.id]; }); return b; }
+  function refrescarVidaTropas() { tropas.forEach(function (u) { if (u.tipo === 'heroe') return; var f = u.vida / u.max; u.max = vidaTropa(u.tipo, u.armadura); u.vida = f * u.max; }); }
+  function abrirTalentos() {
+    var t = talentos(), libres = puntosTalento();
+    var html = '<div class="carta tal-cab"><b>🌟 ' + L('Puntos libres: ', 'Free points: ') + libres + '</b><small>' + L('Ganas 2 puntos cada vez que subes de nivel. Máximo ' + TAL_MAX + ' por rama.', 'You get 2 points every level up. Max ' + TAL_MAX + ' per branch.') + '</small></div>' +
+      TALENTOS_REY.map(function (r) {
+        var n = t[r.id] || 0;
+        return '<div class="carta tal-rama"><div class="pf-fila"><span>' + r.ico + ' <b>' + L(r.es, r.en) + '</b></span><small>' + n + ' / ' + TAL_MAX + '</small></div>' +
+          '<div class="pf-barra"><div style="width:' + Math.round(n / TAL_MAX * 100) + '%"></div></div>' +
+          r.txt.map(function (x) { var v = r.b[x[2]]; return '<div class="pf-fila"><span>' + L(x[0], x[1]) + '</span><b>+' + (Math.round(v * n * 1000) / 10) + '%</b></div>'; }).join('') +
+          '<p class="nota">' + L('Cada punto: ', 'Each point: ') + r.txt.map(function (x) { return '+' + (r.b[x[2]] * 100) + '% ' + L(x[0], x[1]).toLowerCase(); }).join(' · ') + '</p>' +
+          '<div class="tal-bts"><button class="comprar mini verde" data-accion="tal-sumar" data-r="' + r.id + '" data-n="1"' + (libres > 0 && n < TAL_MAX ? '' : ' disabled') + '>+1</button>' +
+          '<button class="comprar mini verde" data-accion="tal-sumar" data-r="' + r.id + '" data-n="5"' + (libres >= 5 && n + 5 <= TAL_MAX ? '' : ' disabled') + '>+5</button></div></div>';
+      }).join('') +
+      (talentosGastados() ? '<button class="comprar mini rojo" data-accion="tal-reset">🔄 ' + L('Reiniciar talentos', 'Reset talents') + ' · 💰' + formatoNumero(costoResetTalentos()) + '</button>' : '') +
+      '<button class="comprar mini" data-accion="pf-tab" data-tab="detalles">↩ ' + L('Volver', 'Back') + '</button>';
+    abrirPanel('🌟 ' + L('Talentos', 'Talents'), html, { tipo: 'talentos' });
+  }
+  function costoResetTalentos() { return 5000 * nivelJugador(); }
+  function sumarTalento(id, n) {
+    var t = talentos(), r = TALENTOS_REY.filter(function (x) { return x.id === id; })[0]; if (!r) return;
+    n = Math.min(n, puntosTalento(), TAL_MAX - (t[id] || 0)); if (n <= 0) { sonar('error'); return; }
+    t[id] = (t[id] || 0) + n; if (id === 'guerra') refrescarVidaTropas();
+    sonar('magia'); guardar(true); actualizarHUD(); abrirTalentos();
+  }
+  function resetTalentos() {
+    var c = costoResetTalentos();
+    if (!estado.oroInfinito && (estado.oro || 0) < c) { consejoTemporal(L('Te falta oro.', 'Not enough gold.')); sonar('error'); return; }
+    if (!estado.oroInfinito) estado.oro -= c;
+    estado.talentos = {}; refrescarVidaTropas(); sonar('magia'); guardar(true); actualizarHUD(); abrirTalentos();
   }
   function xpDeProgreso() {
     var x = ((estado.oleada || 1) - 1) * 20;
@@ -3356,6 +3413,7 @@
   // ---------- CADENA DE DESBLOQUEO: lo que pide cada obra ----------
   var REQ_CONSTRUIR = { academia: [['cuartel', 1], ['jugador', 2]], establo: [['cuartel', 2], ['jugador', 3]], galeria: [['cuartel', 1]], herreria: [['academia', 1]], vigia: [['muralla', 1]], enfermeria: [['cuartel', 1]], almacen: [['castillo', 2]], mercado: [['castillo', 2]] };
   function filaReq(que, pide) {
+    if (que === 'jugador') pide = nivelReq(pide); // v7.79
     var tiene = que === 'jugador' ? nivelJugador() : que === 'castillo' ? (estado.castillo || 1) : que === 'muralla' ? (estado.muralla || 0) : nivelMayor(que);
     var nom = que === 'jugador' ? '⭐ ' + L('Tu nivel', 'Your level') : que === 'castillo' ? '🏰 ' + T('castillo') : que === 'muralla' ? '🧱 ' + L('Muralla', 'Wall') : (EDIFICIOS[que] ? EDIFICIOS[que].icono + ' ' : '') + N(que);
     return { nombre: nom, pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + tiene, ok: tiene >= pide || !!estado.dueno, k: que, n: pide };
@@ -4299,7 +4357,7 @@
       chispas(s.pos.clone().setY(1), 0xd8c49a, 18, 4);
       sonar('listo');
       flotar(N(o.tipo) + ' ★' + o.nivel, s.pos.clone().setY(5), 'oro');
-      sumarXP(10 * o.nivel);
+      sumarXP(10 * o.nivel + 45); // v7.79: +10% del poder ganado (450 por nivel)
       guardar();
     }
   }
@@ -4516,7 +4574,7 @@
   // ---------- ACELERADORES CON TIEMPO ----------
   var ACELERADORES = ['acel_1m', 'acel_5m', 'acel_15m', 'acel_1h', 'acel_2h5', 'acel_8h', 'acel_12h', 'acel_15h', 'acel_24h', 'inv_1m', 'inv_15m', 'inv_1h', 'inv_2h5', 'inv_8h', 'inv_15h', 'inv_24h', 'inv_3d'];
   function totalAceleradores() { return ACELERADORES.concat(['acelerador']).reduce(function (a, k) { return a + ((estado.mochila && estado.mochila[k]) || 0); }, 0); }
-  function rapidezAcademia() { var ia = academiaLista(); return ia ? EDIFICIOS.academia.rapidez[ia.edificio.nivel - 1] : 1; }
+  function rapidezAcademia() { var ia = academiaLista(); return (ia ? EDIFICIOS.academia.rapidez[ia.edificio.nivel - 1] : 1) * (1 + vipProd()); } // v7.79: +3% por VIP
   // segundos reales que faltan para terminar
   // lo que hay con tiempo pendiente ahora mismo (para elegir qué acelerar)
   function cosasConTiempo(soloInv) {
@@ -4640,12 +4698,14 @@
     var real = (estado.mochila && estado.mochila.acelerador) || 0;
     if (real && !listo) filas += '<div class="ac-fila"><span class="ac-ico">⏩</span><div class="ac-txt"><b>' + N('acelerador') + '</b><span>' + T('acel_todo') + ' · ×' + real + '</span></div><div class="ac-bts"><button class="comprar mini naranja" data-ac="acelerador">' + L('Usar', 'Use') + '</button></div></div>';
     var gFin = listo ? 0 : gemasParaTerminar(falta);
+    var gratis = !listo && que !== 'entreno' && que !== 'invest' && falta <= vipMinGratis() * 60; // v7.79: VIP termina gratis los últimos minutos de una obra
     d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>⏩ ' + L('Acelerar', 'Speed up') + '</h3><button class="cerrar" id="ac-cerrar">✕</button></div>' +
       '<p class="ac-nom">' + escaparHTML(nom) + '</p>' +
       (listo ? '<div class="ac-terminado">✅ ' + L('¡Terminado!', 'Finished!') + '</div>' : '<div class="ac-reloj" id="ac-reloj">⏱ ' + fmtTiempo(falta) + '</div>') +
       (resultado ? '<p class="ac-res">' + resultado + '</p>' : '') +
       '<div class="ac-gemas">' + L('Tus gemas: ', 'Your gems: ') + '<span class="ico gema"></span><b id="ac-saldo">' + formatoNumero(gem) + '</b></div>' +
       (listo ? '<button class="comprar boton-oleada-grande" id="ac-ok">' + L('Aceptar', 'OK') + '</button>' :
+        (gratis ? '<button class="comprar verde boton-oleada-grande ac-gratis" id="ac-gratis">🆓 ' + L('Gratis', 'Free') + ' <small>(VIP ' + vipNivel() + ' · ' + vipMinGratis() + ' min)</small></button>' : '') +
         (que !== 'entreno' ? '<button class="comprar verde boton-oleada-grande ac-fin" id="ac-fin"' + (gem >= gFin ? '' : ' disabled') + '>⚡ ' + L('Finalizar ahora', 'Finish now') + ' <span class="ico gema"></span><b id="ac-fin-g">' + gFin + '</b></button>' : '') +
         '<p class="ac-sub">' + L('Aceleradores (de menor a mayor)', 'Speed-ups (shortest first)') + '</p><div class="ac-lista">' + filas + '</div>') + '</div>';
     document.body.appendChild(d);
@@ -4654,7 +4714,7 @@
     if ($('ac-ok')) $('ac-ok').addEventListener('click', function () { sonar('click'); cerrar(); });
     if (!listo) relojAcel = setInterval(function () {
       if (!document.body.contains(d)) { clearInterval(relojAcel); relojAcel = null; return; }
-      var f = faltaDe(que); if (f <= 0.5) { abrirAcelerar(que, resultado); return; }
+      var f = faltaDe(que); if (f <= 0.5 || (!gratis && que !== 'entreno' && que !== 'invest' && f <= vipMinGratis() * 60)) { abrirAcelerar(que, resultado); return; }
       var r = $('ac-reloj'); if (r) r.textContent = '⏱ ' + fmtTiempo(f);
       var g = $('ac-fin-g'); if (g) g.textContent = gemasParaTerminar(f);
     }, 500);
@@ -4668,6 +4728,7 @@
       if (ev.target === d) { cerrar(); return; }
       var fin = ev.target.closest('#ac-fin'), b = ev.target.closest('[data-ac]'), cy = ev.target.closest('[data-ac-cyu]');
       var antes = faltaDe(que);
+      if (ev.target.closest('#ac-gratis')) { if (antes > 0 && antes <= vipMinGratis() * 60 + 1) { aplicarAcelerador(que, antes + 2); sonar('magia'); despues(antes, '🆓 VIP ' + vipNivel()); } return; }
       if (fin) {
         if (fin.disabled || antes <= 0) return;
         var g0 = estado.gemas; terminarConGemas(que);
@@ -4722,7 +4783,7 @@
     var r = TROPA_REQ[tipo]; if (!r || estado.dueno) return null;
     if (nivelMayor(r.ed) < r.n) return r.n > 1 ? L('Necesitas ' + N(r.ed) + ' nivel ' + r.n, 'You need ' + N(r.ed) + ' level ' + r.n) : T(r.ed === 'establo' ? 'necesitas_establo' : r.ed === 'galeria' ? 'necesitas_galeria' : 'necesitas_cuartel_t');
     if (r.otro && nivelMayor(r.otro[0]) < r.otro[1]) return L('Necesitas ' + N(r.otro[0]) + ' nivel ' + r.otro[1], 'You need ' + N(r.otro[0]) + ' level ' + r.otro[1]);
-    if (r.jugador && nivelJugador() < r.jugador) return L('Necesitas nivel de jugador ' + r.jugador, 'You need player level ' + r.jugador);
+    if (r.jugador && nivelJugador() < nivelReq(r.jugador)) return L('Necesitas nivel de jugador ' + nivelReq(r.jugador), 'You need player level ' + nivelReq(r.jugador));
     return null;
   }
   function puedeEntrenarTipo(tipo) { return !faltaTropa(tipo); }
@@ -5096,7 +5157,7 @@
     sonar('magia'); guardar(true); actualizarHUD(); reabrirPanel();
   }
   function capacidadEnfermeria() {
-    return slots.reduce(function (a, s) { return a + (s.edificio && s.edificio.tipo === 'enfermeria' ? EDIFICIOS.enfermeria.capacidad[s.edificio.nivel - 1] : 0); }, 0);
+    return Math.floor(slots.reduce(function (a, s) { return a + (s.edificio && s.edificio.tipo === 'enfermeria' ? EDIFICIOS.enfermeria.capacidad[s.edificio.nivel - 1] : 0); }, 0) * (1 + bonoTalento('enfermeria')));
   }
   function totalHeridos() { var n = 0; for (var k in estado.heridos) n += estado.heridos[k]; return n; }
   function curarHeridos() {
@@ -5116,7 +5177,7 @@
   }
   // ---- POBLACIÓN (v6.33): base del castillo + regalo a los que ya jugaban + cabañas. Las tropas la ocupan. ----
   function poblacionMax() { return POB_BASE + (estado.pobRegalo || 0) + edificiosDe('cabana').reduce(function (a, s) { return a + EDIFICIOS.cabana.poblacion[s.edificio.nivel - 1]; }, 0); }
-  function obrerosOcupados() { return OBREROS_OBRA * (slots.filter(function (s) { return s.obra; }).length + (estado.obraCastillo ? 1 : 0) + (obraMuralla ? 1 : 0)); }
+  function obrerosOcupados() { var n = slots.filter(function (s) { return s.obra; }).length + (estado.obraCastillo ? 1 : 0) + (obraMuralla ? 1 : 0); if (n > 0 && vipNivel() >= 8) n--; return OBREROS_OBRA * n; } // v7.79: VIP 8 = 2.º constructor
   function poblacionLibre() { return poblacionMax() - obrerosOcupados(); }
   function faltanObreros() { if (estado.dueno || poblacionLibre() >= OBREROS_OBRA) return false; consejoTemporal(T('pob_obreros', { n: OBREROS_OBRA })); sonar('error'); return true; }
   function tropasOcupadas() { return tropasNormales() + totalHeridos() + colaEntreno.length; }
@@ -5319,6 +5380,7 @@
     var sem = typeof semanaActual === 'function' ? semanaActual() : 0;
     if (estado.kpSem !== sem) { estado.kpSem = sem; estado.kpTemp = 0; }
     estado.kpTotal = (estado.kpTotal || 0) + p; estado.kpTemp = (estado.kpTemp || 0) + p;
+    sumarXP(p * 0.05, true); // v7.79: 5% de los puntos de liquidación
   }
   function morir(u) {
     var lista = u.aliado ? tropas : enemigos;
@@ -5624,7 +5686,7 @@
     // ---- investigación en curso ----
     if (estado.investigando) {
       var aca = academiaLista();
-      if (aca) estado.investigando.t += dt * EDIFICIOS.academia.rapidez[aca.edificio.nivel - 1];
+      if (aca) estado.investigando.t += dt * rapidezAcademia();
       if (estado.investigando.t >= estado.investigando.total) terminarInvestigacion();
     }
     // ---- muralla en construcción ----
@@ -8317,6 +8379,7 @@
   }
   function terminarInvestigacion() {
     var inv = estado.investigando; estado.investigando = null;
+    sumarXP(PODER_INVEST * 0.1); // v7.79
     var antesCastillo = vidaMaxCastillo();
     estado.invest[inv.id] = inv.nivel;
     // aplicar lo que mejoró a lo que ya existe
@@ -8362,7 +8425,7 @@
   function faltaInvestigacion() {
     var ii = estado.investigando, ia = academiaLista();
     if (!ii) return 0;
-    return (ii.total - ii.t) / ((ia ? EDIFICIOS.academia.rapidez[ia.edificio.nivel - 1] : 1) * velReal());
+    return (ii.total - ii.t) / (rapidezAcademia() * velReal());
   }
   function segHastaManana() { var a = new Date(), m = new Date(a); m.setHours(24, 0, 0, 0); return (m - a) / 1000; }
   var relojesDiv = {}, vRel = new V3();
@@ -8541,7 +8604,7 @@
   function tamanoMarcha(heroe) {
     var h = heroe === undefined ? liderActual() : heroe, base = Math.max(5000, nivelRelevo() * 10000);
     if (h && estado.heroes && estado.heroes[h]) base += nivelHeroe(h) * 250 + 1000 * piezasDe(h).filter(function (p) { return p.s === h; }).length;
-    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1));
+    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')));
   }
   function maxMarchas() { return Math.min(12, Math.max(1, nivelRelevo())); }
   function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length; }
@@ -9117,7 +9180,9 @@
   function bonoExtra(id) {
     var b = 0, c = cargos();
     CARGOS.forEach(function (x) { if (x.bonos.indexOf(id) >= 0 && c[x.id] && estado.heroes[c[x.id]]) b += bonoCargoDe(c[x.id]); });
-    if (id === 'obras' || id === 'cosecha' || id === 'lenadores' || id === 'canteros') b += vipNivel() * 0.01;
+    if (id === 'obras' || id === 'cosecha' || id === 'lenadores' || id === 'canteros' || id === 'impuestos') b += vipProd();
+    if (id === 'espadas' || id === 'escudos') b += vipCombate();
+    b += bonoTalento(id); // v7.79
     return b;
   }
   function abrirCargos() {
@@ -9149,14 +9214,28 @@
   function caraFelicidad() { var f = felicidad(); return f >= 90 ? '😊' : f >= 70 ? '🙂' : f >= 55 ? '😐' : '😟'; }
 
   // ---------- VIP: sube entrando cada día; cada nivel da +1% de obras y de recursos (máximo VIP 10) ----------
-  var VIP_PUNTOS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5500];
+  // v7.79: VIP del 1 al 15 con beneficios reales (obras gratis al final, +3% por nivel, combate desde VIP 6, 2.º constructor en VIP 8)
+  var VIP_PUNTOS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5500, 7500, 10000, 13000, 17000, 22000];
+  function vipMinGratis(n) { return 5 + 2 * ((n || vipNivel()) - 1); }
+  function vipProd(n) { return 0.03 * (n || vipNivel()); }
+  function vipCombate(n) { return Math.max(0, (n || vipNivel()) - 5) * 0.01; }
+  function vipSumar(n) {
+    var v = vip(), antes = vipNivel(); v.pts += n;
+    if (vipNivel() > antes) setTimeout(function () { consejoTemporal('👑 ' + L('¡Subiste a VIP ', 'You reached VIP ') + vipNivel() + '!'); sonar('victoria'); }, 2800);
+  }
+  function vipLista(n) {
+    var l = ['🆓 ' + L('Obras gratis en sus últimos ', 'Builds free in their last ') + vipMinGratis(n) + ' min', '📈 +' + Math.round(vipProd(n) * 100) + '% ' + L('producción, obras e investigación', 'production, building and research')];
+    if (vipCombate(n) > 0) l.push('⚔️ +' + Math.round(vipCombate(n) * 100) + '% ' + L('ataque y vida de tropas', 'troop attack and HP'));
+    if (n >= 8) l.push('👷 ' + L('2.º constructor permanente (una obra sin gastar obreros)', 'Permanent 2nd builder (one build uses no workers)'));
+    return l;
+  }
   function vip() { if (!estado.vip) estado.vip = { pts: 0, ultimo: '', racha: 0 }; return estado.vip; }
   function vipNivel() { var p = vip().pts, n = 1; for (var i = 0; i < VIP_PUNTOS.length; i++) if (p >= VIP_PUNTOS[i]) n = i + 1; return n; }
   function vipDia() {
     var v = vip(), hoy = hoyTexto(); if (v.ultimo === hoy) return;
     var ayer = new Date(); ayer.setDate(ayer.getDate() - 1); var ayerT = ayer.getFullYear() + '-' + (ayer.getMonth() + 1) + '-' + ayer.getDate();
-    v.racha = v.ultimo === ayerT ? Math.min(7, (v.racha || 0) + 1) : 1; v.ultimo = hoy;
-    var antes = vipNivel(), gana = 40 + v.racha * 10; v.pts += gana; guardar();
+    v.racha = v.ultimo === ayerT ? Math.min(9999, (v.racha || 0) + 1) : 1; v.ultimo = hoy;
+    var antes = vipNivel(), gana = Math.min(300, 50 * v.racha); v.pts += gana; guardar(); // v7.79: día 1 = 50 … día 6+ = 300
     consejoTemporal('👑 VIP +' + gana + ' ' + L('puntos (racha de ', 'points (streak of ') + v.racha + L(' días)', ' days)'));
     if (vipNivel() > antes) setTimeout(function () { consejoTemporal('👑 ' + L('¡Subiste a VIP ', 'You reached VIP ') + vipNivel() + '!'); sonar('victoria'); }, 2800);
   }
@@ -9225,17 +9304,18 @@
       return '<button data-accion="pf-tab" data-tab="' + t[0] + '" class="' + (pestPerfil === t[0] ? 'activo' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
     var cuerpo = '';
     if (pestPerfil === 'detalles') {
-      var pt = 0, pe = 0;
-      tropas.forEach(function (u) { pt += Math.round(u.d.vida * 2 + u.d.dano * 25); });
-      slots.forEach(function (s) { if (s.edificio) pe += s.edificio.nivel * 450; });
-      pe += estado.muralla * 600;
+      var dp = desglosePoder(), ptal = puntosTalento(), vMax = vn >= VIP_PUNTOS.length;
       cuerpo = '<div class="carta"><div class="pf-fila"><span>' + L('Nivel', 'Level') + ': <b>' + nj + '</b></span><small>' + formatoNumero(xp) + ' / ' + formatoNumero(xpT) + '</small></div>' +
           '<div class="pf-barra"><div style="width:' + Math.round(Math.min(1, xp / xpT) * 100) + '%"></div></div>' +
-          '<p class="nota">' + L('Construye, entrena y gana oleadas para subir de nivel.', 'Build, train and win waves to level up.') + '</p></div>' +
+          '<button class="comprar mini ' + (ptal ? 'verde' : '') + ' pf-tal" data-accion="tal-abrir">🌟 ' + L('Talentos', 'Talents') + (ptal ? ' <i class="pf-n">' + ptal + '</i>' : '') + '</button>' +
+          '<p class="nota">' + L('Gana EXP con misiones, obras, investigaciones (10% del poder) y matando enemigos (5% de los puntos de liquidación). Cada nivel: +2 puntos de talento y un cofre.', 'Earn XP from missions, builds, research (10% of power) and kills (5% of kill points). Each level: +2 talent points and a chest.') + '</p></div>' +
         '<div class="carta"><div class="pf-fila"><span>👑 VIP <b>' + vn + '</b></span><small>' + (vn < VIP_PUNTOS.length ? formatoNumero(vp - vAnt) + ' / ' + formatoNumero(vSig - vAnt) : L('Máximo', 'Max')) + '</small></div>' +
           '<div class="pf-barra"><div style="width:' + (vn < VIP_PUNTOS.length ? Math.round((vp - vAnt) / Math.max(1, vSig - vAnt) * 100) : 100) + '%"></div></div>' +
-          '<p class="nota">' + L('Entra cada día para subir de VIP. Cada nivel: +1% obras y +1% recursos. Racha: ', 'Log in every day to raise your VIP. Each level: +1% building and +1% resources. Streak: ') + (vip().racha || 0) + ((vip().racha || 0) === 1 ? L(' día', ' day') : L(' días', ' days')) + '</p></div>' +
-        '<div class="carta">' + fila(L('Poder', 'Power'), formatoNumero(calcularPoder())) + fila('🛡️ ' + T('poder_tropas'), formatoNumero(pt)) + fila('🏠 ' + T('poder_edificios'), formatoNumero(pe)) + fila('⚔️ ' + T('poder_oleadas'), formatoNumero((estado.oleada - 1) * 1000)) + '</div>';
+          '<p class="nota">🔥 ' + L('Racha: ', 'Streak: ') + (vip().racha || 0) + ((vip().racha || 0) === 1 ? L(' día', ' day') : L(' días', ' days')) + ' · ' + L('mañana +', 'tomorrow +') + Math.min(300, 50 * ((vip().racha || 0) + 1)) + L(' pts (si faltas un día vuelve a +50)', ' pts (miss a day and it goes back to +50)') + '</p>' +
+          '<div class="pf-vip-l"><b>' + L('Activo en VIP ', 'Active at VIP ') + vn + '</b>' + vipLista(vn).map(function (x) { return '<span>✅ ' + x + '</span>'; }).join('') + '</div>' +
+          (vMax ? '' : '<div class="pf-vip-l sig"><b>' + L('En VIP ', 'At VIP ') + (vn + 1) + L(' desbloqueas', ' you unlock') + '</b>' + vipLista(vn + 1).filter(function (x) { return vipLista(vn).indexOf(x) < 0; }).map(function (x) { return '<span>🔒 ' + x + '</span>'; }).join('') + '</div>') +
+          '<p class="nota">' + L('Más puntos VIP: fichas «+100 Puntos VIP» en la Tienda, la Ruleta y los cofres de campamentos y villas.', 'More VIP points: "+100 VIP points" tokens in the Shop, the Wheel and camp/village chests.') + '</p></div>' +
+        '<div class="carta">' + fila(L('Poder', 'Power'), formatoNumero(calcularPoder())) + fila('🛡️ ' + T('poder_tropas'), formatoNumero(dp.tropas)) + fila('🏠 ' + T('poder_edificios'), formatoNumero(dp.edificios)) + fila('📜 ' + L('Investigación', 'Research'), formatoNumero(dp.invest)) + fila('🎽 ' + L('Equipo', 'Gear'), formatoNumero(dp.equipo)) + fila('⚔️ ' + T('poder_oleadas'), formatoNumero(dp.oleadas)) + '</div>';
     } else if (pestPerfil === 'reino') {
       var lg = miLugar(), cn = $('tk-ciudad-n'), ciudad = cn && cn.textContent ? cn.textContent : L('Mi reino', 'My kingdom'), c = cargos();
       cuerpo = '<div class="carta">' + fila(L('Reino', 'Kingdom'), escaparHTML(ciudad) + ' (' + lg.x + ', ' + lg.y + ')') + fila(L('Castillo', 'Castle'), L('Nivel ', 'Level ') + (estado.castillo || 1)) +
@@ -9887,6 +9967,7 @@
         }
       }
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
+      if (Math.random() < 0.12) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; ganados.push({ ico: OBJETOS.vip_100.icono, nom: N('vip_100'), cat: 'reliquia', extra: true }); } // v7.79
       if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true, extra: true }); }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
       else r.sinLlave++;
@@ -10050,7 +10131,8 @@
       var otra = marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); })[0];
       if (!otra) { consejoTemporal(L('No tienes ninguna marcha en camino.', 'You have no march on the way.')); sonar('error'); return; }
       cancelarMarcha(otra); msg = L('Tus tropas vuelven a casa.', 'Your troops come home.');
-    } else if (e === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n; msg = '🪙 +' + o.n + ' ' + L('fichas', 'tokens'); }
+    } else if (e === 'vip') { vipSumar(o.n); msg = '👑 VIP +' + o.n + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
+    else if (e === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n; msg = '🪙 +' + o.n + ' ' + L('fichas', 'tokens'); }
     else if (e === 'expHeroe') { var h = liderActual() || Object.keys(estado.heroes || {})[0]; if (!h) { consejoTemporal(L('Todavía no tienes héroes.', 'You have no heroes yet.')); sonar('error'); return; } darExp(h, o.n); msg = '⚡ ' + NH(h) + ' +' + o.n + ' EXP'; }
     else if (e === 'abrirCofre') { gastar1(k); estado.mochila[o.cofre] = (estado.mochila[o.cofre] || 0) + 1; guardar(true); usarObjeto(o.cofre, true); return; }
     else if (e === 'talentos') {
@@ -10900,6 +10982,9 @@
     else if (a === 'sub-heroes') abrirPanelHeroes();
     else if (a === 'sub-cargos' || a === 'pf-cargos') { sonar('click'); abrirCargos(); }
     else if (a === 'pf-tab') { sonar('click'); abrirPanelPerfil(b.getAttribute('data-tab')); }
+    else if (a === 'tal-abrir') { sonar('click'); abrirTalentos(); }
+    else if (a === 'tal-sumar') sumarTalento(b.getAttribute('data-r'), +b.getAttribute('data-n') || 1);
+    else if (a === 'tal-reset') resetTalentos();
     else if (a === 'pf-ajustes') { sonar('click'); abrirPanelAjustes(); }
     else if (a === 'logro-cobrar') cobrarMedalla(b.getAttribute('data-id'), +b.getAttribute('data-i'));
     else if (a === 'finde-reclamar') reclamarFinde(+b.getAttribute('data-i'));
@@ -11111,17 +11196,19 @@
     var premio = GEMAS_POR_OLEADA + (n === OLEADAS.length && !estado.infinito ? GEMAS_VICTORIA : 0);
     return partes.join(' · ') + (premio ? ' · ' + T('premio', { g: premio }) : '') + (n === OLEADAS.length && !estado.infinito ? ' — ' + T('ultima') : '');
   }
-  function calcularPoder() {
-    var p = 0;
-    tropas.forEach(function (u) { p += Math.round(u.d.vida * 2 + u.d.dano * 25); });
-    var rv = reserva(); for (var kr in rv) if (TROPAS[kr]) p += (rv[kr] || 0) * Math.round(TROPAS[kr].vida * 2 + TROPAS[kr].dano * 25);
-    slots.forEach(function (s) { if (s.edificio) p += s.edificio.nivel * 450; });
-    p += estado.muralla * 600 + ((estado.castillo || 1) - 1) * 800;
-    for (var ik in estado.invest) p += (estado.invest[ik] || 0) * PODER_INVEST;
-    piezas().forEach(function (pz) { p += pz.n * PODER_PIEZA * MULT_RAREZA_EQ[pz.r]; });
-    barricadas.forEach(function (b) { p += b.nivel * 300; });
-    return p + (estado.oleada - 1) * 1000;
+  // v7.79: desglose del poder (el perfil muestra las mismas partes que suman el total; el castillo cuenta desde el nivel 1)
+  function desglosePoder() {
+    var d = { tropas: 0, edificios: 0, invest: 0, equipo: 0, oleadas: ((estado.oleada || 1) - 1) * 1000 };
+    tropas.forEach(function (u) { d.tropas += Math.round(u.d.vida * 2 + u.d.dano * 25); });
+    var rv = reserva(); for (var kr in rv) if (TROPAS[kr]) d.tropas += (rv[kr] || 0) * Math.round(TROPAS[kr].vida * 2 + TROPAS[kr].dano * 25);
+    slots.forEach(function (s) { if (s.edificio) d.edificios += s.edificio.nivel * 450; });
+    d.edificios += (estado.muralla || 0) * 600 + (estado.castillo || 1) * 800;
+    barricadas.forEach(function (b) { d.edificios += b.nivel * 300; });
+    for (var ik in estado.invest) d.invest += (estado.invest[ik] || 0) * PODER_INVEST;
+    piezas().forEach(function (pz) { d.equipo += pz.n * PODER_PIEZA * MULT_RAREZA_EQ[pz.r]; });
+    return d;
   }
+  function calcularPoder() { var d = desglosePoder(); return d.tropas + d.edificios + d.invest + d.equipo + d.oleadas; }
   // v7.36: con B (miles de millones) y T (billones) para que los poderes grandes no salgan como «16326,6»
   function corto(n) { n = Math.floor(n || 0); return n < 10000 ? '' + n : n < 1e6 ? (Math.floor(n / 100) / 10) + 'k' : n < 1e9 ? (Math.floor(n / 1e5) / 10) + 'M' : n < 1e12 ? (Math.floor(n / 1e8) / 10) + 'B' : (Math.floor(n / 1e11) / 10) + 'T'; }
   function formatoNumero(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, estado.idioma === 'en' ? ',' : '.'); }
@@ -11276,7 +11363,12 @@
   $('btn-misiones').addEventListener('click', function () { if (!enMenu) { sonar('click'); abrirPanelMisiones(); } });
   $('btn-guerra').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'guerra') { cerrarPanel(); return; } abrirPanelGuerra(); cargarGuerra(true); });
   $('btn-promos').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'promos') cerrarPanel(); else abrirPromos(); });
-  $('bo-acelerar').addEventListener('click', function () { var q = $('barra-obra').dataset.que; if (q && !enMenu) { sonar('click'); abrirAcelerar(q); } });
+  $('bo-acelerar').addEventListener('click', function () {
+    var q = $('barra-obra').dataset.que; if (!q || enMenu) return;
+    var f = faltaDe(q);
+    if (f > 0 && f <= vipMinGratis() * 60) { aplicarAcelerador(q, f + 2); sonar('magia'); consejoTemporal('🆓 ' + L('Obra terminada gratis (VIP ', 'Build finished for free (VIP ') + vipNivel() + ')'); guardar(true); actualizarHUD(); return; }
+    sonar('click'); abrirAcelerar(q);
+  });
   $('bo-txt').addEventListener('click', function () { var q = $('barra-obra').dataset.que || ''; if (enMenu) return; sonar('click'); if (q === 'castillo') { enfocar(castillo.position); abrirPanelCastillo(); } else if (q.indexOf('obra:') === 0) { var si = +q.split(':')[1]; enfocar(slots[si].pos); abrirPanelEdificio(si); } });
   $('btn-alianza').addEventListener('click', function () {
     if (enMenu) return;
@@ -11682,7 +11774,7 @@
       estado.regresos = g.regresos || [];
       estado.destinos = g.destinos || {};
       estado.enemigos = g.enemigos || {};
-      estado.xp = g.xp;
+      estado.xp = g.xp; estado.xp2 = g.xp2; estado.talentos = g.talentos || {}; // v7.79
       estado.bestias = g.bestias || {};
       estado.alLocal = g.alLocal || null;
       estado.carretas = g.carretas || { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] };
@@ -11795,6 +11887,7 @@
     ponerEquipo();
     ponerMuralla(estado.muralla);
     if (typeof estado.xp !== 'number') estado.xp = xpDeProgreso();
+    if (!estado.xp2) { var vj = 1; while (vj < 60 && estado.xp >= 25 * vj * (vj + 1)) vj++; estado.xp = Math.max(estado.xp, xpParaNivel(vj)); estado.xp2 = 1; } // v7.79: curva nueva, se queda tu nivel
     estado.vidaCastillo = vidaMaxCastillo();
     curarHeridos();
     tiempoJuego = 0;

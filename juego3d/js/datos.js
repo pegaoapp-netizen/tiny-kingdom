@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.78';
+var VERSION_JUEGO = '7.80';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -419,6 +419,7 @@ var NOMBRES = {
   mixto_1m: { es: 'Paquete de construcción', en: 'Building pack', des_es: '1.000.000 de oro, comida, madera y piedra.', des_en: '1,000,000 gold, food, wood and stone.' },
   ficha_x1: { es: 'Ficha de la suerte', en: 'Luck token', des_es: '1 ficha para la Ruleta del Azar.', des_en: '1 token for the Luck wheel.' },
   ficha_x5: { es: '5 fichas de la suerte', en: '5 luck tokens', des_es: '5 fichas para la Ruleta del Azar.', des_en: '5 tokens for the Luck wheel.' },
+  vip_100: { es: '+100 Puntos VIP', en: '+100 VIP points', des_es: 'Suma 100 puntos a tu VIP para subir de nivel más rápido.', des_en: 'Adds 100 points to your VIP to level up faster.' },
   energia_heroe: { es: 'Energía de héroe', en: 'Hero energy', des_es: '+50 de experiencia para tu héroe principal.', des_en: '+50 XP for your main hero.' },
   llave_bronce: { es: 'Llave de bronce', en: 'Bronze key', des_es: 'Abre un Cofre de plata al momento.', des_en: 'Opens a Silver chest at once.' },
   llave_plata: { es: 'Llave de plata', en: 'Silver key', des_es: 'Abre un Cofre de oro al momento.', des_en: 'Opens a Gold chest at once.' },
@@ -755,6 +756,7 @@ var OBJETOS = {
   ficha_x1:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 1 },
   ficha_x5:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 5 },
   energia_heroe:   { icono: '⚡', inv: 'reliquia', efecto: 'expHeroe', n: 50 },
+  vip_100:         { icono: '👑', inv: 'reliquia', efecto: 'vip', n: 100 }, // v7.79
   llave_bronce:    { icono: '🗝️', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_plata' },
   llave_plata:     { icono: '🔑', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_oro' },
   reinicio_tal:    { icono: '🔄', inv: 'intercambia', efecto: 'talentos' },
@@ -801,7 +803,7 @@ var TIENDA = [
   { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' },
   // v7.14: pestañas que estaban vacías
   { id: 'cuerno_guerra', gemas: 15, cat: 'combate' }, { id: 'coraza_acero', gemas: 15, cat: 'combate' }, { id: 'marcha_rapida', gemas: 10, cat: 'combate' }, { id: 'retirada_marcha', gemas: 20, cat: 'combate' }, { id: 'ampliar_marcha', gemas: 35, cat: 'combate' },
-  { id: 'bono_comida', gemas: 10, cat: 'varios' }, { id: 'bono_madera', gemas: 10, cat: 'varios' }, { id: 'bono_piedra', gemas: 10, cat: 'varios' }, { id: 'bono_oro', gemas: 10, cat: 'varios' }, { id: 'constructor_exp', gemas: 25, cat: 'varios' }, { id: 'cosecha_ya', gemas: 15, cat: 'varios' },
+  { id: 'bono_comida', gemas: 10, cat: 'varios' }, { id: 'bono_madera', gemas: 10, cat: 'varios' }, { id: 'bono_piedra', gemas: 10, cat: 'varios' }, { id: 'bono_oro', gemas: 10, cat: 'varios' }, { id: 'constructor_exp', gemas: 25, cat: 'varios' }, { id: 'vip_100', gemas: 20, cat: 'varios' }, { id: 'cosecha_ya', gemas: 15, cat: 'varios' },
   { id: 'comida_2m', gemas: 25, cat: 'recursos' }, { id: 'madera_2m', gemas: 25, cat: 'recursos' }, { id: 'piedra_2m', gemas: 25, cat: 'recursos' }, { id: 'oro_1m', gemas: 30, cat: 'recursos' }, { id: 'mixto_1m', gemas: 45, cat: 'recursos' },
   { id: 'ficha_x1', gemas: 15, cat: 'varios' }, { id: 'ficha_x5', gemas: 65, cat: 'varios' }, { id: 'energia_heroe', gemas: 10, cat: 'varios' }, { id: 'llave_bronce', gemas: 20, cat: 'varios' }, { id: 'llave_plata', gemas: 20, cat: 'varios' },
   { id: 'cristal_mistico', gemas: 20, cat: 'varios' }, { id: 'cristal_encantado', gemas: 40, cat: 'varios' }, { id: 'cristal_arcano', gemas: 80, cat: 'varios' },
