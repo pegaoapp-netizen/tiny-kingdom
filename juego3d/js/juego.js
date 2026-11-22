@@ -197,7 +197,8 @@
   var AZ_CAM = Math.PI; // v7.44: alineado con la muralla cuadrada (antes 3.55)
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
   var GIRO_DIAG = Math.PI / 5; // v7.55: como en KoC, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
-  function azVista() { return AZ_CAM + GIRO_DIAG; } // v6.76: Ciudad, Campos y Mundo con el mismo ángulo: solo se aleja la cámara
+  var GIRO_PROTO = 0; // v7.71 prototipo 3D: la cámara se puede girar un poco
+  function azVista() { return AZ_CAM + GIRO_DIAG + GIRO_PROTO; } // v6.76: Ciudad, Campos y Mundo con el mismo ángulo: solo se aleja la cámara
   var CENTRO_REINO = new V3(0, 0, 0);
   // ---------- DISEÑO v6.31: ciudad redonda con 4 caminos de piedra en cruz, y los campos en un recinto amurallado ----------
   // El eje U mira hacia la cámara (abajo en la pantalla) y el eje V va de lado a lado.
@@ -846,6 +847,7 @@
     pu.position.set(px, 0, pz); pu.rotation.y = -Math.atan2(Math.sin(tp), Math.cos(tp)); escena.add(pu);
     });
   })();
+  var DETALLES_LOD = new THREE.Group();
   (function crearNaturaleza() {
     var arboles = [];
     function libre(x, z, extra) {
@@ -902,6 +904,7 @@
     }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
+    // v7.71 prototipo: los detalles chicos solo se dibujan de cerca (niveles de detalle)
     // v7.69: CASAS MEDIEVALES de relleno en los huecos de la villa (como un reino de verdad): no se tocan ni tapan parcelas
     (function rellenarVilla() {
       var casas = new THREE.Group(), puestas = [], r2 = rnd;
@@ -922,7 +925,7 @@
       var giroCalle = Math.atan2(EJE_U.x, EJE_U.z);
       for (var t = 0; t < 2600 && puestas.length < 70; t++) {
         var la = (r2() - 0.5) * 2 * R_CIUDAD, lb = (r2() - 0.5) * 2 * R_CIUDAD, w = aMundo(la, lb), x = w[0], z = w[1];
-        var esCasa = r2() < 0.72, sep = esCasa ? 2.6 : 1.2;
+        var esCasa = r2() < 0.72, sep = esCasa ? 2.6 : 1.2; if (!esCasa && window.__proto3d) { if (!okCasa(x, z, sep)) continue; var ad = M.adornoMedieval(r2); ad.position.set(x, 0, z); ad.rotation.y = giroCalle + r2() * 6; DETALLES_LOD.add(ad); puestas.push([x, z, sep]); continue; }
         if (!okCasa(x, z, sep)) continue;
         var m = esCasa ? M.casaMedieval(r2) : M.adornoMedieval(r2);
         m.position.set(x, 0, z); m.rotation.y = giroCalle + Math.floor(r2() * 4) * Math.PI / 2 + (r2() - 0.5) * 0.12;
@@ -930,6 +933,7 @@
         casas.add(m); puestas.push([x, z, sep]);
       }
       escena.add(M.fusionar(casas));
+      if (DETALLES_LOD.children.length) { var lod = M.fusionar(DETALLES_LOD); escena.add(lod); DETALLES_LOD = lod; }
     })();
     var arb = [], matas = [];
     for (var ia = 0; ia < 1600 && arb.length < 230; ia++) {
@@ -11912,6 +11916,14 @@
   }
   $('btn-ranking').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'ranking') cerrarPanel(); else abrirPanelRanking(); });
   $('btn-chat').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'chat') cerrarPanel(); else abrirPanelChat(); });
+  // v7.71 PROTOTIPO 3D: botones para girar un poco la cámara (±30°) y un cartel que avisa que es la prueba
+  if (window.__proto3d) (function () {
+    var d = document.createElement('div'); d.id = 'proto3d-giro';
+    d.innerHTML = '<span>Prototipo 3D</span><button data-g="-1" aria-label="Girar a la izquierda">⟲</button><button data-g="1" aria-label="Girar a la derecha">⟳</button>';
+    d.style.cssText = 'position:fixed;left:8px;top:44%;z-index:60;display:flex;flex-direction:column;gap:6px;align-items:center;font:700 11px Georgia,serif;color:#ffd76a;text-shadow:0 1px 2px #000';
+    document.body.appendChild(d);
+    d.querySelectorAll('button').forEach(function (b) { b.style.cssText = 'width:42px;height:42px;border-radius:50%;border:2px solid #c9902a;background:#2a180b;color:#f3e2bb;font-size:22px'; b.addEventListener('click', function () { GIRO_PROTO = Math.max(-0.55, Math.min(0.55, GIRO_PROTO + (+b.getAttribute('data-g')) * 0.18)); sonar('click'); }); });
+  })();
   $('btn-centrar').addEventListener('click', function () { if (enMenu) return; sonar('click'); if (enMundo) cerrarMundo(); vistaActual = 'ciudad'; pintarVista(); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); });
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
@@ -11930,6 +11942,7 @@
       castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     }
     if (!enMenu) cam.az += (azVista() - cam.az) * Math.min(1, dtReal * 3);
+    if (window.__proto3d) DETALLES_LOD.visible = cam.dist < zoomBase() * 0.85; // v7.71 prototipo: detalle según el zoom
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
     if (window.NOCHE) NOCHE.moverBruma(brumaCiudad, dtReal);

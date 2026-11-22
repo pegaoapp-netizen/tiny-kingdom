@@ -589,7 +589,10 @@ var M = (function () {
   // v6.36 prueba: Cabaña 3D hecha en Tripo (mientras carga se ve la dibujada)
   var MODELOS_TRIPO = {};
   // v7.47: tejados de color según el tipo de edificio (así no se confunden) y muros de piedra más claros
+  // v7.71 PROTOTIPO 3D (?proto3d=1): todos los edificios con modelo 3D real, tejado azul y piedra clara como el castillo
+  var PROTO3D = /[?&]proto3d=1/.test(location.search); window.__proto3d = PROTO3D; if (PROTO3D) window.__sin2D = true;
   var TEJADO = { herreria: [204, 0.62], cuartel: [5, 0.62], establo: [5, 0.62], galeria: [5, 0.62], academia: [204, 0.62], embajada: [204, 0.62], mercado: [48, 0.85], almacen: [48, 0.85], enfermeria: [48, 0.85], cabana: [22, 0.58] };
+  if (PROTO3D) ['establo', 'galeria', 'academia', 'embajada', 'mercado', 'almacen', 'enfermeria', 'cabana', 'relevo', 'vigia'].forEach(function (k) { TEJADO[k] = [212, 0.72]; });
   function hsl2rgb(h, s2, l) { var C = (1 - Math.abs(2 * l - 1)) * s2, X = C * (1 - Math.abs((h / 60) % 2 - 1)), m = l - C / 2, r = 0, g = 0, b = 0, k = Math.floor(h / 60) % 6;
     if (k === 0) { r = C; g = X; } else if (k === 1) { r = X; g = C; } else if (k === 2) { g = C; b = X; } else if (k === 3) { g = X; b = C; } else if (k === 4) { r = X; b = C; } else { r = C; b = X; } return [(r + m) * 255, (g + m) * 255, (b + m) * 255]; }
   function recolorTejado(tex, tipo) {
@@ -659,7 +662,7 @@ var M = (function () {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
     var s2 = edificio2D(tipo, nivel); if (s2) return s2;
     if (!ES_CAMPO_T[tipo]) esc *= tipo === 'cabana' ? 1.2 : 1.3; // v7.48: edificios de la villa más grandes en su barrio (como en KoC)
-    var et = TRIPO_ETAPAS[tipo] === 2 ? ((nivel || 1) >= 15 ? 2 : 1) : Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
+    var et = TRIPO_ETAPAS[tipo] === 2 ? ((nivel || 1) >= 15 || PROTO3D ? 2 : 1) : Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
     var t = et > 1 ? modeloTripo(tipo + et, tipo + '_tripo_' + et + '.glb', 'tripo-glb') : modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb');
     if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior
     if (!t) return null;
