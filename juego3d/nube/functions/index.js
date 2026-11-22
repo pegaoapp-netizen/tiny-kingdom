@@ -1,4 +1,4 @@
-/* Tiny Kingdom · Cloud Functions de pagos (v7.92)
+/* Tiny Kingdom · Cloud Functions de pagos (v7.93)
  * - verificarCompraNativa (callable): el teléfono avisa de una compra de Google Play / App Store.
  *   Se pregunta a RevenueCat (con la clave SECRETA, que solo vive aquí) si esa transacción existe y es de ese jugador.
  * - webhookStripe (HTTP): Stripe avisa de un pago de la web (checkout.session.completed), con firma verificada.

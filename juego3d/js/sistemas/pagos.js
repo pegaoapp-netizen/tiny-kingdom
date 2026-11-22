@@ -14,7 +14,7 @@
  */
 (function () {
   var CONFIG = {
-    activo: false,                 // ponlo en true cuando las tiendas y RevenueCat estén configurados
+    activo: true,                  // v7.93: encendido. En la web sigue sin cobrar (no hay Stripe) y en la app solo cobra si trae el plugin de RevenueCat
     revenuecat: { ios: 'appl_AWLLzjPILKKgYoIXihhNYDkcAhN', android: '' },   // claves PÚBLICAS de RevenueCat (appl_… y goog_…)
     funcion: 'verificarCompraNativa',        // Cloud Function (callable) que valida el recibo
     region: 'us-central1',
@@ -43,14 +43,29 @@
     return 'web';
   }
   function plugin() { var c = cap(); return c && c.Plugins && c.Plugins.Purchases; }
-  var listo = null;
+  var listo = null, idRC = null;
+  // RevenueCat SIEMPRE con el uid de Firebase: el servidor busca la compra por ese id
+  function uidActual() { var u = window.firebase && firebase.auth && firebase.auth().currentUser; return u ? u.uid : null; }
   function iniciar(uid) {
     var pl = detectarPlataformaPago();
     if (pl === 'web') return Promise.resolve(pl);
     var P = plugin(), clave = CONFIG.revenuecat[pl];
+    uid = uid || uidActual();
     if (!P || !clave) return Promise.reject(new Error('Falta el plugin de RevenueCat o su clave (' + pl + ')'));
-    if (!listo) listo = P.configure({ apiKey: clave, appUserID: uid || null }).then(function () { return pl; });
+    if (!uid) return Promise.reject(new Error('Sin sesión'));
+    if (!listo) { idRC = uid; listo = P.configure({ apiKey: clave, appUserID: uid }).then(function () { return pl; }); }
+    else if (idRC !== uid) { var antes = listo; idRC = uid; listo = antes.then(function () { return P.logIn({ appUserID: uid }); }).then(function () { return pl; }); }
     return listo;
+  }
+  // compras cobradas por la tienda cuya verificación falló (sin red, etc.): se reintentan hasta entregarse
+  var CLAVE_PEND = 'tk_pagos_pendientes';
+  function leerPend() { try { return JSON.parse(localStorage.getItem(CLAVE_PEND) || '[]') || []; } catch (e) { return []; } }
+  function guardarPend(l) { try { localStorage.setItem(CLAVE_PEND, JSON.stringify(l)); } catch (e) {} }
+  function reintentar() {
+    var l = leerPend(); if (!l.length || !uidActual()) return Promise.resolve(0);
+    return l.reduce(function (pr, d) {
+      return pr.then(function (n) { return llamarFuncion(d).then(function () { guardarPend(leerPend().filter(function (x) { return x.k !== d.k; })); return n + 1; }, function () { return n; }); });
+    }, Promise.resolve(0));
   }
   function activo() {
     if (!CONFIG.activo) return false;
@@ -81,7 +96,11 @@
       .then(function (res) {
         var tx = (res && res.transaction) || {};
         // el servidor valida con RevenueCat y crea compras/{id}; el teléfono no entrega nada por su cuenta
-        return llamarFuncion({ producto: id, plataforma: pl, transaccion: tx.transactionIdentifier || tx.transactionId || '' }).then(function () { return { ok: true, plataforma: pl }; });
+        var datos = { producto: id, plataforma: pl, transaccion: tx.transactionIdentifier || tx.transactionId || '' };
+        datos.k = id + ':' + (datos.transaccion || Date.now());
+        var l = leerPend(); l.push(datos); guardarPend(l);   // se guarda ANTES de verificar: nunca se pierde una compra cobrada
+        return llamarFuncion(datos).then(function () { guardarPend(leerPend().filter(function (x) { return x.k !== datos.k; })); return { ok: true, plataforma: pl }; },
+          function () { return { ok: true, plataforma: pl, pendiente: true }; });
       });
   }
   // llamada a una Cloud Function «callable» sin el SDK de Functions (protocolo HTTPS: { data } + token del jugador)
@@ -93,5 +112,5 @@
       return fetch('https://' + CONFIG.region + '-' + proyecto + '.cloudfunctions.net/' + CONFIG.funcion, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ data: datos }) });
     }).then(function (r) { return r.json().then(function (j) { if (!r.ok || j.error) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); return j.result; }); });
   }
-  window.Pagos = { CONFIG: CONFIG, CATALOGO: CATALOGO, detectarPlataformaPago: detectarPlataformaPago, activo: activo, iniciar: iniciar, precios: precios, comprarProducto: comprarProducto };
+  window.Pagos = { CONFIG: CONFIG, CATALOGO: CATALOGO, detectarPlataformaPago: detectarPlataformaPago, activo: activo, iniciar: iniciar, precios: precios, comprarProducto: comprarProducto, reintentar: reintentar };
 })();

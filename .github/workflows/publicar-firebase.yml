@@ -42,3 +42,36 @@ jobs:
           python3 -c "import json,sys; d=json.load(open(sys.argv[1])); print('Cuenta de servicio:', d.get('client_email'), '· proyecto de la llave:', d.get('project_id'))" "$RUNNER_TEMP/clave.json"
           cd juego3d/nube
           npx --yes firebase-tools@13 deploy --only firestore:rules --project tiny-kingdom-pegao --non-interactive
+  # v7.93: Cloud Function de pagos (verificarCompraNativa). Se publica cuando cambia juego3d/nube/functions/ o a mano (Run workflow).
+  # Necesita: plan Blaze en tiny-kingdom-pegao, FIREBASE_SERVICE_ACCOUNT_TK y el secreto REVENUECAT_SECRET (clave secreta sk_… de RevenueCat) en GitHub.
+  funciones:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Ver si cambiaron las funciones
+        id: cambio
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || git diff --name-only HEAD~1 HEAD | grep -q '^juego3d/nube/functions/'; then echo "si=1" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-node@v4
+        if: steps.cambio.outputs.si == '1'
+        with:
+          node-version: 20
+      - name: Publicar la función de pagos
+        if: steps.cambio.outputs.si == '1'
+        env:
+          CLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_TK || secrets.IREBASE_SERVICE_ACCOUNT_TK }}
+          RC: ${{ secrets.REVENUECAT_SECRET }}
+        run: |
+          if [ -z "$CLAVE" ]; then echo "Falta el secreto FIREBASE_SERVICE_ACCOUNT_TK."; exit 1; fi
+          printf '%s' "$CLAVE" > "$RUNNER_TEMP/clave.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/clave.json"
+          cd juego3d/nube
+          (cd functions && npm install --omit=dev --no-audit --no-fund)
+          if [ -n "$RC" ]; then
+            printf '%s' "$RC" > "$RUNNER_TEMP/rc.txt"
+            npx --yes firebase-tools@13 functions:secrets:set REVENUECAT_SECRET --data-file "$RUNNER_TEMP/rc.txt" --project tiny-kingdom-pegao --non-interactive --force
+            rm -f "$RUNNER_TEMP/rc.txt"
+          fi
+          npx --yes firebase-tools@13 deploy --only functions:verificarCompraNativa --project tiny-kingdom-pegao --non-interactive --force

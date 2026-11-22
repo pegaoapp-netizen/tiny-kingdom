@@ -10930,6 +10930,7 @@
   function cobrarCompras() {
     if (!hayCuenta() || !Cuentas.comprasPendientes || cobrandoCompras) return;
     cobrandoCompras = true;
+    if (window.Pagos && Pagos.reintentar) Pagos.reintentar().then(function (n) { if (n > 0) setTimeout(cobrarCompras, 3000); }).catch(function () {});
     Cuentas.comprasPendientes().then(function (l) {
       cobrandoCompras = false;
       estado.comprasCobradas = estado.comprasCobradas || {};
