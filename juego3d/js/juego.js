@@ -1902,7 +1902,7 @@
       atk = ejercitoDePoder(f, op.atkMezcla); multA = null;
       def = miComposicion(); var realDef = JSON.parse(JSON.stringify(def)); var vMis = valorDe(def), resto = Math.max(0, d - vMis);
       var extra = ejercitoDePoder(resto, { arquero: 0.6, guardian: 0.4 }); for (var k in extra) def[k] = (def[k] || 0) + extra[k];
-      multD = multiplicadoresHeroe(op.defHeroe || liderActual()); if (buffActivo('def')) multD.vida += 20;
+      multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : liderActual()); if (buffActivo('def')) multD.vida += 20;
     } else {
       atk = op.tropas || miComposicion(); var heroe = op.heroe !== undefined ? op.heroe : liderActual();
       multA = multiplicadoresHeroe(heroe); if (buffActivo('atk')) multA.atk += 20;
@@ -1911,7 +1911,7 @@
         def = {}; var vt = 0; for (var k2 in op.defTropas) if (COMBATE_KOC[k2] && op.defTropas[k2] > 0) { def[k2] = op.defTropas[k2]; vt += def[k2] * valorUnidadTipo(k2); }
         var resto2 = Math.max(0, d - vt); var ex2 = ejercitoDePoder(resto2, { arquero: 0.6, guardian: 0.4 }); for (var k3 in ex2) def[k3] = (def[k3] || 0) + ex2[k3];
       } else def = ejercitoDePoder(d, op.defMezcla);
-      multD = null;
+      multD = op.multDef || null;
     }
     var sim = simularRondas(atk, def, { multA: multA, multD: multD, muralla: op.muralla || 0, escalaA: escA, escalaD: escD });
     if (op.defensa) { // de los defensores, solo cuentan como pérdidas mías las tropas de verdad (el resto es el castillo y las torres)
@@ -6868,6 +6868,7 @@
     if (p.tipo === 'construir') abrirPanelConstruir(p.slot);
     else if (p.tipo === 'tropas') abrirPanelTropas();
     else if (p.tipo === 'invocar') abrirPanelInvocar();
+    else if (p.tipo === 'edificio' && p.reunion === 'defensa') abrirReunion(p.slot, 'defensa'); // v7.81
     else if (p.tipo === 'edificio') abrirPanelEdificio(p.slot);
     else if (p.tipo === 'construir-detalle' && tipoAConstruir) abrirDetalleConstruir(tipoAConstruir);
     else if (p.tipo === 'castillo') abrirPanelCastillo();
@@ -6985,7 +6986,39 @@
     if (tipo === 'embajada' || tipo === 'relevo') return '<span>' + EDIFICIOS[tipo].icono + ' ' + N(tipo) + '</span>';
     return '<span>' + T('dano') + ': ' + d.dano[i] + '</span><span>' + T('alcance') + ': ' + d.alcance[i] + '</span>';
   }
-  function htmlMuralla() {
+  // ---------- v7.81: DEFENSA DE LA VILLA: interruptor ON/OFF (santuario) y héroe defensor ----------
+  function heroesFuera() {
+    var f = {};
+    marchasActivas().forEach(function (m) { var h = ((estado.marchaTropas || {})[m.id] || {}).heroe; if (h) f[h] = 1; });
+    marchasPVE.forEach(function (m) { if (m.heroe) f[m.heroe] = 1; });
+    return f;
+  }
+  function heroeDefensor() { var h = estado.heroeDefensor; return h && estado.heroes && estado.heroes[h] && HEROE[h] && !heroesFuera()[h] ? h : null; }
+  function datosHeroeDef() {
+    var h = heroeDefensor(); if (!h) return null;
+    var m = multiplicadoresHeroe(h);
+    return { n: nivelHeroe(h), c: Math.round(m.combate), a: Math.round(m.atk * 10) / 10, v: Math.round(m.vida * 10) / 10, fa: Math.round(m.foeAtk * 10) / 10, fv: Math.round(m.foeVida * 10) / 10, s: m.set, h: String(NH(h)).slice(0, 30) };
+  }
+  function multDeDatos(hd) { return hd ? { atk: +hd.a || 0, vida: +hd.v || 0, foeAtk: +hd.fa || 0, foeVida: +hd.fv || 0, combate: +hd.c || 0, set: +hd.s || 0 } : null; }
+  function htmlDefensaVilla() {
+    var on = estado.tropasDefienden !== false, hd = heroeDefensor(), fuera = heroesFuera();
+    var mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; }).sort(function (x, y) { return nivelHeroe(y) - nivelHeroe(x); });
+    var h = '<div class="carta dv-caja"><div class="dv-fila"><div><h4>🛡️ ' + L('Defensa de Tropas', 'Troop Defense') + '</h4><small>' + (on ? L('ON: el 100% de tus tropas libres pelean si te atacan.', 'ON: 100% of your free troops fight if you are attacked.') : L('OFF (Santuario): tus tropas se esconden y no pelean. El atacante gana, pero solo se lleva lo que pase de la protección del Almacén.', 'OFF (Sanctuary): your troops hide and do not fight. The attacker wins, but only takes what is above your Storehouse protection.')) + '</small></div>' +
+      '<button class="cs-switch' + (on ? ' on' : '') + '" data-accion="cast-defensa"><span>' + (on ? 'ON' : 'OFF') + '</span><i></i></button></div>';
+    h += '<h4 class="dv-sub">🦸 ' + L('Héroe Defensor de la Villa', 'Village Defender Hero') + '</h4>';
+    if (!mios.length) h += '<p class="nota">' + L('Todavía no tienes héroes.', 'You have no heroes yet.') + '</p>';
+    else {
+      h += '<div class="dv-heroes"><button class="dv-h' + (!hd ? ' activo' : '') + '" data-accion="def-heroe" data-id="">🚫<small>' + L('Ninguno', 'None') + '</small></button>' + mios.map(function (k) {
+        var ocup = !!fuera[k];
+        return '<button class="dv-h' + (hd === k ? ' activo' : '') + '" data-accion="def-heroe" data-id="' + k + '"' + (ocup ? ' disabled' : '') + '><span class="dv-f">' + fotoHTML(k, '🦸') + '</span><b>' + escaparHTML(NH(k)) + '</b><small>' + (ocup ? L('Marchando', 'Marching') : L('Nv ', 'Lv ') + nivelHeroe(k)) + '</small></button>';
+      }).join('') + '</div>';
+      if (hd) { var mh = multiplicadoresHeroe(hd); h += '<p class="nota">✅ ' + L('Defiende con su equipo y su set: ', 'Defends with gear and set: ') + '⚔️ +' + Math.round(mh.atk) + '% · ❤ +' + Math.round(mh.vida) + '%' + (mh.foeAtk ? ' · ' + L('enemigo', 'enemy') + ' −' + Math.round(mh.foeAtk) + '%' : '') + '. ' + L('Si su nivel es mayor que el del héroe atacante, tus tropas disparan primero.', 'If his level is higher than the attacking hero, your troops shoot first.') + (on ? '' : ' <b>' + L('(Con la defensa en OFF no pelea.)', '(With defense OFF he does not fight.)') + '</b>') + '</p>'; }
+      else h += '<p class="nota aviso-rojo">' + L('Sin héroe defensor: tus tropas defienden sin bonos de héroe.', 'No defender hero: your troops defend with no hero bonus.') + '</p>';
+    }
+    return h + '<p class="nota">🛡️ ' + L('Tu defensa: ', 'Your defense: ') + '<b>' + formatoNumero(Math.round(defensaReino())) + '</b></p></div>';
+  }
+  function htmlMuralla() { return htmlMurallaObra() + htmlDefensaVilla(); }
+  function htmlMurallaObra() {
     var n = estado.muralla, sig = n + 1;
     var h = '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('muralla', MURALLA.icono) + '</div><div><h3>' + N('muralla') + (n ? ' — ' + T('nivel_corto') + ' ' + n + '/' + NIVEL_MAX : '') + '</h3><p>' + D('muralla') + '</p></div></div>';
     if (obraMuralla) return h + '<div class="stats"><span>' + T('construyendo') + ' ⏱ ' + fmtTiempo((obraMuralla.total - obraMuralla.t) / velObras()) + '</span></div>' + botonGemas(gemasParaTerminar((obraMuralla.total - obraMuralla.t) / velObras()), 'terminar-gemas', 'data-que="muralla"', '⏩ ' + T('terminar_ya')) + '</div>';
@@ -7391,6 +7424,8 @@
       }).join('') + '</div>' : '<p class="iv-vacio">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</p>';
       h += '<div class="ru-res"><span>🛡️ ' + L('Refuerzos de tu alianza: ', 'Alliance reinforcements: ') + '<b>' + ref + '</b></span><span>💚 ' + L('Heridos: ', 'Wounded: ') + '<b>' + heridos + '</b></span></div>';
       h += '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (tiposCasa.length ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
+    } else if (p === 'defensa') {
+      h += htmlDefensaVilla();
     } else {
       var ahora = Date.now(), l = [];
       marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Regresando a la villa · informe en el Correo', 'Returning home · report in Mail') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
@@ -7498,7 +7533,7 @@
     else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
     else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
     else if (tipo === 'mercado') t.push(['abrir-mercado', T('mb_comerciar')]);
-    else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
+    else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
     else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + ' <span class="mail-n">' + promosTorreN() + '</span>']); }
     else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
@@ -8498,7 +8533,9 @@
   function datosEspia() {
     // v7.22: el defensor pelea con TODAS sus tropas de la ciudad (las de reserva también); antes solo contaban las que se veían y el resto se inventaba
     var t = {}; if (estado.tropasDefienden !== false) Object.keys(TROPAS).forEach(function (k) { var n = cuentaTipo(k); if (n > 0) t[k] = n; });
-    return { nivelJ: nivelJugador(), castillo: estado.castillo || 1, muralla: estado.muralla || 0, tropas: t, heroes: (estado.equipo || []).length };
+    var o = { nivelJ: nivelJugador(), castillo: estado.castillo || 1, muralla: estado.muralla || 0, tropas: t, heroes: (estado.equipo || []).length };
+    if (estado.tropasDefienden === false) o.san = 1; else { var hd = datosHeroeDef(); if (hd) o.hd = hd; } // v7.81
+    return o;
   }
   function diplomacia(a) {
     if (estado.alianza && a.alianza === estado.alianza) return { k: 'aliada', t: L('Aliada', 'Allied'), c: '#2f7a22' };
@@ -8920,7 +8957,7 @@
       var bv = (estado.bajasDe || {})[m.defensor];
       if (bv && al && (al.actualizado || 0) < bv.t) { for (var kb in bv.perd) if (tDef[kb]) tDef[kb] = Math.max(0, tDef[kb] - bv.perd[kb]); dDef = Math.max(1, dDef - bv.valor); }
       else if (bv) delete estado.bajasDe[m.defensor];
-      var datos = decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, muralla: esp.muralla || 0 });
+      var datos = esp.san ? decidirAtaque(m, 1, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: {}, muralla: 0 }) : decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, muralla: esp.muralla || 0, multDef: multDeDatos(esp.hd) }); // v7.81: santuario y héroe defensor
       try { var sdf = ultimaBatalla && !ultimaBatalla.defensa ? ultimaBatalla.sim.def : null; if (sdf) { estado.bajasDe = estado.bajasDe || {}; var reg = estado.bajasDe[m.defensor] && al && (al.actualizado || 0) < estado.bajasDe[m.defensor].t ? estado.bajasDe[m.defensor] : { perd: {}, valor: 0 }; reg.t = Date.now();
         for (var kd in sdf) { var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
       return Cuentas.resolverAtaque(m.id, datos).then(function () { for (var k in datos) m[k] = datos[k]; return m; })
@@ -9056,7 +9093,8 @@
         } else html += '<p><b>' + T('rep_resististe') + '</b></p>';
         // v7.14: mis defensores también pelean por rondas: pierdo tropas (70 % heridos, 90 % con Enfermería nivel 10+)
         try { if (!(estado.defensasVistas || {})[r.id]) { estado.defensasVistas = estado.defensasVistas || {}; estado.defensasVistas[r.id] = Date.now(); var kv = Object.keys(estado.defensasVistas); if (kv.length > 80) kv.sort(function (a, b) { return estado.defensasVistas[a] - estado.defensasVistas[b]; }).slice(0, kv.length - 80).forEach(function (k) { delete estado.defensasVistas[k]; });
-          resolverBatalla(Math.max(1, r.fuerza || 1), Math.max(1, r.defensa || defensaReino()), { defensa: true, muralla: estado.muralla || 0 });
+          if (estado.tropasDefienden === false) throw 0; // v7.81: santuario, las tropas no pelean
+          resolverBatalla(Math.max(1, r.fuerza || 1), Math.max(1, r.defensa || defensaReino()), { defensa: true, muralla: estado.muralla || 0, defHeroe: heroeDefensor() });
           ultimaBatalla.aplicada = true; ultimaBatalla.perdidas = aplicarPerdidasRondas(ultimaBatalla.sim.defReal || {}, true);
           if (ultimaBatalla.perdidas.muertos + ultimaBatalla.perdidas.heridos > 0) html += '<p class="nota">💀 ' + formatoNumero(ultimaBatalla.perdidas.muertos) + ' · 🏥 ' + formatoNumero(ultimaBatalla.perdidas.heridos) + '</p>'; } } catch (e) {}
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
@@ -10468,10 +10506,9 @@
         : '<p class="iv-vacio">' + L('Todavía no conquistaste territorios. Ve al Mundo, toca una pradera, bosque o cantera y elige Ataque.', 'No territories yet. Go to the World, tap a field, forest or quarry and choose Attack.') + '</p>') + '</div>';
     }
     if (t === 'defensa') {
-      var on = estado.tropasDefienden !== false, casa = {};
+      var casa = {};
       tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; casa[u.tipo] = (casa[u.tipo] || 0) + 1; });
-      cuerpo = '<div class="cs-caja"><h4>' + L('Tropas defienden', 'Troops defend') + '</h4><p class="cs-txt">' + L('Encendido: tus tropas salen a defender cuando te atacan (y pueden morir). Apagado: se quedan guardadas y solo defienden el castillo y la muralla.', 'On: your troops defend when you are attacked (and may die). Off: they stay safe and only the castle and wall defend.') + '</p>' +
-        '<button class="cs-switch' + (on ? ' on' : '') + '" data-accion="cast-defensa"><span>' + (on ? 'ON' : 'OFF') + '</span><i></i></button></div>' +
+      cuerpo = htmlDefensaVilla() +
         '<div class="cs-caja"><h4>' + L('Defensores en casa', 'Defenders at home') + '</h4><table class="ru-tabla"><tr><th>' + L('Tropa', 'Troop') + '</th><th>' + L('Cantidad', 'Amount') + '</th></tr>' + (Object.keys(casa).length ? Object.keys(casa).map(function (k) { return '<tr><td>' + TROPAS[k].icono + ' ' + N(k) + '</td><td>' + formatoNumero(casa[k]) + '</td></tr>'; }).join('') : '<tr><td colspan="2">' + L('No tienes tropas en casa.', 'No troops at home.') + '</td></tr>') + '</table>' +
         '<p class="cs-txt">🛡️ ' + T('at_defensa') + ': <b>' + formatoNumero(Math.round(defensaReino())) + '</b></p></div>';
     }
@@ -10885,7 +10922,7 @@
     else if (a === 'arbol-lista') { sonar('click'); abrirPanelInvestigacion(ramaInv, true); }
     else if (a === 'hl-tab') { sonar('click'); hlTab = b.getAttribute('data-t'); abrirPanelHeroes(); }
     else if (a === 'cast-tab') { sonar('click'); castTab = b.getAttribute('data-t'); abrirPanelCastillo(); }
-    else if (a === 'cast-defensa') { estado.tropasDefienden = estado.tropasDefienden === false; sonar('click'); actualizarBotonDefensa(); consejoTemporal(T(estado.tropasDefienden ? 'def_on_txt' : 'def_off_txt')); guardar(true); publicarAldea(true); abrirPanelCastillo(); }
+    else if (a === 'cast-defensa') { estado.tropasDefienden = estado.tropasDefienden === false; sonar('click'); actualizarBotonDefensa(); consejoTemporal(T(estado.tropasDefienden ? 'def_on_txt' : 'def_off_txt')); guardar(true); publicarAldea(true); if (panelActual && panelActual.tipo === 'castillo') abrirPanelCastillo(); else reabrirPanel(); }
     else if (a === 'cast-color') { sonar('click'); estado.colorBandera = b.getAttribute('data-c'); pintarBanderasCastillo(); guardar(true); abrirPanelCastillo(); }
     else if (a === 'cuartel-sub') { sonar('click'); subCuartel = b.getAttribute('data-s'); abrirPanelEdificio(slotElegido); }
     else if (a === 'derribar-panel') {
@@ -11026,6 +11063,7 @@
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'def-heroe') { if (b.disabled) return; estado.heroeDefensor = b.getAttribute('data-id') || null; sonar('click'); guardar(true); publicarAldea(true); consejoTemporal('🦸 ' + (estado.heroeDefensor ? L('Héroe defensor: ', 'Defender hero: ') + NH(estado.heroeDefensor) : L('Sin héroe defensor', 'No defender hero'))); if (panelActual && panelActual.tipo === 'castillo') abrirPanelCastillo(); else reabrirPanel(); }
     else if (a === 'reunion-marchar') { sonar('click'); marcharDesdeReunion(); }
     else if (a === 'torre-pest') { sonar('click'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
     else if (a === 'torre-sub') { sonar('click'); torreSub[b.getAttribute('data-p')] = b.getAttribute('data-s'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
@@ -12408,7 +12446,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { estado: function () { return estado; }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { estado: function () { return estado; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

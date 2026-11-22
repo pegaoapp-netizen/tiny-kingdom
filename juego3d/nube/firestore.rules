@@ -1,5 +1,5 @@
 rules_version = '2';
-// reglas v7.76: torneo de temporada (temporadas/{id}/puntos)
+// reglas v7.81: espía con santuario y héroe defensor (espia hasta 8 campos)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -34,7 +34,7 @@ service cloud.firestore {
         && (!('kpt' in request.resource.data) || (request.resource.data.kpt is int && request.resource.data.kpt >= 0 && request.resource.data.kpt <= 1000000000000000))
         && (!('kps' in request.resource.data) || request.resource.data.kps is int)
         && (!('mapa' in request.resource.data) || request.resource.data.mapa is int)
-        && (!('espia' in request.resource.data) || (request.resource.data.espia is map && request.resource.data.espia.size() <= 6))
+        && (!('espia' in request.resource.data) || (request.resource.data.espia is map && request.resource.data.espia.size() <= 8))
         && (!('escudo' in request.resource.data) || request.resource.data.escudo is int)
         && (!('defensa' in request.resource.data) || (request.resource.data.defensa is int && request.resource.data.defensa >= 0 && request.resource.data.defensa <= 100000000))
         && request.resource.data.nombre is string
