@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1120">
+<title>Tiny Kingdom · Prueba de esqueleto</title>
+<!-- Página de PRUEBA del nuevo sistema de esqueleto. No cambia nada del juego: index.html no la usa. -->
+<style>
+  :root { --oro: #e8c36a; --oro2: #b8862e; --fondo: rgba(14, 18, 32, 0.86); --borde: rgba(232, 195, 106, 0.55); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1120; color: #f3ead2; font-family: "Segoe UI", "Trebuchet MS", system-ui, sans-serif; touch-action: none; user-select: none; -webkit-user-select: none; }
+  canvas { display: block; }
+  .barra { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 8px; right: 8px; display: flex; gap: 8px; align-items: center; pointer-events: none; z-index: 5; }
+  .barra > * { pointer-events: auto; }
+  .chip { background: var(--fondo); border: 1px solid var(--borde); border-radius: 12px; padding: 7px 11px; font-size: 13px; white-space: nowrap; }
+  .chip b { color: var(--oro); }
+  #estado { font-size: 15px; font-weight: 700; color: var(--oro); min-width: 92px; text-align: center; }
+  a.chip { color: #f3ead2; text-decoration: none; }
+  .esp { flex: 1; }
+  button { font-family: inherit; color: #f8efd6; background: linear-gradient(#2b3350, #171d31); border: 1px solid var(--borde); border-radius: 12px; font-size: 13px; padding: 8px 10px; cursor: pointer; }
+  button:active { transform: scale(0.96); }
+  button.on { background: linear-gradient(#c79a3c, #8a6420); color: #1a1206; border-color: #ffe39a; font-weight: 700; }
+  button:disabled { opacity: 0.45; }
+  #panel { position: fixed; top: calc(env(safe-area-inset-top) + 52px); right: 8px; width: min(300px, calc(100vw - 16px)); max-height: calc(100vh - 260px); overflow: auto; background: var(--fondo); border: 1px solid var(--borde); border-radius: 14px; padding: 10px; z-index: 6; display: none; }
+  #panel.abierto { display: block; }
+  #panel h3 { margin: 6px 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--oro); }
+  .fila { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+  .fila button { flex: 1 1 auto; }
+  .nota { font-size: 11px; opacity: 0.75; line-height: 1.35; }
+  #joy { position: fixed; left: calc(env(safe-area-inset-left) + 18px); bottom: calc(env(safe-area-inset-bottom) + 18px); width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(rgba(232,195,106,0.12), rgba(14,18,32,0.55)); border: 2px solid var(--borde); z-index: 5; touch-action: none; }
+  #joy i { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffe7a8, #b8862e 70%, #6e4c12); box-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+  #acciones { position: fixed; right: calc(env(safe-area-inset-right) + 14px); bottom: calc(env(safe-area-inset-bottom) + 16px); display: grid; grid-template-columns: repeat(3, 62px); gap: 8px; z-index: 5; }
+  #acciones button { height: 58px; font-size: 12px; line-height: 1.1; padding: 4px; border-radius: 16px; }
+  #acciones button .ico { display: block; font-size: 20px; margin-bottom: 2px; }
+  #atacar { grid-column: 3; grid-row: 1 / span 2; height: 124px !important; font-size: 14px !important; background: linear-gradient(#a8342a, #5e1610) !important; }
+  #resultados { position: fixed; inset: 10% 6% auto 6%; max-height: 78vh; overflow: auto; background: rgba(10, 13, 24, 0.96); border: 1px solid var(--borde); border-radius: 16px; padding: 14px; z-index: 9; display: none; font-size: 13px; }
+  #resultados.abierto { display: block; }
+  #resultados h2 { margin: 0 0 8px; font-size: 16px; color: var(--oro); }
+  #resultados .r { padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #resultados .ok { color: #8fe08a; font-weight: 700; } #resultados .no { color: #ff8a7a; font-weight: 700; }
+  #resultados small { display: block; opacity: 0.75; margin-top: 2px; }
+  #carga { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 8; display: none; }
+  #ayuda { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 170px); transform: translateX(-50%); font-size: 11px; opacity: 0.6; pointer-events: none; text-align: center; z-index: 4; width: 90%; }
+  @media (max-width: 420px) { #acciones { grid-template-columns: repeat(3, 56px); } #acciones button { height: 54px; } #atacar { height: 116px !important; } #joy { width: 124px; height: 124px; } }
+</style>
+</head>
+<body>
+<div class="barra">
+  <a class="chip" href="index.html">← Juego</a>
+  <div class="chip" id="estado">Quieto</div>
+  <div class="chip" id="fps">— fps</div>
+  <div class="esp"></div>
+  <button id="btnPanel">⚙ Opciones</button>
+</div>
+
+<div id="panel">
+  <h3>Modelo (mismo esqueleto)</h3>
+  <div class="fila" id="modelos">
+    <button data-m="prueba" class="on">Prueba</button>
+    <button data-m="trasgo">Trasgo</button>
+    <button data-m="ogro">Ogro</button>
+    <button data-m="aldeano">Aldeano</button>
+    <button data-m="chispa">Chispa</button>
+  </div>
+  <h3>Equipo</h3>
+  <div class="fila" id="equipo">
+    <button data-e="espada">🗡 Espada</button>
+    <button data-e="escudo">🛡 Escudo</button>
+    <button data-e="casco">⛑ Casco</button>
+    <button data-e="armadura">Armadura</button>
+    <button data-e="tunica">Túnica</button>
+  </div>
+  <div class="nota" id="notaTunica">La túnica es ropa con huesos: se dobla con las piernas. Solo con el esqueleto estándar (Prueba).</div>
+  <h3>Ver</h3>
+  <div class="fila">
+    <button id="btnHuesos">Huesos</button>
+    <button id="btnLento">Cámara lenta</button>
+    <button id="btnMultitud">Multitud ×20</button>
+  </div>
+  <div class="fila">
+    <button id="camIzq">⟲ Cámara</button>
+    <button id="camDer">Cámara ⟳</button>
+    <button id="btnCentro">Centrar</button>
+  </div>
+  <h3>Comprobar</h3>
+  <div class="fila"><button id="btnPruebas">▶ Pruebas automáticas</button></div>
+  <div class="nota">Teclado: WASD o flechas · Mayús corre · Espacio ataca · H golpe · K morir/revivir · Z/X girar · Q/E cámara.</div>
+</div>
+
+<div id="joy"><i></i></div>
+<div id="acciones">
+  <button id="girIzq"><span class="ico">↺</span>Girar</button>
+  <button id="girDer"><span class="ico">↻</span>Girar</button>
+  <button id="atacar"><span class="ico">⚔</span>Atacar</button>
+  <button id="correr"><span class="ico">»</span>Correr</button>
+  <button id="golpe"><span class="ico">✶</span>Golpe</button>
+  <button id="morir" style="grid-column:1 / span 2"><span class="ico">☠</span>Morir</button>
+</div>
+<div id="ayuda">Mueve el joystick para caminar en cualquier dirección · empuja poco para girar en el sitio</div>
+<div class="chip" id="carga">Cargando…</div>
+<div id="resultados"></div>
+
+<script src="js/three.min.js"></script>
+<script src="js/GLTFLoader.js"></script>
+<script src="js/SkeletonUtils.js"></script>
+<script src="js/sistemas/esqueleto.js"></script>
+<script src="js/sistemas/esqueleto-pruebas.js"></script>
+<script>
+(function () {
+  'use strict';
+  var E = window.TKEsqueleto, $ = function (id) { return document.getElementById(id); };
+  // ---------- escena (luces como en el juego) ----------
+  var render = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  render.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); render.setSize(innerWidth, innerHeight);
+  render.shadowMap.enabled = true; render.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.prepend(render.domElement);
+  var escena = new THREE.Scene(); escena.background = new THREE.Color(0x9fc2dc); escena.fog = new THREE.Fog(0x9fc2dc, 38, 80);
+  escena.add(new THREE.HemisphereLight(0xe6e2d4, 0x6a5a3a, 0.62));
+  var sol = new THREE.DirectionalLight(0xffdcae, 1.1); sol.castShadow = true; sol.shadow.mapSize.set(1024, 1024);
+  var sc = sol.shadow.camera; sc.left = sc.bottom = -9; sc.right = sc.top = 9; sc.near = 1; sc.far = 60; sol.shadow.bias = -0.0006; sol.shadow.normalBias = 0.02;
+  escena.add(sol); escena.add(sol.target);
+  // suelo de baldosas: así se ve si un pie resbala
+  var cv = document.createElement('canvas'); cv.width = cv.height = 256; var cx = cv.getContext('2d');
+  for (var i = 0; i < 4; i++) for (var j = 0; j < 4; j++) { cx.fillStyle = (i + j) % 2 ? '#5f7a3c' : '#6b8645'; cx.fillRect(i * 64, j * 64, 64, 64); }
+  cx.strokeStyle = 'rgba(40,50,20,0.35)'; cx.lineWidth = 2; for (i = 0; i <= 4; i++) { cx.beginPath(); cx.moveTo(i * 64, 0); cx.lineTo(i * 64, 256); cx.stroke(); cx.beginPath(); cx.moveTo(0, i * 64); cx.lineTo(256, i * 64); cx.stroke(); }
+  var tex = new THREE.CanvasTexture(cv); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.repeat.set(60, 60); tex.anisotropy = 4;
+  var suelo = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshLambertMaterial({ map: tex }));
+  suelo.rotation.x = -Math.PI / 2; suelo.receiveShadow = true; escena.add(suelo);
+  // unos postes para tener referencias al moverse
+  var matPoste = new THREE.MeshLambertMaterial({ color: 0x8a6a44 }), matPiedra = new THREE.MeshLambertMaterial({ color: 0xbcb6a8 });
+  for (i = 0; i < 26; i++) { var a = i * 2.4, r = 6 + (i % 5) * 4.5, x = Math.cos(a) * r, z = Math.sin(a) * r;
+    var m = new THREE.Mesh(i % 3 ? new THREE.CylinderGeometry(0.12, 0.14, 1.4, 8) : new THREE.DodecahedronGeometry(0.55), i % 3 ? matPoste : matPiedra);
+    m.position.set(x, i % 3 ? 0.7 : 0.35, z); m.castShadow = m.receiveShadow = true; escena.add(m); }
+
+  // ---------- cámara: isométrica oblicua como la del juego, sigue al personaje ----------
+  var cam = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.3, 200);
+  var vista = { az: Math.PI / 4, incl: 0.72, dist: 11, azObj: Math.PI / 4, foco: new THREE.Vector3(0, 1, 0) };
+  function ponerCamara(dt) {
+    vista.az += E.util.envolver(vista.azObj - vista.az) * Math.min(1, dt * 6);
+    var objetivo = jugador ? jugador.pos : new THREE.Vector3(); vista.foco.lerp(new THREE.Vector3(objetivo.x, 1.0, objetivo.z), Math.min(1, dt * 5));
+    var ch = Math.cos(vista.incl) * vista.dist;
+    cam.position.set(vista.foco.x + Math.sin(vista.az) * ch, vista.foco.y + Math.sin(vista.incl) * vista.dist, vista.foco.z + Math.cos(vista.az) * ch);
+    cam.lookAt(vista.foco);
+    sol.position.set(vista.foco.x - 8, 18, vista.foco.z + 6); sol.target.position.copy(vista.foco);
+  }
+
+  // ---------- equipo hecho con código (el agarre en el origen; la hoja hacia +Z) ----------
+  var MAT = { acero: new THREE.MeshLambertMaterial({ color: 0xd8dde4 }), oro: new THREE.MeshLambertMaterial({ color: 0xd9a63a }), cuero: new THREE.MeshLambertMaterial({ color: 0x5a3418 }),
+    madera: new THREE.MeshLambertMaterial({ color: 0x8a5a2e }), azul: new THREE.MeshLambertMaterial({ color: 0x2a58b0 }), rojo: new THREE.MeshLambertMaterial({ color: 0x9a2a22 }) };
+  function malla(g, mt, x, y, z) { var m = new THREE.Mesh(g, mt); m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; return m; }
+  var HACER = {
+    espada: function () { var g = new THREE.Group();
+      var hoja = malla(new THREE.BoxGeometry(0.05, 0.012, 0.78), MAT.acero, 0, 0, 0.5); g.add(hoja);
+      var punta = malla(new THREE.ConeGeometry(0.035, 0.12, 4), MAT.acero, 0, 0, 0.95); punta.rotation.x = Math.PI / 2; punta.scale.y = 1; g.add(punta);
+      g.add(malla(new THREE.BoxGeometry(0.2, 0.03, 0.035), MAT.oro, 0, 0, 0.1));
+      var mango = malla(new THREE.CylinderGeometry(0.018, 0.018, 0.16, 8), MAT.cuero, 0, 0, 0.0); mango.rotation.x = Math.PI / 2; g.add(mango);
+      g.add(malla(new THREE.SphereGeometry(0.03, 8, 6), MAT.oro, 0, 0, -0.09));
+      var e = new THREE.Group(); g.rotation.x = 0.95; e.add(g); return e; }, // en reposo la hoja cuelga hacia abajo y algo adelante
+    escudo: function () { var g = new THREE.Group();
+      var d = malla(new THREE.CylinderGeometry(0.27, 0.27, 0.04, 22), MAT.azul, 0.07, 0.05, 0.04); d.rotation.z = Math.PI / 2; g.add(d);
+      var aro = malla(new THREE.TorusGeometry(0.27, 0.022, 6, 24), MAT.oro, 0.09, 0.05, 0.04); aro.rotation.y = Math.PI / 2; g.add(aro);
+      var bo = malla(new THREE.SphereGeometry(0.06, 10, 8), MAT.oro, 0.1, 0.05, 0.04); bo.scale.x = 0.6; g.add(bo); return g; },
+    casco: function () { var g = new THREE.Group();
+      var c = malla(new THREE.SphereGeometry(0.135, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), MAT.acero, 0, -0.01, -0.005); c.scale.set(0.95, 1.05, 1.05); g.add(c);
+      g.add(malla(new THREE.BoxGeometry(0.02, 0.1, 0.02), MAT.acero, 0, -0.06, 0.13));
+      var cr = malla(new THREE.BoxGeometry(0.025, 0.07, 0.2), MAT.rojo, 0, 0.13, -0.01); g.add(cr); return g; },
+    armadura: function () { var g = new THREE.Group();
+      var p = malla(new THREE.SphereGeometry(0.2, 16, 10), MAT.acero, 0, -0.02, 0.02); p.scale.set(1.02, 0.95, 0.72); g.add(p);
+      var cin = malla(new THREE.CylinderGeometry(0.15, 0.17, 0.05, 16), MAT.cuero, 0, -0.17, 0); g.add(cin);
+      g.add(malla(new THREE.BoxGeometry(0.05, 0.05, 0.02), MAT.oro, 0, -0.17, 0.16)); return g; }
+  };
+  var RANURA = { espada: 'manoD', escudo: 'manoI', casco: 'cabeza', armadura: 'pecho' };
+  var equipoOn = { espada: true, escudo: false, casco: false, armadura: false, tunica: false };
+
+  // túnica con huesos sobre el esqueleto estándar: se crea con sus propios huesos y se viste con vestir()
+  function hacerTunica(med) {
+    var hu = E.crearHuesos(med), P = {}; E.LISTA.forEach(function (n) { P[n] = new THREE.Vector3(); hu.huesos[n].updateMatrixWorld(true); hu.huesos[n].getWorldPosition(P[n]); });
+    var idx = {}; E.LISTA.forEach(function (n, k) { idx[n] = k; });
+    var k = med.escala, arriba = P.pelvis.y + 0.12 * k, abajo = P['pierna.L'].y + 0.04 * k, pos = [], si = [], sw = [], ind = [], N = 14, F = 8;
+    for (var fz = 0; fz < 2; fz++) for (var f = 0; f <= F; f++) for (var c = 0; c <= N; c++) {
+      var u = c / N, v = f / F, y = lerp(arriba, abajo, v), ancho = lerp(0.17, 0.2, v) * k, x = (u * 2 - 1) * ancho, z = (fz ? -1 : 1) * lerp(0.115, 0.13, v) * k;
+      pos.push(x, y, z);
+      var lado = x >= 0 ? 'L' : 'R', wl = E.util.clamp((v - 0.15) / 0.6, 0, 1) * E.util.clamp(Math.abs(x) / (0.09 * k), 0, 1);
+      si.push(idx.pelvis, idx['muslo.' + lado], 0, 0); sw.push(1 - wl, wl, 0, 0);
+    }
+    var fila = N + 1; for (fz = 0; fz < 2; fz++) for (f = 0; f < F; f++) for (c = 0; c < N; c++) { var b = fz * (F + 1) * fila + f * fila + c; if (fz) ind.push(b, b + fila, b + 1, b + 1, b + fila, b + fila + 1); else ind.push(b, b + 1, b + fila, b + 1, b + fila + 1, b + fila); }
+    var g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(ind); g.computeVertexNormals();
+    g.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(si, 4)); g.setAttribute('skinWeight', new THREE.Float32BufferAttribute(sw, 4));
+    var malla2 = new THREE.SkinnedMesh(g, new THREE.MeshLambertMaterial({ color: 0x9a2a22, side: THREE.DoubleSide })); malla2.castShadow = true;
+    malla2.add(hu.raiz); malla2.updateMatrixWorld(true); malla2.bind(new THREE.Skeleton(hu.lista)); malla2.name = 'tunica';
+    var grupo = new THREE.Group(); grupo.add(malla2); return grupo;
+  }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+
+  // ---------- modelos ----------
+  var ARCHIVO = { trasgo: 'trasgo_rig', ogro: 'ogro_rig', aldeano: 'aldeano_anim', chispa: 'chispa' };
+  var ALTO = { prueba: 1.8, trasgo: 1.45, ogro: 1.9, aldeano: 1.75, chispa: 2.0 };
+  var glbs = {}, cargador = new THREE.GLTFLoader();
+  function cargarGLB(id, listo) {
+    if (glbs[id]) return listo(glbs[id]);
+    $('carga').style.display = 'block'; $('carga').textContent = 'Cargando ' + id + '…';
+    cargador.load('modelos/' + ARCHIVO[id] + '.glb', function (gl) {
+      gl.scene.traverse(function (o) { if (!o.isMesh) return; var map = o.material && o.material.map; if (map) map.encoding = THREE.LinearEncoding; o.material = new THREE.MeshLambertMaterial({ map: map || null, color: 0xffffff }); });
+      glbs[id] = gl.scene; $('carga').style.display = 'none'; listo(gl.scene);
+    }, undefined, function () { $('carga').textContent = 'No se pudo cargar ' + id; setTimeout(function () { $('carga').style.display = 'none'; }, 2000); });
+  }
+  function crearPersonaje(id, escenaGLB, colores) {
+    if (id === 'prueba') return new E.Personaje({ alto: ALTO.prueba, colores: colores });
+    return new E.Personaje({ modelo: THREE.SkeletonUtils.clone(escenaGLB), alto: ALTO[id] });
+  }
+
+  var jugador = null, modeloActual = 'prueba', ayudaHuesos = null;
+  function ponerJugador(id) {
+    var poner = function (gl) {
+      var pos = jugador ? jugador.pos.clone() : new THREE.Vector3(), yaw = jugador ? jugador.yaw : 0;
+      if (jugador) escena.remove(jugador.grupo);
+      jugador = crearPersonaje(id, gl); jugador.pos.copy(pos); jugador.yaw = jugador.yawObj = yaw; jugador.anim.iniciado = false;
+      escena.add(jugador.grupo); modeloActual = id;
+      jugador.on('estado', function (es) { $('estado').textContent = NOMBRE_ESTADO[es] || es; });
+      jugador.on('revivido', function () { $('morir').innerHTML = '<span class="ico">☠</span>Morir'; });
+      jugador.actualizar(0); $('estado').textContent = NOMBRE_ESTADO[jugador.estado()];
+      document.querySelectorAll('#modelos button').forEach(function (b) { b.classList.toggle('on', b.dataset.m === id); });
+      $('morir').innerHTML = '<span class="ico">☠</span>Morir';
+      aplicarEquipo(); ponerAyudaHuesos();
+    };
+    if (id === 'prueba') poner(null); else cargarGLB(id, poner);
+  }
+  var NOMBRE_ESTADO = { quieto: 'Quieto', caminar: 'Caminar', correr: 'Correr', girar: 'Girar', ataque: 'Ataque', golpe: 'Golpe', muerte: 'Muerte', revivir: 'Revivir' };
+  function aplicarEquipo() {
+    Object.keys(RANURA).forEach(function (e) { if (equipoOn[e]) jugador.equipar(RANURA[e], HACER[e]()); else jugador.quitar(RANURA[e]); });
+    var puede = jugador.tipo === 'prueba', bt = document.querySelector('[data-e="tunica"]'); bt.disabled = !puede;
+    if (!puede) equipoOn.tunica = false;
+    if (jugador.tunica) { jugador.tunica.parent && jugador.tunica.parent.remove(jugador.tunica); jugador.tunica = null; }
+    if (equipoOn.tunica && puede) { var t = hacerTunica(jugador.medidas); jugador.vestir(t); jugador.tunica = jugador.malla.getObjectByName('tunica'); }
+    document.querySelectorAll('#equipo button').forEach(function (b) { b.classList.toggle('on', !!equipoOn[b.dataset.e]); });
+  }
+  function ponerAyudaHuesos() {
+    if (ayudaHuesos) { escena.remove(ayudaHuesos); ayudaHuesos = null; }
+    if (!verHuesos || !jugador) return;
+    ayudaHuesos = new THREE.SkeletonHelper(jugador.tipo === 'prueba' ? jugador.malla : jugador.modelo); ayudaHuesos.material.depthTest = false; ayudaHuesos.material.linewidth = 2; escena.add(ayudaHuesos);
+  }
+
+  // ---------- multitud (para ver el rendimiento con muchos a la vez) ----------
+  var multitud = [];
+  function ponerMultitud(on) {
+    multitud.forEach(function (n) { escena.remove(n.p.grupo); }); multitud = [];
+    if (!on) return;
+    var tonos = [0x2f5fa8, 0x9a2a22, 0x2e7d4a, 0x6b3fa0, 0xb07a1a, 0x444b55];
+    for (var i = 0; i < 20; i++) {
+      var p = new E.Personaje({ alto: 1.55 + Math.random() * 0.45, colores: { camisa: tonos[i % tonos.length], pantalon: [0x4a3a2a, 0x2a2f3a, 0x55452f][i % 3] } });
+      var a = Math.random() * 6.28, r = 4 + Math.random() * 10; p.pos.set(jugador.pos.x + Math.cos(a) * r, 0, jugador.pos.z + Math.sin(a) * r); p.yaw = p.yawObj = Math.random() * 6.28; p.anim.iniciado = false;
+      if (i % 2) p.equipar('manoD', HACER.espada()); if (i % 3 === 0) p.equipar('cabeza', HACER.casco());
+      escena.add(p.grupo); multitud.push({ p: p, t: 0, dx: 0, dz: 0, corre: false, k: 0 });
+    }
+  }
+  function pensarMultitud(dt) {
+    multitud.forEach(function (n) {
+      n.t -= dt; var p = n.p;
+      if (n.t <= 0) { var r = Math.random(); n.t = 1.5 + Math.random() * 3;
+        if (r < 0.25) { n.k = 0; } else { var a = Math.random() * 6.28; n.dx = Math.sin(a); n.dz = Math.cos(a); n.k = 1; n.corre = r > 0.8; }
+        if (Math.random() < 0.3) p.atacar();
+        var d = Math.hypot(p.pos.x - jugador.pos.x, p.pos.z - jugador.pos.z); if (d > 16) { n.dx = (jugador.pos.x - p.pos.x) / d; n.dz = (jugador.pos.z - p.pos.z) / d; n.k = 1; }
+      }
+      p.mover(n.dx, n.dz, n.k, n.corre); p.actualizar(dt);
+    });
+  }
+
+  // ---------- controles ----------
+  var joy = { x: 0, y: 0, id: null }, teclas = {}, correrOn = false, lento = false, verHuesos = false;
+  var jb = $('joy'), jp = jb.querySelector('i');
+  function joyMover(e) { var r = jb.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, rad = r.width / 2;
+    var x = (e.clientX - cx) / rad, y = -(e.clientY - cy) / rad, l = Math.hypot(x, y); if (l > 1) { x /= l; y /= l; }
+    joy.x = x; joy.y = y; jp.style.transform = 'translate(' + (x * rad * 0.62) + 'px,' + (-y * rad * 0.62) + 'px)'; }
+  jb.addEventListener('pointerdown', function (e) { joy.id = e.pointerId; jb.setPointerCapture(e.pointerId); joyMover(e); e.preventDefault(); });
+  jb.addEventListener('pointermove', function (e) { if (e.pointerId === joy.id) joyMover(e); });
+  function joySoltar(e) { if (e.pointerId !== joy.id) return; joy.id = null; joy.x = joy.y = 0; jp.style.transform = ''; }
+  jb.addEventListener('pointerup', joySoltar); jb.addEventListener('pointercancel', joySoltar);
+  addEventListener('keydown', function (e) { var k = e.key.toLowerCase(); teclas[k] = true;
+    if (k === ' ') { jugador.atacar(); e.preventDefault(); } if (k === 'h') golpe(); if (k === 'k') morirRevivir(); if (k === 'z') jugador.girar(Math.PI / 2); if (k === 'x') jugador.girar(-Math.PI / 2);
+    if (k === 'q') vista.azObj += Math.PI / 4; if (k === 'e') vista.azObj -= Math.PI / 4; });
+  addEventListener('keyup', function (e) { teclas[e.key.toLowerCase()] = false; });
+  // arrastrar fuera de los botones: gira la cámara · rueda o pellizco: acerca
+  var arr = null, toques = {};
+  render.domElement.addEventListener('pointerdown', function (e) { toques[e.pointerId] = { x: e.clientX, y: e.clientY }; arr = { x: e.clientX, d: null }; });
+  render.domElement.addEventListener('pointermove', function (e) {
+    if (!toques[e.pointerId]) return; var ids = Object.keys(toques);
+    if (ids.length === 2) { toques[e.pointerId] = { x: e.clientX, y: e.clientY }; var A = toques[ids[0]], B = toques[ids[1]], d = Math.hypot(A.x - B.x, A.y - B.y); if (arr.d) vista.dist = E.util.clamp(vista.dist * arr.d / d, 5, 24); arr.d = d; return; }
+    vista.azObj -= (e.clientX - arr.x) * 0.008; arr.x = e.clientX; toques[e.pointerId] = { x: e.clientX, y: e.clientY };
+  });
+  function fuera(e) { delete toques[e.pointerId]; if (!Object.keys(toques).length) arr = null; }
+  render.domElement.addEventListener('pointerup', fuera); render.domElement.addEventListener('pointercancel', fuera);
+  render.domElement.addEventListener('wheel', function (e) { vista.dist = E.util.clamp(vista.dist * (e.deltaY > 0 ? 1.1 : 0.9), 5, 24); e.preventDefault(); }, { passive: false });
+
+  function golpe() { jugador.recibirGolpe(Math.random() < 0.5 ? -1 : 1); }
+  function morirRevivir() { if (jugador.estaMuerto()) { if (jugador.revivir()) $('morir').innerHTML = '<span class="ico">☠</span>Morir'; } else if (jugador.morir()) $('morir').innerHTML = '<span class="ico">✚</span>Revivir'; }
+  function clic(id, fn) { $(id).addEventListener('click', fn); }
+  clic('atacar', function () { jugador.atacar(); }); clic('golpe', golpe); clic('morir', morirRevivir);
+  clic('girIzq', function () { jugador.girar(Math.PI / 2); }); clic('girDer', function () { jugador.girar(-Math.PI / 2); });
+  clic('correr', function () { correrOn = !correrOn; $('correr').classList.toggle('on', correrOn); });
+  clic('btnPanel', function () { $('panel').classList.toggle('abierto'); $('btnPanel').classList.toggle('on', $('panel').classList.contains('abierto')); });
+  document.querySelectorAll('#modelos button').forEach(function (b) { b.addEventListener('click', function () { ponerJugador(b.dataset.m); }); });
+  document.querySelectorAll('#equipo button').forEach(function (b) { b.addEventListener('click', function () { equipoOn[b.dataset.e] = !equipoOn[b.dataset.e]; aplicarEquipo(); }); });
+  clic('btnHuesos', function () { verHuesos = !verHuesos; $('btnHuesos').classList.toggle('on', verHuesos); ponerAyudaHuesos(); });
+  clic('btnLento', function () { lento = !lento; $('btnLento').classList.toggle('on', lento); });
+  clic('btnMultitud', function () { var on = !multitud.length; ponerMultitud(on); $('btnMultitud').classList.toggle('on', on); });
+  clic('camIzq', function () { vista.azObj += Math.PI / 4; }); clic('camDer', function () { vista.azObj -= Math.PI / 4; });
+  clic('btnCentro', function () { jugador.pos.set(0, 0, 0); jugador.anim.iniciado = false; vista.azObj = Math.PI / 4; });
+  clic('btnPruebas', function () { correrPruebas(function () {}); });
+  $('resultados').addEventListener('click', function () { $('resultados').classList.remove('abierto'); });
+
+  function correrPruebas(listo) {
+    var id = modeloActual, caja = $('resultados');
+    caja.innerHTML = '<h2>Probando «' + id + '»…</h2>'; caja.classList.add('abierto');
+    setTimeout(function () {
+      var res = E.pruebas(function () { return crearPersonaje(id, glbs[id]); }, { limiteMs: 16 }), ok = res.filter(function (r) { return r.ok; }).length;
+      caja.innerHTML = '<h2>Pruebas «' + id + '»: ' + ok + ' de ' + res.length + ' bien</h2>' + res.map(function (r) { return '<div class="r"><span class="' + (r.ok ? 'ok">✔ ' : 'no">✘ ') + '</span>' + r.nombre + '<small>' + r.detalle + '</small></div>'; }).join('') + '<p class="nota">Toca para cerrar.</p>';
+      listo(res);
+    }, 30);
+  }
+
+  // ---------- bucle ----------
+  var antes = performance.now(), cuenta = 0, tFps = 0;
+  function bucle(ahora) {
+    var dt = Math.min(0.05, (ahora - antes) / 1000); antes = ahora; if (lento) dt *= 0.25;
+    cuenta++; tFps += (ahora - (bucle.ult || ahora)); bucle.ult = ahora; if (tFps > 500) { $('fps').innerHTML = '<b>' + Math.round(cuenta * 1000 / tFps) + '</b> fps'; cuenta = 0; tFps = 0; }
+    if (jugador && !window.__pausa) {
+      var jx = joy.x, jy = joy.y;
+      if (teclas.a || teclas.arrowleft) jx -= 1; if (teclas.d || teclas.arrowright) jx += 1; if (teclas.w || teclas.arrowup) jy += 1; if (teclas.s || teclas.arrowdown) jy -= 1;
+      var d = E.dirDesdeCamara(jx, jy, cam);
+      if (window.__entrada) d = window.__entrada; // para las pruebas en el navegador
+      if (d.k > 0.02) jugador.mover(d.x, d.z, d.k, correrOn || teclas.shift); else jugador.mover(0, 0, 0, false);
+      jugador.actualizar(dt); pensarMultitud(dt);
+    }
+    ponerCamara(dt); render.render(escena, cam); requestAnimationFrame(bucle);
+  }
+  // avanza la simulación N segundos a 60 fotogramas exactos (para capturas y pruebas)
+  function avanzar(seg) { window.__pausa = true; for (var i = 0; i < Math.round(seg * 60); i++) { var d = window.__entrada || { k: 0 }; if (d.k > 0.02) jugador.mover(d.x, d.z, d.k, correrOn); else jugador.mover(0, 0, 0, false); jugador.actualizar(1 / 60); pensarMultitud(1 / 60); ponerCamara(1 / 60); } render.render(escena, cam); }
+  addEventListener('resize', function () { render.setSize(innerWidth, innerHeight); cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); });
+  ponerJugador('prueba');
+  requestAnimationFrame(bucle);
+  // acceso para las pruebas automáticas desde fuera
+  window.__tk = { avanzar: avanzar, get jugador() { return jugador; }, poner: ponerJugador, pruebas: correrPruebas, vista: vista, cargado: function (id) { return id === 'prueba' || !!glbs[id]; }, multitud: function () { return multitud.length; } };
+})();
+</script>
+</body>
+</html>
