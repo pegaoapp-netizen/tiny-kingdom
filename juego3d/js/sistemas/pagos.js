@@ -15,7 +15,7 @@
 (function () {
   var CONFIG = {
     activo: false,                 // ponlo en true cuando las tiendas y RevenueCat estén configurados
-    revenuecat: { ios: '', android: '' },   // claves PÚBLICAS de RevenueCat (appl_… y goog_…)
+    revenuecat: { ios: 'appl_AWLLzjPILKKgYoIXihhNYDkcAhN', android: '' },   // claves PÚBLICAS de RevenueCat (appl_… y goog_…)
     funcion: 'verificarCompraNativa',        // Cloud Function (callable) que valida el recibo
     region: 'us-central1',
     // web: un Payment Link de Stripe por producto (https://buy.stripe.com/…); el juego le añade ?client_reference_id=<uid>
