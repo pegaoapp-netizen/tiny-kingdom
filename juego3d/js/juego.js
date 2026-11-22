@@ -7122,6 +7122,14 @@
     var n = v.lista.length - 1;
     confirmarJuego('🏘️ ' + L('¡Villa fundada!', 'Village founded!'), nombreVilla(n) + ' · X ' + f.x + ' · Y ' + f.y + '<br>' + L('Tiene su propio Castillo, campos y edificios. Cambia de villa con el botón 🏘️ de arriba.', 'It has its own Castle, fields and buildings. Switch village with the 🏘️ button at the top.'), L('Ir ahora', 'Go now'), function () { cambiarVilla(n); });
   }
+  // v7.83: ataques a la Villa Principal mientras miras otra villa: se aplican a su foto
+  function nivelEnFoto(d, tipo) { var n = 0; (d.edificios || []).forEach(function (e) { if (e && e.tipo === tipo && e.nivel > n) n = e.nivel; }); return n; }
+  function bajasEnFoto(d, frac) {
+    if (!d || d.tropasDefienden === false) return 0;
+    var caen = 0;
+    ['tropas', 'reserva'].forEach(function (c) { var t = d[c] || {}; Object.keys(t).forEach(function (k) { var x = Math.floor((t[k] || 0) * frac); t[k] = (t[k] || 0) - x; caen += x; if (TROPAS[k]) d.pt = Math.max(0, (d.pt || 0) - x * Math.round(TROPAS[k].vida * 2 + TROPAS[k].dano * 25)); }); });
+    return caen;
+  }
   function htmlMisVillas() {
     var v = misVillas(), mx = maxVillas();
     var h = '<div class="carta"><div class="pf-fila"><b>🏘️ ' + L('Villas', 'Villages') + ': ' + v.lista.length + ' / ' + mx + '</b><small>' + L('máx. 5', 'max 5') + '</small></div>' +
@@ -7814,7 +7822,6 @@
       (u.armadura ? '<p class="nota nivel-arm">🛡️ ' + T('armadura') + ' ' + u.armadura + ' — ' + T('defensa') + ' ' + Math.round(u.defensa * 100) + '%</p>' : '') +
       (u.invocada ? '<p class="nota">✨ ' + T('t_invocada') + '</p>' : '') +
       (u.tipo === 'heroe' ? '<p class="nota">👑 ' + T('t_heroe') + '</p>' : '') +
-      (aliado && hambre ? '<p class="nota aviso-rojo">🍞 ' + T('t_hambre') + '</p>' : '') +
       '</div></div></div>';
     abrirPanel(nombre, html, { tipo: 'unidad' });
   }
@@ -9269,7 +9276,6 @@
   // El defensor revisa si lo atacaron (al entrar y cada minuto)
   var ultimaRevision = 0, revisando = false;
   function revisarAtaques(forzar) {
-    if (villaActiva()) return; // v7.82: los informes de ataques a la principal se aplican al volver a ella
     if (!hayCuenta() || enMenu || revisando) return;
     if (!forzar && Date.now() - ultimaRevision < 60000) return;
     ultimaRevision = Date.now(); revisando = true;
@@ -9279,7 +9285,7 @@
       revisando = false;
       lista = lista.filter(function (r) { if (r.cancelado) { Cuentas.marcarVisto(r.id).catch(function () {}); return false; } return r.resuelto !== false; });
       if (!lista.length) return;
-      var perdio = false, html = '';
+      var perdio = false, html = '', enOtra = villaActiva() > 0, dm = enOtra ? misVillas().lista[0].datos : null; // v7.83: si miras otra villa, el ataque se aplica igual a la Principal
       lista.sort(function (a, b) { return a.fecha - b.fecha; }).forEach(function (r) {
         estado.enemigos = estado.enemigos || {}; if (r.atacante) estado.enemigos[r.atacante] = Date.now();
         html += '<div class="carta" style="margin-bottom:8px"><h3>' + T('rep_te_ataco', { n: escaparHTML(r.atacanteNombre) }) + '</h3>';
@@ -9287,15 +9293,16 @@
           perdio = true;
           var real = {};
           ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) {
-            var q = Math.min(Math.max(0, cantidad(k) - proteccionAlmacen(k)), r.botin[k] || 0);
-            if (!estado.oroInfinito) estado[claveRecurso(k)] = cantidad(k) - q;
+            var tiene = enOtra ? (dm[claveRecurso(k)] || 0) : cantidad(k), prot = enOtra ? Math.floor(tiene * pctAlmacenNivel(nivelEnFoto(dm, 'almacen')) / 100) : proteccionAlmacen(k);
+            var q = Math.min(Math.max(0, tiene - prot), r.botin[k] || 0);
+            if (!estado.oroInfinito) { if (enOtra) dm[claveRecurso(k)] = tiene - q; else estado[claveRecurso(k)] = tiene - q; }
             real[k] = q;
           });
           html += '<p class="aviso-rojo">' + T('rep_perdiste', { b: textoBotin(real).replace(/\+/g, '-') }) + '</p>';
         } else html += '<p><b>' + T('rep_resististe') + '</b></p>';
         // v7.14: mis defensores también pelean por rondas: pierdo tropas (70 % heridos, 90 % con Enfermería nivel 10+)
         try { if (!(estado.defensasVistas || {})[r.id]) { estado.defensasVistas = estado.defensasVistas || {}; estado.defensasVistas[r.id] = Date.now(); var kv = Object.keys(estado.defensasVistas); if (kv.length > 80) kv.sort(function (a, b) { return estado.defensasVistas[a] - estado.defensasVistas[b]; }).slice(0, kv.length - 80).forEach(function (k) { delete estado.defensasVistas[k]; });
-          if (estado.tropasDefienden === false) throw 0; // v7.81: santuario, las tropas no pelean
+          if (enOtra || estado.tropasDefienden === false) throw 0; // v7.81: santuario, las tropas no pelean
           resolverBatalla(Math.max(1, r.fuerza || 1), Math.max(1, r.defensa || defensaReino()), { defensa: true, muralla: estado.muralla || 0, defHeroe: heroeDefensor() });
           ultimaBatalla.aplicada = true; ultimaBatalla.perdidas = aplicarPerdidasRondas(ultimaBatalla.sim.defReal || {}, true);
           if (ultimaBatalla.perdidas.muertos + ultimaBatalla.perdidas.heridos > 0) html += '<p class="nota">💀 ' + formatoNumero(ultimaBatalla.perdidas.muertos) + ' · 🏥 ' + formatoNumero(ultimaBatalla.perdidas.heridos) + '</p>'; } } catch (e) {}
@@ -9307,7 +9314,8 @@
         Cuentas.marcarVisto(r.id).catch(function () {});
       });
       // tropas en ON: defienden y algunas mueren (más si se pierde); en OFF no mueren
-      if (estado.tropasDefienden !== false) { var muertas = bajasEjercito(perdio ? 0.5 : 0.15); if (muertas) html += '<p class="aviso-rojo">⚔️ ' + T('at_bajas', { n: muertas }) + '</p>'; }
+      if (enOtra) { var mf = bajasEnFoto(dm, perdio ? 0.5 : 0.15); if (mf) html += '<p class="aviso-rojo">⚔️ ' + T('at_bajas', { n: mf }) + '</p>'; }
+      else if (estado.tropasDefienden !== false) { var muertas = bajasEjercito(perdio ? 0.5 : 0.15); if (muertas) html += '<p class="aviso-rojo">⚔️ ' + T('at_bajas', { n: muertas }) + '</p>'; }
       // v7.14: ya no se pone un escudo automático de 30 min al perder (por eso solo se podía atacar una vez); como en KoC, el escudo se compra o se usa
       actualizarHUD(); guardar(true); publicarAldea(true); actualizarEscudo();
       consejoTemporal('📬 ' + L('Tienes un informe nuevo de guerra en el Correo', 'You have a new war report in your Mail'));

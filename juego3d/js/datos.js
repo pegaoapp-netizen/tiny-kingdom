@@ -94,7 +94,7 @@ var TEXTOS = {
     gemas_inf: 'Gemas infinitas',
     r_oro: 'oro', r_comida: 'comida', r_madera: 'madera', r_piedra: 'piedra', r_gemas: 'gemas',
     falta: 'Te falta {r}.', costo: 'Cuesta', produce_txt: 'Produce {n} {r} cada {s} s',
-    comen: 'Tus tropas comen {n} de comida por minuto.', sin_comida: '¡Sin comida! Tus tropas pelean más débiles. Construye Granjas.',
+    comen: 'Tus tropas comen {n} de comida por minuto.', sin_comida: '🍞 Comida en 0: tus tropas pelean igual al 100%. Construye Granjas o manda comida desde otra villa.',
     impuesto: 'El castillo cobra {n} de oro cada {s} s.', recursos_inf: 'Recursos infinitos',
     c_aserradero: 'Ahora pon un Aserradero: da madera para construir.', c_mina: 'Consejo: una Mina da piedra para torres y muralla.',
     c_barricada: 'Consejo: pon una Barricada en el camino para frenar a los enemigos.',
@@ -236,7 +236,7 @@ var TEXTOS = {
     gemas_inf: 'Infinite gems',
     r_oro: 'gold', r_comida: 'food', r_madera: 'wood', r_piedra: 'stone', r_gemas: 'gems',
     falta: 'You need more {r}.', costo: 'Costs', produce_txt: 'Makes {n} {r} every {s} s',
-    comen: 'Your troops eat {n} food per minute.', sin_comida: 'Out of food! Your troops fight weaker. Build Farms.',
+    comen: 'Your troops eat {n} food per minute.', sin_comida: '🍞 Food at 0: your troops still fight at 100%. Build Farms or send food from another village.',
     impuesto: 'The castle collects {n} gold every {s} s.', recursos_inf: 'Infinite resources',
     c_aserradero: 'Now place a Sawmill: it gives wood to build.', c_mina: 'Tip: a Mine gives stone for towers and the wall.',
     c_barricada: 'Tip: place a Barricade on the road to slow enemies down.',
@@ -508,7 +508,7 @@ function esCampo(tipo) { return TIPOS_CAMPO.indexOf(tipo) >= 0; }
 // El castillo cobra impuestos: da oro cada cierto tiempo
 var IMPUESTO = { oro: 3, cada: 4 };
 // Cada tropa come 1 de comida cada tantos segundos. Sin comida pelean más débiles.
-var COMIDA_TROPA = { cada: 15, debilidad: 0.7 };
+var COMIDA_TROPA = { cada: 15, debilidad: 1 }; // v7.83: como en KoC, sin comida las tropas pelean al 100%
 
 // ---------------- Edificios (valores por nivel 1, 2, 3) ----------------
 // costo = oro; madera y piedra = lo que piden además (por nivel 1, 2, 3)
