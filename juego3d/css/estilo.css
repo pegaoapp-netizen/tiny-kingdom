@@ -2171,4 +2171,4 @@ html body #panel .tl-volver { margin: 6px 0; padding: 6px 12px; border-radius: 1
 #victoria-campo button { position: relative; }
 @keyframes vcEntra { from { opacity: 0; transform: scale(1.08); } }
 @keyframes vcGira { to { transform: translateX(-50%) rotate(360deg); } }
-body.en-batalla #brujula-cam, body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !important; } /* en la batalla solo se ve lo de la batalla */
+body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !important; } /* en la batalla solo se ve lo de la batalla */
