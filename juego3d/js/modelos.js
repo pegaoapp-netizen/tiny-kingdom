@@ -1393,7 +1393,13 @@ var M = (function () {
     function plano(o) { o.castShadow = false; o.receiveShadow = true; g.add(o); return o; }
     // tierra arada (alto 0.04, centro en y = 0.02: queda al ras del césped)
     plano(caja(TAM_PARCELA, 0.04, TAM_PARCELA, 0x7d5a38, 0, 0.02, 0));
-    for (var sf = -3; sf <= 3; sf++) plano(caja(TAM_PARCELA - 0.6, 0.012, 0.26, 0x5e4127, 0, 0.044, sf * (TAM_PARCELA / 7.6)));
+    // v7.66: surcos más reales y claros: cada surco con su lomo iluminado y su canal en sombra, y unos brotes verdes en los campos
+    var paso = TAM_PARCELA / 9;
+    for (var sf = -4; sf <= 4; sf++) {
+      plano(caja(TAM_PARCELA - 0.5, 0.014, paso * 0.42, 0xa47a4c, 0, 0.046, sf * paso - paso * 0.12));
+      plano(caja(TAM_PARCELA - 0.5, 0.01, paso * 0.22, 0x553a22, 0, 0.044, sf * paso + paso * 0.28));
+      if (campo) for (var br = -3; br <= 3; br++) if ((br + sf * 3) % 2 === 0) plano(caja(0.22, 0.05, 0.22, 0x7fb04a, br * (TAM_PARCELA / 7.4) + (sf % 2) * 0.3, 0.06, sf * paso - paso * 0.12));
+    }
     // marco fino de piedra, también plano
     [[0, -T2, TAM_PARCELA + 0.4, 0.4], [0, T2, TAM_PARCELA + 0.4, 0.4], [-T2, 0, 0.4, TAM_PARCELA], [T2, 0, 0.4, TAM_PARCELA]].forEach(function (q) { plano(caja(q[2], 0.03, q[3], 0xa39a8a, q[0], 0.02, q[1])); });
     // símbolo de construir: un + dentro de un aro, pintado sobre la tierra (se esconde cuando hay edificio)
@@ -3178,6 +3184,41 @@ var M = (function () {
   // =================================================================
   //  NATURALEZA: árboles (en grupo para que sea rápido), rocas, nubes
   // =================================================================
+  // v7.66: material de hojas: Lambert suave y un degradado de luz según la altura dentro de la copa
+  var _matHoja = null;
+  function matHojaReal() {
+    if (_matHoja) return _matHoja;
+    var m = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    m.onBeforeCompile = function (sh) {
+      sh.vertexShader = 'varying float vHojaY;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vHojaY = position.y;');
+      sh.fragmentShader = 'varying float vHojaY;\n' + sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb *= mix(0.58, 1.18, smoothstep(-0.9, 0.9, vHojaY));');
+    };
+    m.customProgramCacheKey = function () { return 'hojaReal1'; };
+    _matHoja = m; return m;
+  }
+  function ruidoBulto(x, y, z, sem) { return Math.sin(x * 3.1 + sem) * Math.sin(y * 2.7 + sem * 1.7) * Math.sin(z * 3.3 + sem * 0.6); }
+  // copa redonda con bultos (como un racimo de hojas), sombreado suave
+  function copaBultos(r, sem) {
+    var g = new THREE.SphereGeometry(r, 9, 7), P = g.attributes.position, v = new THREE.Vector3();
+    for (var i = 0; i < P.count; i++) {
+      v.fromBufferAttribute(P, i); var n = v.clone().normalize();
+      var k = 1 + 0.16 * ruidoBulto(n.x, n.y, n.z, sem) + 0.07 * ruidoBulto(n.x * 2.3, n.y * 2.1, n.z * 2.2, sem + 5);
+      if (n.y < -0.3) k *= 0.86; // la parte de abajo un poco más plana
+      P.setXYZ(i, v.x * k, v.y * k * (n.y < 0 ? 0.85 : 1), v.z * k);
+    }
+    g.computeVertexNormals(); return g;
+  }
+  // piso de pino con el borde en puntas (ramas) en lugar de un cono liso
+  function conoPino(r, h, sem) {
+    var g = new THREE.ConeGeometry(r, h, 14, 2), P = g.attributes.position, v = new THREE.Vector3();
+    for (var i = 0; i < P.count; i++) {
+      v.fromBufferAttribute(P, i); var a = Math.atan2(v.z, v.x), rad = Math.hypot(v.x, v.z);
+      if (rad < 1e-4) continue;
+      var baja = v.y < -h * 0.2, k = 1 + (baja ? 0.14 * Math.cos(a * 7 + sem) : 0.05 * Math.sin(a * 5 + sem));
+      P.setXYZ(i, v.x * k, v.y - (baja ? 0.12 * h * (0.5 + 0.5 * Math.cos(a * 7 + sem)) : 0), v.z * k);
+    }
+    g.computeVertexNormals(); return g;
+  }
   function bosque(posiciones) {
     // posiciones: [{x, z, s, tipo, tono}]
     // tipo 0 = pino, 1 = árbol redondo, 2 = frondoso (copa ancha), 3 = palmera
@@ -3204,7 +3245,8 @@ var M = (function () {
       return im;
     }
     function variar(hex, dh, ds, dl) { return new THREE.Color(hex).offsetHSL(dh, ds, dl).getHex(); }
-    var hoja = matPlano(0xffffff), corteza = matPlano(0xffffff);
+    // v7.66: hojas más reales: copas redondeadas con bultos, sombreado suave y luz de arriba (abajo más oscuro, arriba más claro)
+    var hoja = matHojaReal(), corteza = mat(0xffffff);
 
     // ---- pinos: tres pisos de conos, algo torcidos ----
     var pinos = porTipo(0), troncoP = [], c1 = [], c2 = [], c3 = [];
@@ -3217,9 +3259,9 @@ var M = (function () {
     });
     var tronco = new THREE.CylinderGeometry(0.16, 0.26, 1.2, 5);
     inst(tronco, corteza, troncoP);
-    inst(new THREE.ConeGeometry(1.25, 1.7, 7), hoja, c1);
-    inst(new THREE.ConeGeometry(0.95, 1.4, 7), hoja, c2);
-    inst(new THREE.ConeGeometry(0.6, 1.1, 7), hoja, c3);
+    inst(conoPino(1.25, 1.7, 1), hoja, c1);
+    inst(conoPino(0.95, 1.4, 2), hoja, c2);
+    inst(conoPino(0.6, 1.1, 3), hoja, c3);
 
     // ---- redondos: copa de tres bolas ----
     var red = porTipo(1), troncoR = [], b1 = [], b2 = [];
@@ -3231,8 +3273,8 @@ var M = (function () {
       b2.push({ x: p.x - 0.5 * p.s, y: y + 2.35 * p.s, z: p.z - 0.3 * p.s, s: p.s * 0.9, rot: p.rot + 2, color: variar(p.tono, -0.01, 0, -0.04) });
     });
     inst(tronco, corteza, troncoR);
-    inst(new THREE.IcosahedronGeometry(1.15, 0), hoja, b1);
-    inst(new THREE.IcosahedronGeometry(0.75, 0), hoja, b2);
+    inst(copaBultos(1.15, 1), hoja, b1);
+    inst(copaBultos(0.75, 2), hoja, b2);
 
     // ---- frondosos: tronco grueso con ramas y copa ancha de cinco masas ----
     var fro = porTipo(2), troncoF = [], ramas = [], masas = [];
@@ -3252,7 +3294,7 @@ var M = (function () {
     inst(new THREE.CylinderGeometry(0.22, 0.38, 1.8, 6), corteza, troncoF);
     var geoRama = new THREE.CylinderGeometry(0.07, 0.12, 1.1, 5); geoRama.translate(0, 0.45, 0);
     inst(geoRama, corteza, ramas, false);
-    inst(new THREE.DodecahedronGeometry(1, 0), hoja, masas);
+    inst(copaBultos(1, 3), hoja, masas);
 
     // ---- palmeras: tronco curvo en segmentos, hojas caídas y cocos ----
     var pal = porTipo(3), segs = [], hojas = [], cocos = [];

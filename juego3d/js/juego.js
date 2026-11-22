@@ -544,7 +544,34 @@
     }
     return false;
   }
-  function materialAgua(op, color) { return new THREE.MeshPhongMaterial({ color: color || 0x3a9ad8, specular: 0x2a4a5e, shininess: 110, transparent: true, opacity: op, side: THREE.DoubleSide }); }
+  // v7.66: AGUA MÁS REAL: ondas que se mueven, tonos hondos y claros, y destellos de sol (sin texturas: va en el dibujo)
+  var AGUA_T = { value: 0 };
+  function materialAgua(op, color) {
+    var m = new THREE.MeshPhongMaterial({ color: color || 0x3a9ad8, specular: 0xbfe6ff, shininess: 140, transparent: true, opacity: op, side: THREE.DoubleSide });
+    m.onBeforeCompile = function (sh) {
+      sh.uniforms.uAguaT = AGUA_T;
+      sh.vertexShader = 'varying vec3 vAguaW;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vAguaW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = 'uniform float uAguaT;\nvarying vec3 vAguaW;\n' +
+        'float aguaOnda(vec2 p){ return sin(p.x)*sin(p.y*1.3+p.x*0.4); }\n' +
+        sh.fragmentShader.replace('#include <color_fragment>', [
+          '#include <color_fragment>',
+          ' vec2 wa = vAguaW.xz;',
+          ' float o1 = aguaOnda(wa * 0.55 + vec2(uAguaT * 0.6, uAguaT * 0.35));',
+          ' float o2 = aguaOnda(wa * 1.3 - vec2(uAguaT * 0.45, -uAguaT * 0.7) + 2.0);',
+          ' float o3 = aguaOnda(wa * 2.9 + vec2(-uAguaT * 1.1, uAguaT * 0.9) + 5.0);',
+          ' float ola = o1 * 0.5 + o2 * 0.35 + o3 * 0.15;',
+          ' vec3 hondo = diffuseColor.rgb * vec3(0.55, 0.72, 0.85), claro = mix(diffuseColor.rgb, vec3(0.75, 0.93, 1.0), 0.45);',
+          ' diffuseColor.rgb = mix(hondo, claro, smoothstep(-0.55, 0.65, ola));',
+          ' float brillo = smoothstep(0.78, 0.97, o2 * 0.6 + o3 * 0.55);',
+          ' diffuseColor.rgb += vec3(brillo * 0.55);'
+        ].join('\n')).replace('#include <normal_fragment_begin>', [
+          '#include <normal_fragment_begin>',
+          ' normal = normalize(normal + vec3(cos(vAguaW.x * 1.3 + uAguaT * 1.2) * 0.18, 0.0, cos(vAguaW.z * 1.1 - uAguaT) * 0.18));'
+        ].join('\n'));
+    };
+    m.customProgramCacheKey = function () { return 'aguaReal1'; };
+    return m;
+  }
   // ---------- RÍO con cascada que baja de las colinas (rodea el reino por detrás) ----------
   var RIO = (function () {
     var pts = [];
@@ -5913,7 +5940,9 @@
     var dSlotT = (function () { var hs = rayo.intersectObjects(slots.filter(function (q) { return q.edificio || q.obra; }).map(function (q) { return q.grupo; }), true); return hs.length ? hs[0].distance : Infinity; })();
     if (!modoColocar && rayo.intersectObjects(murallaModelo ? [castillo, murallaModelo] : [castillo], true).some(function (h) { var o = h.object; while (o && !o.userData.castillo) o = o.parent; return o && o !== murallaModelo && !h.object.isSprite && h.distance <= dSlotT; })) { sonar('click'); abrirPanelCastillo(); return; }
     // primero miramos si tocó una tropa o un enemigo (se ven más arriba que el suelo)
-    if (!modoColocar) {
+    // v7.66: si el dedo cae sobre un edificio, se abre el edificio aunque haya soldados delante (en la oleada se juntan frente al Cuartel y no dejaban entrar)
+    var tocaEdif = !modoColocar && rayo.intersectObjects(slots.filter(function (q) { return q.edificio || q.obra; }).map(function (q) { return q.grupo; }), true).length > 0;
+    if (!modoColocar && !tocaEdif) {
       var gente = tropasFuera().concat(enemigos);
       var hitsG = rayo.intersectObjects(gente.map(function (u) { return u.m.grupo; }), true);
       if (hitsG.length) {
@@ -11844,6 +11873,7 @@
   function bucle() {
     requestAnimationFrame(bucle);
     var dtReal = Math.min(reloj.getDelta(), 0.05);
+    AGUA_T.value = (AGUA_T.value + dtReal) % 1000; // v7.66: el agua se mueve
     if (!enMenu && !pausado) {
       var dt = dtReal * velocidad;
       try { actualizar(dt); } catch (errA) { avisarFallo(errA); try { revisarFinOleada(dt); } catch (x) {} }
