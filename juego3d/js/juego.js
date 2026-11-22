@@ -180,11 +180,14 @@
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.5; }
-  function zoomMax() { return zoomBase() * 1.75; } // v7.61: mismo zoom en Ciudad y Campos (es un solo mapa seguido) // v7.15: se puede alejar hasta ver TODA la villa con su muralla // v6.86: en la Ciudad no se aleja hasta ver los campos
-  function distInicial() { return Math.min(distEncuadre() * 1.3, (window.innerWidth < window.innerHeight ? 150 : 122) / 0.65); } // v7.52: la villa entera cabe al entrar // v7.44: la ciudad por barrios es más grande // v7.15: un poco más lejos // v7.04: un poco más lejos para ver casi todos los edificios sin mover el dedo // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
+  function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? ZOOM_MAX_CIUDAD : 1.6); } // v7.65: en la Ciudad no se aleja hasta ver los campos
+  // v7.65: en la Ciudad el castillo se ve más grande (más cerca) y los campos no se ven: solo con el botón Campos
+  var ACERCA_CIUDAD = 0.7, ZOOM_MAX_CIUDAD = 1.3;
+  function distReino() { return Math.min(distEncuadre() * 1.3, (window.innerWidth < window.innerHeight ? 150 : 122) / 0.65); }
+  function distInicial() { return distReino() * ACERCA_CIUDAD; }
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
-  function DIST_CAMPOS() { return distInicial(); } // v7.61: los campos se ven del mismo tamaño que la ciudad, como en KoC
+  function DIST_CAMPOS() { return distReino(); } // v7.65: los campos se ven enteros al tocar Campos
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = Math.PI; // v7.44: alineado con la muralla cuadrada (antes 3.55)
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
@@ -5794,10 +5797,12 @@
     // la cámara no se puede ir lejos del reino
     cam.meta.x = Math.max(CENTRO_REINO.x - LIMITE_CAM, Math.min(CENTRO_REINO.x + LIMITE_CAM, cam.meta.x));
     cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
-    // v7.61: CIUDAD Y CAMPOS EN UN SOLO MAPA: con el dedo se pasa de la villa a los campos sin cambiar de vista
-    if (!enMundo && !oleadaActiva) {
-      var lc = aLocal(cam.meta.x, cam.meta.z), aMax = R_CIUDAD * 0.45 + 14, aMin = CAMPOS_RECT.a - 8;
-      var tB = Math.max(0, Math.min(1, (-R_CIUDAD - lc.a) / 30)), bMax = R_CIUDAD * 0.45 + tB * 10;
+    // v7.65: CIUDAD y CAMPOS separados: en la Ciudad la cámara se queda sobre la villa (los campos no se ven);
+    // en Campos se queda sobre los campos. Se cambia con el botón de abajo y la cámara se desliza suave.
+    if (!enMundo && !oleadaActiva && (vistaActual === 'ciudad' || vistaActual === 'campos')) {
+      var lc = aLocal(cam.meta.x, cam.meta.z), aMin, aMax, bMax;
+      if (vistaActual === 'ciudad') { aMin = 14 - R_CIUDAD * 0.42; aMax = 14 + R_CIUDAD * 0.42; bMax = R_CIUDAD * 0.42; }
+      else { aMin = CAMPOS_RECT.a - 14; aMax = CAMPOS_RECT.a + 14; bMax = CAMPOS_RECT.hb - 20; }
       var na = Math.max(aMin, Math.min(aMax, lc.a)), nb = Math.max(-bMax, Math.min(bMax, lc.b));
       if (na !== lc.a || nb !== lc.b) {
         var pc = aMundo(na, nb); cam.meta.x = pc[0]; cam.meta.z = pc[1];
@@ -5806,9 +5811,6 @@
         cam.vel.set(EJE_U.x * va + EJE_V.x * vb, 0, EJE_U.z * va + EJE_V.z * vb);
       }
       if (cam.distMeta > zoomMax()) cam.distMeta = zoomMax();
-      // el botón de abajo dice dónde estás (Ciudad o Campos) según lo que se ve
-      var zona = aLocal(cam.objetivo.x, cam.objetivo.z).a < -R_CIUDAD - 12 ? 'campos' : 'ciudad';
-      if (zona !== vistaActual && (vistaActual === 'ciudad' || vistaActual === 'campos')) { vistaActual = zona; pintarVista(); }
     }
     // v7.61: mientras el dedo arrastra (o la inercia corre) el mapa va pegado, sin retraso; los viajes con botón se deslizan
     if (arrastre || cam.vel.lengthSq() > 0) cam.objetivo.copy(cam.meta);
