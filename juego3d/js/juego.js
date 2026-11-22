@@ -4269,6 +4269,13 @@
       s.modelo.scale.multiplyScalar(1.6); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
       var cjF = new THREE.Box3().setFromObject(s.modelo).getCenter(new V3()); s.modelo.position.x -= cjF.x; s.modelo.position.z -= cjF.z; s.modelo.position.y = 0.2;
     }
+    if (s.modelo.userData.es2D) { // v7.49: edificio 2D: tamaño fijo por parcela (no se mide la caja del dibujo)
+      s.modelo.scale.setScalar(ladoEdificio(tipo, nivel) * (window.__f2D || 1.9) * (s.fijo && !s.campo && s.fijo === tipo ? 1.6 : 1) / s.modelo.userData.ancho2D); s.modelo.position.set(0, 0.15, 0);
+      // adelanta el dibujo hacia la cámara en coordenadas del mundo (cada barrio tiene la parcela girada distinto)
+      s.grupo.updateMatrixWorld(true); var qI = new THREE.Quaternion(); s.grupo.getWorldQuaternion(qI); qI.invert();
+      var dirC = new V3(Math.cos(azVista()), 0, Math.sin(azVista())).applyQuaternion(qI).multiplyScalar(s.modelo.userData.adelanto2D);
+      s.modelo.children[0].position.set(dirC.x, 0.05, dirC.z);
+    }
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
@@ -4276,15 +4283,15 @@
     if (s.insignia) s.grupo.remove(s.insignia);
     // v6.82: chapa siempre visible con el icono del edificio y su nivel, para saber cuál es cuál de un vistazo
     if (s.chapa) { s.grupo.remove(s.chapa); s.chapa = null; }
-    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, Math.max(1.6, bxc.max.y - s.grupo.position.y) + 0.9, 0); s.grupo.add(s.chapa); }
+    { s.grupo.updateMatrixWorld(true); var bxc = new THREE.Box3().setFromObject(s.modelo); s.chapa = chapaEdificio(tipo, nivel); s.chapa.position.set(0, (s.modelo.userData.es2D ? s.modelo.userData.alto2D * s.modelo.scale.y * 0.92 : Math.max(1.6, bxc.max.y - s.grupo.position.y)) + 0.9, 0); s.grupo.add(s.chapa); }
     s.insignia = M.etiquetaEdificio(N(tipo), nivel);
     s.insignia.position.set(0, (tipo === 'torre' || tipo === 'vigia' ? 4.4 : 2.7), 0);
     s.grupo.add(s.insignia);
     s.grupo.add(s.modelo);
     // v6.56: sombra suave y tierra apisonada debajo, para que el edificio se vea asentado en el suelo
     if (s.baseSombra) { s.grupo.remove(s.baseSombra); s.baseSombra = null; }
-    if (!s.campo) {
-      s.grupo.updateMatrixWorld(true); var bxs = new THREE.Box3().setFromObject(s.modelo), tam = Math.min(4.3, Math.max(bxs.max.x - bxs.min.x, bxs.max.z - bxs.min.z) * 0.95 + 0.6);
+    if (!s.campo && !s.modelo.userData.es2D) { // el dibujo 2D ya trae su propia base
+      s.grupo.updateMatrixWorld(true); var bxs = new THREE.Box3().setFromObject(s.modelo), tam = s.modelo.userData.es2D ? 3.2 * s.modelo.scale.x * s.modelo.userData.ancho2D / 5.6 : Math.min(4.3, Math.max(bxs.max.x - bxs.min.x, bxs.max.z - bxs.min.z) * 0.95 + 0.6);
       var bs = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), matBaseSombra()); bs.rotation.x = -Math.PI / 2; bs.scale.set(tam, tam, 1); bs.position.y = 0.125; bs.renderOrder = 1;
       s.baseSombra = bs; s.grupo.add(bs);
     }

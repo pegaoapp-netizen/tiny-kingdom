@@ -630,8 +630,34 @@ var M = (function () {
   var TRIPO_ETAPAS = { cuartel: 3, almacen: 2, embajada: 2, academia: 2, mercado: 2, herreria: 2, establo: 2, enfermeria: 2, galeria: 2, relevo: 2, cabana: 2, vigia: 2, granja: 2 };
   function etapaEdificio(nivel) { return nivel >= 20 ? 3 : nivel >= 10 ? 2 : 1; }
   var CON_HUMO = { herreria: 1, cabana: 1, granja: 1, enfermeria: 1, almacen: 1, establo: 1 };
+  // v7.49: prueba 2D: edificio dibujado (PNG con fondo transparente) puesto de pie en el mapa, mirando a la cámara
+  var SPRITES_2D = {} // se llena cuando lleguen los dibujos de Tripo (p. ej. cuartel: { ancho: 5.6, base: { cuartel: 0.27 } }), TEX_2D = {};
+  function tex2D(nombre) {
+    var e = TEX_2D[nombre];
+    if (!e) {
+      e = TEX_2D[nombre] = { tex: null, falla: false };
+      var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
+      new THREE.TextureLoader().load('modelos/2d/' + nombre + '.png' + v, function (t) { t.anisotropy = 4; e.tex = t; window.dispatchEvent(new Event('tripo-glb')); }, undefined, function () { e.falla = true; window.dispatchEvent(new Event('tripo-glb')); });
+    }
+    return e;
+  }
+  // cada edificio puede tener un dibujo por etapa: <tipo>_1.png (niveles 1-9), <tipo>_2.png (10-19), <tipo>.png (20+); si falta uno se usa el de la etapa más cercana que exista
+  function edificio2D(tipo, nivel) {
+    var cfg = SPRITES_2D[tipo]; if (!cfg || window.__sin2D) return null;
+    var et = etapaEdificio(nivel || 1), orden = et === 1 ? [tipo + '_1', tipo + '_2', tipo] : et === 2 ? [tipo + '_2', tipo + '_1', tipo] : [tipo, tipo + '_2', tipo + '_1'], e = null;
+    for (var i = 0; i < orden.length; i++) { var x = tex2D(orden[i]); if (x.tex) { e = x; e.nombre = orden[i]; break; } if (!x.falla) return null; }
+    if (!e) return null;
+    var img = e.tex.image, alto = cfg.ancho * img.height / img.width;
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: e.tex, alphaTest: 0.5, transparent: false, fog: false }));
+    sp.center.set(0.5, 0); sp.scale.set(cfg.ancho, alto, 1);
+    // el borde de abajo del dibujo es la esquina delantera de su base: se adelanta hacia la cámara para que el centro de la base quede en el centro de la parcela (si no, se ve volando)
+    var bs = typeof cfg.base === 'number' ? cfg.base : (cfg.base[e.nombre] || 0.2), adelanto = bs * alto / Math.sin(35 * Math.PI / 180); sp.position.set(-adelanto, 0.05, 0);
+    var g = new THREE.Group(); g.add(sp); g.userData.noFusionar = true; g.userData.tripo = true; g.userData.es2D = true; g.userData.adelanto2D = adelanto; g.userData.alto2D = alto; g.userData.ancho2D = cfg.ancho; g.userData.alturaDisparo = alto * 0.6;
+    return g;
+  }
   function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
+    var s2 = edificio2D(tipo, nivel); if (s2) return s2;
     if (!ES_CAMPO_T[tipo]) esc *= tipo === 'cabana' ? 1.2 : 1.3; // v7.48: edificios de la villa más grandes en su barrio (como en KoC)
     var et = TRIPO_ETAPAS[tipo] === 2 ? ((nivel || 1) >= 15 ? 2 : 1) : Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
     var t = et > 1 ? modeloTripo(tipo + et, tipo + '_tripo_' + et + '.glb', 'tripo-glb') : modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb');
@@ -2828,11 +2854,11 @@ var M = (function () {
   // ---------- FIGURAS DE ARCHIVO (sin huesos): tropas y carretas ----------
   // alto: altura en el juego · gira: para que mire hacia +Z (como las tropas)
   var FIGURAS = {
-    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' }, anciano: { alto: 1.6, gira: 0, archivo: 'anciano_rig', animDe: 'aldeano' }, nino: { alto: 1.1, gira: 0, archivo: 'nino_rig', animDe: 'aldeano' }, trasgo: { alto: 1.45, gira: 0, archivo: 'trasgo_rig', animDe: 'aldeano', delta: true }, // v7.28: trasgo de Tripo (con huesos), camina con la animación del aldeano
+    caballero: { alto: 2.45, gira: 0 }, guardian: { alto: 1.95, gira: 0 }, arquero: { alto: 1.8, gira: 0 }, espadachin: { alto: 1.85, gira: 0, archivo: 'espadachin_anim' }, aldeano: { alto: 1.75, gira: 0, archivo: 'aldeano_anim' }, aldeana: { alto: 1.62, gira: 0, archivo: 'aldeana_rig', animDe: 'aldeano' }, anciano: { alto: 1.6, gira: 0, archivo: 'anciano_rig', animDe: 'aldeano' }, nino: { alto: 1.1, gira: 0, archivo: 'nino_rig', animDe: 'aldeano' }, trasgo: { alto: 1.45, gira: 0, archivo: 'trasgo_rig', animDe: 'aldeano', delta: true }, ogro: { alto: 1.9, gira: 0, archivo: 'ogro_rig', animDe: 'aldeano', delta: true }, // v7.49: ogro de Tripo (morado con picos) // v7.28: trasgo de Tripo (con huesos), camina con la animación del aldeano
 
     carreta: { alto: 0.62, gira: 0 }, caballo: { alto: 0.72, gira: 0 }, gallina: { alto: 0.45, gira: 0 }
   };
-  var FIGURA_TROPA = { caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano', nino: 'nino' };
+  var FIGURA_TROPA = { ogro: 'ogro', caballeria: 'caballero', guardian: 'guardian', arquero: 'arquero', espadachin: 'espadachin', aldeano: 'aldeano', aldeana: 'aldeana', anciano: 'anciano', nino: 'nino' };
   var figListas = {}, figPedidas = false, pendRet = {};
   // figuras con esqueleto pero sin animación: usan la de otra figura (mismos huesos, otros nombres)
   var HUESO_DIF = { Spine: 'Spine02', Spine1: 'Spine01', Spine2: 'Spine', Neck: 'neck' };
