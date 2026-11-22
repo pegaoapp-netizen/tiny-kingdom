@@ -6,6 +6,14 @@ workflows:
   ios-app-store:
     name: Tiny Kingdom - iPhone (App Store)
     max_build_duration: 30
+    # Se compila sola cuando Claude sube una etiqueta "app-..." (por ejemplo app-v7.94).
+    # Los cambios normales del juego NO gastan minutos de Codemagic.
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'app-*'
+          include: true
     instance_type: mac_mini_m2
 
     integrations:
@@ -64,6 +72,14 @@ workflows:
   android-google-play:
     name: Tiny Kingdom - Android (Google Play)
     max_build_duration: 30
+    # Se compila sola cuando Claude sube una etiqueta "app-..." (por ejemplo app-v7.94).
+    # Los cambios normales del juego NO gastan minutos de Codemagic.
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'app-*'
+          include: true
     instance_type: linux_x2
 
     environment:

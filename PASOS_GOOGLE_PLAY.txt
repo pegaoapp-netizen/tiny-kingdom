@@ -18,7 +18,7 @@ PASO 3 — Crear la llave de firma en Codemagic (una sola vez)
   Descárgala y guárdala en un lugar seguro: sin ella no se pueden subir
   versiones nuevas de la app.
 
-PASO 4 — Construir
+PASO 4 — Construir (Claude lo lanza solo subiendo una etiqueta app-...; o a mano:)
   Codemagic -> tu app -> Start new build -> workflow
   "Tiny Kingdom - Android (Google Play)". Tarda unos 10 minutos.
   Al terminar, descarga el archivo  tiny-kingdom.aab  (en Artifacts).
