@@ -102,6 +102,9 @@ workflows:
           node scripts/copiar-web.js
           if [ ! -d android ]; then npx cap add android; fi
           npx cap sync android
+          # Google Play (protección automática) exige minSdk 24 o más; Capacitor trae 23
+          sed -i 's/minSdkVersion = [0-9]*/minSdkVersion = 24/' android/variables.gradle
+          grep -n minSdkVersion android/variables.gradle
       - name: Icono y pantalla de carga
         script: |
           cd app
