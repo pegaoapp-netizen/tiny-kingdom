@@ -4246,14 +4246,14 @@
       cacheChapa[k + '|chica'] = new THREE.SpriteMaterial({ map: tex2, depthTest: false, transparent: true });
     }
     var sp = new THREE.Sprite(cacheChapa[k]); if (unico) sp.scale.set(9.2, 2.8, 1); else sp.scale.set(5.6, 1.7, 1); sp.renderOrder = unico ? 12 : 11;
-    sp.userData.grande = { m: cacheChapa[k], s: sp.scale.clone() };
+    sp.userData.grande = { m: cacheChapa[k], s: sp.scale.clone() }; sp.userData.unico = unico;
     sp.userData.chica = { m: cacheChapa[k + '|chica'], s: unico ? new THREE.Vector3(3.6, 2.6, 1) : new THREE.Vector3(2.6, 1.9, 1) };
     return sp;
   }
   // con la cámara lejos, las chapas pasan a ser chicas (dibujo + nivel); de cerca, con el nombre
   function chapaSegunZoom(sp) {
     if (!sp || !sp.userData.chica) return;
-    var lejos = cam.dist > distInicial() * 1.12, q = lejos ? sp.userData.chica : sp.userData.grande;
+    var lejos = cam.dist > distInicial() * 1.12 && !sp.userData.unico, q = lejos ? sp.userData.chica : sp.userData.grande; // v7.47: los edificios únicos siempre muestran su nombre
     if (sp.material !== q.m) { sp.material = q.m; sp.scale.copy(q.s); }
   }
   function ponerEdificio(s, tipo, nivel) {

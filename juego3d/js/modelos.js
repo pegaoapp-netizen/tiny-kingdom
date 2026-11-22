@@ -588,6 +588,25 @@ var M = (function () {
   // v6.33: CABAÑA: casita de paredes claras con vigas, techo de paja y chimenea; con el nivel se suman casitas
   // v6.36 prueba: Cabaña 3D hecha en Tripo (mientras carga se ve la dibujada)
   var MODELOS_TRIPO = {};
+  // v7.47: tejados de color según el tipo de edificio (así no se confunden) y muros de piedra más claros
+  var TEJADO = { cuartel: [5, 0.62], establo: [5, 0.62], galeria: [5, 0.62], academia: [204, 0.62], embajada: [204, 0.62], mercado: [48, 0.85], almacen: [48, 0.85], enfermeria: [48, 0.85], cabana: [22, 0.58] };
+  function hsl2rgb(h, s2, l) { var C = (1 - Math.abs(2 * l - 1)) * s2, X = C * (1 - Math.abs((h / 60) % 2 - 1)), m = l - C / 2, r = 0, g = 0, b = 0, k = Math.floor(h / 60) % 6;
+    if (k === 0) { r = C; g = X; } else if (k === 1) { r = X; g = C; } else if (k === 2) { g = C; b = X; } else if (k === 3) { g = X; b = C; } else if (k === 4) { r = X; b = C; } else { r = C; b = X; } return [(r + m) * 255, (g + m) * 255, (b + m) * 255]; }
+  function recolorTejado(tex, tipo) {
+    var tj = TEJADO[tipo]; if (!tj || !tex || !tex.image || !tex.image.width) return tex;
+    var im = tex.image, w = im.width, h = im.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+    var x = c.getContext('2d'); x.drawImage(im, 0, 0); var d = x.getImageData(0, 0, w, h), p = d.data;
+    for (var i = 0; i < p.length; i += 4) {
+      var r = p[i] / 255, g = p[i + 1] / 255, b = p[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
+      var sat = dd < 0.001 ? 0 : dd / (1 - Math.abs(2 * l - 1)), hue = dd < 0.001 ? 0 : (mx === r ? ((g - b) / dd + 6) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4) * 60, o = null;
+      if ((hue < 24 || hue > 335) && sat > 0.4 && l > 0.18) o = hsl2rgb(tj[0], Math.min(1, Math.max(tj[1], sat * 0.9)), l); // tejas
+      else if (sat < 0.22 && l > 0.32 && l < 0.85) o = hsl2rgb(40, 0.32, Math.min(0.9, l * 0.75 + 0.24)); // piedra -> crema claro
+      if (o) { p[i] = o[0]; p[i + 1] = o[1]; p[i + 2] = o[2]; }
+    }
+    x.putImageData(d, 0, 0);
+    var t = new THREE.CanvasTexture(c); t.flipY = tex.flipY; t.wrapS = tex.wrapS; t.wrapT = tex.wrapT; t.encoding = tex.encoding; t.anisotropy = tex.anisotropy; t.userData.recolor = true;
+    return t;
+  }
   function modeloTripo(clave, archivo, evento) {
     var e = MODELOS_TRIPO[clave] || (MODELOS_TRIPO[clave] = { escena: null, cargando: false });
     if (e.escena) return e.escena;
@@ -596,6 +615,8 @@ var M = (function () {
       var v = typeof VERSION_JUEGO !== 'undefined' ? '?v=' + VERSION_JUEGO : '';
       new THREE.GLTFLoader().load('modelos/' + archivo + v, function (gl) {
         gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, color: mp ? 0xffffff : o.material.color, emissive: mp ? 0x4a4a4a : 0x000000, emissiveMap: mp || null }); o.castShadow = true; o.receiveShadow = true; } });
+        var tipoT = String(archivo).split('_tripo')[0];
+        if (TEJADO[tipoT]) try { gl.scene.traverse(function (o) { if (o.isMesh && o.material && o.material.map && !o.material.map.userData.recolor) { var nt = recolorTejado(o.material.map, tipoT); o.material.map = nt; if (o.material.emissiveMap) o.material.emissiveMap = nt; } }); } catch (er) {}
         e.escena = gl.scene; window.dispatchEvent(new Event(evento));
       }, undefined, function () {});
     }
