@@ -182,7 +182,7 @@
   // v6.54: zoom corto, como en los juegos de reinos: se acerca y se aleja solo un poco desde la vista normal
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
-  function zoomMin() { return zoomBase() * 0.5; }
+  function zoomMin() { return zoomBase() * 0.4; } // v7.69: se puede acercar más para ver los detalles
   function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? ZOOM_MAX_CIUDAD : 1.6); } // v7.65: en la Ciudad no se aleja hasta ver los campos
   // v7.65: en la Ciudad el castillo se ve más grande (más cerca) y los campos no se ven: solo con el botón Campos
   var ACERCA_CIUDAD = VISTA.acerca, ZOOM_MAX_CIUDAD = 1.3 * 0.7 / VISTA.acerca;
@@ -900,6 +900,35 @@
     }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
+    // v7.69: CASAS MEDIEVALES de relleno en los huecos de la villa (como un reino de verdad): no se tocan ni tapan parcelas
+    (function rellenarVilla() {
+      var casas = new THREE.Group(), puestas = [], r2 = rnd;
+      function okCasa(x, z, sep) {
+        var mx = (x - MURALLA_FORMA.cx) / MURALLA_FORMA.rx, mz = (z - MURALLA_FORMA.cz) / MURALLA_FORMA.rz;
+        if (formaD2(mx, mz) > 0.86) return false;                       // dentro de la muralla, lejos de ella
+        var lc = aLocal(x, z);
+        if (Math.hypot(lc.a, lc.b) < COLINA.foso1 + 4) return false;    // ni el castillo ni su foso
+        if (lc.a > COLINA.r - 3 && lc.a < 42 && Math.abs(lc.b) < 9) return false; // ni la rampa ni la plaza de la fuente
+        if (enCalleCiudad(lc.a, lc.b, 1.4)) return false;
+        if (distCruz(x, z) < 5) return false;
+        if (distCamino(x, z) < 4.5) return false;
+        if (Math.hypot(x - PUNTO_REUNION[0], z - PUNTO_REUNION[1]) < 8) return false;
+        for (var i = 0; i < PARCELAS.nCiudad; i++) if (Math.hypot(x - PARCELAS.todas[i][0], z - PARCELAS.todas[i][1]) < 7.4) return false;
+        for (var j = 0; j < puestas.length; j++) if (Math.hypot(x - puestas[j][0], z - puestas[j][1]) < sep + puestas[j][2]) return false;
+        return true;
+      }
+      var giroCalle = Math.atan2(EJE_U.x, EJE_U.z);
+      for (var t = 0; t < 2600 && puestas.length < 70; t++) {
+        var la = (r2() - 0.5) * 2 * R_CIUDAD, lb = (r2() - 0.5) * 2 * R_CIUDAD, w = aMundo(la, lb), x = w[0], z = w[1];
+        var esCasa = r2() < 0.72, sep = esCasa ? 2.6 : 1.2;
+        if (!okCasa(x, z, sep)) continue;
+        var m = esCasa ? M.casaMedieval(r2) : M.adornoMedieval(r2);
+        m.position.set(x, 0, z); m.rotation.y = giroCalle + Math.floor(r2() * 4) * Math.PI / 2 + (r2() - 0.5) * 0.12;
+        if (esCasa) m.scale.setScalar(1.05 + r2() * 0.25);
+        casas.add(m); puestas.push([x, z, sep]);
+      }
+      escena.add(M.fusionar(casas));
+    })();
     var arb = [], matas = [];
     for (var ia = 0; ia < 1600 && arb.length < 230; ia++) {
       var bx = (rnd() - 0.5) * 190, bz = (rnd() - 0.5) * 190;
@@ -4367,6 +4396,14 @@
     );
     encajarEnParcela(s.modelo, tr, tipo, nivel);
 
+    // v7.69: en la villa los edificios llenan más su parcela (como un reino de verdad), sin pisar la calle
+    var CRECE_VILLA = 1.18;
+    if (!s.campo && !(s.fijo && s.fijo === tipo) && !s.modelo.userData.es2D) {
+      s.modelo.scale.multiplyScalar(CRECE_VILLA);
+      s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
+      var bxV = new THREE.Box3().setFromObject(s.modelo), cjV = bxV.getCenter(new V3());
+      s.modelo.position.set(-cjV.x, 0.08 - bxV.min.y, -cjV.z);
+    }
     if (s.fijo && !s.campo && s.fijo === tipo) {
       s.modelo.scale.multiplyScalar(1.35);
       s.modelo.position.set(0, 0, 0);
@@ -4377,7 +4414,7 @@
     }
 
     if (s.modelo.userData.es2D) {
-      var anchoObjetivo = (s.fijo && !s.campo && s.fijo === tipo) ? 9.4 : 7.8;
+      var anchoObjetivo = (s.fijo && !s.campo && s.fijo === tipo) ? 9.4 : 7.8 * (s.campo ? 1 : CRECE_VILLA);
       s.modelo.scale.setScalar(anchoObjetivo / s.modelo.userData.ancho2D);
       s.modelo.position.set(0, 0.12, 0);
       // adelanto hacia la cámara: el borde de abajo del dibujo es la esquina delantera de su base
@@ -5831,7 +5868,8 @@
     // en Campos se queda sobre los campos. Se cambia con el botón de abajo y la cámara se desliza suave.
     if (!enMundo && !oleadaActiva && (vistaActual === 'ciudad' || vistaActual === 'campos')) {
       var lc = aLocal(cam.meta.x, cam.meta.z), aMin, aMax, bMax;
-      if (vistaActual === 'ciudad') { aMin = 14 - R_CIUDAD * 0.42; aMax = 14 + R_CIUDAD * 0.42; bMax = R_CIUDAD * 0.42; }
+      // v7.69: cuanto más cerca, más se puede recorrer la villa (de lejos se queda centrada para que no se vean los campos)
+      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz; aMax = 14 + R_CIUDAD * kz; bMax = R_CIUDAD * kz; }
       else { aMin = CAMPOS_RECT.a - 14; aMax = CAMPOS_RECT.a + 14; bMax = CAMPOS_RECT.hb - 20; }
       var na = Math.max(aMin, Math.min(aMax, lc.a)), nb = Math.max(-bMax, Math.min(bMax, lc.b));
       if (na !== lc.a || nb !== lc.b) {

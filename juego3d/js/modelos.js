@@ -3220,6 +3220,54 @@ var M = (function () {
     }
     g.computeVertexNormals(); return g;
   }
+  // v7.69: CASA MEDIEVAL de relleno (no se toca): zócalo de piedra, paredes de cal con vigas de madera, tejado inclinado
+  // de teja con alero, chimenea, puerta y ventanas. Varía en tamaño, pisos, color de tejado y si tiene un ala lateral.
+  function prisma(w, h, L) {
+    return geo('pr' + w + '_' + h + '_' + L, function () {
+      var f = new THREE.Shape(); f.moveTo(-w / 2, 0); f.lineTo(w / 2, 0); f.lineTo(0, h); f.lineTo(-w / 2, 0);
+      var g = new THREE.ExtrudeGeometry(f, { depth: L, bevelEnabled: false }); g.translate(0, 0, -L / 2); return g;
+    });
+  }
+  var TEJAS = [0xb24a32, 0xa6402c, 0x3f6fae, 0x8a5636, 0xb85a3a, 0x4a76b4], CALES = [0xf0e6cf, 0xe8dcc0, 0xdccfae, 0xf3ecdc];
+  function casaMedieval(r) {
+    var g = new THREE.Group(), W = 2.6 + r() * 1.6, D = 2.2 + r() * 1.2, pisos = r() < 0.45 ? 2 : 1, H = 1.35 * pisos + 0.2;
+    var teja = TEJAS[Math.floor(r() * TEJAS.length)], cal = CALES[Math.floor(r() * CALES.length)], MAD = 0x5a3a22, PIE = 0x9a9488;
+    function cuerpo(w, d, h, x, z) {
+      var c = new THREE.Group(); c.position.set(x, 0, z);
+      c.add(caja(w + 0.12, 0.42, d + 0.12, PIE, 0, 0.21, 0));
+      c.add(caja(w, h, d, cal, 0, 0.42 + h / 2, 0));
+      // vigas: esquinas, cinturón entre pisos y cruces en el frente
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (q) { c.add(caja(0.14, h, 0.14, MAD, q[0] * w / 2, 0.42 + h / 2, q[1] * d / 2)); });
+      for (var p = 1; p <= pisos; p++) { c.add(caja(w + 0.04, 0.12, d + 0.04, MAD, 0, 0.42 + h * p / pisos, 0)); }
+      if (pisos > 1) { c.add(caja(w * 0.9, 0.1, 0.06, MAD, 0, 0.42 + h * 0.5, d / 2 + 0.02)); }
+      // tejado a dos aguas con alero
+      var th = Math.min(w, d) * 0.62 + 0.4, tj = new THREE.Mesh(prisma(d + 0.5, th, w + 0.45), mat(teja));
+      tj.rotation.y = Math.PI / 2; tj.position.set(0, 0.42 + h, 0); tj.castShadow = true; tj.receiveShadow = true; c.add(tj);
+      var cumb = caja(w + 0.5, 0.12, 0.16, 0x6a3a26, 0, 0.42 + h + th, 0); c.add(cumb);
+      return { g: c, h: h, th: th };
+    }
+    var a = cuerpo(W, D, H, 0, 0); g.add(a.g);
+    if (r() < 0.4) { var b = cuerpo(D * 0.9, W * 0.55, H * 0.8, W * 0.35, D * 0.5 + W * 0.25); b.g.rotation.y = Math.PI / 2; g.add(b.g); }
+    // puerta y ventanas al frente (+z)
+    g.add(caja(0.6, 0.95, 0.06, 0x4a2c18, -W * 0.2, 0.9, D / 2 + 0.04));
+    for (var k = 0; k < pisos; k++) [W * 0.18, W * 0.38].forEach(function (x) { g.add(caja(0.38, 0.42, 0.05, 0x2e3440, x, 1.05 + k * 1.35, D / 2 + 0.04)); g.add(caja(0.48, 0.08, 0.07, MAD, x, 0.82 + k * 1.35, D / 2 + 0.05)); });
+    for (var k2 = 0; k2 < pisos; k2++) g.add(caja(0.05, 0.42, 0.38, 0x2e3440, W / 2 + 0.03, 1.05 + k2 * 1.35, 0));
+    // chimenea de piedra
+    if (r() < 0.75) g.add(caja(0.42, 1.0 + a.th * 0.6, 0.42, 0x8a847a, W * 0.28, 0.42 + H + a.th * 0.35, -D * 0.12));
+    g.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    return g;
+  }
+  // detalles medievales chicos: barriles, montón de heno, carro, farol, cajas
+  function adornoMedieval(r) {
+    var g = new THREE.Group(), u = r();
+    if (u < 0.3) { for (var i = 0; i < 3; i++) { var bx = cil(0.32, 0.28, 0.7, 10, 0x7a4e2a, (i % 2) * 0.55 - 0.25, 0.35, Math.floor(i / 2) * 0.55); g.add(bx); g.add(cil(0.335, 0.335, 0.06, 10, 0x3a3a3a, (i % 2) * 0.55 - 0.25, 0.5, Math.floor(i / 2) * 0.55)); } }
+    else if (u < 0.55) { g.add(cil(0.9, 1.05, 0.9, 12, 0xd8b45a, 0, 0.45, 0)); g.add(cono(0.95, 0.6, 12, 0xcfa64e, 0, 1.2, 0)); }
+    else if (u < 0.75) { g.add(caja(1.6, 0.12, 0.9, 0x8a5a32, 0, 0.62, 0)); [-0.55, 0.55].forEach(function (x) { var rd = cil(0.42, 0.42, 0.08, 12, 0x5a3a22, x, 0.42, 0.5); rd.rotation.x = Math.PI / 2; g.add(rd); var rd2 = rd.clone(); rd2.position.z = -0.5; g.add(rd2); }); g.add(caja(1.6, 0.4, 0.06, 0x8a5a32, 0, 0.85, 0.45)); g.add(caja(1.6, 0.4, 0.06, 0x8a5a32, 0, 0.85, -0.45)); g.add(caja(0.9, 0.5, 0.7, 0xd8b45a, 0.1, 1.0, 0)); }
+    else if (u < 0.88) { g.add(cil(0.07, 0.09, 2.2, 6, 0x2e2e2e, 0, 1.1, 0)); g.add(caja(0.34, 0.4, 0.34, 0xffd27a, 0, 2.3, 0)); g.add(cono(0.3, 0.25, 4, 0x2e2e2e, 0, 2.62, 0)); }
+    else { g.add(caja(0.7, 0.6, 0.7, 0x9a6a3a, 0, 0.3, 0)); g.add(caja(0.55, 0.5, 0.55, 0x8a5a32, 0.55, 0.25, 0.3)); g.add(caja(0.5, 0.45, 0.5, 0xa47444, 0.2, 0.82, 0.1)); }
+    g.traverse(function (o) { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    return g;
+  }
   function bosque(posiciones) {
     // posiciones: [{x, z, s, tipo, tono}]
     // tipo 0 = pino, 1 = árbol redondo, 2 = frondoso (copa ancha), 3 = palmera
@@ -3625,7 +3673,7 @@ var M = (function () {
   }
 
   return {
-    mat: mat, caja: caja, cil: cil, cono: cono, esfera: esfera, colores: C,
+    mat: mat, caja: caja, cil: cil, cono: cono, casaMedieval: casaMedieval, adornoMedieval: adornoMedieval, esfera: esfera, colores: C,
     castillo: castillo, edificioTripo: edificioTripo, adornoTripo: adornoTripo, castilloEtapa: castilloEtapa, etapaCastillo: etapaCastillo, terreno: terreno, parcelaLibre: parcelaLibre, parcelaCerrada: parcelaCerrada, TAM_PARCELA: TAM_PARCELA, andamio: andamio,
     granja: granja, cuartel: cuartel, torre: torre, enfermeria: enfermeria, muralla: muralla, aserradero: aserradero, mina: mina, barricada: barricada, academia: academia,
     vigia: vigia, almacen: almacen, cabana: cabana, mercado: mercado, herreria: herreria, establo: establo, galeria: galeria, embajada: embajada, relevo: relevo, embajada: embajada, relevo: relevo,
