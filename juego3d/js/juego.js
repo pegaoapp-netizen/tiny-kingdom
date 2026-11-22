@@ -162,7 +162,7 @@
   // v6.48: vista isométrica fija estilo 2D: la cámara se aleja ISO_K veces con un lente ISO_K veces más cerrado (casi sin perspectiva)
   // v7.67: con perspectiva de verdad, como en la referencia del dueño: lo de cerca se ve grande y lo de lejos se va achicando
   // iso: cuánta perspectiva (5 = casi plano), grados: inclinación de la cámara, luz: claridad de día, acerca: zoom de la Ciudad
-  var VISTA = { iso: 1.7, grados: 40, luz: 1.0, sombra: 0.72, acerca: 0.7 }; // v7.70: luz natural: menos luz que rellena (sombras de verdad) y colores sin quemar
+  var VISTA = /[?&]vista=antes\b/.test(location.search) ? { iso: 1.7, grados: 40, luz: 1.0, sombra: 0.72, acerca: 0.7, baja: 9 } : { iso: 6, grados: 42, luz: 1.0, sombra: 0.72, acerca: 0.78, baja: 0 }; // v7.79: vista isométrica como Kingdoms of Camelot: casi sin perspectiva (los edificios no se deforman), en diagonal a 45° y ángulo fijo al acercar. Con ?vista=antes se ve la de antes // v7.70: luz natural: menos luz que rellena (sombras de verdad) y colores sin quemar
   var ISO_K = VISTA.iso;
   function fovBase() { return window.innerWidth < window.innerHeight ? 34 : 30; }
   function fovPantalla() { return 2 * Math.atan(Math.tan(fovBase() * Math.PI / 360) / ISO_K) * 180 / Math.PI; }
@@ -196,7 +196,7 @@
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = Math.PI; // v7.44: alineado con la muralla cuadrada (antes 3.55)
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
-  var GIRO_DIAG = Math.PI / 5; // v7.55: como en KoC, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
+  var GIRO_DIAG = VISTA.baja ? Math.PI / 5 : Math.PI / 4; // v7.79: diagonal exacta de 45° (parcelas en rombo, como en KoC) // v7.55: como en KoC, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
   var GIRO_PROTO = 0; // v7.71 prototipo 3D: la cámara se puede girar un poco
   // v7.73 CÁMARA LIBRE: con los edificios en 3D la cámara gira 360° (dos dedos girando) y se inclina (dos dedos arriba/abajo).
   // giro: vueltas que dio el jugador; grados: inclinación elegida (al acercar baja un poco sola, como en los juegos de estrategia modernos)
@@ -5964,7 +5964,7 @@
     CAMV.grados += (CAMV.gradosMeta - CAMV.grados) * kg;
     // al acercarse la cámara baja un poco (se ven más las fachadas); de lejos queda la vista de maqueta
     var zAcerca = Math.max(0, Math.min(1, (zoomBase() - cam.dist) / Math.max(1, zoomBase() - zoomMin())));
-    var gradosVer = Math.max(CAMV.GMIN - 4, CAMV.grados - 9 * zAcerca);
+    var gradosVer = Math.max(CAMV.GMIN - 4, CAMV.grados - VISTA.baja * zAcerca);
     cam.polar = Math.PI / 2 - gradosVer * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
     escena.fog.near = cam.dist * (ISO_K + 0.8); escena.fog.far = cam.dist * (ISO_K + 3) + 140;
