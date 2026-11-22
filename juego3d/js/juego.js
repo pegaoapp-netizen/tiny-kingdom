@@ -158,7 +158,10 @@
 
   // ángulo estrecho: las fachadas no se estiran y el reino se ve como en la foto
   // v6.48: vista isométrica fija estilo 2D: la cámara se aleja ISO_K veces con un lente ISO_K veces más cerrado (casi sin perspectiva)
-  var ISO_K = 5;
+  // v7.67: con perspectiva de verdad, como en la referencia del dueño: lo de cerca se ve grande y lo de lejos se va achicando
+  // iso: cuánta perspectiva (5 = casi plano), grados: inclinación de la cámara, luz: claridad de día, acerca: zoom de la Ciudad
+  var VISTA = { iso: 2.6, grados: 38, luz: 1.25, acerca: 0.75 };
+  var ISO_K = VISTA.iso;
   function fovBase() { return window.innerWidth < window.innerHeight ? 34 : 30; }
   function fovPantalla() { return 2 * Math.atan(Math.tan(fovBase() * Math.PI / 360) / ISO_K) * 180 / Math.PI; }
   var camara = new THREE.PerspectiveCamera(fovPantalla(), window.innerWidth / window.innerHeight, 2, 9000);
@@ -182,7 +185,7 @@
   function zoomMin() { return zoomBase() * 0.5; }
   function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? ZOOM_MAX_CIUDAD : 1.6); } // v7.65: en la Ciudad no se aleja hasta ver los campos
   // v7.65: en la Ciudad el castillo se ve más grande (más cerca) y los campos no se ven: solo con el botón Campos
-  var ACERCA_CIUDAD = 0.7, ZOOM_MAX_CIUDAD = 1.3;
+  var ACERCA_CIUDAD = VISTA.acerca, ZOOM_MAX_CIUDAD = 1.3 * 0.7 / VISTA.acerca;
   function distReino() { return Math.min(distEncuadre() * 1.3, (window.innerWidth < window.innerHeight ? 150 : 122) / 0.65); }
   function distInicial() { return distReino() * ACERCA_CIUDAD; }
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
@@ -306,10 +309,10 @@
     }
     if (brumaCiudad) brumaCiudad.visible = k > 0.05;
     sol.color.copy(mezcla(CIELO.sol, k, d));
-    sol.intensity = 1.12 - k * 0.6 - d * 0.14;
+    sol.intensity = (1.12 - k * 0.6 - d * 0.14) * (1 + (VISTA.luz - 1) * (1 - k)); // v7.67: de día más claro
     hemi.color.copy(mezcla(CIELO.hemiCielo, k, d));
     hemi.groundColor.copy(mezcla(CIELO.hemiSuelo, k, d));
-    hemi.intensity = 0.56 - k * 0.04;
+    hemi.intensity = (0.56 - k * 0.04) * (1 + (VISTA.luz - 1) * 1.3 * (1 - k));
     M.matNube.color.copy(mezcla(CIELO.nube, k, d));
     escena.userData.estrellas.material.opacity = Math.max(0, k * 1.1 - 0.1);
     M.luzNoche(k, t);
@@ -5843,7 +5846,7 @@
     if (arrastre || cam.vel.lengthSq() > 0) cam.objetivo.copy(cam.meta);
     else cam.objetivo.lerp(cam.meta, kp);
     // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
-    cam.polar = Math.PI / 2 - 35 * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
+    cam.polar = Math.PI / 2 - VISTA.grados * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
     escena.fog.near = cam.dist * (ISO_K + 0.8); escena.fog.far = cam.dist * (ISO_K + 3) + 140;
     var o = cam.objetivo, s = Math.sin(cam.polar);
