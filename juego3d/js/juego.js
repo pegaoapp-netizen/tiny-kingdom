@@ -3534,6 +3534,7 @@
       : '<button class="comprar mini naranja" data-accion="ped-donar" data-id="' + escaparHTML(p.id) + '">' + T('ped_donar') + '</button>';
     return h + '</div>';
   }
+  function htmlGuarnicion(recibidos, enviados) { var pc = pedidosCache, x = htmlRefuerzos([], recibidos, enviados), k = x.indexOf('<h3>' + T('ref_titulo')); pedidosCache = pc; return '<div class="carta">' + (k >= 0 ? x.slice(k) : x); } // v7.88
   function htmlRefuerzos(pedidos, recibidos, enviados) {
     var yoUid = Cuentas.usuario().uid, hoy = Date.now() - 24 * 3600 * 1000;
     pedidosCache = pedidos.filter(function (p) { return p.tipo && p.fecha > hoy; });
@@ -3622,6 +3623,7 @@
       var rg = $('ref-' + k); if (rg) rg.addEventListener('input', function () { $('refn-' + k).textContent = rg.value; });
     });
   }
+  var EMB_POR_NIVEL = 25000; // v7.88: cada nivel de la Embajada aloja 25.000 tropas de refuerzo
   function mandarRefuerzo(b) {
     if (oleadaActiva) { consejoTemporal(T('ref_en_oleada')); sonar('error'); return; }
     if (!refSel) return;
@@ -3630,6 +3632,8 @@
     TIPOS_REFUERZO.forEach(function (k) { var n = Math.min(refSel.t[k] || 0, propiasDe(k).length, refPedido ? tope : 300); n = Math.min(n, tope - total); t[k] = n; total += n; });
     if (!total) { $('ref-error').textContent = T('ref_nada'); sonar('error'); return; }
     var uid = refSel.uid, nombre = refSel.nombre;
+    if (!b.dataset.embOk) { b.disabled = true; Cuentas.leerAldea(uid).then(function (al) { var e = al && al.espia && al.espia.emb; b.disabled = false; if (e && !e[0]) { $('ref-error').textContent = L('Tu aliado no tiene Embajada: no puede alojar refuerzos.', 'Your ally has no Embassy: cannot host reinforcements.'); sonar('error'); return; } if (e && e[1] + total > e[0] * EMB_POR_NIVEL) { $('ref-error').textContent = L('Embajada del aliado al máximo', 'Ally Embassy is full') + ' (' + formatoNumero(e[1]) + ' / ' + formatoNumero(e[0] * EMB_POR_NIVEL) + ')'; sonar('error'); return; } b.dataset.embOk = '1'; mandarRefuerzo(b); }).catch(function () { b.disabled = false; b.dataset.embOk = '1'; mandarRefuerzo(b); }); return; }
+    delete b.dataset.embOk;
     b.disabled = true;
     var docR = { de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: uid, paraNombre: String(nombre).slice(0, 30), tropas: t, alianza: estado.alianza, fecha: Date.now(), devuelto: false };
     if (refHeroe && estado.heroes[refHeroe]) docR.heroe = String(NH(refHeroe)).slice(0, 30); // v6.97: el caballero que lleva el refuerzo
@@ -3648,9 +3652,9 @@
   }
   function abrirNuevoPedido(tipo, motivo) {
     if (!hayCuenta() || !estado.alianza) return;
-    var tropasP = tipo === 'tropas', max = tropasP ? limiteRefuerzos(nivelCaballero()) : 100000;
+    var tropasP = tipo === 'tropas', max = tropasP ? limiteRefuerzos(nivelCaballero()) : 1000000; // v7.88: hasta 1.000.000 de recursos
     var h = '<div class="carta"><h3>' + (tropasP ? T(motivo === 'atacar' ? 'ped_atk' : 'ped_def') : T('ped_rec')) + '</h3>' +
-      (tropasP ? '<p class="nota">' + T('nivel_caballero', { n: nivelCaballero(), m: max }) + '</p>' : '<p class="nota">' + T('ped_llegan') + '</p><div class="mer-fila" id="ped-recursos">' + ['oro', 'comida', 'madera', 'piedra'].map(function (r, i) { return '<button class="mer-r' + (i === 0 ? ' activo' : '') + '" data-r="' + r + '">' + ICONO_RECURSO[r] + '</button>'; }).join('') + '</div>') +
+      (tropasP ? '<p class="nota">' + T('nivel_caballero', { n: nivelCaballero(), m: max }) + '</p>' : '<p class="nota">' + T('ped_llegan') + '</p><div class="mer-fila" id="ped-recursos">' + REC_ALIADO.map(function (r, i) { return '<button class="mer-r' + (i === 0 ? ' activo' : '') + '" data-r="' + r + '">' + ICONO_RECURSO[r] + '</button>'; }).join('') + '</div>') +
       '<div class="tropa-cantidad"><span>' + T('ped_cantidad') + '</span><input type="range" id="ped-n" min="' + (tropasP ? 5 : 500) + '" max="' + max + '" step="' + (tropasP ? 5 : 500) + '" value="' + Math.round(max / 2) + '"><span class="tropa-num" id="ped-num">' + Math.round(max / 2) + '</span></div>' +
       '<button class="comprar naranja boton-oleada-grande" data-accion="ped-crear" data-tipo="' + tipo + '" data-motivo="' + (motivo || '') + '">' + T('ped_crear') + '</button></div>';
     abrirPanel(T('ped_titulo'), h, { tipo: 'pedido' });
@@ -3659,11 +3663,12 @@
   }
   function crearPedido(b) {
     var tipo = b.getAttribute('data-tipo'), tropasP = tipo === 'tropas', n = Math.floor(+$('ped-n').value || 0);
-    var max = tropasP ? limiteRefuerzos(nivelCaballero()) : 100000; n = Math.max(1, Math.min(max, n));
+    var max = tropasP ? limiteRefuerzos(nivelCaballero()) : 1000000; n = Math.max(1, Math.min(max, n));
     var rsel = document.querySelector('#ped-recursos .activo');
     var datos = { nombre: Cuentas.nombrePublico(), alianza: estado.alianza, fecha: Date.now(), tipo: tropasP ? 'tropas' : 'recursos', motivo: tropasP ? (b.getAttribute('data-motivo') || 'defender') : '', recurso: tropasP ? '' : (rsel ? rsel.getAttribute('data-r') : 'oro'), cantidad: n, recibido: 0, donantes: [] };
     b.disabled = true;
-    Cuentas.crearPedido(tropasP ? 't' : 'r', datos).then(function () { sonar('cuerno'); consejoTemporal(T('ped_hecho')); abrirPanelAlianza(); })
+    Cuentas.crearPedido(tropasP ? 't' : 'r', datos).then(function () { sonar('cuerno'); consejoTemporal(T('ped_hecho')); if (!tropasP && canalAlianza()) { Cuentas.enviarChat(canalAlianza(), { uid: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), texto: ('📦[PED:' + Cuentas.usuario().uid + '_r] ' + L('solicita ', 'requests ') + formatoNumero(datos.cantidad || 0) + ' ' + T('r_' + datos.recurso)).slice(0, 200), fecha: Date.now() }).catch(function () {}); cargarPedidosChat(true); }
+      if (pedidoDesdeChat) { pedidoDesdeChat = false; abrirPanelChat(canalAlianza()); } else abrirPanelAlianza(); })
       .catch(function () { b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
   }
   function abrirDonar(p) {
@@ -3681,16 +3686,16 @@
     if (!hayCuenta() || !estado.alianza) return;
     trSel = { uid: uid, nombre: nombre };
     var capT = capCarreta() * carretasLibres();
-    var h = '<div class="rf-hoja"><p class="rf-para">' + L('Mandar recursos a ', 'Send resources to ') + '<b>' + escaparHTML(nombre) + '</b></p><div class="rf-lista">' + ['oro', 'comida', 'madera', 'piedra'].map(function (r) {
-      var n = Math.max(0, Math.min(Math.floor(cantidad(r)), capT, 100000000));
+    var h = '<div class="rf-hoja"><p class="rf-para">' + L('Mandar recursos a ', 'Send resources to ') + '<b>' + escaparHTML(nombre) + '</b></p><p class="nota">🧾 ' + L('Impuesto de transporte: ', 'Transport tax: ') + '<b>' + Math.round(impuestoTransporte() * 1000) / 10 + '%</b> · ' + L('baja al subir el Mercado (2% en el Nv 16)', 'drops as the Market levels up (2% at Lv 16)') + '</p><div class="rf-lista">' + REC_ALIADO.map(function (r) {
+      var n = Math.max(0, Math.min(cantRec(r), capT, 100000));
       return '<div class="rf-fila' + (n ? '' : ' vacia') + '"><div class="rf-foto rf-rec">' + ICONO_RECURSO[r] + '</div><div class="rf-dat"><div class="rf-top"><b>' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="rf-num" id="trn-' + r + '" min="0" max="' + n + '" value="0"' + (n ? '' : ' disabled') + '></div>' +
         '<div class="rf-barra"><button class="rf-pm" data-accion="tr-menos" data-r="' + r + '"' + (n ? '' : ' disabled') + '>−</button><input type="range" id="tr-' + r + '" min="0" max="' + n + '" step="' + Math.max(1, Math.round(n / 100)) + '" value="0"' + (n ? '' : ' disabled') + '><button class="rf-pm" data-accion="tr-mas" data-r="' + r + '"' + (n ? '' : ' disabled') + '>+</button>' +
         '<button class="rf-max" data-accion="tr-max" data-r="' + r + '"' + (n ? '' : ' disabled') + ' title="' + T('maximo') + '">⏭</button></div><div class="rf-lim"><span>0</span><span>' + cortoNum(n) + '</span></div></div></div>';
     }).join('') + '</div><p class="nota aviso-rojo" id="tr-error"></p>' +
       '<div class="rf-pie"><div class="rf-cap"><span>📦 <b id="tr-total">0</b>/' + cortoNum(capT) + '</span><span>🛒 ' + carretasLibres() + '/' + carretas().n + '</span></div><button class="comprar azul rf-sig" data-accion="tr-mandar">' + L('Transportar', 'Transport') + '</button></div></div>';
     abrirPanel(L('Transportar', 'Transport'), h, { tipo: 'refuerzo' });
-    function total() { var t = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var nu = $('trn-' + r); if (nu) t += Math.max(0, Math.min(+nu.max, Math.floor(+nu.value || 0))); }); var e = $('tr-total'); if (e) { e.textContent = cortoNum(t); e.parentNode.classList.toggle('rojo', t > capT); } }
-    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) {
+    function total() { var t = 0; REC_ALIADO.forEach(function (r) { var nu = $('trn-' + r); if (nu) t += Math.max(0, Math.min(+nu.max, Math.floor(+nu.value || 0))); }); var e = $('tr-total'); if (e) { e.textContent = cortoNum(t); e.parentNode.classList.toggle('rojo', t > capT); } }
+    REC_ALIADO.forEach(function (r) {
       var rg = $('tr-' + r), nu = $('trn-' + r); if (!rg) return;
       rg.addEventListener('input', function () { nu.value = rg.value; total(); });
       nu.addEventListener('input', function () { var v = Math.max(0, Math.min(+rg.max, Math.floor(+nu.value || 0))); rg.value = v; total(); });
@@ -3699,31 +3704,38 @@
   }
   function cortoNum(n) { n = Math.floor(n || 0); return n >= 1e12 ? (Math.floor(n / 1e11) / 10) + 't' : n >= 1e9 ? (Math.floor(n / 1e8) / 10) + 'b' : n >= 1e6 ? (Math.floor(n / 1e5) / 10) + 'm' : n >= 1e4 ? (Math.floor(n / 100) / 10) + 'k' : formatoNumero(n); }
   function cambiarTransporte(r, d, max) { var rg = $('tr-' + r); if (!rg) return; var nu = $('trn-' + r), v = max ? +rg.max : Math.max(0, Math.min(+rg.max, (Math.floor(+nu.value || 0)) + d * Math.max(1, +rg.step || 1))); rg.value = v; rg.dispatchEvent(new Event('input')); nu.value = v; nu.dispatchEvent(new Event('input')); }
+  // v7.88: impuesto de transporte entre aliados: 20% con el Mercado Nv 1 y baja hasta 2% en el Nv 16
+  function impuestoTransporte() { var n = Math.max(1, mercadoNivel()); return Math.max(0.02, Math.round((0.20 - (n - 1) * 0.012) * 1000) / 1000); }
+  function conImpuesto(rec) { var t = impuestoTransporte(), o = {}; Object.keys(rec).forEach(function (r) { o[r] = Math.floor((rec[r] || 0) * (1 - t)); }); return o; }
+  var REC_ALIADO = ['oro', 'comida', 'madera', 'piedra', 'hierro'];
   function mandarTransporte(b) {
     if (!trSel) return;
-    var rec = { oro: 0, comida: 0, madera: 0, piedra: 0 }, tot = 0;
-    ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var nu = $('trn-' + r); var n = nu ? Math.max(0, Math.min(Math.floor(+nu.value || 0), +nu.max, Math.floor(cantidad(r)))) : 0; rec[r] = n; tot += n; });
+    var rec = { oro: 0, comida: 0, madera: 0, piedra: 0, hierro: 0 }, tot = 0;
+    REC_ALIADO.forEach(function (r) { var nu = $('trn-' + r); var n = nu ? Math.max(0, Math.min(Math.floor(+nu.value || 0), +nu.max, cantRec(r), 100000)) : 0; rec[r] = n; tot += n; });
     if (!tot) { $('tr-error').textContent = L('Elige cuánto quieres mandar.', 'Choose how much to send.'); sonar('error'); return; }
     var nc = carretasPara(tot); if (carretasLibres() < nc) { $('tr-error').textContent = T('car_faltan', { n: nc, l: carretasLibres() }); sonar('error'); return; }
-    var pago = {}; Object.keys(rec).forEach(function (r) { if (rec[r]) pago[r] = rec[r]; }); if (!pagar(pago)) return;
+    if (rec.hierro > cantRec('hierro')) return;
+    var pago = {}; Object.keys(rec).forEach(function (r) { if (rec[r] && r !== 'hierro') pago[r] = rec[r]; }); if (!pagar(pago)) return; if (rec.hierro) quitarRec('hierro', rec.hierro);
+    var enviado = rec; rec = conImpuesto(rec); // llega el envío menos el impuesto de transporte
     b.disabled = true; var dest = trSel, destino, seg;
     lugarDeNube(dest.uid).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: dest.uid, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc }); })
       .then(function () { salirCarretas('envio', miLugar(), destino, rec, nc, dest.nombre); consejoTemporal('🛒 ' + L('Tus tropas de suministro van hacia ', 'Your supply troops are heading to ') + escaparHTML(dest.nombre)); sonar('moneda'); guardar(true); trSel = null; cerrarPanel(); })
-      .catch(function () { Object.keys(pago).forEach(function (r) { sumarRecurso(r, pago[r]); }); b.disabled = false; $('tr-error').textContent = T('ref_error'); sonar('error'); });
+      .catch(function () { Object.keys(pago).forEach(function (r) { sumarRecurso(r, pago[r]); }); if (enviado.hierro) estado.hierro = (estado.hierro || 0) + enviado.hierro; b.disabled = false; $('tr-error').textContent = T('ref_error'); sonar('error'); });
   }
-  function mandarDonacion(b) {
-    var p = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!p) return;
-    var n = Math.floor(+$('don-n').value || 0), r = p.recurso; if (n <= 0) return;
+  function mandarDonacion(b, pDir, nDir, alListo) {
+    var p = pDir || pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (!p) return;
+    var n = nDir || Math.floor(+$('don-n').value || 0), r = p.recurso; if (n <= 0) return;
+    if (r === 'hierro') { if (cantRec('hierro') < n) { consejoTemporal(L('No tienes tanto hierro.', 'Not enough iron.')); sonar('error'); return; } }
     var nc = carretasPara(n); if (carretasLibres() < nc) { consejoTemporal(T('car_faltan', { n: nc, l: carretasLibres() })); sonar('error'); return; }
-    var rec = { oro: 0, comida: 0, madera: 0, piedra: 0 }; rec[r] = n;
-    var c = {}; c[r] = n; if (!pagar(c)) return;
-    b.disabled = true;
+    var rec = { oro: 0, comida: 0, madera: 0, piedra: 0, hierro: 0 }; rec[r] = n; rec = conImpuesto(rec); var llega = rec[r];
+    if (r === 'hierro') quitarRec('hierro', n); else { var c = {}; c[r] = n; if (!pagar(c)) return; }
+    if (b) b.disabled = true;
     var destino, seg;
     lugarDeNube(p.uid).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: p.uid, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc })
       ; })
-      .then(function () { return Cuentas.donarPedido(p.id, n, Cuentas.nombrePublico()); })
-      .then(function () { salirCarretas('envio', miLugar(), destino, rec, nc, p.nombre); consejoTemporal(T('ped_donado', { n: ICONO_RECURSO[r] + ' ' + formatoNumero(n), q: escaparHTML(p.nombre) })); sonar('moneda'); guardar(true); abrirPanelAlianza(); })
-      .catch(function () { sumarRecurso(r, n); b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
+      .then(function () { return Cuentas.donarPedido(p.id, Math.max(1, llega), Cuentas.nombrePublico()); })
+      .then(function () { p.recibido = (p.recibido || 0) + llega; salirCarretas('envio', miLugar(), destino, rec, nc, p.nombre); consejoTemporal(T('ped_donado', { n: ICONO_RECURSO[r] + ' ' + formatoNumero(llega), q: escaparHTML(p.nombre) })); sonar('moneda'); guardar(true); if (alListo) alListo(); else abrirPanelAlianza(); })
+      .catch(function () { if (r === 'hierro') estado.hierro = (estado.hierro || 0) + n; else sumarRecurso(r, n); if (b) b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
   }
   function pedirRefuerzos(b) {
     if (!estado.alianza) return;
@@ -5163,7 +5175,8 @@
       lista.filter(function (e) { return (e.llega || 0) <= ahora; }).forEach(function (e) {
         Cuentas.borrarEnvio(e.id).then(function () {
           var b = e.recursos || {};
-          ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (b[r] > 0) sumarRecurso(r, Math.min(100000, b[r])); });
+          var dm0 = villaActiva() && misVillas().lista[0].datos;
+          REC_ALIADO.forEach(function (r) { var q = Math.min(100000, Math.floor(+b[r] || 0)); if (q <= 0) return; if (dm0) { var ck = r === 'hierro' ? 'hierro' : claveRecurso(r); dm0[ck] = (dm0[ck] || 0) + q; } else if (r === 'hierro') estado.hierro = (estado.hierro || 0) + q; else sumarRecurso(r, q); }); // v7.88
           sonar('moneda'); consejoTemporal(T('mer_recibiste', { n: escaparHTML(e.deNombre || '?'), b: textoBotin(b) }));
           nuevoCorreo('alianza', L('Llegaron recursos de ' + (e.deNombre || '?'), 'Resources arrived from ' + (e.deNombre || '?')), e.deNombre || '?', htmlInforme([[L('Carretas', 'Carts'), '🛒 ' + (e.carretas || 1)]], b));
           guardar(true);
@@ -7798,6 +7811,10 @@
       h += '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (tiposCasa.length ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
     } else if (p === 'defensa') {
       h += htmlDefensaVilla();
+    } else if (p === 'guarnicion') {
+      var cupo = nivelMayor('embajada') * EMB_POR_NIVEL, aloj = tropas.filter(function (u) { return u.refuerzo; }).length;
+      h += '<div class="carta"><b>🏳️ ' + L('Embajada', 'Embassy') + ': ' + formatoNumero(aloj) + ' / ' + formatoNumero(cupo) + '</b><p class="nota">' + L('Cada nivel de la Embajada aloja 25.000 tropas aliadas. Pelean contigo con los bonos de tu Héroe Defensor.', 'Each Embassy level hosts 25,000 allied troops. They fight with you using your Defender Hero bonuses.') + '</p></div><div id="ru-guarnicion"><p class="nota">' + T('mundo_cargando') + '</p></div>';
+      setTimeout(function () { if (!hayCuenta()) return; Promise.all([Cuentas.refuerzosRecibidos(), Cuentas.refuerzosEnviados()]).then(function (r) { var box = $('ru-guarnicion'); if (box) box.innerHTML = htmlGuarnicion(r[0], r[1]); }).catch(function () { var box = $('ru-guarnicion'); if (box) box.innerHTML = '<p class="nota">' + T('ref_error') + '</p>'; }); }, 50);
     } else {
       var ahora = Date.now(), l = [];
       marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Regresando a la villa · informe en el Correo', 'Returning home · report in Mail') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
@@ -7905,7 +7922,7 @@
     else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
     else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
     else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
-    else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
+    else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); if (hayCuenta() && estado.alianza) t.push(['reunion-pest" data-p="guarnicion', '🏳️ ' + L('Guarnición', 'Garrison')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
     else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + ' <span class="mail-n">' + promosTorreN() + '</span>']); }
     else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
@@ -8944,6 +8961,7 @@
     var t = {}; if (estado.tropasDefienden !== false) Object.keys(TROPAS).forEach(function (k) { var n = cuentaTipo(k); if (n > 0) t[k] = n; });
     var o = { nivelJ: nivelJugador(), castillo: estado.castillo || 1, muralla: estado.muralla || 0, tropas: t, heroes: (estado.equipo || []).length };
     if (estado.tropasDefienden === false) o.san = 1; else { var hd = datosHeroeDef(); if (hd) o.hd = hd; } // v7.81
+    o.emb = [nivelMayor('embajada'), tropas.filter(function (u) { return u.refuerzo; }).length]; // v7.88: Embajada (nivel, refuerzos alojados)
     return o;
   }
   function diplomacia(a) {
@@ -11498,6 +11516,8 @@
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'chat-pedir') { sonar('click'); pedidoDesdeChat = true; abrirNuevoPedido('recursos'); }
+    else if (a === 'chat-donar') { if (!b.disabled) { b.disabled = true; donarDesdeChat(b.getAttribute('data-id')); } }
     else if (a === 'cg-elegir') { sonar('click'); elegirCargo(b.getAttribute('data-cargo')); }
     else if (a === 'altar') { invocarAltar(b.getAttribute('data-t')); }
     else if (a === 'recuperar-reino') { sonar('click'); ofrecerRecuperar(); }
@@ -12704,6 +12724,7 @@
     else if (chat.canal === 'al' || (chat.canal !== 'global' && !canalAlianza())) html += '<p class="nota">' + T('chat_sin_alianza') + '</p>';
     else {
       html += '<div class="chat-lista" id="chat-lista"></div>' +
+        (chat.canal === canalAlianza() ? '<div class="chat-pedir"><button class="comprar mini dorado" data-accion="chat-pedir">📦 ' + L('Pedir Recursos', 'Request Resources') + '</button></div>' : '') +
         '<div class="chat-escribir"><input id="chat-texto" maxlength="200" autocomplete="off" placeholder="' + T('chat_escribe') + '"><button class="comprar naranja" data-accion="chat-enviar">➤</button></div>' +
         '<p class="nota chat-normas">' + T('chat_normas') + (bloqueados().length ? ' · ' + T('chat_bloqueados', { n: bloqueados().length }) : '') + '</p>';
     }
@@ -12712,12 +12733,37 @@
     var inp = $('chat-texto');
     if (inp) inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); enviarMensaje(); } });
   }
+  // v7.88: tarjetas «Pedir Recursos» dentro del chat de la alianza
+  var pedidosChat = {}, pedidosChatT = 0, pedidoDesdeChat = false;
+  function cargarPedidosChat(forzar) {
+    if (!hayCuenta() || !estado.alianza || !Cuentas.pedidos) return;
+    if (!forzar && Date.now() - pedidosChatT < 15000) return; pedidosChatT = Date.now();
+    Cuentas.pedidos(estado.alianza).then(function (l) { pedidosChat = {}; l.forEach(function (p) { pedidosChat[p.id] = p; }); l.forEach(function (p) { if (!pedidosCache.some(function (x) { return x.id === p.id; })) pedidosCache.push(p); }); if ($('chat-lista') && chat.canal === canalAlianza()) pintarMensajes(true); }).catch(function () {});
+  }
+  function htmlTarjetaPedido(id, m) {
+    var p = pedidosChat[id], yo = Cuentas.usuario().uid;
+    if (!p || p.tipo !== 'recursos' || (p.fecha || 0) < Date.now() - 24 * 3600 * 1000) return '<div class="chat-ped viejo">📦 ' + escaparHTML(m.nombre) + ' · ' + L('Solicitud terminada', 'Request closed') + '</div>';
+    var tot = p.cantidad || 1, rec = Math.min(tot, p.recibido || 0), pct = Math.round(rec / tot * 100), lleno = rec >= tot, mio = p.uid === yo;
+    return '<div class="chat-ped' + (lleno ? ' lleno' : '') + '"><div class="cp-cab">📦 <b>' + escaparHTML(p.nombre) + '</b> ' + L('solicita', 'requests') + ' <b>' + formatoNumero(tot) + '</b> ' + ICONO_RECURSO[p.recurso] + ' ' + T('r_' + p.recurso) + '</div>' +
+      '<div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + formatoNumero(rec) + ' / ' + formatoNumero(tot) + ' ' + L('recibido', 'received') + '</span></div>' +
+      (lleno ? '<p class="cp-ok">✅ ' + L('¡Solicitud completada!', 'Request completed!') + '</p>' : mio ? '<p class="cp-ok">' + L('Tu solicitud', 'Your request') + '</p>' : '<button class="comprar mini verde cp-donar" data-accion="chat-donar" data-id="' + escaparHTML(id) + '">🎁 ' + L('Donar', 'Donate') + '</button>') + '</div>';
+  }
+  function donarDesdeChat(id) {
+    var p = pedidosChat[id]; if (!p) return;
+    var falta = Math.max(0, (p.cantidad || 0) - (p.recibido || 0)), r = p.recurso, t = impuestoTransporte();
+    var n = Math.min(Math.ceil(falta / (1 - t)), cantRec(r), capCarreta() * carretasLibres(), 100000);
+    if (!falta) { consejoTemporal(L('Esa solicitud ya está completa.', 'That request is already complete.')); return; }
+    if (n <= 0) { consejoTemporal(cantRec(r) <= 0 ? L('No tienes ', 'You have no ') + T('r_' + r) : T('car_faltan', { n: 1, l: carretasLibres() })); sonar('error'); return; }
+    mandarDonacion(null, p, n, function () { pintarMensajes(true); cargarPedidosChat(true); });
+  }
   function pintarMensajes(nuevo) {
     var box = $('chat-lista'); if (!box) return;
     var c = chat.canal, l = (chat.msgs[c] || []).filter(function (m) { return bloqueados().indexOf(m.uid) < 0; }), yo = Cuentas.usuario().uid;
     var abajo = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+    if (c === canalAlianza()) cargarPedidosChat(false);
     box.innerHTML = l.length ? l.map(function (m) {
       var mio = m.uid === yo, hora = new Date(m.fecha), hh = ('0' + hora.getHours()).slice(-2) + ':' + ('0' + hora.getMinutes()).slice(-2);
+      var mp = /^📦\[PED:([A-Za-z0-9_]+)\]/.exec(String(m.texto || '')); if (mp) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaPedido(mp[1], m) + '</div>'; // v7.88
       return '<div class="chat-m' + (mio ? ' mio' : '') + (String(m.texto || '').indexOf('📣') === 0 ? ' megafono' : '') + '"><button class="chat-quien" data-accion="chat-quien" data-uid="' + m.uid + '" data-id="' + m.id + '" data-n="' + escaparHTML(m.nombre) + '">' + (mio ? T('chat_tu') : escaparHTML(m.nombre)) + '</button><span class="chat-hora">' + hh + '</span><div class="chat-t">' + escaparHTML(filtrarTexto(m.texto)) + '</div></div>';
     }).join('') : '<p class="nota chat-vacio">' + T('chat_vacio') + '</p>';
     if (!nuevo || abajo) box.scrollTop = box.scrollHeight;
@@ -12929,7 +12975,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { estado: function () { return estado; }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

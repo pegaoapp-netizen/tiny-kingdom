@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.87';
+var VERSION_JUEGO = '7.88';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -92,7 +92,7 @@ var TEXTOS = {
     e_general: 'No se pudo. Inténtalo otra vez.', e_repetir: 'Las contraseñas no son iguales.',
     e_sin_nube: 'Las cuentas no están disponibles ahora (sin internet).',
     gemas_inf: 'Gemas infinitas',
-    r_oro: 'oro', r_comida: 'comida', r_madera: 'madera', r_piedra: 'piedra', r_gemas: 'gemas',
+    r_oro: 'oro', r_comida: 'comida', r_madera: 'madera', r_piedra: 'piedra', r_hierro: 'hierro', r_gemas: 'gemas',
     falta: 'Te falta {r}.', costo: 'Cuesta', produce_txt: 'Produce {n} {r} cada {s} s',
     comen: 'Tus tropas comen {n} de comida por minuto.', sin_comida: '🍞 Comida en 0: tus tropas pelean igual al 100%. Construye Granjas o manda comida desde otra villa.',
     impuesto: 'El castillo cobra {n} de oro cada {s} s.', recursos_inf: 'Recursos infinitos',
@@ -234,7 +234,7 @@ var TEXTOS = {
     e_general: 'Something went wrong. Try again.', e_repetir: 'Passwords do not match.',
     e_sin_nube: 'Accounts are not available right now (no internet).',
     gemas_inf: 'Infinite gems',
-    r_oro: 'gold', r_comida: 'food', r_madera: 'wood', r_piedra: 'stone', r_gemas: 'gems',
+    r_oro: 'gold', r_comida: 'food', r_madera: 'wood', r_piedra: 'stone', r_hierro: 'iron', r_gemas: 'gems',
     falta: 'You need more {r}.', costo: 'Costs', produce_txt: 'Makes {n} {r} every {s} s',
     comen: 'Your troops eat {n} food per minute.', sin_comida: '🍞 Food at 0: your troops still fight at 100%. Build Farms or send food from another village.',
     impuesto: 'The castle collects {n} gold every {s} s.', recursos_inf: 'Infinite resources',
