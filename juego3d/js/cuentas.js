@@ -349,7 +349,7 @@ var Cuentas = (function () {
     // pedidos nuevos (v5.4): uno de tropas (_t) y uno de recursos (_r) por jugador
     crearPedido: function (sufijo, datos) { if (!usuario) return Promise.reject(new Error('sin usuario')); datos.uid = usuario.uid; return db.collection('pedidos').doc(usuario.uid + '_' + sufijo).set(datos); },
     quitarPedidoId: function (id) { return db.collection('pedidos').doc(id).delete(); },
-    donarPedido: function (id, n, nombre) { var FV = firebase.firestore.FieldValue; return db.collection('pedidos').doc(id).update({ recibido: FV.increment(n), donantes: FV.arrayUnion(String(nombre).slice(0, 20) + '|' + n + '|' + Date.now()) }); },
+    donarPedido: function (id, n, nombre, porRecurso) { var FV = firebase.firestore.FieldValue, u = { recibido: FV.increment(n), donantes: FV.arrayUnion(String(nombre).slice(0, 20) + '|' + n + '|' + Date.now()) }; Object.keys(porRecurso || {}).forEach(function (r) { if (porRecurso[r] > 0) u['recibidos.' + r] = FV.increment(Math.floor(porRecurso[r])); }); return db.collection('pedidos').doc(id).update(u); }, // v7.98: recibidos por recurso
     // casillas del mapa conquistadas (id 'x_y')
     casillas: function () {
       return db.collection('casillas').limit(500).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; if (x.mapa !== MAPA_TAM) { var p = d.id.split('_'); x.id = Math.min(MAPA_TAM - 1, Math.floor((+p[0] + 0.5) * MAPA_TAM / 80)) + '_' + Math.min(MAPA_TAM - 1, Math.floor((+p[1] + 0.5) * MAPA_TAM / 80)); } return x; }); });

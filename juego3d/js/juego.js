@@ -3531,7 +3531,7 @@
   var pedidosCache = [];
   function htmlPedido(p, mio) {
     var tropasP = p.tipo !== 'recursos', falta = Math.max(0, (p.cantidad || 0) - (p.recibido || 0)), pct = Math.min(100, Math.round((p.recibido || 0) / Math.max(1, p.cantidad || 1) * 100));
-    var que = tropasP ? T('ped_tropas') + ' ' + T(p.motivo === 'atacar' ? 'ped_motivo_atacar' : 'ped_motivo_defender') : ICONO_RECURSO[p.recurso] + ' ' + T('r_' + p.recurso);
+    var que = tropasP ? T('ped_tropas') + ' ' + T(p.motivo === 'atacar' ? 'ped_motivo_atacar' : 'ped_motivo_defender') : p.recursos ? Object.keys(p.recursos).map(function (r) { return ICONO_RECURSO[r] + ' ' + cortoNum(p.recursos[r]); }).join(' · ') : ICONO_RECURSO[p.recurso] + ' ' + T('r_' + p.recurso);
     var don = (p.donantes || []).map(function (s) { var q = String(s).split('|'); return escaparHTML(q[0]) + ' ' + formatoNumero(+q[1] || 0); });
     var h = '<div class="pedido' + (mio ? ' mio' : '') + '"><div class="ped-cab">' + (tropasP ? (p.motivo === 'atacar' ? '⚔️' : '🛡️') : '📦') + ' <b>' + (mio ? T('ped_mio') : T('ped_de', { n: escaparHTML(p.nombre) })) + '</b> · ' + que + '</div>' +
       '<div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + formatoNumero(p.recibido || 0) + ' / ' + formatoNumero(p.cantidad || 0) + (falta ? ' · ' + T('ped_faltan', { n: formatoNumero(falta) }) : '') + '</span></div>' +
@@ -3689,14 +3689,15 @@
   }
   // v6.97: TRANSPORTAR a un aliado: eliges cuánto de cada recurso; lo llevan tus tropas de suministro (carretas)
   var trSel = null;
-  function abrirTransportar(uid, nombre) {
+  function abrirTransportar(uid, nombre, pedido) {
     if (!hayCuenta() || !estado.alianza) return;
-    trSel = { uid: uid, nombre: nombre };
+    trSel = { uid: uid, nombre: nombre, pedido: pedido || null };
+    var faltaP = function (r) { if (!pedido || !pedido.recursos) return Infinity; return Math.max(0, Math.ceil(((pedido.recursos[r] || 0) - ((pedido.recibidos || {})[r] || 0)) / (1 - impuestoTransporte()))); };
     var capT = capCarreta() * carretasLibres();
     var h = '<div class="rf-hoja"><p class="rf-para">' + L('Mandar recursos a ', 'Send resources to ') + '<b>' + escaparHTML(nombre) + '</b></p><p class="nota">🧾 ' + L('Impuesto de transporte: ', 'Transport tax: ') + '<b>' + Math.round(impuestoTransporte() * 1000) / 10 + '%</b> · ' + L('baja al subir el Mercado (2% en el Nv 16)', 'drops as the Market levels up (2% at Lv 16)') + '</p><div class="rf-lista">' + REC_ALIADO.map(function (r) {
-      var n = Math.max(0, Math.min(cantRec(r), capT, 100000));
-      return '<div class="rf-fila' + (n ? '' : ' vacia') + '"><div class="rf-foto rf-rec">' + ICONO_RECURSO[r] + '</div><div class="rf-dat"><div class="rf-top"><b>' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="rf-num" id="trn-' + r + '" min="0" max="' + n + '" value="0"' + (n ? '' : ' disabled') + '></div>' +
-        '<div class="rf-barra"><button class="rf-pm" data-accion="tr-menos" data-r="' + r + '"' + (n ? '' : ' disabled') + '>−</button><input type="range" id="tr-' + r + '" min="0" max="' + n + '" step="' + Math.max(1, Math.round(n / 100)) + '" value="0"' + (n ? '' : ' disabled') + '><button class="rf-pm" data-accion="tr-mas" data-r="' + r + '"' + (n ? '' : ' disabled') + '>+</button>' +
+      var n = Math.max(0, Math.min(cantRec(r), capT, 100000, faltaP(r))), v0 = pedido ? n : 0; // v7.98: donando a una solicitud, ya viene puesto lo que falta
+      return '<div class="rf-fila' + (n ? '' : ' vacia') + '"><div class="rf-foto rf-rec">' + ICONO_RECURSO[r] + '</div><div class="rf-dat"><div class="rf-top"><b>' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="rf-num" id="trn-' + r + '" min="0" max="' + n + '" value="' + v0 + '"' + (n ? '' : ' disabled') + '></div>' +
+        '<div class="rf-barra"><button class="rf-pm" data-accion="tr-menos" data-r="' + r + '"' + (n ? '' : ' disabled') + '>−</button><input type="range" id="tr-' + r + '" min="0" max="' + n + '" step="' + Math.max(1, Math.round(n / 100)) + '" value="' + v0 + '"' + (n ? '' : ' disabled') + '><button class="rf-pm" data-accion="tr-mas" data-r="' + r + '"' + (n ? '' : ' disabled') + '>+</button>' +
         '<button class="rf-max" data-accion="tr-max" data-r="' + r + '"' + (n ? '' : ' disabled') + ' title="' + T('maximo') + '">⏭</button></div><div class="rf-lim"><span>0</span><span>' + cortoNum(n) + '</span></div></div></div>';
     }).join('') + '</div><p class="nota aviso-rojo" id="tr-error"></p>' +
       '<div class="rf-pie"><div class="rf-cap"><span>📦 <b id="tr-total">0</b>/' + cortoNum(capT) + '</span><span>🛒 ' + carretasLibres() + '/' + carretas().n + '</span></div><button class="comprar azul rf-sig" data-accion="tr-mandar">' + L('Transportar', 'Transport') + '</button></div></div>';
@@ -3725,8 +3726,11 @@
     var pago = {}; Object.keys(rec).forEach(function (r) { if (rec[r] && r !== 'hierro') pago[r] = rec[r]; }); if (!pagar(pago)) return; if (rec.hierro) quitarRec('hierro', rec.hierro);
     var enviado = rec; rec = conImpuesto(rec); // llega el envío menos el impuesto de transporte
     b.disabled = true; var dest = trSel, destino, seg;
-    lugarDeNube(dest.uid).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: dest.uid, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc }); })
-      .then(function () { salirCarretas('envio', miLugar(), destino, rec, nc, dest.nombre); consejoTemporal('🛒 ' + L('Tus tropas de suministro van hacia ', 'Your supply troops are heading to ') + escaparHTML(dest.nombre)); sonar('moneda'); guardar(true); trSel = null; cerrarPanel(); })
+    var pedT = dest.pedido; // v7.98: donación a una solicitud de varios recursos: va a la villa que pidió
+    (pedT && pedT.destino ? Promise.resolve({ x: pedT.destino.x, y: pedT.destino.y }) : lugarDeNube(dest.uid)).then(function (l) { destino = l; seg = segViaje(miLugar(), destino); return Cuentas.enviarRecursos({ de: Cuentas.usuario().uid, deNombre: Cuentas.nombrePublico(), para: dest.uid, recursos: rec, alianza: estado.alianza, fecha: Date.now(), llega: Date.now() + seg * 1000, carretas: nc }); })
+      .then(function () {
+        if (pedT) { var llegaT = 0, porR = {}; Object.keys(rec).forEach(function (r) { if (rec[r] > 0) { porR[r] = rec[r]; llegaT += rec[r]; } }); Cuentas.donarPedido(pedT.id, Math.max(1, llegaT), Cuentas.nombrePublico(), porR).then(function () { cargarPedidosChat(true); }).catch(function () {}); }
+        salirCarretas('envio', miLugar(), destino, rec, nc, dest.nombre); consejoTemporal('🛒 ' + L('Tus tropas de suministro van hacia ', 'Your supply troops are heading to ') + escaparHTML(dest.nombre)); sonar('moneda'); guardar(true); trSel = null; cerrarPanel(); if (pedT && canalAlianza()) abrirPanelChat(canalAlianza()); })
       .catch(function () { Object.keys(pago).forEach(function (r) { sumarRecurso(r, pago[r]); }); if (enviado.hierro) estado.hierro = (estado.hierro || 0) + enviado.hierro; b.disabled = false; $('tr-error').textContent = T('ref_error'); sonar('error'); });
   }
   function mandarDonacion(b, pDir, nDir, alListo) {
@@ -11628,7 +11632,7 @@
     else if (a === 'ped-crear') crearPedido(b);
     else if (a === 'ped-quitar') { b.disabled = true; Cuentas.quitarPedidoId(b.getAttribute('data-id')).then(abrirPanelAlianza).catch(function () { b.disabled = false; }); }
     else if (a === 'ped-tropas') { var pt = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (pt) abrirEnviarRefuerzo(pt.uid, pt.nombre, pt); }
-    else if (a === 'ped-donar') { var pd = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (pd) abrirDonar(pd); }
+    else if (a === 'ped-donar') { var pd = pedidosCache.filter(function (x) { return x.id === b.getAttribute('data-id'); })[0]; if (pd) { if (pd.recursos) abrirTransportar(pd.uid, pd.nombre, pd); else abrirDonar(pd); } }
     else if (a === 'ped-mandar') mandarDonacion(b);
     else if (a === 'car-entrenar') entrenarCarretas(+b.getAttribute('data-n') || 1, b.getAttribute('data-t') || 'carreta');
     else if (a === 'car-mejorar') mejorarCarretas();
@@ -11716,7 +11720,9 @@
     else if (a === 'tienda-tab') { sonar('click'); var tt = b.getAttribute('data-t'); if (tt === 'paquetes') abrirPaquetes(); else if (tt === 'gemas') abrirTiendaGemas(); else { pestTiendaArriba = 'tienda'; abrirPanelTienda(); } }
     else if (a === 'paquete-oferta') { sonar('click'); var po = PAQUETES_OFERTA[+b.getAttribute('data-i')]; if (po && pagoReal(SKU_OFERTA[po.id], po.nombre[estado.idioma === 'en' ? 1 : 0])) return; if (po) confirmarJuego(po.ico + ' ' + po.nombre[estado.idioma === 'en' ? 1 : 0], L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {}); }
     else if (a === 'reunion-pest') { sonar('click'); abrirReunion(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
-    else if (a === 'chat-pedir') { sonar('click'); pedidoDesdeChat = true; abrirNuevoPedido('recursos'); }
+    else if (a === 'chat-pedir' || a === 'chat-ayuda') { sonar('click'); abrirAyudaAlianza('recursos'); }
+    else if (a === 'chat-reforzar') { var prf = pedidosChat[b.getAttribute('data-id')]; if (prf) abrirEnviarRefuerzo(prf.uid, prf.nombre, prf); else consejoTemporal(L('Esa solicitud ya terminó.', 'That request is over.')); }
+    else if (a === 'chat-marcha-ir') { var mx = +b.getAttribute('data-x'), my = +b.getAttribute('data-y'); sonar('click'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { var cm = celdaDe(mx, my); irACeldaMundo(cm.x, cm.y); }, 700); }
     else if (a === 'chat-donar') { if (!b.disabled) { b.disabled = true; donarDesdeChat(b.getAttribute('data-id')); } }
     else if (a === 'cg-elegir') { sonar('click'); elegirCargo(b.getAttribute('data-cargo')); }
     else if (a === 'altar') { invocarAltar(b.getAttribute('data-t')); }
@@ -12944,8 +12950,7 @@
     else if (chat.canal === 'al' || (chat.canal !== 'global' && !canalAlianza())) html += '<p class="nota">' + T('chat_sin_alianza') + '</p>';
     else {
       html += '<div class="chat-lista" id="chat-lista"></div>' +
-        (chat.canal === canalAlianza() ? '<div class="chat-pedir"><button class="comprar mini dorado" data-accion="chat-pedir">📦 ' + L('Pedir Recursos', 'Request Resources') + '</button></div>' : '') +
-        '<div class="chat-escribir"><input id="chat-texto" maxlength="200" autocomplete="off" placeholder="' + T('chat_escribe') + '"><button class="comprar naranja" data-accion="chat-enviar">➤</button></div>' +
+        '<div class="chat-escribir"><input id="chat-texto" maxlength="200" autocomplete="off" placeholder="' + T('chat_escribe') + '">' + (chat.canal === canalAlianza() ? '<button class="chat-mas" data-accion="chat-ayuda" title="' + L('Solicitar ayuda a la alianza', 'Ask the alliance for help') + '" aria-label="' + L('Solicitar ayuda a la alianza', 'Ask the alliance for help') + '">+</button>' : '') + '<button class="comprar naranja" data-accion="chat-enviar">➤</button></div>' + // v7.98: botón + como en los juegos de castillos
         '<p class="nota chat-normas">' + T('chat_normas') + (bloqueados().length ? ' · ' + T('chat_bloqueados', { n: bloqueados().length }) : '') + '</p>';
     }
     abrirPanel(T('p_chat'), html, { tipo: 'chat' });
@@ -12963,13 +12968,126 @@
   function htmlTarjetaPedido(id, m) {
     var p = pedidosChat[id], yo = Cuentas.usuario().uid;
     if (!p || p.tipo !== 'recursos' || (p.fecha || 0) < Date.now() - 24 * 3600 * 1000) return '<div class="chat-ped viejo">📦 ' + escaparHTML(m.nombre) + ' · ' + L('Solicitud terminada', 'Request closed') + '</div>';
+    if (p.recursos) return htmlTarjetaVarios(id, p, yo);
     var tot = p.cantidad || 1, rec = Math.min(tot, p.recibido || 0), pct = Math.round(rec / tot * 100), lleno = rec >= tot, mio = p.uid === yo;
     return '<div class="chat-ped' + (lleno ? ' lleno' : '') + '"><div class="cp-cab">📦 <b>' + escaparHTML(p.nombre) + '</b> ' + L('solicita', 'requests') + ' <b>' + formatoNumero(tot) + '</b> ' + ICONO_RECURSO[p.recurso] + ' ' + T('r_' + p.recurso) + '</div>' +
       '<div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + formatoNumero(rec) + ' / ' + formatoNumero(tot) + ' ' + L('recibido', 'received') + '</span></div>' +
       (lleno ? '<p class="cp-ok">✅ ' + L('¡Solicitud completada!', 'Request completed!') + '</p>' : mio ? '<p class="cp-ok">' + L('Tu solicitud', 'Your request') + '</p>' : '<button class="comprar mini verde cp-donar" data-accion="chat-donar" data-id="' + escaparHTML(id) + '">🎁 ' + L('Donar', 'Donate') + '</button>') + '</div>';
   }
+  // v7.98: SOLICITAR AYUDA A LA ALIANZA (botón + del chat): Recursos (los 5 juntos) · Reforzar · Marcha, con la villa de destino
+  var AYUDA_REC = ['oro', 'comida', 'madera', 'piedra', 'hierro'], AYUDA_MAX = 3000000, ayuda = { pest: 'recursos', villa: 0, rec: {}, mx: '', my: '', mtipo: 'atacar' };
+  function textoDestino(d) { return d ? escaparHTML(d.n || '') + ' (' + d.x + ',' + d.y + ')' : ''; }
+  function destinoAyuda() { var l = lugarVilla(ayuda.villa) || miLugar(); return { n: String(nombreVilla(ayuda.villa)).slice(0, 30), x: Math.round(l.x), y: Math.round(l.y) }; }
+  function embajadaLibre() { var cap = nivelMayor('embajada') * EMB_POR_NIVEL, hay = tropas.filter(function (u) { return u.refuerzo; }).length; return { cap: cap, hay: hay }; }
+  function abrirAyudaAlianza(pest, prueba) {
+    if (!prueba && (!hayCuenta() || !estado.alianza)) { consejoTemporal(T('chat_sin_alianza')); return; }
+    if (pest) ayuda.pest = pest;
+    var vl = misVillas().lista; if (ayuda.villa >= vl.length) ayuda.villa = villaActiva();
+    var v = $('ayuda-al'); if (v) v.remove();
+    var d = document.createElement('div'); d.id = 'ayuda-al';
+    if (prueba) d.dataset.prueba = '1';
+    var tabs = [['recursos', L('Recursos', 'Resources')], ['reforzar', L('Reforzar', 'Reinforce')], ['marcha', L('Marcha', 'March')]];
+    var h = '<div class="aa-caja"><div class="aa-tit">' + L('Solicitar ayuda a la alianza', 'Ask the alliance for help') + '<button class="aa-x" data-aa="cerrar" aria-label="' + L('Cerrar', 'Close') + '">✕</button></div>' +
+      '<div class="aa-tabs">' + tabs.map(function (t) { return '<button data-aa-pest="' + t[0] + '" class="' + (ayuda.pest === t[0] ? 'activo' : '') + '">' + t[1] + '</button>'; }).join('') + '</div><div class="aa-cuerpo">';
+    if (ayuda.pest !== 'marcha') h += '<div class="aa-dest"><b>' + L('Destino:', 'Destination:') + '</b><div class="aa-villas">' + vl.map(function (x, i) { var l = lugarVilla(i) || { x: '?', y: '?' };
+      return '<label class="aa-radio' + (ayuda.villa === i ? ' sel' : '') + '"><input type="radio" name="aa-villa" value="' + i + '"' + (ayuda.villa === i ? ' checked' : '') + '><i></i><span>' + escaparHTML(nombreVilla(i)) + ' (' + Math.round(l.x) + ',' + Math.round(l.y) + ')</span></label>'; }).join('') + '</div></div>';
+    if (ayuda.pest === 'recursos') {
+      h += '<div class="aa-recs">' + AYUDA_REC.map(function (r) { var n = Math.max(0, Math.min(AYUDA_MAX, ayuda.rec[r] || 0));
+        return '<div class="aa-rec"><span class="aa-ico">' + ICONO_RECURSO[r] + '</span><b class="aa-nom">' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="aa-num" id="aan-' + r + '" min="0" max="' + AYUDA_MAX + '" step="1000" value="' + n + '">' +
+          '<div class="aa-barra"><input type="range" id="aar-' + r + '" min="0" max="' + AYUDA_MAX + '" step="50000" value="' + n + '"><div class="aa-marcas"><span style="left:0%">0</span><span style="left:16.67%">500k</span><span style="left:33.33%">1m</span><span style="left:66.67%">2m</span><span style="left:100%">3m</span></div></div></div>';
+      }).join('') + '</div><p class="aa-total">' + L('Total pedido: ', 'Total requested: ') + '<b id="aa-total">0</b></p>';
+    } else if (ayuda.pest === 'reforzar') {
+      var e = embajadaLibre();
+      h += '<p class="aa-aviso">🛡️ ' + L('Solicita refuerzos a la alianza para ayudar a tus defensas.', 'Ask your alliance for reinforcements to help your defenses.') + '</p>' +
+        '<p class="aa-aviso">🏛️ ' + L('Espacio en tu Embajada: ', 'Space in your Embassy: ') + '<b>' + formatoNumero(e.hay) + ' / ' + formatoNumero(e.cap) + '</b> ' + L('tropas', 'troops') + '</p>' +
+        (e.cap ? '' : '<p class="aa-error">' + L('Necesitas una Embajada para alojar refuerzos.', 'You need an Embassy to host reinforcements.') + '</p>');
+    } else {
+      var yo = miLugar();
+      h += '<p class="aa-aviso">⚔️ ' + L('Comparte unas coordenadas con tu alianza para atacar juntos o reunirse.', 'Share coordinates with your alliance to attack together or rally.') + '</p>' +
+        '<div class="aa-coord"><label>X <input type="number" id="aa-x" min="0" max="999" value="' + escaparHTML(ayuda.mx === '' ? Math.round(yo.x) : ayuda.mx) + '"></label><label>Y <input type="number" id="aa-y" min="0" max="999" value="' + escaparHTML(ayuda.my === '' ? Math.round(yo.y) : ayuda.my) + '"></label></div>' +
+        '<div class="aa-mtipos">' + [['atacar', '⚔️ ' + L('Atacar', 'Attack')], ['reunir', '🚩 ' + L('Reunión', 'Rally')], ['defender', '🛡️ ' + L('Defender', 'Defend')]].map(function (q) { return '<button data-aa-mt="' + q[0] + '" class="' + (ayuda.mtipo === q[0] ? 'activo' : '') + '">' + q[1] + '</button>'; }).join('') + '</div>' +
+        '<input class="aa-msg" id="aa-msg" maxlength="80" placeholder="' + L('Mensaje (opcional)', 'Message (optional)') + '">';
+    }
+    h += '<p class="aa-error" id="aa-error"></p></div><div class="aa-pie"><button class="aa-btn" data-aa="enviar">' + L('Enviar', 'Send') + '</button><button class="aa-btn" data-aa="cerrar">' + L('Cancelar', 'Cancel') + '</button></div></div>';
+    d.innerHTML = h; document.body.appendChild(d);
+    function total() { var t = 0; AYUDA_REC.forEach(function (r) { t += ayuda.rec[r] || 0; }); var e2 = $('aa-total'); if (e2) e2.textContent = formatoNumero(t); }
+    AYUDA_REC.forEach(function (r) { var rg = $('aar-' + r), nu = $('aan-' + r); if (!rg) return;
+      rg.addEventListener('input', function () { ayuda.rec[r] = +rg.value; nu.value = rg.value; total(); });
+      nu.addEventListener('input', function () { var x = Math.max(0, Math.min(AYUDA_MAX, Math.floor(+nu.value || 0))); ayuda.rec[r] = x; rg.value = x; total(); });
+      nu.addEventListener('change', function () { nu.value = ayuda.rec[r] || 0; }); });
+    total();
+    d.addEventListener('change', function (ev) { if (ev.target.name === 'aa-villa') { ayuda.villa = +ev.target.value; d.querySelectorAll('.aa-radio').forEach(function (lb) { lb.classList.toggle('sel', lb.querySelector('input').checked); }); } });
+    d.addEventListener('click', function (ev) {
+      if (ev.target === d) { d.remove(); return; }
+      var t = ev.target.closest('[data-aa-pest]'); if (t) { guardarMarcha(); sonar('click'); abrirAyudaAlianza(t.getAttribute('data-aa-pest'), d.dataset.prueba === '1'); return; }
+      var mt = ev.target.closest('[data-aa-mt]'); if (mt) { ayuda.mtipo = mt.getAttribute('data-aa-mt'); d.querySelectorAll('[data-aa-mt]').forEach(function (x) { x.classList.toggle('activo', x === mt); }); sonar('click'); return; }
+      var a = ev.target.closest('[data-aa]'); if (!a) return;
+      if (a.getAttribute('data-aa') === 'cerrar') { sonar('click'); d.remove(); return; }
+      if (a.getAttribute('data-aa') === 'enviar' && !a.disabled) enviarAyuda(a);
+    });
+  }
+  function guardarMarcha() { if ($('aa-x')) { ayuda.mx = $('aa-x').value; ayuda.my = $('aa-y').value; } }
+  function errAyuda(t) { var e = $('aa-error'); if (e) e.textContent = t; sonar('error'); }
+  function enviarAyuda(b) {
+    var uid = Cuentas.usuario().uid, nom = Cuentas.nombrePublico(), canal = canalAlianza();
+    var fin = function () { var v = $('ayuda-al'); if (v) v.remove(); sonar('cuerno'); cargarPedidosChat(true); abrirPanelChat(canal); };
+    var falla = function () { b.disabled = false; errAyuda(T('ref_error')); };
+    if (ayuda.pest === 'recursos') {
+      var rec = {}, tot = 0, primero = '';
+      AYUDA_REC.forEach(function (r) { var n = Math.max(0, Math.min(AYUDA_MAX, Math.floor(ayuda.rec[r] || 0))); if (n) { rec[r] = n; tot += n; if (!primero) primero = r; } });
+      if (!tot) { errAyuda(L('Elige cuánto quieres pedir de algún recurso.', 'Choose how much of some resource to request.')); return; }
+      var dest = destinoAyuda();
+      var datos = { nombre: nom, alianza: estado.alianza, fecha: Date.now(), tipo: 'recursos', motivo: '', recurso: primero, cantidad: tot, recibido: 0, donantes: [], recursos: rec, recibidos: {}, destino: dest };
+      b.disabled = true;
+      Cuentas.crearPedido('r', datos).then(function () {
+        var txt = '📦[PED:' + uid + '_r] ' + L('pide ', 'requests ') + Object.keys(rec).map(function (r) { return cortoNum(rec[r]) + ' ' + T('r_' + r); }).join(', ') + ' → ' + dest.n;
+        return Cuentas.enviarChat(canal, { uid: uid, nombre: nom, texto: txt.slice(0, 200), fecha: Date.now() });
+      }).then(function () { ayuda.rec = {}; consejoTemporal(T('ped_hecho')); fin(); }).catch(falla);
+    } else if (ayuda.pest === 'reforzar') {
+      var e = embajadaLibre(); if (!e.cap) { errAyuda(L('Necesitas una Embajada para alojar refuerzos.', 'You need an Embassy to host reinforcements.')); return; }
+      if (e.hay >= e.cap) { errAyuda(L('Tu Embajada está llena.', 'Your Embassy is full.')); return; }
+      var dr = destinoAyuda();
+      var dt = { nombre: nom, alianza: estado.alianza, fecha: Date.now(), tipo: 'tropas', motivo: 'defender', recurso: '', cantidad: Math.min(1000000, e.cap), recibido: Math.min(e.hay, e.cap), donantes: [], destino: dr };
+      b.disabled = true;
+      Cuentas.crearPedido('t', dt).then(function () {
+        return Cuentas.enviarChat(canal, { uid: uid, nombre: nom, texto: ('🛡️[REF:' + uid + '_t] ' + L('pide refuerzos para ', 'requests reinforcements for ') + dr.n + ' (' + dr.x + ',' + dr.y + ')').slice(0, 200), fecha: Date.now() });
+      }).then(function () { consejoTemporal(T('ref_pedido_hecho')); fin(); }).catch(falla);
+    } else {
+      guardarMarcha();
+      var x = Math.floor(+ayuda.mx), y = Math.floor(+ayuda.my);
+      if (!(x >= 0 && y >= 0 && x < 1000 && y < 1000)) { errAyuda(L('Pon unas coordenadas válidas.', 'Enter valid coordinates.')); return; }
+      var msg = String(($('aa-msg') || {}).value || '').replace(/[\[\]]/g, '').slice(0, 80);
+      b.disabled = true;
+      Cuentas.enviarChat(canal, { uid: uid, nombre: nom, texto: ('⚔️[MAR:' + x + ',' + y + ',' + ayuda.mtipo + '] ' + filtrarTexto(msg)).slice(0, 200), fecha: Date.now() }).then(fin).catch(falla);
+    }
+  }
+  function htmlTarjetaVarios(id, p, yo) {
+    var rec = p.recursos || {}, rb = p.recibidos || {}, mio = p.uid === yo, tot = p.cantidad || 1, rcb = Math.min(tot, p.recibido || 0), lleno = rcb >= tot;
+    var filas = AYUDA_REC.filter(function (r) { return rec[r] > 0; }).map(function (r) { var q = Math.min(rec[r], rb[r] || 0);
+      return '<div class="cp-r"><span>' + ICONO_RECURSO[r] + ' ' + T('r_' + r) + '</span><b>' + cortoNum(q) + ' / ' + cortoNum(rec[r]) + '</b></div>'; }).join('');
+    return '<div class="chat-ped varios' + (lleno ? ' lleno' : '') + '"><div class="cp-cab">📦 <b>' + escaparHTML(p.nombre) + '</b> ' + L('solicita recursos', 'requests resources') + '</div>' +
+      (p.destino ? '<div class="cp-dest">📍 ' + textoDestino(p.destino) + '</div>' : '') + '<div class="cp-lista">' + filas + '</div>' +
+      '<div class="ped-barra"><div style="width:' + Math.round(rcb / tot * 100) + '%"></div><span>' + cortoNum(rcb) + ' / ' + cortoNum(tot) + ' ' + L('recibido', 'received') + '</span></div>' +
+      (lleno ? '<p class="cp-ok">✅ ' + L('¡Solicitud completada!', 'Request completed!') + '</p>' : mio ? '<p class="cp-ok">' + L('Tu solicitud', 'Your request') + '</p>' : '<button class="comprar mini verde cp-donar" data-accion="chat-donar" data-id="' + escaparHTML(id) + '">🎁 ' + L('Donar', 'Donate') + '</button>') + '</div>';
+  }
+  function htmlTarjetaRefuerzo(id, m) {
+    var p = pedidosChat[id], yo = Cuentas.usuario().uid;
+    if (!p || p.tipo !== 'tropas' || (p.fecha || 0) < Date.now() - 24 * 3600 * 1000) return '<div class="chat-ped viejo">🛡️ ' + escaparHTML(m.nombre) + ' · ' + L('Solicitud terminada', 'Request closed') + '</div>';
+    var cap = p.cantidad || 1, hay = Math.min(cap, p.recibido || 0), lleno = hay >= cap, mio = p.uid === yo;
+    return '<div class="chat-ped refuerzo' + (lleno ? ' lleno' : '') + '"><div class="cp-cab">🛡️ <b>' + escaparHTML(p.nombre) + '</b> ' + L('solicita refuerzos', 'requests reinforcements') + '</div>' +
+      (p.destino ? '<div class="cp-dest">📍 ' + textoDestino(p.destino) + '</div>' : '') +
+      '<div class="ped-barra"><div style="width:' + Math.round(hay / cap * 100) + '%"></div><span>🏛️ ' + formatoNumero(hay) + ' / ' + formatoNumero(cap) + ' ' + L('tropas', 'troops') + '</span></div>' +
+      (lleno ? '<p class="cp-ok">✅ ' + L('Embajada llena', 'Embassy full') + '</p>' : mio ? '<p class="cp-ok">' + L('Tu solicitud', 'Your request') + '</p>' : '<button class="comprar mini verde cp-donar" data-accion="chat-reforzar" data-id="' + escaparHTML(id) + '">🛡️ ' + L('Reforzar', 'Reinforce') + '</button>') + '</div>';
+  }
+  function htmlTarjetaMarcha(mm, m) {
+    var t = { atacar: ['⚔️', L('¡Atacar!', 'Attack!')], reunir: ['🚩', L('Reunión', 'Rally')], defender: ['🛡️', L('Defender', 'Defend')] }[mm[3]] || ['⚔️', L('Marcha', 'March')];
+    return '<div class="chat-ped marcha"><div class="cp-cab">' + t[0] + ' <b>' + escaparHTML(m.nombre) + '</b> · ' + t[1] + '</div><div class="cp-dest">📍 (' + (+mm[1]) + ',' + (+mm[2]) + ')</div>' +
+      (mm[4] ? '<div class="cp-msg">' + escaparHTML(filtrarTexto(mm[4])) + '</div>' : '') +
+      '<button class="comprar mini dorado cp-donar" data-accion="chat-marcha-ir" data-x="' + (+mm[1]) + '" data-y="' + (+mm[2]) + '">🗺️ ' + L('Ir al mapa', 'Go to map') + '</button></div>';
+  }
   function donarDesdeChat(id) {
     var p = pedidosChat[id]; if (!p) return;
+    if (p.recursos) { abrirTransportar(p.uid, p.nombre, p); return; } // v7.98: varios recursos: eliges cuánto de cada uno
     var falta = Math.max(0, (p.cantidad || 0) - (p.recibido || 0)), r = p.recurso, t = impuestoTransporte();
     var n = Math.min(Math.ceil(falta / (1 - t)), cantRec(r), capCarreta() * carretasLibres(), 100000);
     if (!falta) { consejoTemporal(L('Esa solicitud ya está completa.', 'That request is already complete.')); return; }
@@ -12984,6 +13102,8 @@
     box.innerHTML = l.length ? l.map(function (m) {
       var mio = m.uid === yo, hora = new Date(m.fecha), hh = ('0' + hora.getHours()).slice(-2) + ':' + ('0' + hora.getMinutes()).slice(-2);
       var mp = /^📦\[PED:([A-Za-z0-9_]+)\]/.exec(String(m.texto || '')); if (mp) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaPedido(mp[1], m) + '</div>'; // v7.88
+      var mr = /^🛡️\[REF:([A-Za-z0-9_]+)\]/.exec(String(m.texto || '')); if (mr) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaRefuerzo(mr[1], m) + '</div>'; // v7.98
+      var mm = /^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec(String(m.texto || '')); if (mm) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaMarcha(mm, m) + '</div>';
       return '<div class="chat-m' + (mio ? ' mio' : '') + (String(m.texto || '').indexOf('📣') === 0 ? ' megafono' : '') + '"><button class="chat-quien" data-accion="chat-quien" data-uid="' + m.uid + '" data-id="' + m.id + '" data-n="' + escaparHTML(m.nombre) + '">' + (mio ? T('chat_tu') : escaparHTML(m.nombre)) + '</button><span class="chat-hora">' + hh + '</span><div class="chat-t">' + escaparHTML(filtrarTexto(m.texto)) + '</div></div>';
     }).join('') : '<p class="nota chat-vacio">' + T('chat_vacio') + '</p>';
     if (!nuevo || abajo) box.scrollTop = box.scrollHeight;
@@ -13195,7 +13315,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
