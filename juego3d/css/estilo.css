@@ -955,6 +955,9 @@ body.panel-abierto .centro-construir .icono { margin-top: -14px; width: 52px; he
 .hf-foto { width: 100%; flex: none; height: 210px; border-radius: 10px; background: radial-gradient(ellipse at 50% 75%, rgba(255,255,255,.45), rgba(255,255,255,.08) 70%); }
 .hf-visor { width: 100%; height: 100%; }
 .hf-visor canvas { display: block; width: 100% !important; height: 100% !important; cursor: grab; }
+/* v7.83: retrato pintado del héroe en la pestaña Equipo (en vez del muñeco 3D) */
+.hf-foto .hf-visor img.hf-retrato { width: 100%; height: 100%; object-fit: contain; object-position: 50% 30%; border-radius: 0; background: none; padding: 6px 0 34px; box-sizing: border-box; filter: drop-shadow(0 6px 10px rgba(0,0,0,.45)); animation: hf-respira 4s ease-in-out infinite; }
+@keyframes hf-respira { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.025); } }
 .hf .rz-cinta { top: 6px; right: 6px; left: auto; bottom: auto; transform: none; font-size: 10px; }
 
 /* ---- Habilidades del héroe ---- */
@@ -2212,3 +2215,6 @@ body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !importa
 .ev-op { flex: 1 1 70px; display: flex; flex-direction: column; align-items: center; padding: 6px 4px; border-radius: 9px; border: 2px solid #6b4b2a; background: #3a2616; color: #f3e3c3; font-weight: 700; font-size: 14px; }
 .ev-op small { font-size: 11px; font-weight: 400; opacity: .85; }
 .ev-op.activo { border-color: #ffd54a; background: #5a3c12; }
+
+/* v7.83: botón Cobrar todas en Misiones */
+.mis-todas { display: block; width: 100%; margin: 8px 0 10px; padding: 12px; font-size: 17px; font-weight: 800; }

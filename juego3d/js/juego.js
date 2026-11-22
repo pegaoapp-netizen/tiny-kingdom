@@ -1260,6 +1260,8 @@
     } else {
       h += '<p class="nota">' + L('Se renuevan cada día. Nuevas en ', 'New ones every day. Next in ') + '<b>' + fmtTiempo(segHastaManana()) + '</b></p><div class="mis-grupo">' + MIS_DIA.map(function (t) { return filaMision(t, true); }).join('') + '</div>';
     }
+    var nTab = pestMis === 'misiones' ? nM : nD;
+    if (nTab > 1) h = h.replace('</button></div>', '</button></div><button class="comprar verde mis-todas" data-accion="mis-todas" data-dia="' + (pestMis === 'misiones' ? '0' : '1') + '">🎁 ' + L('Cobrar todas', 'Claim all') + ' (' + nTab + ')</button>'); // v7.80
     abrirPanel(L('Misiones', 'Quests'), h, { tipo: 'misiones' });
   }
   function reclamarMision(id) {
@@ -1273,6 +1275,25 @@
     sonar('victoria'); guardar(true); actualizarMision();
     if (panelActual && panelActual.tipo === 'misiones') abrirPanelMisiones();
     mostrarRecompensas(L('Misión cumplida', 'Quest complete') + ': ' + (estado.idioma === 'en' ? t.en : t.es), premioAItems(t.p));
+  }
+  // v7.83: COBRAR TODAS: reclama de golpe todas las misiones listas de la pestaña abierta y muestra un solo resumen de premios
+  function reclamarTodas(dia) {
+    var items = [], n = 0, xp = 0;
+    function junta(l) { l.forEach(function (it) { var o = items.filter(function (x) { return x.nom === it.nom && x.ico === it.ico; })[0]; if (o) o.n += it.n; else items.push({ ico: it.ico, nom: it.nom, n: it.n }); }); }
+    if (dia) {
+      MIS_DIA.forEach(function (t) { if (!misLista(t, true)) return; misDia().hechas[t.id] = 1; darPremio(t.p); junta(premioAItems(t.p)); xp += 10; n++; });
+    } else {
+      for (var vuelta = 0; vuelta < 50; vuelta++) { // la misión guía puede encadenar varias ya cumplidas
+        var m = MISIONES[estado.mision || 0]; if (!m || !m.ok()) break;
+        darPremio(m.p); junta(premioAItems(m.p)); estado.mision = (estado.mision || 0) + 1; xp += 30; n++;
+      }
+      estado.misHechas = estado.misHechas || {};
+      GRUPOS_MIS.forEach(function (g) { g.t.forEach(function (t) { if (!misLista(t)) return; estado.misHechas[t.id] = 1; darPremio(t.p); junta(premioAItems(t.p)); xp += 20; n++; }); });
+    }
+    if (!n) { sonar('error'); return; }
+    sumarXP(xp); sonar('victoria'); actualizarHUD(); guardar(true); actualizarMision();
+    if (panelActual && panelActual.tipo === 'misiones') abrirPanelMisiones();
+    mostrarRecompensas(L('Cobraste ' + n + (n === 1 ? ' misión' : ' misiones'), 'Claimed ' + n + (n === 1 ? ' quest' : ' quests')), items);
   }
   var badgeMisT = 0;
   function actualizarMision() {
@@ -8386,7 +8407,7 @@
     } else html += '<p class="nota">' + T('bloqueado') + '</p>';
     html += '</div></div>' +
       '<div class="subtabs hf-tabs">' + [['atrib', T('hv_atributos')], ['hab', T('hv_habilidades')], ['equipo', T('hv_equipo')]].map(function (p) { return '<button data-accion="heroe-tab" data-tab="' + p[0] + '" data-id="' + id + '" class="' + (pestanaHeroe === p[0] ? 'activo' : '') + '">' + p[1] + '</button>'; }).join('') + '</div>';
-    if (pestanaHeroe === 'equipo') { html += htmlEquipo(id); abrirPanel(NH(id), html, { tipo: 'heroe', id: id }); var nv1 = e ? e.nivel : 1; visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv1) + ':' + M.etapaArmadura(nv1) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv1); }); return; }
+    if (pestanaHeroe === 'equipo') { html += htmlEquipo(id); abrirPanel(NH(id), html, { tipo: 'heroe', id: id }); var vRet = $('visor-heroe'); if (vRet && RETRATOS_IMG['h_' + id]) { vRet.innerHTML = '<img class="hf-retrato" src="iconos/ui/' + RETRATOS_IMG['h_' + id] + '.webp" alt="' + NH(id) + '" draggable="false">'; return; } var nv1 = e ? e.nivel : 1; visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv1) + ':' + M.etapaArmadura(nv1) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv1); }); return; }
     if (pestanaHeroe === 'hab') { html += htmlHabilidades(id); abrirPanel(NH(id), html, { tipo: 'heroe', id: id }); var nv0 = e ? e.nivel : 1; visorModelo($('visor-heroe'), 'h:' + id + ':' + M.tierHeroe(nv0) + ':' + M.etapaArmadura(nv0) + ':' + M.tieneGLB(id), function () { return M.heroe(h, nv0); }); return; }
     html += '<div class="hf-stats"><span>❤ ' + s.vida + '</span><span>⚔ ' + s.dano + '</span><span>🎯 ' + s.alcance + '</span><span>✚ ' + s.cura + '/s</span></div>' +
       '<div class="hf-hab"><b>' + hb.nombre + ' · ' + T('nivel_corto') + ' ' + nivelHab(id) + '</b> <span class="nota">' + T('cada_s', { s: recargaHab(id) }) + '</span><div class="nota">' + hb.des + '</div></div>';
@@ -11083,6 +11104,7 @@
     else if (a === 'tienda-arriba') { sonar('click'); pestTiendaArriba = b.getAttribute('data-p'); abrirPanelTienda(); }
     else if (a === 'mis-pest') { sonar('click'); pestMis = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelMisiones(); }
     else if (a === 'mis-reclamar') reclamarMision(b.getAttribute('data-id'));
+    else if (a === 'mis-todas') reclamarTodas(b.getAttribute('data-dia') === '1');
     else if (a === 'cuartel-pest') { sonar('click'); pestCuartel = b.getAttribute('data-p'); tropaDetalle = null; abrirPanelEdificio(slotElegido); }
     else if (a === 'cuartel-carretas') { sonar('click'); if (edificiosDe('mercado').length) abrirPanelMercado(); else consejoTemporal(L('Construye un Mercado para entrenar carretas.', 'Build a Market to train carts.')); }
     else if (a === 'cuartel-tropa') { sonar('click'); tropaDetalle = b.getAttribute('data-tipo'); pestDetalle = 'entrenar'; cantDetalle = 1; $('panel').scrollTop = 0; abrirPanelEdificio(slotElegido); }
