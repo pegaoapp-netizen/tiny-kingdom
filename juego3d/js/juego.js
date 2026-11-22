@@ -511,6 +511,11 @@
   //  PARCELAS: cuadrícula con calles dentro de la muralla, campos marrones fuera.
   //  Cada edificio ocupa 1 cuadro y deja 2 cuadros de pasto entre el siguiente.
   // ------------------------------------------------------------------
+  // v7.79: VILLA MÁS JUNTA (como KoC): las filas de fuera se acercan; lo pegado a la colina y al foso no se mueve
+  var JUNTA_K = /[?&]vista=antes\b/.test(location.search) ? 1 : 0.86;
+  function juntaEje(v, piv) { var m = Math.abs(v); return m <= piv ? v : Math.sign(v) * (piv + (m - piv) * JUNTA_K); }
+  function juntaA(a) { return juntaEje(a, 8); }
+  function juntaB(b) { return juntaEje(b, 18); }
   var PARCELAS = (function () {
     // 30 parcelas exactas. +a mira a la puerta (abajo). +b es la izquierda de la pantalla.
     // El castillo va en el centro y no ocupa parcela. 8 bordes son fijos; las otras 22, cabaña o cuartel.
@@ -528,7 +533,7 @@
       else { var bp = nG % 2 === 0 ? barrioL[nG >> 1] : barrioR[nG >> 1]; puestos.push([bp[0], bp[1], '']); nG++; }
     }
     var ciudad = [], fijo = [];
-    puestos.forEach(function (p) { ciudad.push(aMundo(p[0], p[1])); fijo.push(p[2] || ''); });
+    puestos.forEach(function (p) { ciudad.push(aMundo(juntaA(p[0]), juntaB(p[1]))); fijo.push(p[2] || ''); });
     var campos = [];
     for (var fa = -2.5; fa <= 2.5; fa++) for (var fb = -3; fb <= 3; fb++) campos.push(aMundo(CAMPOS_RECT.a + fa * 10, CAMPOS_RECT.b + fb * 10)); // v6.87: 42 parcelas
     campos.sort(function (p, q) { return Math.hypot(p[0], p[1]) - Math.hypot(q[0], q[1]); });
@@ -554,6 +559,7 @@
       [-47, -21, 25, 25, 1.5], [-47, -21, -25, -25, 1.5],          // entre los barrios de atrás
       [21, 47, 25, 25, 1.5], [21, 47, -25, -25, 1.5]               // entre los barrios de delante
     ];
+    calles = calles.map(function (c) { return [juntaA(c[0]), juntaA(c[1]), juntaB(c[2]), juntaB(c[3]), c[4]]; }); // v7.79: las calles siguen a la villa junta
     return { lista: lista, calles: calles, plaza: COLINA.r - 1.2, fuente: [33, 0] };
   })();
   function enCalleCiudad(a, b, m) {
@@ -4313,7 +4319,7 @@
 
   function ladoEdificio(tipo, nivel) {
     var n = Math.max(1, Math.min(30, nivel || 1));
-    return (TAM_TIPO[tipo] || 6.8) * (0.65 + 0.35 * Math.pow((Math.min(16, n) - 1) / 15, 0.6));
+    return (TAM_TIPO[tipo] || 6.8) * (0.8 + 0.2 * Math.pow((Math.min(16, n) - 1) / 15, 0.6));
   }
 
   function encajarEnParcela(m, tr, tipo, nivel) {
@@ -4418,7 +4424,7 @@
     encajarEnParcela(s.modelo, tr, tipo, nivel);
 
     // v7.69: en la villa los edificios llenan más su parcela (como un reino de verdad), sin pisar la calle
-    var CRECE_VILLA = 1.18;
+    var CRECE_VILLA = 1.4; // v7.79: más grandes, como en KoC (antes 1.18)
     if (!s.campo && !(s.fijo && s.fijo === tipo) && !s.modelo.userData.es2D) {
       s.modelo.scale.multiplyScalar(CRECE_VILLA);
       s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
@@ -4451,7 +4457,7 @@
     if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.78);
 
     if (!s.campo && !s.modelo.userData.es2D) {
-      var TOPE = 9.4;
+      var TOPE = 11; // v7.79: llenan la parcela hasta la calle (antes 9.4)
       s.modelo.updateMatrixWorld(true);
       var bxT = new THREE.Box3().setFromObject(s.modelo);
       var lT = Math.max(bxT.max.x - bxT.min.x, bxT.max.z - bxT.min.z);

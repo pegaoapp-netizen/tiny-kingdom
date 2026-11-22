@@ -17,7 +17,7 @@ CONTROLES
     Abajo salen las cartas de los héroes: con "Auto" lanzan su poder solos; sin "Auto" tocas la carta.
     Con ?oleadaclasica=1 en la dirección las oleadas vuelven a entrar por la ciudad.
     Con ?clasico=1 se ven los edificios 2D de antes.
-  - VISTA (v7.79): isométrica como Kingdoms of Camelot (en diagonal, sin deformar los edificios). Con ?vista=antes se ve la de antes.
+  - VISTA (v7.79): isométrica como Kingdoms of Camelot (en diagonal, sin deformar los edificios), edificios más grandes y villa más junta. Con ?vista=antes se ve la de antes.
   - Toca un terreno vacío para construir. Toca un edificio para mejorarlo.
   - CONSTRUIR: Granja (da monedas), Cuartel (permite entrenar), Torre (dispara flechas).
   - TROPAS: Espadachín, Arquero, Guardián.
