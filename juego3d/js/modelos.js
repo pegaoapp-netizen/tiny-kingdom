@@ -623,6 +623,7 @@ var M = (function () {
     return null;
   }
   // v6.38: edificios de Tripo. Si el tipo está en la lista, se usa su archivo modelos/<tipo>_tripo.glb
+  var ES_CAMPO_T = { granja: 1, aserradero: 1, mina: 1, cantera: 1 };
   var TRIPO_EDIFICIOS = { cabana: 3.0, cuartel: 3.6, granja: 3.6, aserradero: 3.6, mina: 3.6, cantera: 3.6, academia: 3.6, mercado: 3.6, herreria: 3.6, establo: 3.6, enfermeria: 3.6, galeria: 3.6, almacen: 3.6, vigia: 2.6, embajada: 3.6, relevo: 3.6 };
   // v6.40: cuántas versiones tiene cada edificio (cambia de modelo en el nivel 10 y en el 20)
   // v6.52: edificios con 2 versiones: la grande y más detallada sale desde el nivel 15
@@ -631,6 +632,7 @@ var M = (function () {
   var CON_HUMO = { herreria: 1, cabana: 1, granja: 1, enfermeria: 1, almacen: 1, establo: 1 };
   function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
+    if (!ES_CAMPO_T[tipo]) esc *= tipo === 'cabana' ? 1.2 : 1.3; // v7.48: edificios de la villa más grandes en su barrio (como en KoC)
     var et = TRIPO_ETAPAS[tipo] === 2 ? ((nivel || 1) >= 15 ? 2 : 1) : Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
     var t = et > 1 ? modeloTripo(tipo + et, tipo + '_tripo_' + et + '.glb', 'tripo-glb') : modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb');
     if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior
