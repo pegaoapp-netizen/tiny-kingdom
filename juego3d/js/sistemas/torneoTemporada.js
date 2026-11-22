@@ -16,7 +16,7 @@
     // cofres personales (cada uno se cobra una vez por temporada)
     hitos: [
       { puntos: 100000, premio: [['acel_1h', 5]] },
-      { puntos: 300000, premio: [['ficha_x5', 1]] },
+      { puntos: 300000, premio: [['ficha_x5', 1], ['carretas_x10', 1]] },
       { puntos: 600000, premio: [['estrella_mar', 15]] },
       { puntos: 1000000, premio: [['pergamino', 10]] },
       { puntos: 1500000, premio: [['ficha_x5', 2], ['acel_8h', 1]] },

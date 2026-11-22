@@ -2461,6 +2461,7 @@
       '<div class="perg-botones"><button class="comprar azul" id="cas-espiar">' + L('Espiar', 'Scout') + '</button>' + (mia ? '<button class="comprar azul" id="cas-soltar">' + T('cas_abandonar') + '</button>' : '<button class="comprar azul" id="cas-conquistar">' + L('Ataque', 'Attack') + '</button>') + '</div>' +
       ''; // v6.70: sin botón Reubicar: la villa se muda solo con un portal del Inventario y solo a llanuras desocupadas
     if (mia) { var gd = guardadoCasilla(c), rr = TIPOS_CASILLA[c.tipo].r; html += '<p class="nota">' + ICONO_RECURSO[rr] + ' ' + T('cas_guardado', { a: formatoNumero(gd.n), m: formatoNumero(gd.max), r: T('r_' + rr), h: formatoNumero(gd.hora) }) + '</p><button class="comprar naranja" id="cas-recoger"' + (gd.n >= 1 ? '' : ' disabled') + '>' + T('cas_recolectar') + ' · ' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + '</button>'; }
+    if (c.tipo === 'llanura' && !mia && !deOtro && libreTel && villaActiva() === 0) html += '<button class="comprar morado boton-oleada-grande" id="cas-portal">🌀 ' + L('Teletransportar aquí', 'Teleport here') + ' <small>(' + ((estado.mochila && estado.mochila.portal_elegir) || 0) + ' ' + L('portales', 'portals') + ')</small></button>'; // v7.86
     if (c.tipo === 'llanura' && !mia && !deOtro && libreTel) html += '<button class="comprar verde boton-oleada-grande" id="cas-fundar">🏘️ ' + L('Fundar villa', 'Found village') + ' <small>(' + misVillas().lista.length + '/' + maxVillas() + ')</small></button>'; // v7.82
     $('mundo-info').innerHTML = html + '</div>';
     var bfv = $('cas-fundar'); if (bfv) bfv.addEventListener('click', function () { fundarVilla(c.x, c.y); });
@@ -2899,6 +2900,7 @@
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', cm.nivel);
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano && Math.random() < 0.15) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; setTimeout(function () { consejoTemporal('👑 ' + L('El cofre del campamento traía ', 'The camp chest had ') + N('vip_100')); }, 3500); } // v7.79
+    if (res.gano && Math.random() < 0.2) { estado.mochila.carreta_sum = (estado.mochila.carreta_sum || 0) + 1; setTimeout(function () { consejoTemporal('🐴 ' + L('Botín de campaña: ', 'Campaign loot: ') + N('carreta_sum')); }, 5000); } // v7.86
     if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); darBlasones(3 + 2 * cm.nivel); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
@@ -2980,7 +2982,7 @@
     estado.lugar = { x: aCoord(x), y: aCoord(y) };
     var yo = hayCuenta() ? Cuentas.usuario().uid : '__yo';
     aldeasCache.forEach(function (a) { if (a.uid === yo) { a.x = estado.lugar.x; a.y = estado.lugar.y; } });
-    estado.ultimoPortal = Date.now(); estado.sinAtacarHasta = Date.now() + 3600 * 1000;
+    estado.ultimoPortal = Date.now(); estado.sinAtacarHasta = Date.now() + 3600 * 1000; estado.juntado = true; // v7.86: que el reino no vuelva solo a su sitio viejo
     cancelarAtaquesEntrantes();
     guardar(true); publicarAldea(true);
     sonar('magia'); setTimeout(function () { sonar('poder'); }, 300);
@@ -3003,11 +3005,32 @@
     entrantes = entrantes.filter(function (r) { return !r.cancelado; });
     actualizarAlertas();
   }
+  // v7.86: Portal elegido: escribes X, Y (o vas al mapa y tocas una Llanura libre)
+  function abrirPortalElegir() {
+    var v = $('rm-caja'); if (v) v.remove();
+    var yo = celdaDe(miLugar().x, miLugar().y), d = document.createElement('div'); d.id = 'rm-caja';
+    d.innerHTML = '<div class="rm-ventana"><div class="mc-cab"><b>🌀 ' + N('portal_elegir') + '</b><small>' + L('¿A dónde mudas tu reino?', 'Where do you move your kingdom?') + '</small><button class="mc-x" data-pe="x">✕</button></div>' +
+      '<p class="rm-txt">' + L('Escribe las coordenadas de una Llanura libre, o ve al Mundo y tócala.', 'Type the coordinates of a free Plain, or go to the World and tap it.') + '</p>' +
+      '<div class="rm-xy"><label>X <input id="pe-x" type="number" inputmode="numeric" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + yo.x + '"></label><label>Y <input id="pe-y" type="number" inputmode="numeric" min="0" max="' + (TAM_MUNDO - 1) + '" value="' + yo.y + '"></label></div>' +
+      '<button class="ru-marchar" data-pe="ir">🌀 ' + L('Teletransportar', 'Teleport') + '</button><button class="comprar mini" data-pe="mapa" style="margin-top:6px">🌍 ' + L('Elegir en el mapa', 'Pick on the map') + '</button></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-pe]'); if (!b) { if (ev.target === d) d.remove(); return; }
+      var q = b.getAttribute('data-pe');
+      if (q === 'x') { d.remove(); return; }
+      if (q === 'mapa') { d.remove(); consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
+      var x = Math.floor(+$('pe-x').value), y = Math.floor(+$('pe-y').value);
+      if (!(x >= 0 && y >= 0 && x < TAM_MUNDO && y < TAM_MUNDO)) { consejoTemporal(L('Coordenada fuera del mapa', 'Coordinate off the map')); sonar('error'); return; }
+      if (!celdaLibre(x, y) || casillaMundo(x, y).tipo !== 'llanura') { consejoTemporal(T('tel_ocupada') + ' (' + L('tiene que ser una Llanura libre', 'it must be a free Plain') + ')'); sonar('error'); return; }
+      d.remove(); cerrarPanel();
+      if (teletransportar(x, y, 'portal_elegir')) { abrirMundo(); setTimeout(function () { try { irACoordenadas(x, y); } catch (e) {} }, 800); }
+    });
+  }
   function portalAlAzar() {
     var actual = celdaDe(miLugar().x, miLugar().y);
     for (var i = 0; i < 600; i++) {
       var x = 2 + Math.floor(Math.random() * (TAM_MUNDO - 4)), y = 2 + Math.floor(Math.random() * (TAM_MUNDO - 4));
-      if (Math.hypot(x - actual.x, y - actual.y) > 5 && celdaLibre(x, y)) return teletransportar(x, y, 'portal_azar');
+      if (Math.hypot(x - actual.x, y - actual.y) > 5 && celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return teletransportar(x, y, 'portal_azar');
     }
     return false;
   }
@@ -7043,7 +7066,7 @@
   //  v7.82: VARIAS VILLAS (1 principal + hasta 4): una nueva cada 5 niveles del Castillo Principal.
   //  La villa activa vive en el estado de siempre; las otras se guardan como «foto» en estado.villas.lista[i].datos.
   // =====================================================================
-  var VILLA_CLAVES = ['monedas', 'comida', 'madera', 'piedra', 'vidaCastillo', 'edificios', 'obras', 'guardados', 'tropas', 'heridos', 'muralla', 'barricadas', 'castillo', 'obraCastillo', 'obraMuralla', 'invocadas', 'colaEntreno', 'reserva', 'pobRegalo', 'tropasDefienden', 'heroeDefensor', 'lugar', 'comidaResto'];
+  var VILLA_CLAVES = ['monedas', 'comida', 'madera', 'piedra', 'hierro', 'vidaCastillo', 'edificios', 'obras', 'guardados', 'tropas', 'heridos', 'muralla', 'barricadas', 'castillo', 'obraCastillo', 'obraMuralla', 'invocadas', 'colaEntreno', 'reserva', 'pobRegalo', 'tropasDefienden', 'heroeDefensor', 'lugar', 'comidaResto'];
   var VILLA_COSTO = 10000, cambiandoVilla = false;
   function misVillas() { if (!estado.villas || !estado.villas.lista) estado.villas = { activa: 0, lista: [{ nombre: '' }] }; return estado.villas; }
   function villaActiva() { return (estado.villas && estado.villas.activa) || 0; }
@@ -7096,7 +7119,7 @@
     setTimeout(irse, (window.Cuentas && Cuentas.usuario()) ? 5000 : 300);
   }
   function datosVillaNueva(x, y) {
-    return { monedas: VILLA_COSTO, comida: VILLA_COSTO, madera: VILLA_COSTO, piedra: VILLA_COSTO, edificios: [], obras: [], guardados: [], tropas: {}, heridos: {}, muralla: 0, barricadas: [], castillo: 1,
+    return { monedas: VILLA_COSTO, comida: VILLA_COSTO, madera: VILLA_COSTO, piedra: VILLA_COSTO, hierro: 0, edificios: [], obras: [], guardados: [], tropas: {}, heridos: {}, muralla: 0, barricadas: [], castillo: 1,
       obraCastillo: null, obraMuralla: null, invocadas: {}, colaEntreno: [], reserva: {}, pobRegalo: 0, tropasDefienden: true, lugar: { x: x, y: y }, comidaResto: 0, nueva: 1, desde: Date.now(), pt: 0, pe: 800 };
   }
   function villaEn(x, y) { var v = estado.villas; if (!v || !v.lista) return -1; for (var i = 1; i < v.lista.length; i++) if (v.lista[i].x === x && v.lista[i].y === y) return i; return -1; }
@@ -7142,58 +7165,155 @@
   }
   function htmlMisVillas() {
     var v = misVillas(), mx = maxVillas();
-    var h = '<div class="carta"><div class="pf-fila"><b>🏘️ ' + L('Villas', 'Villages') + ': ' + v.lista.length + ' / ' + mx + '</b><small>' + L('máx. 5', 'max 5') + '</small></div>' +
-      '<p class="nota">' + (mx < 5 ? L('Próximo espacio con el Castillo Principal nivel ', 'Next slot at Main Castle level ') + (5 * mx) + '. ' : '') + L('Para fundar: ve al Mundo, toca una Llanura libre 🌾 y elige «Fundar villa» (10.000 de cada recurso).', 'To found: go to the World, tap a free Plain 🌾 and choose "Found village" (10,000 of each resource).') + '</p></div>';
+    var h = '<div class="carta"><div class="pf-fila"><b>🏘️ ' + L('Mis villas', 'My villages') + ': ' + v.lista.length + ' / 5</b><button class="comprar mini" data-accion="villa-centrar">🏰 ' + L('Ver mi castillo', 'View my castle') + '</button></div></div>';
     h += v.lista.map(function (e, i) {
       var act = i === v.activa, d = act ? null : e.datos, lu = lugarVilla(i) || { x: '?', y: '?' };
       var cast = act ? (estado.castillo || 1) : ((d && d.castillo) || 1), com = act ? cantidad('comida') : ((d && d.comida) || 0);
-      return '<div class="carta vl-fila' + (act ? ' activa' : '') + '"><div class="vl-dat"><b>' + (i === 0 ? '👑 ' : '🏘️ ') + escaparHTML(nombreVilla(i)) + '</b><small>X ' + lu.x + ' · Y ' + lu.y + ' · 🏰 ' + L('Nv ', 'Lv ') + cast + ' · 🌾 ' + corto(com) + '</small></div>' +
-        (act ? '<span class="vl-aqui">' + L('Estás aquí', 'You are here') + '</span>' : '<button class="comprar mini verde" data-accion="villa-ir" data-i="' + i + '">' + L('Ir', 'Go') + '</button>') + '</div>';
+      return '<div class="carta vl-fila' + (act ? ' activa' : '') + '"><div class="vl-dat"><b>' + (i === 0 ? '👑 ' : '🏘️ ') + escaparHTML(nombreVilla(i)) + '</b><small>X ' + lu.x + ' · Y ' + lu.y + ' · 🏰 ' + L('Nv ', 'Lv ') + cast + ' · 🌾 ' + corto(com) + '</small>' +
+        (act ? '' : '<div class="vl-bts"><button class="comprar mini" data-accion="villa-caravana" data-i="' + i + '">🐴 ' + L('Enviar Recursos', 'Send Resources') + '</button><button class="comprar mini" data-accion="villa-destacar" data-i="' + i + '">⚔️ ' + L('Destacar Tropas', 'Station Troops') + '</button></div>') + '</div>' +
+        (act ? '<span class="vl-aqui">' + L('Estás aquí', 'You are here') + '</span>' : '<button class="comprar mini verde" data-accion="villa-ir" data-i="' + i + '">' + L('Entrar', 'Enter') + '</button>') + '</div>';
     }).join('');
+    for (var k = v.lista.length; k < 5; k++) {
+      var nv = 5 * k, abierta = k < mx;
+      h += '<div class="carta vl-fila vl-cerrada"><div class="vl-dat"><b>' + (abierta ? '🌾 ' + L('Espacio libre', 'Free slot') : '🔒 ' + L('Villa ', 'Village ') + (k + 1)) + '</b><small>' + (abierta ? L('¡Disponible! Funda tu villa en una Llanura libre.', 'Available! Found your village on a free Plain.') : L('Se desbloquea con el Castillo Principal Nv. ', 'Unlocks with Main Castle Lv. ') + nv) + '</small></div>' + (abierta ? '<button class="comprar mini verde" data-accion="villa-mundo">🌍 ' + L('Ir al Mundo', 'Go to World') + '</button>' : '<span class="vl-req">🏰 ' + nv + '</span>') + '</div>';
+    }
+    h += '<div class="carta"><b>📜 ' + L('Cómo fundar una villa', 'How to found a village') + '</b><ol class="vl-guia"><li>' + L('Sube el Castillo Principal (Nv. 5, 10, 15 y 20 abren un espacio cada uno).', 'Upgrade the Main Castle (Lv. 5, 10, 15 and 20 open one slot each).') + '</li><li>' + L('En el Mundo, toca una Llanura 🌾 libre.', 'On the World map, tap a free Plain 🌾.') + '</li><li>' + L('Elige «Fundar villa»: salen colonos con 10.000 de oro, comida, madera y piedra.', 'Choose "Found village": settlers leave with 10,000 gold, food, wood and stone.') + '</li><li>' + L('Al llegar, la Llanura es tu villa nueva con sus propios campos y edificios.', 'On arrival the Plain becomes your new village with its own fields and buildings.') + '</li></ol></div>';
     if (estado.fundando) h += '<p class="nota">🏇 ' + L('Colonos en camino a ', 'Settlers on the way to ') + 'X ' + estado.fundando.x + ' · Y ' + estado.fundando.y + '</p>';
-    if (v.lista.length > 1) h += '<button class="comprar mini" data-accion="villas-enviar">🐴 ' + L('Enviar recursos a mis villas', 'Send resources to my villages') + '</button>';
+    var env = (estado.envios || []).filter(function (x) { return x.llega > Date.now(); });
+    if (env.length) h += '<div class="carta"><b>' + L('En camino entre tus villas', 'On the way between your villages') + '</b>' + env.map(function (x) { return '<div class="pf-fila"><span>' + (x.tropas ? '⚔️ ' + formatoNumero(sumaObj(x.tropas)) + ' ' + L('tropas', 'troops') : '🐴 ' + textoRecursos(x.rec || (function () { var o = {}; o[x.r] = x.n; return o; })())) + ' → ' + escaparHTML(nombreVilla(x.a)) + '</span><small>⏱ ' + fmtTiempo((x.llega - Date.now()) / 1000) + '</small></div>'; }).join('') + '</div>';
     return h;
   }
+  function sumaObj(o) { var n = 0; for (var k in o) n += o[k] || 0; return n; }
+  var ICO_HIERRO = '⛓️';
+  function icoRec(r) { return r === 'hierro' ? ((typeof ICONO_RECURSO !== 'undefined' && ICONO_RECURSO.hierro) || ICO_HIERRO) : ICONO_RECURSO[r]; }
+  function textoRecursos(o) { return Object.keys(o).filter(function (r) { return o[r]; }).map(function (r) { return icoRec(r) + ' ' + corto(o[r]); }).join(' · '); }
   function abrirMisVillas() { abrirPanel('🏘️ ' + L('Mis villas', 'My villages'), htmlMisVillas(), { tipo: 'villas' }); }
-  // ---------- caravanas de recursos entre tus villas (desde el Mercado) ----------
-  var envioSel = { a: -1, r: 'comida', n: 0 };
-  function abrirEnvioVillas() {
-    var v = misVillas(), act = v.activa;
-    if (v.lista.length < 2) { consejoTemporal(L('Primero funda otra villa.', 'Found another village first.')); sonar('error'); return; }
-    if (envioSel.a < 0 || envioSel.a === act || !v.lista[envioSel.a]) envioSel.a = act === 0 ? 1 : 0;
-    var aqui = lugarVilla(act), h = '<div class="carta"><b>🐴 ' + L('Caravana desde ', 'Caravan from ') + escaparHTML(nombreVilla(act)) + '</b><p class="nota">' + L('Los recursos viajan por el mapa y llegan a la otra villa (aunque no la estés viendo).', 'Resources travel across the map and reach the other village (even if you are not viewing it).') + '</p>' +
-      '<div class="ev-grupo">' + v.lista.map(function (e, i) { if (i === act) return ''; var lu = lugarVilla(i), dist = Math.hypot(lu.x - aqui.x, lu.y - aqui.y); return '<button class="ev-op' + (envioSel.a === i ? ' activo' : '') + '" data-accion="ev-dest" data-i="' + i + '">' + escaparHTML(nombreVilla(i)) + '<small>⏱ ' + fmtTiempo(tiempoCaravana(dist)) + '</small></button>'; }).join('') + '</div>' +
-      '<div class="ev-grupo">' + ['comida', 'madera', 'piedra', 'oro'].map(function (r) { return '<button class="ev-op' + (envioSel.r === r ? ' activo' : '') + '" data-accion="ev-rec" data-r="' + r + '">' + ICONO_RECURSO[r] + '<small>' + corto(cantidad(r)) + '</small></button>'; }).join('') + '</div>' +
-      '<div class="ev-grupo">' + [10000, 100000, 1000000, -1].map(function (n) { return '<button class="comprar mini' + (envioSel.n === n ? ' verde' : '') + '" data-accion="ev-cant" data-n="' + n + '">' + (n < 0 ? L('Todo', 'All') : corto(n)) + '</button>'; }).join('') + '</div>' +
-      '<button class="comprar verde boton-oleada-grande" data-accion="ev-enviar"' + (envioSel.n ? '' : ' disabled') + '>🐴 ' + L('Enviar ', 'Send ') + (envioSel.n ? (envioSel.n < 0 ? L('todo', 'all') : formatoNumero(Math.min(envioSel.n, cantidad(envioSel.r)))) + ' ' + ICONO_RECURSO[envioSel.r] : '') + '</button></div>';
-    var en = (estado.envios || []).filter(function (x) { return x.llega > Date.now(); });
-    if (en.length) h += '<div class="carta"><b>' + L('En camino', 'On the way') + '</b>' + en.map(function (x) { return '<div class="pf-fila"><span>' + ICONO_RECURSO[x.r] + ' ' + formatoNumero(x.n) + ' → ' + escaparHTML(nombreVilla(x.a)) + '</span><small>⏱ ' + fmtTiempo((x.llega - Date.now()) / 1000) + '</small></div>'; }).join('') + '</div>';
-    abrirPanel('🐴 ' + L('Enviar a mis villas', 'Send to my villages'), h, { tipo: 'envio-villas' });
+  // ---------- v7.86: CARAVANAS DE RECURSOS entre tus villas (con las Carretas de Suministro del Mercado) ----------
+  var REC_CARAVANA = ['comida', 'madera', 'piedra', 'hierro', 'oro'], envioSel = { a: -1, c: {} };
+  function cantRec(r) { return r === 'hierro' ? Math.floor(estado.hierro || 0) : Math.floor(cantidad(r)); }
+  function quitarRec(r, n) { if (estado.oroInfinito && r !== 'hierro') return; if (r === 'hierro') estado.hierro = Math.max(0, (estado.hierro || 0) - n); else estado[claveRecurso(r)] = cantidad(r) - n; }
+  function cargaPorCarreta() { return Math.round(capCarreta() * (1 + 0.05 * mercadoNivel())); } // el Mercado suma +5% de carga por nivel
+  function maxCaravana() { return carretasLibres() * cargaPorCarreta(); }
+  function otraVillaPorDefecto(sel) { var v = misVillas(); if (sel >= 0 && sel !== v.activa && v.lista[sel]) return sel; return v.activa === 0 ? 1 : 0; }
+  function botonesDestino(sel, accion) {
+    var v = misVillas(), aqui = lugarVilla(v.activa);
+    return '<div class="ev-grupo">' + v.lista.map(function (e, i) { if (i === v.activa) return ''; var lu = lugarVilla(i); return '<button class="ev-op' + (sel === i ? ' activo' : '') + '" data-accion="' + accion + '" data-i="' + i + '">' + escaparHTML(nombreVilla(i)) + '<small>📍 ' + lu.x + ', ' + lu.y + ' · ' + Math.round(Math.hypot(lu.x - aqui.x, lu.y - aqui.y)) + L(' casillas', ' tiles') + '</small></button>'; }).join('') + '</div>';
   }
-  function tiempoCaravana(dist) { return Math.max(60, Math.min(3600, Math.round(dist * 20))); }
+  function abrirEnvioVillas(dest) {
+    var v = misVillas();
+    if (v.lista.length < 2) { consejoTemporal(L('Primero funda otra villa.', 'Found another village first.')); sonar('error'); return; }
+    if (dest !== undefined) envioSel.a = dest;
+    envioSel.a = otraVillaPorDefecto(envioSel.a);
+    var hayMer = edificiosDe('mercado').length > 0, max = maxCaravana(), libres = carretasLibres(), aqui = lugarVilla(v.activa), alla = lugarVilla(envioSel.a);
+    var h = '<div class="carta"><b>🐴 ' + L('Caravana desde ', 'Caravan from ') + escaparHTML(nombreVilla(v.activa)) + '</b>' + botonesDestino(envioSel.a, 'ev-dest') +
+      '<p class="nota">🐴 ' + L('Carretas libres: ', 'Free carts: ') + '<b>' + libres + '</b> · ' + L('carga cada una ', 'each carries ') + formatoNumero(cargaPorCarreta()) + ' · ' + L('máximo por envío: ', 'max per shipment: ') + '<b id="ev-max">' + formatoNumero(max) + '</b>' + (hayMer ? '' : '<br>⚠️ ' + L('Necesitas un Mercado en esta villa.', 'You need a Market in this village.')) + '</p>';
+    h += REC_CARAVANA.map(function (r) { var tope = Math.min(cantRec(r), max), val = Math.min(envioSel.c[r] || 0, tope);
+      return '<div class="ev-desl"><span class="ev-r">' + icoRec(r) + ' ' + (r === 'hierro' ? L('Hierro', 'Iron') : (function (x) { return x.charAt(0).toUpperCase() + x.slice(1); })(T('r_' + r))) + '</span><input type="range" class="ev-rango" data-r="' + r + '" min="0" max="' + tope + '" step="' + Math.max(1, Math.round(tope / 200)) + '" value="' + val + '"' + (tope ? '' : ' disabled') + '><b class="ev-val" data-r="' + r + '">' + formatoNumero(val) + '</b></div>'; }).join('');
+    h += '<p class="nota" id="ev-resumen"></p><button class="comprar verde boton-oleada-grande" data-accion="ev-enviar" id="ev-enviar">🐴 ' + L('Enviar caravana', 'Send caravan') + '</button></div>';
+    var en = (estado.envios || []).filter(function (x) { return x.llega > Date.now() && !x.tropas; });
+    if (en.length) h += '<div class="carta"><b>' + L('En camino', 'On the way') + '</b>' + en.map(function (x) { return '<div class="pf-fila"><span>' + textoRecursos(x.rec || (function () { var o = {}; o[x.r] = x.n; return o; })()) + ' → ' + escaparHTML(nombreVilla(x.a)) + '</span><small>⏱ ' + fmtTiempo((x.llega - Date.now()) / 1000) + '</small></div>'; }).join('') + '</div>';
+    abrirPanel('🐴 ' + L('Enviar Recursos', 'Send Resources'), h, { tipo: 'envio-villas' });
+    function resumen() {
+      var tot = 0; REC_CARAVANA.forEach(function (r) { tot += envioSel.c[r] || 0; });
+      var n = tot ? Math.ceil(tot / cargaPorCarreta()) : 0, seg = tot ? Math.round(segViaje(aqui, alla) * velViaje(n)) : 0, e = $('ev-resumen'), b = $('ev-enviar');
+      if (e) e.innerHTML = tot ? '📦 ' + formatoNumero(tot) + ' · 🐴 ' + n + ' ' + L('carretas', 'carts') + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Mueve las barras para elegir cuánto mandar.', 'Move the sliders to choose how much to send.');
+      if (b) b.disabled = !tot || !hayMer;
+    }
+    document.querySelectorAll('#panel .ev-rango').forEach(function (inp) {
+      inp.addEventListener('input', function () {
+        var r = inp.getAttribute('data-r'), otros = 0; REC_CARAVANA.forEach(function (q) { if (q !== r) otros += envioSel.c[q] || 0; });
+        var val = Math.min(+inp.value || 0, Math.max(0, max - otros)); inp.value = val; envioSel.c[r] = val;
+        var lb = document.querySelector('#panel .ev-val[data-r="' + r + '"]'); if (lb) lb.textContent = formatoNumero(val);
+        resumen();
+      });
+    });
+    resumen();
+  }
   function enviarCaravana() {
-    var v = misVillas(), a = envioSel.a, r = envioSel.r, n = envioSel.n < 0 ? Math.floor(cantidad(r)) : Math.min(envioSel.n, Math.floor(cantidad(r)));
-    if (!v.lista[a] || a === v.activa || n <= 0) { sonar('error'); return; }
-    var aqui = lugarVilla(v.activa), alla = lugarVilla(a), seg = tiempoCaravana(Math.hypot(alla.x - aqui.x, alla.y - aqui.y));
-    if (!estado.oroInfinito) estado[claveRecurso(r)] = cantidad(r) - n;
-    estado.envios = (estado.envios || []).concat([{ a: a, r: r, n: n, llega: Date.now() + seg * 1000 }]);
-    sonar('moneda'); consejoTemporal('🐴 ' + formatoNumero(n) + ' ' + ICONO_RECURSO[r] + ' → ' + nombreVilla(a) + ' · ⏱ ' + fmtTiempo(seg));
+    var v = misVillas(), a = envioSel.a, rec = {}, tot = 0;
+    if (!v.lista[a] || a === v.activa || !edificiosDe('mercado').length) { sonar('error'); return; }
+    REC_CARAVANA.forEach(function (r) { var n = Math.min(envioSel.c[r] || 0, cantRec(r)); if (n > 0) { rec[r] = n; tot += n; } });
+    if (!tot || tot > maxCaravana()) { consejoTemporal(L('No tienes carretas libres para tanta carga.', 'Not enough free carts for that load.')); sonar('error'); return; }
+    var n = Math.ceil(tot / cargaPorCarreta()), aqui = lugarVilla(v.activa), alla = lugarVilla(a), seg = Math.round(segViaje(aqui, alla) * velViaje(n)), ahora = Date.now();
+    Object.keys(rec).forEach(function (r) { quitarRec(r, rec[r]); });
+    // las carretas van y vuelven vacías: tardan lo mismo de vuelta
+    carretas().viajes.push({ id: 'vv' + ahora, tipo: 'villa', de: aqui, a: alla, sale: ahora, llega: ahora + seg * 1000, vuelve: ahora + 2 * seg * 1000, n: n, nombre: nombreVilla(a) });
+    estado.envios = (estado.envios || []).concat([{ a: a, rec: rec, llega: ahora + seg * 1000 }]);
+    envioSel.c = {}; sonar('moneda'); consejoTemporal('🐴 ' + textoRecursos(rec) + ' → ' + nombreVilla(a) + ' · ⏱ ' + fmtTiempo(seg));
     guardar(true); actualizarHUD(); abrirEnvioVillas();
+  }
+  // ---------- v7.86: DESTACAR TROPAS (reubicar) a otra de tus villas ----------
+  var destSel = { a: -1, t: {}, h: '' };
+  function quitarDeCasa(k, n) {
+    var r = reserva(), q = Math.min(n, r[k] || 0); r[k] = (r[k] || 0) - q; n -= q;
+    if (n > 0) tropas.filter(function (u) { return u.tipo === k && !u.invocada && !u.refuerzo && !u.heroeId; }).slice(0, n).forEach(function (u) { quitarUnidad(u); n--; });
+  }
+  function abrirDestacar(dest) {
+    var v = misVillas();
+    if (v.lista.length < 2) { consejoTemporal(L('Primero funda otra villa.', 'Found another village first.')); sonar('error'); return; }
+    if (dest !== undefined) destSel.a = dest;
+    destSel.a = otraVillaPorDefecto(destSel.a);
+    var tipos = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && libresParaMarcha(k) > 0; });
+    var fuera = heroesFuera(), mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k] && !fuera[k]; });
+    var h = '<div class="carta"><b>⚔️ ' + L('Destacar tropas desde ', 'Station troops from ') + escaparHTML(nombreVilla(v.activa)) + '</b>' + botonesDestino(destSel.a, 'dt-dest') +
+      '<p class="nota">' + L('Las tropas se mudan para siempre: al llegar forman parte del ejército de esa villa (para atacar o defender desde allí).', 'Troops move for good: on arrival they join that village\'s army (to attack or defend from there).') + '</p>';
+    h += tipos.length ? tipos.map(function (k) { var mx = libresParaMarcha(k), val = Math.min(destSel.t[k] || 0, mx);
+      return '<div class="ev-desl"><span class="ev-r">' + TROPAS[k].icono + ' ' + N(k) + '</span><input type="range" class="dt-rango" data-k="' + k + '" min="0" max="' + mx + '" step="1" value="' + val + '"><b class="dt-val" data-k="' + k + '">' + formatoNumero(val) + '</b></div>'; }).join('') : '<p class="iv-vacio">' + L('No tienes tropas libres en esta villa.', 'You have no free troops in this village.') + '</p>';
+    h += '<div class="ev-desl"><span class="ev-r">🦸 ' + L('Héroe (opcional)', 'Hero (optional)') + '</span><select class="campo" id="dt-heroe"><option value="">' + L('Ninguno', 'None') + '</option>' + mios.map(function (k) { return '<option value="' + k + '"' + (destSel.h === k ? ' selected' : '') + '>' + escaparHTML(NH(k)) + ' (' + L('Nv ', 'Lv ') + nivelHeroe(k) + ')</option>'; }).join('') + '</select></div>' +
+      '<p class="nota">' + L('El héroe queda como Héroe Defensor de la villa de destino.', 'The hero becomes the Defender Hero of the destination village.') + '</p>';
+    h += '<p class="nota" id="dt-resumen"></p><button class="comprar verde boton-oleada-grande" data-accion="dt-enviar" id="dt-enviar">⚔️ ' + L('Destacar', 'Station') + '</button></div>';
+    abrirPanel('⚔️ ' + L('Destacar Tropas', 'Station Troops'), h, { tipo: 'destacar' });
+    var alla = lugarVilla(destSel.a);
+    function resumen() {
+      var tot = sumaObj(destSel.t), e = $('dt-resumen'), b = $('dt-enviar'), seg = tiempoDestacar(alla);
+      if (e) e.innerHTML = tot ? '⚔️ ' + formatoNumero(tot) + ' ' + L('tropas', 'troops') + ' · ⏱ ' + fmtTiempo(seg) : L('Mueve las barras para elegir las tropas.', 'Move the sliders to pick the troops.');
+      if (b) b.disabled = !tot && !destSel.h;
+    }
+    document.querySelectorAll('#panel .dt-rango').forEach(function (inp) { inp.addEventListener('input', function () { var k = inp.getAttribute('data-k'); destSel.t[k] = +inp.value || 0; var lb = document.querySelector('#panel .dt-val[data-k="' + k + '"]'); if (lb) lb.textContent = formatoNumero(destSel.t[k]); resumen(); }); });
+    var sh = $('dt-heroe'); if (sh) sh.addEventListener('change', function () { destSel.h = sh.value || ''; resumen(); });
+    resumen();
+  }
+  function tiempoDestacar(alla) { return Math.round(tiempoMarcha({ x: alla.x, y: alla.y }, destSel.h || null) / 1000); }
+  function enviarDestacamento() {
+    var v = misVillas(), a = destSel.a, t = {}, tot = 0;
+    if (!v.lista[a] || a === v.activa) { sonar('error'); return; }
+    Object.keys(destSel.t).forEach(function (k) { var n = Math.min(destSel.t[k] || 0, libresParaMarcha(k)); if (n > 0) { t[k] = n; tot += n; } });
+    var hz = destSel.h && estado.heroes[destSel.h] && !heroesFuera()[destSel.h] ? destSel.h : '';
+    if (!tot && !hz) { sonar('error'); return; }
+    var seg = tiempoDestacar(lugarVilla(a));
+    Object.keys(t).forEach(function (k) { quitarDeCasa(k, t[k]); });
+    if (hz && estado.heroeDefensor === hz) estado.heroeDefensor = null;
+    estado.envios = (estado.envios || []).concat([{ a: a, tropas: t, heroe: hz || null, llega: Date.now() + seg * 1000 }]);
+    destSel.t = {}; destSel.h = ''; sonar('cuerno');
+    consejoTemporal('⚔️ ' + formatoNumero(tot) + ' ' + L('tropas van a ', 'troops heading to ') + nombreVilla(a) + ' · ⏱ ' + fmtTiempo(seg));
+    guardar(true); actualizarHUD(); abrirDestacar();
   }
   function procesarEnvios() {
     var l = estado.envios; if (!l || !l.length || cambiandoVilla) return;
     var ahora = Date.now(), quedan = [], v = misVillas();
     l.forEach(function (x) {
       if (x.llega > ahora) { quedan.push(x); return; }
-      if (x.a === v.activa) { sumarRecurso(x.r, x.n); consejoTemporal('🐴 ' + L('Llegó una caravana: +', 'A caravan arrived: +') + formatoNumero(x.n) + ' ' + ICONO_RECURSO[x.r]); }
-      else if (v.lista[x.a] && v.lista[x.a].datos) { var d = v.lista[x.a].datos, c = claveRecurso(x.r); d[c] = (d[c] || 0) + x.n; }
+      var aqui = x.a === v.activa, d = !aqui && v.lista[x.a] ? v.lista[x.a].datos : null;
+      if (!aqui && !d) return;
+      if (x.tropas) {
+        Object.keys(x.tropas).forEach(function (k) { if (!TROPAS[k]) return; if (aqui) reserva()[k] = (reserva()[k] || 0) + x.tropas[k]; else { d.reserva = d.reserva || {}; d.reserva[k] = (d.reserva[k] || 0) + x.tropas[k]; d.pt = (d.pt || 0) + x.tropas[k] * Math.round(TROPAS[k].vida * 2 + TROPAS[k].dano * 25); } });
+        if (x.heroe) { if (aqui) estado.heroeDefensor = x.heroe; else d.heroeDefensor = x.heroe; }
+        if (aqui) consejoTemporal('⚔️ ' + L('Llegaron tropas destacadas: +', 'Stationed troops arrived: +') + formatoNumero(sumaObj(x.tropas)));
+        return;
+      }
+      var rec = x.rec || (function () { var o = {}; o[x.r] = x.n; return o; })();
+      Object.keys(rec).forEach(function (r) {
+        if (aqui) { if (r === 'hierro') estado.hierro = (estado.hierro || 0) + rec[r]; else sumarRecurso(r, rec[r]); }
+        else { var c = r === 'hierro' ? 'hierro' : claveRecurso(r); d[c] = (d[c] || 0) + rec[r]; }
+      });
+      if (aqui) consejoTemporal('🐴 ' + L('Llegó una caravana: ', 'A caravan arrived: ') + textoRecursos(rec));
     });
     if (quedan.length !== l.length) { estado.envios = quedan; guardar(true); actualizarHUD(); }
   }
   setInterval(procesarEnvios, 2000);
   // ---------- selector rápido en el HUD de arriba ----------
   function pintarSelectorVillas() {
-    var v = estado.villas, n = v && v.lista ? v.lista.length : 1, ver = n > 1 || castilloPrincipal() >= 5;
+    var v = estado.villas, n = v && v.lista ? v.lista.length : 1, ver = true; window.__tkAbrirVillas = abrirMisVillas;
     var b = $('tk-villas');
     if (!b) {
       if (!ver) return;
@@ -7203,6 +7323,7 @@
     }
     b.style.display = ver ? '' : 'none';
     var t = '🏘️ ' + (villaActiva() + 1) + '/' + n + ' ▾';
+    window.__tkAbrirVillas = abrirMisVillas;
     if (b.textContent !== t) b.textContent = t;
   }
   // ---------- v7.81: DEFENSA DE LA VILLA: interruptor ON/OFF (santuario) y héroe defensor ----------
@@ -7642,6 +7763,7 @@
         return '<div class="ru-tarjeta"><div class="ru-dibujo">' + fotoHTML(k, '<span class="ru-emoji">' + TROPAS[k].icono + '</span>') + '</div><b class="ru-nom">' + N(k) + '</b><span class="ru-cant">' + formatoNumero(cuentaTipo(k)) + '</span></div>';
       }).join('') + '</div>' : '<p class="iv-vacio">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</p>';
       h += '<div class="ru-res"><span>🛡️ ' + L('Refuerzos de tu alianza: ', 'Alliance reinforcements: ') + '<b>' + ref + '</b></span><span>💚 ' + L('Heridos: ', 'Wounded: ') + '<b>' + heridos + '</b></span></div>';
+      if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) h += '<div class="ru-res"><button class="comprar mini" data-accion="villas-destacar">⚔️ ' + L('Destacar Tropas a otra villa', 'Station troops to another village') + '</button><button class="comprar mini" data-accion="villas-enviar">🐴 ' + L('Enviar Recursos', 'Send Resources') + '</button></div>'; // v7.86
       h += '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (tiposCasa.length ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
     } else if (p === 'defensa') {
       h += htmlDefensaVilla();
@@ -7751,7 +7873,7 @@
     if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
     else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
     else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
-    else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('A mis villas', 'To my villages')]); }
+    else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
     else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
     else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + ' <span class="mail-n">' + promosTorreN() + '</span>']); }
@@ -9403,7 +9525,7 @@
     var on = protegido() && !enMenu;
     cupulaEscudo.visible = on;
     // v7.33: sin escudo ni burbuja la pastilla sigue a la vista en rojo: «🔓 Ciudad abierta» (para que nadie olvide que lo pueden atacar)
-    $('pill-escudo').classList.toggle('oculto-pill', !!enMenu);
+    $('pill-escudo').classList.toggle('oculto-pill', !!enMenu || !on); // v7.86: sin escudo no sale el cartel «Ciudad abierta»
     $('pill-escudo').classList.toggle('pill-abierta', !on);
     $('pill-escudo').firstChild.textContent = !on ? '🔓' : burbujaActiva() ? '🫧' : '🛡️';
     $('escudo-t').textContent = on ? fmtLargo((estado.escudoHasta - Date.now()) / 1000) : L('Ciudad abierta', 'City open');
@@ -9670,6 +9792,7 @@
       '<h3>' + (rgElegido ? '👤 ' + escaparHTML(rgElegido.nombre) : L('Elige primero un jugador', 'Choose a player first')) + '</h3>' +
       '<h4>⚔️ ' + L('Tropas', 'Troops') + '</h4><div class="rg-rejilla">' +
       RG_TIPOS_TROPA.map(function (t) { return '<label class="rg-celda"><span>' + (TROPAS[t].icono || '') + ' ' + N(t) + '</span><input class="campo rg-t" data-t="' + t + '" type="number" min="0" max="999999999999" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
+      '<p class="nota"><b>🐴 ' + L('Carretas de Suministro', 'Supply Wagons') + '</b></p><div class="rg-rejilla">' + SUMINISTRO_ORDEN.map(function (t) { return '<label class="rg-celda"><span>' + SUMINISTRO[t].icono + ' ' + nombreSum(t) + '</span><input class="campo rg-t" data-t="sum_' + t + '" type="number" min="0" max="100000" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<h4>🧰 ' + L('Equipo de héroe', 'Hero gear') + '</h4><div class="rg-rejilla">' +
       '<label class="rg-celda"><span>' + L('Pieza', 'Piece') + '</span><select class="campo" id="rg-eq-t"><option value="">' + L('Al azar', 'Random') + '</option>' + TIPOS_EQ.map(function (t) { return '<option value="' + t + '">' + EQ[t].emoji + ' ' + T('eq_' + t) + '</option>'; }).join('') + '</select></label>' +
       '<label class="rg-celda"><span>' + L('Rareza', 'Rarity') + '</span><select class="campo" id="rg-eq-r">' + ['comun', 'raro', 'legendario', 'mitico'].map(function (r) { return '<option value="' + r + '"' + (r === 'legendario' ? ' selected' : '') + '>' + T('rareza_' + r) + '</option>'; }).join('') + '</select></label>' +
@@ -9761,7 +9884,7 @@
       lista.forEach(function (g) {
         Cuentas.borrarRegalo(g.id).then(function () {
           var partes = [], t = g.tropas || {}, nt = 0;
-          Object.keys(t).forEach(function (k) { var n = Math.min(TOPE_REGALO, Math.floor(+t[k] || 0)); if (!TROPAS[k] || n <= 0) return; reserva()[k] = (reserva()[k] || 0) + n; nt += n; partes.push(n + ' ' + (TROPAS[k].icono || '') + ' ' + N(k)); });
+          Object.keys(t).forEach(function (k) { var n = Math.min(TOPE_REGALO, Math.floor(+t[k] || 0)); if (k.indexOf('sum_') === 0 && SUMINISTRO[k.slice(4)] && n > 0) { var cs = sumin(), ts = k.slice(4); if (ts === 'carreta') cs.n += n; else cs.tipos[ts] = (cs.tipos[ts] || 0) + n; partes.push(n + ' ' + SUMINISTRO[ts].icono + ' ' + nombreSum(ts)); return; } if (!TROPAS[k] || n <= 0) return; reserva()[k] = (reserva()[k] || 0) + n; nt += n; partes.push(n + ' ' + (TROPAS[k].icono || '') + ' ' + N(k)); });
           (g.piezas || []).slice(0, 30).forEach(function (p) { if (EQ[p.t] && MULT_RAREZA_EQ[p.r]) { var np = darPieza(p.t, p.r); if (np && p.s && ARMADURA_HEROE[p.s]) np.s = p.s; } });
           if ((g.piezas || []).length) partes.push((g.piezas || []).length + ' 🧰 ' + L('piezas de equipo', 'gear pieces'));
           var gm = Math.min(TOPE_REGALO, Math.floor(+g.gemas || 0)); if (gm > 0) { estado.gemas = (estado.gemas || 0) + gm; partes.push(gm + ' 💎'); }
@@ -10268,6 +10391,7 @@
       }
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
       if (Math.random() < 0.12) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; ganados.push({ ico: OBJETOS.vip_100.icono, nom: N('vip_100'), cat: 'reliquia', extra: true }); } // v7.79
+      if (Math.random() < 0.1) { estado.mochila.carreta_sum = (estado.mochila.carreta_sum || 0) + 1; ganados.push({ ico: OBJETOS.carreta_sum.icono, nom: N('carreta_sum'), cat: 'tropas', extra: true }); } // v7.86
       if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true, extra: true }); }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
       else r.sinLlave++;
@@ -10432,6 +10556,7 @@
       if (!otra) { consejoTemporal(L('No tienes ninguna marcha en camino.', 'You have no march on the way.')); sonar('error'); return; }
       cancelarMarcha(otra); msg = L('Tus tropas vuelven a casa.', 'Your troops come home.');
     } else if (e === 'elegirDragon') { abrirCofreDragon(k); return; }
+    else if (e === 'carreta') { sumin().n += o.n; msg = '🐴 +' + o.n + ' ' + L('Carretas de Suministro', 'Supply Wagons') + ' · ' + L('libres: ', 'free: ') + carretasLibres(); }
     else if (e === 'vip') { vipSumar(o.n); msg = '👑 VIP +' + o.n + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
     else if (e === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n; msg = '🪙 +' + o.n + ' ' + L('fichas', 'tokens'); }
     else if (e === 'expHeroe') { var h = liderActual() || Object.keys(estado.heroes || {})[0]; if (!h) { consejoTemporal(L('Todavía no tienes héroes.', 'You have no heroes yet.')); sonar('error'); return; } darExp(h, o.n); msg = '⚡ ' + NH(h) + ' +' + o.n + ' EXP'; }
@@ -10468,7 +10593,7 @@
     if (o.efecto) { usarEfecto(k, o); return; } // v7.14: objetos nuevos de la tienda
     if (o.exp || o.pergamino) { var hh = (estado.equipo || []).filter(function (x) { return estado.heroes[x]; })[0] || Object.keys(estado.heroes || {})[0]; consejoTemporal(T('libro_en_heroe')); if (hh) abrirPanelHeroe(hh); return; }
     if (o.segundos) { abrirUsarAcelerador(k); return; }
-    if (o.portal === 'elegir') { consejoTemporal(T('tel_elegir')); cerrarPanel(); abrirMundo(); return; }
+    if (o.portal === 'elegir') { abrirPortalElegir(); return; }
     if (o.portal === 'azar') { if (portalAlAzar()) { cerrarPanel(); abrirMundo(); } return; }
     if (o.exp || o.pergamino) { consejoTemporal(T('libro_en_heroe')); sonar('error'); return; }
     if (o.escudo) {
@@ -10500,6 +10625,7 @@
     else if (o.cofre) {
       premio = {};
       Object.keys(o.cofre).forEach(function (r) { var a = o.cofre[r]; premio[r] = a[0] + Math.floor(Math.random() * (a[1] - a[0] + 1)); });
+      var pCar = { cofre_plata: 0.08, cofre_oro: 0.15, cofre_tesoro: 0.3 }[k]; if (pCar && Math.random() < pCar) { estado.mochila.carreta_sum = (estado.mochila.carreta_sum || 0) + 1; setTimeout(function () { consejoTemporal('🐴 ' + L('¡El cofre traía una Carreta de Suministro!', 'The chest had a Supply Wagon!')); }, 1500); } // v7.86
       chispas(castilloPos.clone().setY(6), 0xffe14a, 24, 5);
     }
     estado.mochila[k]--;
@@ -10668,7 +10794,7 @@
       html += '<div class="fila-tienda"><span class="ft-ico" data-accion="obj-info" data-k="' + k + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(k) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + estado.mochila[k] + '</small><small>' + D(k) + '</small></span>' +
         '<button class="comprar naranja" data-accion="usar" data-obj="' + k + '">' + L('Usar', 'Use') + '</button></div>';
     });
-    abrirPanel(T('p_tienda'), html + '</div>', { tipo: 'tienda' });
+    abrirPanel(T('p_tienda'), html + '</div>', { tipo: 'tienda' }); $('panel').classList.add('iv-panel', 'tg-panel', 'mo-panel'); // v7.86: una tarjeta por fila, como Tienda → Objetos
   }
   // ---------- tienda de gemas (paquetes propios; todavía no se cobra dinero real) ----------
   var PAQUETES_GEMAS = [
@@ -11332,9 +11458,13 @@
     else if (a === 'villa-ir') cambiarVilla(+b.getAttribute('data-i'));
     else if (a === 'villas-enviar') { sonar('click'); abrirEnvioVillas(); }
     else if (a === 'ev-dest') { envioSel.a = +b.getAttribute('data-i'); sonar('click'); abrirEnvioVillas(); }
-    else if (a === 'ev-rec') { envioSel.r = b.getAttribute('data-r'); sonar('click'); abrirEnvioVillas(); }
-    else if (a === 'ev-cant') { envioSel.n = +b.getAttribute('data-n'); sonar('click'); abrirEnvioVillas(); }
-    else if (a === 'ev-enviar') enviarCaravana();
+    else if (a === 'villa-caravana') { sonar('click'); abrirEnvioVillas(+b.getAttribute('data-i')); }
+    else if (a === 'villa-destacar' || a === 'villas-destacar') { sonar('click'); abrirDestacar(b.getAttribute('data-i') !== null ? +b.getAttribute('data-i') : undefined); }
+    else if (a === 'dt-dest') { destSel.a = +b.getAttribute('data-i'); sonar('click'); abrirDestacar(); }
+    else if (a === 'dt-enviar') enviarDestacamento();
+    else if (a === 'villa-mundo') { sonar('click'); cerrarPanel(); abrirMundo(); }
+    else if (a === 'villa-centrar') { sonar('click'); cerrarPanel(); var bcz = $('btn-centrar'); if (bcz) bcz.click(); }
+    else if (a === 'ev-enviar') { if (!b.disabled) enviarCaravana(); }
     else if (a === 'def-heroe') { if (b.disabled) return; estado.heroeDefensor = b.getAttribute('data-id') || null; sonar('click'); guardar(true); publicarAldea(true); consejoTemporal('🦸 ' + (estado.heroeDefensor ? L('Héroe defensor: ', 'Defender hero: ') + NH(estado.heroeDefensor) : L('Sin héroe defensor', 'No defender hero'))); if (panelActual && panelActual.tipo === 'castillo') abrirPanelCastillo(); else reabrirPanel(); }
     else if (a === 'reunion-marchar') { sonar('click'); marcharDesdeReunion(); }
     else if (a === 'torre-pest') { sonar('click'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
@@ -12753,7 +12883,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { estado: function () { return estado; }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { estado: function () { return estado; }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.85';
+var VERSION_JUEGO = '7.86';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -419,6 +419,8 @@ var NOMBRES = {
   mixto_1m: { es: 'Paquete de construcción', en: 'Building pack', des_es: '1.000.000 de oro, comida, madera y piedra.', des_en: '1,000,000 gold, food, wood and stone.' },
   ficha_x1: { es: 'Ficha de la suerte', en: 'Luck token', des_es: '1 ficha para la Ruleta del Azar.', des_en: '1 token for the Luck wheel.' },
   ficha_x5: { es: '5 fichas de la suerte', en: '5 luck tokens', des_es: '5 fichas para la Ruleta del Azar.', des_en: '5 tokens for the Luck wheel.' },
+  carreta_sum: { es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: '+1 Carreta de Suministro: lleva recursos entre tus villas y carga botín.', des_en: '+1 Supply Wagon: carries resources between your villages and hauls loot.' },
+  carretas_x10: { es: '10 Carretas de Suministro', en: '10 Supply Wagons', des_es: '+10 Carretas de Suministro para caravanas grandes.', des_en: '+10 Supply Wagons for big caravans.' },
   cofre_dragon: { es: 'Cofre del Dragón Imperial', en: 'Imperial Dragon Chest', des_es: 'Premio del Torneo de Temporada: elige 1 pieza del Set Dragón Imperial (Temporada 1).', des_en: 'Season Tournament prize: pick 1 piece of the Imperial Dragon Set (Season 1).' },
   vip_100: { es: '+100 Puntos VIP', en: '+100 VIP points', des_es: 'Suma 100 puntos a tu VIP para subir de nivel más rápido.', des_en: 'Adds 100 points to your VIP to level up faster.' },
   energia_heroe: { es: 'Energía de héroe', en: 'Hero energy', des_es: '+50 de experiencia para tu héroe principal.', des_en: '+50 XP for your main hero.' },
@@ -556,7 +558,7 @@ var SUMINISTRO = {
   carretilla: { img: 't_carretilla', icono: '🛒', carga: 0.4, vel: 0.75, costo: { oro: 15, madera: 30 }, tiempo: 25, mercado: 1,
     es: 'Carretilla', en: 'Wheelbarrow', des_es: 'Pequeña y rápida: un aldeano la empuja. Carga poco pero llega antes.', des_en: 'Small and fast: a villager pushes it. Carries little but arrives sooner.' },
   carreta: { img: 't_carreta', icono: '🐴', carga: 1, vel: 1, costo: { oro: 40, madera: 80 }, tiempo: 60, mercado: 1,
-    es: 'Tropa de suministro', en: 'Supply troop', des_es: 'La carreta con caballo de siempre: carga y velocidad normales.', des_en: 'The classic horse cart: normal cargo and speed.' },
+    es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: 'La carreta con caballo de siempre: carga y velocidad normales.', des_en: 'The classic horse cart: normal cargo and speed.' },
   convoy: { img: 't_convoy', icono: '🚚', carga: 3, vel: 1.35, costo: { oro: 200, madera: 350, piedra: 120 }, tiempo: 240, mercado: 5,
     es: 'Convoy', en: 'Convoy', des_es: 'Varias carretas con escolta: carga muchísimo pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
 };
@@ -757,6 +759,8 @@ var OBJETOS = {
   ficha_x1:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 1 },
   ficha_x5:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 5 },
   energia_heroe:   { icono: '⚡', inv: 'reliquia', efecto: 'expHeroe', n: 50 },
+  carreta_sum:     { icono: '🐴', inv: 'tropas', efecto: 'carreta', n: 1 }, // v7.86
+  carretas_x10:    { icono: '🐴', inv: 'tropas', efecto: 'carreta', n: 10 },
   cofre_dragon:    { icono: '🐉', inv: 'reliquia', efecto: 'elegirDragon' }, // v7.84
   vip_100:         { icono: '👑', inv: 'reliquia', efecto: 'vip', n: 100 }, // v7.79
   llave_bronce:    { icono: '🗝️', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_plata' },
@@ -805,7 +809,7 @@ var TIENDA = [
   { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' },
   // v7.14: pestañas que estaban vacías
   { id: 'cuerno_guerra', gemas: 15, cat: 'combate' }, { id: 'coraza_acero', gemas: 15, cat: 'combate' }, { id: 'marcha_rapida', gemas: 10, cat: 'combate' }, { id: 'retirada_marcha', gemas: 20, cat: 'combate' }, { id: 'ampliar_marcha', gemas: 35, cat: 'combate' },
-  { id: 'bono_comida', gemas: 10, cat: 'varios' }, { id: 'bono_madera', gemas: 10, cat: 'varios' }, { id: 'bono_piedra', gemas: 10, cat: 'varios' }, { id: 'bono_oro', gemas: 10, cat: 'varios' }, { id: 'constructor_exp', gemas: 25, cat: 'varios' }, { id: 'vip_100', gemas: 20, cat: 'varios' }, { id: 'cosecha_ya', gemas: 15, cat: 'varios' },
+  { id: 'bono_comida', gemas: 10, cat: 'varios' }, { id: 'bono_madera', gemas: 10, cat: 'varios' }, { id: 'bono_piedra', gemas: 10, cat: 'varios' }, { id: 'bono_oro', gemas: 10, cat: 'varios' }, { id: 'constructor_exp', gemas: 25, cat: 'varios' }, { id: 'vip_100', gemas: 20, cat: 'varios' }, { id: 'carreta_sum', gemas: 5, cat: 'varios' }, { id: 'carretas_x10', gemas: 40, cat: 'varios' }, { id: 'cosecha_ya', gemas: 15, cat: 'varios' },
   { id: 'comida_2m', gemas: 25, cat: 'recursos' }, { id: 'madera_2m', gemas: 25, cat: 'recursos' }, { id: 'piedra_2m', gemas: 25, cat: 'recursos' }, { id: 'oro_1m', gemas: 30, cat: 'recursos' }, { id: 'mixto_1m', gemas: 45, cat: 'recursos' },
   { id: 'ficha_x1', gemas: 15, cat: 'varios' }, { id: 'ficha_x5', gemas: 65, cat: 'varios' }, { id: 'energia_heroe', gemas: 10, cat: 'varios' }, { id: 'llave_bronce', gemas: 20, cat: 'varios' }, { id: 'llave_plata', gemas: 20, cat: 'varios' },
   { id: 'cristal_mistico', gemas: 20, cat: 'varios' }, { id: 'cristal_encantado', gemas: 40, cat: 'varios' }, { id: 'cristal_arcano', gemas: 80, cat: 'varios' },

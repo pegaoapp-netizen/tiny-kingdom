@@ -2241,3 +2241,18 @@ body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !importa
 .dg-temp span { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 .dg-temp img { width: 40px; height: 40px; object-fit: contain; }
 .dg-temp p { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; }
+/* v7.86: Mis objetos en lista (1 por fila) */
+#panel.mo-panel .fila-tienda { display: flex !important; width: auto !important; grid-column: 1 / -1 !important; flex-direction: row !important; text-align: left !important; }
+#panel.mo-panel .fila-tienda .ft-info { flex: 1 1 auto; min-width: 0; word-break: normal; overflow-wrap: normal; hyphens: none; }
+#panel.mo-panel .fila-tienda .ft-info b, #panel.mo-panel .fila-tienda .ft-info small { white-space: normal; word-break: normal; }
+#panel.mo-panel .fila-tienda .comprar { margin-left: auto; }
+/* v7.86: logística entre villas */
+.vl-bts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.vl-cerrada { opacity: .8; }
+.vl-req { font-weight: 800; color: #ffd54a; white-space: nowrap; }
+.vl-guia { margin: 6px 0 0 18px; padding: 0; font-size: 12.5px; line-height: 1.45; }
+.ev-desl { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.ev-desl .ev-r { flex: 0 0 104px; font-size: 13px; }
+.ev-desl input[type=range] { flex: 1 1 auto; min-width: 0; }
+.ev-desl b { flex: 0 0 64px; text-align: right; font-size: 13px; }
+.ev-desl select { flex: 1 1 auto; }
