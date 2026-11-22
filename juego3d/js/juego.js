@@ -181,7 +181,7 @@
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.5; }
   function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? 1.75 : 1.6); } // v7.15: se puede alejar hasta ver TODA la villa con su muralla // v6.86: en la Ciudad no se aleja hasta ver los campos
-  function distInicial() { return window.innerWidth < window.innerHeight ? 150 : 122; } // v7.44: la ciudad por barrios es más grande // v7.15: un poco más lejos // v7.04: un poco más lejos para ver casi todos los edificios sin mover el dedo // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
+  function distInicial() { return Math.min(distEncuadre() * 1.3, (window.innerWidth < window.innerHeight ? 150 : 122) / 0.65); } // v7.52: la villa entera cabe al entrar // v7.44: la ciudad por barrios es más grande // v7.15: un poco más lejos // v7.04: un poco más lejos para ver casi todos los edificios sin mover el dedo // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
   function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 175 : 125; }
@@ -657,7 +657,7 @@
     // setos de cada barrio (con una entrada hacia la plaza) y canteros de flores en las esquinas
     (function setos() {
       var g = new THREE.Group(), FLORES = [0xe8434f, 0xf2c94c, 0xf08ad0, 0xffffff, 0xff8a3a, 0x9b6cff], P = 2.8;
-      function seto(a0, b0, a1, b1) { var la = Math.abs(a1 - a0), lb = Math.abs(b1 - b0); if (la + lb < 0.5) return; g.add(M.caja(lb || 0.75, 0.85, la || 0.75, 0x3f7d36, -(b0 + b1) / 2, 0.42, (a0 + a1) / 2)); }
+      function seto(a0, b0, a1, b1) { return; /* v7.52: sin los bordes verdes de los barrios */ var la = Math.abs(a1 - a0), lb = Math.abs(b1 - b0); if (la + lb < 0.5) return; g.add(M.caja(lb || 0.75, 0.85, la || 0.75, 0x3f7d36, -(b0 + b1) / 2, 0.42, (a0 + a1) / 2)); }
       BARRIOS.lista.forEach(function (r, k) {
         var a0 = r.a - r.ha, a1 = r.a + r.ha, b0 = r.b - r.hb, b1 = r.b + r.hb;
         if (!r.lado) {
@@ -933,7 +933,7 @@
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
     // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
-    var metaC = 21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11;
+    var metaC = 1.15 * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
@@ -4276,6 +4276,7 @@
       var dirC = new V3(Math.cos(azVista()), 0, Math.sin(azVista())).applyQuaternion(qI).multiplyScalar(s.modelo.userData.adelanto2D);
       s.modelo.children[0].position.set(dirC.x, 0.05, dirC.z);
     }
+    if (tipo === 'embajada') s.modelo.scale.multiplyScalar(0.7); else if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.75); // v7.52: que no le hagan sombra al castillo
     s.escala = s.modelo.scale.x;
     if (s.adornos) { s.grupo.remove(s.adornos); s.adornos = null; }
     // v6.38: los edificios de Tripo van limpios (sin postes, banderas ni coronas de nivel)
@@ -6238,7 +6239,7 @@
     $('panel').classList.add('oculto'); $('panel').classList.remove('oscuro'); $('panel').classList.remove('tropas-oscuro');
     document.body.classList.remove('panel-abierto');
     panelActual = null;
-    slotElegido = null;
+    slotElegido = null; clearTimeout(marcarSlot.t); marcarSlot.t = setTimeout(function () { if (slotElegido === null) marcarSlot(null); }, 1800); // el marco dorado se ve un momento al volver al mapa
     volverCamara();
   }
   // ================= v6.34: RANKING DE TODOS Y TORNEO SEMANAL =================
@@ -6803,9 +6804,22 @@
     }).join('') + '<div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + L('Falta: ', 'Left: ') + fmtTiempo(faltaEntreno()) + '</span></div>' +
       '<button class="comprar boton-oleada-grande cq-oro" data-accion="acelerar-entreno">⏩ ' + T('mb_acelerar') + '</button></div>';
   }
+  // v7.52: marco dorado suave en la parcela del edificio tocado (solo mientras está elegido)
+  var MARCO_SEL = null;
+  function marcarSlot(s) {
+    if (MARCO_SEL && MARCO_SEL.parent) MARCO_SEL.parent.remove(MARCO_SEL);
+    if (!s || !s.grupo) return;
+    if (!MARCO_SEL) {
+      var g = new THREE.Group(), mat = new THREE.MeshBasicMaterial({ color: 0xf2c96a, transparent: true, opacity: 0.75, depthWrite: false });
+      var L = 4.6, A = 0.22; [[0, L / 2, L, A], [0, -L / 2, L, A], [L / 2, 0, A, L], [-L / 2, 0, A, L]].forEach(function (q) { var m = new THREE.Mesh(new THREE.PlaneGeometry(q[2], q[3]), mat); m.rotation.x = -Math.PI / 2; m.position.set(q[0], 0.16, q[1]); m.renderOrder = 2; g.add(m); });
+      MARCO_SEL = g;
+    }
+    s.grupo.add(MARCO_SEL);
+  }
   function abrirPanelEdificio(i) {
     var s = slots[i];
     slotElegido = i;
+    marcarSlot(s);
     var tipo = s.edificio ? s.edificio.tipo : s.obra.tipo;
     var nivel = s.edificio ? s.edificio.nivel : s.obra.nivel;
     var esCuartel = (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') && s.edificio;

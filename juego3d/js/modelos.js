@@ -589,7 +589,7 @@ var M = (function () {
   // v6.36 prueba: Cabaña 3D hecha en Tripo (mientras carga se ve la dibujada)
   var MODELOS_TRIPO = {};
   // v7.47: tejados de color según el tipo de edificio (así no se confunden) y muros de piedra más claros
-  var TEJADO = { cuartel: [5, 0.62], establo: [5, 0.62], galeria: [5, 0.62], academia: [204, 0.62], embajada: [204, 0.62], mercado: [48, 0.85], almacen: [48, 0.85], enfermeria: [48, 0.85], cabana: [22, 0.58] };
+  var TEJADO = { herreria: [204, 0.62], cuartel: [5, 0.62], establo: [5, 0.62], galeria: [5, 0.62], academia: [204, 0.62], embajada: [204, 0.62], mercado: [48, 0.85], almacen: [48, 0.85], enfermeria: [48, 0.85], cabana: [22, 0.58] };
   function hsl2rgb(h, s2, l) { var C = (1 - Math.abs(2 * l - 1)) * s2, X = C * (1 - Math.abs((h / 60) % 2 - 1)), m = l - C / 2, r = 0, g = 0, b = 0, k = Math.floor(h / 60) % 6;
     if (k === 0) { r = C; g = X; } else if (k === 1) { r = X; g = C; } else if (k === 2) { g = C; b = X; } else if (k === 3) { g = X; b = C; } else if (k === 4) { r = X; b = C; } else { r = C; b = X; } return [(r + m) * 255, (g + m) * 255, (b + m) * 255]; }
   function recolorTejado(tex, tipo) {
