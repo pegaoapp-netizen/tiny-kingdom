@@ -5054,7 +5054,7 @@
   function capacidad() {
     var c = cuartelesListos().reduce(function (a, s) { return a + EDIFICIOS.cuartel.capacidad[s.edificio.nivel - 1]; }, 0) + edificiosDe('establo').length + edificiosDe('galeria').length;
     // sin tope: se entrena mientras haya materiales (el límite es la comida, porque las tropas comen)
-    return c ? 1e8 : 0;
+    return c ? Infinity : 0; // v7.75: de verdad sin tope (con 1e8 los que tienen recursos infinitos se quedaban sin poder entrenar)
   }
   function rapidezEntreno() {
     return cuartelesListos().reduce(function (a, s) { return Math.max(a, EDIFICIOS.cuartel.rapidez[s.edificio.nivel - 1]); }, 1) * (1 + bono('entreno'));
@@ -7086,7 +7086,7 @@
         '<button class="comprar rojo boton-oleada-grande" data-accion="det-relevar" data-tipo="' + t + '">' + L('Relevar', 'Dismiss') + '</button></div>';
     }
     if (falta) {
-      var filas = [filaReq('jugador', r.jugador || 1), { nombre: '👥 ' + L('Espacio en el ejército', 'Army space'), pide: 1, tiene: Math.max(0, capacidad() - tropasOcupadas()), ok: capacidad() - tropasOcupadas() >= 1 }];
+      var filas = [filaReq('jugador', r.jugador || 1), { nombre: '👥 ' + L('Espacio en el ejército', 'Army space'), pide: 1, tiene: Math.min(1e9, Math.max(0, capacidad() - tropasOcupadas())), ok: capacidad() - tropasOcupadas() >= 1 }];
       if (r.ed) filas.push(filaReq(r.ed, r.n || 1));
       if (r.otro) filas.push(filaReq(r.otro[0], r.otro[1]));
       return h + '<p class="ft-no">' + L('No cumples los requisitos', 'You do not meet the requirements') + '</p>' + tablaRequisitos(costoTropa(t), filas).replace(/<div class="banner-rojo">[\s\S]*?<\/div>/, '') + '<button class="comprar boton-oleada-grande cq-oro" disabled>' + L('No cumples los requisitos', 'Requirements not met') + '</button></div>';
