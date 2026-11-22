@@ -1847,15 +1847,18 @@
   function liderActual() { return (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || null; }
   // multiplicadores del héroe y su equipo (fórmula de KoC): combate = nivel × 3 → +0,5 % ataque y +0,25 % vida por punto
   function multiplicadoresHeroe(id) {
-    var r = { atk: 0, vida: 0, foeAtk: 0, foeVida: 0, heridos: 0, combate: 0, piezas: 0, set: 0 };
+    var r = { atk: 0, vida: 0, foeAtk: 0, foeVida: 0, heridos: 0, combate: 0, piezas: 0, set: 0, asedio: 0, muro: 0, marcha: 0, velMarcha: 0, saqueo: 0, liq: 0, dragon: 0 };
     if (!id || !estado.heroes || !estado.heroes[id]) return r;
     r.combate = nivelHeroe(id) * 3; r.atk += r.combate * 0.5; r.vida += r.combate * 0.25;
     var pz = piezasDe(id); r.piezas = pz.length;
-    pz.forEach(function (p) { var e = EQ_KOC[p.r] || EQ_KOC.comun, sube = 1 + 0.1 * ((p.n || 1) - 1); r.atk += e.pct * sube; r.vida += e.pct * sube; r.foeAtk += e.foe; r.foeVida += e.foe; });
+    pz.forEach(function (p) { var sube = 1 + 0.1 * ((p.n || 1) - 1);
+      if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) { var dg = SET_DRAGON.piezas[p.t]; r.atk += (dg.atk || 0) * sube; r.vida += (dg.vida || 0) * sube; r.foeAtk += dg.foeAtk || 0; r.foeVida += dg.foeVida || 0; r.asedio += dg.asedio || 0; r.muro += dg.muro || 0; r.marcha += dg.marcha || 0; r.velMarcha += dg.velMarcha || 0; r.saqueo += dg.saqueo || 0; r.liq += dg.liq || 0; r.heridos += (dg.heridos || 0) / 100; r.dragon++; return; }
+      var e = EQ_KOC[p.r] || EQ_KOC.comun; r.atk += e.pct * sube; r.vida += e.pct * sube; r.foeAtk += e.foe; r.foeVida += e.foe; });
     var deSet = pz.filter(function (p) { return p.s === id; }).length; r.set = deSet;
     if (deSet >= 2) r.vida += 15;
     if (deSet >= 4) r.atk += 25;
     if (deSet >= 6) { r.foeAtk += 15; r.foeVida += 15; r.heridos += 0.1; }
+    SET_DRAGON.bonos.forEach(function (b) { if (r.dragon >= b[0]) for (var k in b[1]) r[k] += b[1][k]; }); // v7.84: bonos de conjunto 2/4/6
     return r;
   }
   // un ejército «de mentira» con ese poder, para los enemigos que no tienen tropas de verdad (bestias, campamentos, villas)
@@ -1866,16 +1869,17 @@
     return c;
   }
   function valorDe(comp) { var v = 0; for (var k in comp) v += (comp[k] || 0) * valorUnidadTipo(k); return v; }
+  var ASEDIO_KOC = { ariete: 1, catapulta: 1, balista: 1, torre_asedio: 1 };
   function simularRondas(atk, def, op) {
     op = op || {};
     var mA = op.multA || { atk: 0, vida: 0, foeAtk: 0, foeVida: 0 }, mD = op.multD || { atk: 0, vida: 0, foeAtk: 0, foeVida: 0 };
-    var muro = 1 + 0.05 * (op.muralla || 0);
+    var ignMuro = Math.max(0, 1 - (mA.muro || 0) / 100), muro = 1 + 0.05 * (op.muralla || 0) * ignMuro; // v7.84: la Espada Aliento de Dragón ignora parte de la muralla
     function mult(x) { return Math.max(0.2, 1 + x / 100); }
     function grupos(comp, pos, m, foe, extraVida, escala) {
       return Object.keys(comp).filter(function (k) { return comp[k] > 0 && COMBATE_KOC[k]; }).map(function (k) {
-        var c = COMBATE_KOC[k];
-        return { tipo: k, n: comp[k], ini: comp[k], pos: pos, rango: c.rango + (extraVida > 1 && c.distancia ? 20 * (op.muralla || 0) : 0), // v7.51: la muralla da +20 de alcance por nivel a las tropas a distancia del defensor vel: c.velocidad, dist: !!c.distancia,
-          atk: c.ataque * FACTOR_DANO_KOC * (op.factor || 1) * mult(m.atk - foe.foeAtk) * (escala || 1) * (0.9 + Math.random() * 0.2), vida: c.vida * mult(m.vida - foe.foeVida) * extraVida };
+        var c = COMBATE_KOC[k], asd = ASEDIO_KOC[k] ? (m.asedio || 0) : 0;
+        return { tipo: k, n: comp[k], ini: comp[k], pos: pos, rango: c.rango + (extraVida > 1 && c.distancia ? 20 * (op.muralla || 0) * ignMuro : 0), // v7.51: la muralla da +20 de alcance por nivel a las tropas a distancia del defensor vel: c.velocidad, dist: !!c.distancia,
+          atk: c.ataque * FACTOR_DANO_KOC * (op.factor || 1) * mult(m.atk + asd - foe.foeAtk) * (escala || 1) * (0.9 + Math.random() * 0.2), vida: c.vida * mult(m.vida - foe.foeVida) * extraVida };
       });
     }
     var A = grupos(atk, 0, mA, mD, 1, op.escalaA), D = grupos(def, 1500, mD, mA, muro, op.escalaD);
@@ -5419,6 +5423,7 @@
   function puntosEnemigo(tipo) { var n = NIVEL_ENEMIGO[tipo] || 1; return n * n * 10; }
   function liqDeDefensa(defensa, frac) { return Math.round(Math.max(0, defensa || 0) * (frac || 0) / 20); }
   function sumarLiquidacion(p) {
+    var ub = ultimaBatalla && Date.now() - ultimaBatalla.fecha < 15000 ? (ultimaBatalla.defensa ? ultimaBatalla.multD : ultimaBatalla.multA) : null; if (ub && ub.liq) p = (p || 0) * (1 + ub.liq / 100); // v7.84
     p = Math.round(p || 0); if (p <= 0) return;
     var sem = typeof semanaActual === 'function' ? semanaActual() : 0;
     if (estado.kpSem !== sem) { estado.kpSem = sem; estado.kpTemp = 0; }
@@ -6775,7 +6780,7 @@
       var items = [];
       if (cumple) {
         if (pr.oro) items.push({ ico: '🪙', n: pr.oro, nom: T('r_oro') });
-        for (var k = 0; k < pr.piezas; k++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza del Set de Temporada', 'Season Set piece') });
+        if (pr.piezas) items.push({ ico: '🐉', n: pr.piezas, nom: N('cofre_dragon') });
         if (pr.fichas) items.push({ ico: '🎟️', n: pr.fichas, nom: N('ficha_x1') });
         if (pr.cofres) items.push({ ico: '🧰', n: pr.cofres, nom: N('cofre_equipo') });
       } else {
@@ -6788,7 +6793,7 @@
       mostrarRecompensas('👑 ' + L('Temporada · puesto ', 'Season · place ') + pos, items, function () {
         if (cumple) {
           if (pr.oro) sumarRecurso('oro', pr.oro);
-          for (var q = 0; q < pr.piezas; q++) darPiezaHeroe();
+          if (pr.piezas) estado.mochila.cofre_dragon = (estado.mochila.cofre_dragon || 0) + pr.piezas; // v7.84: cofres de selección del Set Dragón Imperial
           if (pr.fichas) estado.mochila.ficha_x1 = (estado.mochila.ficha_x1 || 0) + pr.fichas;
           if (pr.cofres) estado.mochila.cofre_equipo = (estado.mochila.cofre_equipo || 0) + pr.cofres;
           if (pr.extra === 'titulo') estado.tituloTemporada = id;
@@ -6819,8 +6824,9 @@
       C.hitos.map(function (h, k) { var ya = !!t.hitos[k], puede = !ya && misP >= h.puntos;
         return '<div class="fila-miembro"><b>' + (ya ? '✅' : puede ? '🎁' : '🔒') + ' ' + formatoNumero(h.puntos) + '</b><span class="chip" style="white-space:normal;text-align:right">' + h.premio.map(function (o) { return ((OBJETOS[o[0]] || {}).icono || '🎁') + ' ' + N(o[0]) + ' ×' + o[1]; }).join(' · ') + '</span>' +
           (puede ? '<button class="comprar verde" data-accion="tm-hito" data-i="' + k + '">' + L('Cobrar', 'Claim') + '</button>' : '') + '</div>'; }).join('');
-    var premios = [['🥇 1', L('Set completo (6 piezas) + 1M 🪙 + título', 'Full set (6 pieces) + 1M 🪙 + title')], ['🥈🥉 2–3', L('4 piezas + 500k 🪙 + 10 fichas', '4 pieces + 500k 🪙 + 10 tokens')], ['4 – 10', L('2 piezas + 250k 🪙', '2 pieces + 250k 🪙')], ['11 – 25', L('1 pieza + 2 cofres de equipo', '1 piece + 2 gear chests')]];
+    var premios = [['🥇 1', L('🐉 6 cofres del Dragón (Set completo) + 1M 🪙 + título', '🐉 6 Dragon chests (full Set) + 1M 🪙 + title')], ['🥈🥉 2–3', L('🐉 4 cofres del Dragón + 500k 🪙 + 10 fichas', '🐉 4 Dragon chests + 500k 🪙 + 10 tokens')], ['4 – 10', L('🐉 2 cofres del Dragón + 250k 🪙', '🐉 2 Dragon chests + 250k 🪙')], ['11 – 25', L('🐉 1 cofre del Dragón + 2 cofres de equipo', '🐉 1 Dragon chest + 2 gear chests')]];
     return '<div class="carta rk-tuyo"><b>👑 ' + (es ? C.nombre.es : C.nombre.en) + '</b><span class="chip">' + L('Día ', 'Day ') + TT.dia() + '/14</span>' +
+      '<div class="dg-temp">' + ['arma', 'casco', 'pechera', 'guantes', 'botas', 'amuleto'].map(function (t) { return '<span>' + icoPieza({ t: t, s: 'dragon', r: 'mitico', n: 1 }) + '</span>'; }).join('') + '<p>🐉 <b>' + L(SET_DRAGON.es, SET_DRAGON.en) + '</b> · ' + L('cada cofre deja elegir la pieza que te falta', 'each chest lets you pick the piece you need') + '</p></div>' +
       '<p class="reloj-panel">⏳ ' + L('La temporada termina en ', 'Season ends in ') + fmtTiempo(Math.max(0, TT.fin(TT.idTemporada()) - Date.now()) / 1000) + '</p>' +
       '<p><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b> · ' + L('Liquidación: ', 'Kills: ') + formatoNumero(misL) + ' · ' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</p>' +
       '<p class="nota">' + (TT.cumpleMinimo(misP, misL) ? '✅ ' + L('Ya cumples el mínimo para el Set.', 'You reach the Set minimum.') : '🎯 ' + L('Para el Set necesitas ', 'For the Set you need ') + formatoNumero(C.umbralMinimoPuntos) + L(' puntos y ', ' points and ') + formatoNumero(C.umbralMinimoLiquidacion) + L(' de liquidación.', ' from kills.')) + '</p></div>' +
@@ -8038,13 +8044,50 @@
   // v6.89: armaduras y armas con su dibujo (el emoji queda para las listas desplegables)
   Object.keys(EQ).forEach(function (t) { EQ[t].emoji = EQ[t].icono; EQ[t].icono = '<img class="ico-obj" src="iconos/ui/q_' + t + '.webp" alt="' + EQ[t].emoji + '" draggable="false">'; });
   // v6.90: las armaduras de cada héroe (las de torneo) con su propio dibujo: iconos/ui/q_<pieza>_<héroe>.webp
-  var EQ_SET_IMG = { sol: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, luna: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 } };
-  function icoPieza(p) { if (!p) return ''; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
+  var EQ_SET_IMG = { sol: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, luna: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, dragon: { arma: 1, casco: 1, pechera: 1, botas: 1, amuleto: 1 } };
+  function icoPieza(p) { if (!p) return ''; if (p.s === 'dragon' && p.t === 'guantes') return '<span class="ico-obj ico-dragon">🛡️</span>'; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
+  // ---------- v7.84: SET DE TEMPORADA 1 · DRAGÓN IMPERIAL (calidad Temporada / Mítico) ----------
+  // ranuras del juego: arma · guantes (aquí va el escudo) · casco · pechera (armadura) · botas · amuleto (anillo)
+  var SET_DRAGON = { id: 'dragon', es: 'Set Dragón Imperial', en: 'Imperial Dragon Set', temporada: 1, piezas: {
+    arma: { id: 'dragon_arma', es: 'Espada Aliento de Dragón', en: 'Dragon Breath Sword', ran: ['Arma', 'Weapon'], atk: 180, asedio: 60, muro: 10 },
+    guantes: { id: 'dragon_escudo', es: 'Égida de Escamas Negras', en: 'Black Scale Aegis', ran: ['Escudo', 'Shield'], vida: 180, foeAtk: 20 },
+    casco: { id: 'dragon_casco', es: 'Yelmo del Soberano Dracónico', en: 'Helm of the Draconic Sovereign', ran: ['Casco', 'Helmet'], atk: 120, marcha: 25 },
+    pechera: { id: 'dragon_armadura', es: 'Coraza de Fuego Eterno', en: 'Eternal Fire Cuirass', ran: ['Armadura', 'Armor'], vida: 150, foeVida: 20, heridos: 8 },
+    botas: { id: 'dragon_botas', es: 'Grebas del Vuelo Imperial', en: 'Greaves of Imperial Flight', ran: ['Botas', 'Boots'], atk: 90, velMarcha: 45 },
+    amuleto: { id: 'dragon_anillo', es: 'Sello del Trono de Fuego', en: 'Seal of the Fire Throne', ran: ['Anillo', 'Ring'], atk: 110, vida: 110, saqueo: 30, liq: 15 }
+  }, bonos: [[2, { vida: 50, marcha: 15 }], [4, { atk: 80, foeAtk: 15 }], [6, { atk: 150, vida: 150, foeVida: 25 }]] };
+  var TXT_DRAGON = { atk: ['Ataque Tropas', 'Troop Attack', '+'], vida: ['Vida Tropas', 'Troop HP', '+'], asedio: ['Ataque Asedio', 'Siege Attack', '+'], muro: ['ignora defensa de muralla', 'ignores wall defense', ''], foeAtk: ['Ataque Enemigo', 'Enemy Attack', '−'], foeVida: ['Vida Enemiga', 'Enemy HP', '−'], marcha: ['Capacidad de Marcha', 'March Size', '+'], velMarcha: ['Velocidad de Marcha', 'March Speed', '+'], heridos: ['heridos en Enfermería', 'wounded to Infirmary', '+'], saqueo: ['Capacidad de Saqueo', 'Loot Capacity', '+'], liq: ['Puntos de Liquidación', 'Kill Points', '+'] };
+  function abrirCofreDragon(k) {
+    var v = $('dg-elegir'); if (v) v.remove();
+    var tiene = {}; piezas().forEach(function (p) { if (p.s === 'dragon') tiene[p.t] = (tiene[p.t] || 0) + 1; });
+    var d = document.createElement('div'); d.id = 'dg-elegir';
+    d.innerHTML = '<div class="dg-ventana"><div class="mc-cab"><b>🐉 ' + L('Elige tu pieza', 'Pick your piece') + '</b><small>' + L(SET_DRAGON.es, SET_DRAGON.en) + ' · ' + L('Temporada ', 'Season ') + SET_DRAGON.temporada + ' · ×' + (estado.mochila[k] || 0) + '</small><button class="mc-x" data-dg="x">✕</button></div><div class="dg-lista">' +
+      TIPOS_EQ.map(function (t) { var dg = SET_DRAGON.piezas[t], pz = { t: t, s: 'dragon', r: 'mitico', n: 1 };
+        return '<button class="dg-pieza" data-dg="' + t + '"><span class="dg-ico">' + icoPieza(pz) + '</span><span class="dg-txt"><b>' + L(dg.es, dg.en) + '</b><small>' + L(dg.ran[0], dg.ran[1]) + (tiene[t] ? ' · ' + L('ya tienes ', 'you have ') + tiene[t] : '') + '</small><em>' + textoPieza(pz) + '</em></span></button>'; }).join('') + '</div></div>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function (ev) {
+      var b = ev.target.closest('[data-dg]'); if (!b) { if (ev.target === d) d.remove(); return; }
+      var t = b.getAttribute('data-dg'); if (t === 'x') { d.remove(); return; }
+      if (!(estado.mochila[k] > 0)) { d.remove(); return; }
+      var pz = darPiezaDragon(t); if (!pz) { consejoTemporal(L('Tu cofre de equipo está lleno.', 'Your gear chest is full.')); sonar('error'); return; }
+      estado.mochila[k]--; sonar('magia'); guardar(true); d.remove(); reabrirPanel();
+      mostrarRecompensas('🐉 ' + L(SET_DRAGON.es, SET_DRAGON.en), [{ ico: icoPieza(pz), n: 1, nom: nombrePieza(pz) }]);
+    });
+  }
+  function textoBonosDragon(o) { return Object.keys(o).map(function (k) { var x = TXT_DRAGON[k]; return x ? (x[2] || '') + o[k] + '% ' + L(x[0], x[1]) : ''; }).filter(Boolean).join(' · '); }
+  function piezasDragonDe(id) { return id ? piezasDe(id).filter(function (p) { return p.s === 'dragon'; }).length : 0; }
+  function etiquetaDragon(n) { return n >= 6 ? '<span class="et-dragon">🐉 ' + L(SET_DRAGON.es, SET_DRAGON.en) + ' (6/6)</span>' : n >= 2 ? '<span class="et-dragon gris">🐉 ' + L(SET_DRAGON.es, SET_DRAGON.en) + ' (' + n + '/6)</span>' : ''; }
+  function darPiezaDragon(t) {
+    if (!SET_DRAGON.piezas[t]) return null;
+    var pz = darPieza(t, 'mitico'); if (pz) { pz.s = 'dragon'; pz.temp = 1; }
+    return pz;
+  }
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
-  function nombrePieza(p) { if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
+  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
   function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
   function textoPieza(p) {
+    if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) { var dp = {}, d0 = SET_DRAGON.piezas[p.t]; Object.keys(TXT_DRAGON).forEach(function (k) { if (d0[k]) dp[k] = d0[k]; }); return textoBonosDragon(dp); }
     var r = [];
     if (EQ[p.t].dano) r.push('⚔ +' + Math.round(valorPieza(p, 'dano')));
     if (EQ[p.t].danoP) r.push('⚔ +' + Math.round(valorPieza(p, 'danoP') * 100) + '%');
@@ -8150,12 +8193,13 @@
     h += '<div class="eq-rejilla">' + TIPOS_EQ.map(function (t) {
       var p = piezasDe(id).filter(function (x) { return x.t === t; })[0];
       return '<button class="eq-hueco' + (p ? ' ' + p.r : '') + '" data-accion="eq-hueco" data-id="' + id + '" data-t="' + t + '"' + (e ? '' : ' disabled') + '><span class="eq-ico">' + (p ? icoPieza(p) : EQ[t].icono) + '</span>' +
-        (p ? '<span class="eq-nv">' + p.n + '</span><span class="eq-nom">' + T('eq_' + t) + '</span>' : '<span class="eq-nom vacio">' + T('eq_' + t) + '</span>') + '</button>';
+        (p ? '<span class="eq-nv">' + p.n + '</span><span class="eq-nom">' + (p.s === 'dragon' && SET_DRAGON.piezas[t] ? L(SET_DRAGON.piezas[t].ran[0], SET_DRAGON.piezas[t].ran[1]) : T('eq_' + t)) + '</span>' : '<span class="eq-nom vacio">' + T('eq_' + t) + '</span>') + '</button>';
     }).join('') + '</div>';
     var b = bonosEquipo(id), partes = [];
     if (b.dano) partes.push('⚔ +' + Math.round(b.dano)); if (b.danoP) partes.push('⚔ +' + Math.round(b.danoP * 100) + '%'); if (b.vida) partes.push('❤ +' + Math.round(b.vida));
     if (b.def) partes.push('🛡 +' + Math.round(b.def * 100) + '%'); if (b.vel) partes.push('🏃 +' + Math.round(b.vel * 100) + '%'); if (b.recarga) partes.push('⏱ -' + Math.round(b.recarga * 100) + '%');
     h += '<p class="nota">' + T('eq_bonos', { t: partes.join(' · ') || '—' }) + ' · ' + T('eq_tienes', { n: piezas().length }) + '</p>';
+    var nd = piezasDragonDe(id); if (nd) { h += '<div class="carta dg-caja">' + (etiquetaDragon(nd) || '<span class="et-dragon gris">🐉 ' + L(SET_DRAGON.es, SET_DRAGON.en) + ' (1/6)</span>') + SET_DRAGON.bonos.map(function (b) { return '<div class="dg-b' + (nd >= b[0] ? ' si' : '') + '">' + (nd >= b[0] ? '✅' : '🔒') + ' ' + b[0] + ' ' + L('piezas', 'pieces') + ': ' + textoBonosDragon(b[1]) + '</div>'; }).join('') + '</div>'; } // v7.84
     h += '<p class="nota eq-ayuda">' + L('Toca un espacio para elegir pieza. Para quitarla, pulsa dos veces o déjala pulsada.', 'Tap a slot to choose a piece. To remove it, double-tap or press and hold.') + '</p>';
     if (e && esCuentaDueno()) h += '<button class="comprar morado" data-accion="eq-dueno-set" data-id="' + id + '">👑 ' + L('Dueño: darme el juego ', 'Owner: give me set ') + (ARMADURA_HEROE[id] ? ARMADURA_HEROE[id][estado.idioma === 'en' ? 'en' : 'es'] : '') + '</button>';
     if (e) h += '<div class="hf-fila"><button class="comprar naranja" data-accion="eq-rapido" data-id="' + id + '">' + T('eq_rapido') + '</button><button class="comprar" data-accion="eq-quitar-todo" data-id="' + id + '">' + T('eq_quitar_todo') + '</button></div>';
@@ -8165,7 +8209,7 @@
   function abrirHueco(id, t) {
     var v = $('eq-elegir'); if (v) v.remove();
     var actual = piezasDe(id).filter(function (x) { return x.t === t; })[0];
-    var lista = piezas().filter(function (p) { return p.t === t && p !== actual && (!p.s || p.s === id); }).sort(function (a, b) { return (a.h ? 1 : 0) - (b.h ? 1 : 0) || puntosPieza(b) - puntosPieza(a); });
+    var lista = piezas().filter(function (p) { return p.t === t && p !== actual && (!p.s || p.s === id || p.s === 'dragon'); }).sort(function (a, b) { return (a.h ? 1 : 0) - (b.h ? 1 : 0) || puntosPieza(b) - puntosPieza(a); });
     function fila(p, esActual) {
       var c = costoMejoraPieza(p);
       return '<div class="eq-fila ' + p.r + '"><span class="eq-ico" data-eq="info" data-i="' + p.i + '">' + icoPieza(p) + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b>' + (nivelHeroe(id) < nivelPide(p) ? '<em class="ei-req no">' + L('Nivel del héroe', 'Hero level') + ' Lv' + nivelHeroe(id) + '/Lv' + nivelPide(p) + '</em>' : '') + '<span>' + textoPieza(p) + (p.h && !esActual ? ' · ' + T('eq_de', { n: NH(p.h) }) : '') + '</span></div><div class="eq-bts">' +
@@ -8404,7 +8448,7 @@
   function abrirPanelHeroeViejo(id) {
     var h = HEROE[id], e = estado.heroes[id], s = statsHeroe(id), hb = HB(h.hab);
     var html = '<button class="volver-mini" data-accion="sub-heroes">' + T('volver') + '</button>' + flechasHeroe(id) +
-      '<div class="hf ' + h.rareza + '"><div class="hf-foto"><div class="hf-visor" id="visor-heroe"></div>' + (pestanaHeroe === 'equipo' && e ? '<div class="hf-piezas">' + TIPOS_EQ.map(function (t) { var pz = piezasDe(id).filter(function (x) { return x.t === t; })[0]; return '<span class="hfp ' + (pz ? 'puesta ' + pz.r : '') + '" title="' + T('eq_' + t) + '">' + EQ[t].icono + '</span>'; }).join('') + '</div>' : '') + '<span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span></div>' +
+      '<div class="hf ' + h.rareza + '"><div class="hf-foto"><div class="hf-visor" id="visor-heroe"></div>' + (pestanaHeroe === 'equipo' && e ? '<div class="hf-piezas">' + TIPOS_EQ.map(function (t) { var pz = piezasDe(id).filter(function (x) { return x.t === t; })[0]; return '<span class="hfp ' + (pz ? 'puesta ' + pz.r : '') + '" title="' + T('eq_' + t) + '">' + (pz ? icoPieza(pz) : EQ[t].icono) + '</span>'; }).join('') + '</div>' : '') + '<span class="rz-cinta">' + T('rareza_' + h.rareza) + '</span></div>' +
       '<div class="hf-datos"><div class="hf-nombre">' + NH(id) + '</div><div class="hf-clase">' + CLASES_HEROE[h.clase] + ' ' + T('clase_' + h.clase) + '</div>' +
       '<div class="hf-est">' + estrellasHTML(e ? e.estrellas : 0) + '</div>';
     if (e) {
@@ -8849,7 +8893,8 @@
   function tamanoMarcha(heroe) {
     var h = heroe === undefined ? liderActual() : heroe, base = Math.max(5000, nivelRelevo() * 10000);
     if (h && estado.heroes && estado.heroes[h]) base += nivelHeroe(h) * 250 + 1000 * piezasDe(h).filter(function (p) { return p.s === h; }).length;
-    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')));
+    var mh = h && estado.heroes && estado.heroes[h] ? multiplicadoresHeroe(h).marcha : 0;
+    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')) * (1 + mh / 100)); // v7.84: set del dragón
   }
   function maxMarchas() { return Math.min(12, Math.max(1, nivelRelevo())); }
   function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length; }
@@ -8892,7 +8937,7 @@
       var ali = estado.alianza && a.alianza === estado.alianza;
       var h = '<div class="mc-cab"><b>' + L('Marcha', 'March') + '</b><small>→ ' + escaparHTML(a.nombre) + (a.x !== undefined ? ' · X ' + a.x + ' · Y ' + a.y : '') + '</small><button class="mc-x" data-mc="cerrar">✕</button></div>' +
         '<div class="mc1-arriba"><div class="mc1-heroe"><span>🦸 ' + L('Héroe', 'Hero') + '</span><button class="mc1-hbtn" data-mc="cambiar">' + (sel.heroe ? retrato(sel.heroe) + '<span class="mc1-hn"><b>' + NH(sel.heroe) + '</b><small>' + lineaHeroe2(sel.heroe) + '</small></span>' : '<span class="mc1-hn"><b>' + L('Sin héroe', 'No hero') + '</b><small>' + (mios.length ? L('Toca para elegir', 'Tap to choose') : L('No tienes héroes', 'No heroes')) + '</small></span>') + '<span class="mc1-flecha">▾</span></button></div>' +
-        '<div class="mc1-datos"><span>👥 <b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a) / 1000) + '</b></span></div></div>' +
+        '<div class="mc1-datos"><span>👥 <b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a, sel.heroe || null) / 1000) + '</b></span></div></div>' +
         '<div class="mc1-otros"><button class="comprar mini" data-mc="tipo" data-t="explorar">🔍 ' + L('Explorar', 'Scout') + '</button>' + (ali ? '<button class="comprar mini" data-mc="tipo" data-t="reforzar">🛡️ ' + L('Reforzar', 'Reinforce') + '</button>' : '') +
         '<button class="comprar mini" data-mc="todo">' + L('Todas', 'All') + '</button><button class="comprar mini" data-mc="nada">' + L('Ninguna', 'None') + '</button></div>' +
         '<div class="mc-lista">';
@@ -8907,7 +8952,7 @@
       return h + '<p id="mc-aviso" class="mc-rojo"></p><div class="mc-botones"><button class="comprar azul" data-mc="guardar">💾 ' + L('Guardar formación', 'Save formation') + '</button><button class="comprar naranja" data-mc="marchar"' + (tt <= 0 ? ' disabled' : '') + '>⚔️ ' + L('Marchar', 'March') + '</button></div>';
     }
     function htmlMarcha() {
-      var viaje = tiempoMarcha(a) / 1000, f = fuerza(), dd = a.defensa || 1, p = f / dd, tt = total();
+      var viaje = tiempoMarcha(a, sel.heroe || null) / 1000, f = fuerza(), dd = a.defensa || 1, p = f / dd, tt = total();
       var h = '<div class="mc-cab"><b>' + L('Marcha', 'March') + '</b><small>→ ' + escaparHTML(a.nombre) + (a.x !== undefined ? ' · X ' + a.x + ' · Y ' + a.y : '') + '</small><button class="mc-x" data-mc="cerrar">✕</button></div>';
       if (!estado.vistoGuiaMarcha) h += '<div class="mc-guia">' + retrato('sol') + '<p><b>' + NH('sol') + ':</b> ' + L('Elige tu héroe y tus tropas, mira el tiempo de marcha y sal cuando estés listo. ¡Espía antes para no llevarte sorpresas!', 'Pick your hero and troops, check the march time and set out when ready. Scout first so there are no surprises!') + '</p><button class="comprar mini naranja" data-mc="guia-ok">' + L('Vale', 'OK') + '</button></div>';
       if (sel.heroe) h += '<div class="mc-heroe">' + retrato(sel.heroe) + '<div class="mc-hd"><b>' + NH(sel.heroe) + '</b><span>' + lineaHeroe(sel.heroe) + '</span></div><button class="comprar mini" data-mc="cambiar">' + L('Cambiar', 'Change') + '</button></div>';
@@ -9116,9 +9161,10 @@
   // ---------- ATAQUES CON MARCHA ----------
   // Las tropas salen, tardan en llegar y la batalla se decide al llegar.
   function vigiaBono() { var n = nivelMayor('vigia'); return n ? EDIFICIOS.vigia.defensa[n - 1] : 0; }
-  function tiempoMarcha(a) {
+  function tiempoMarcha(a, heroe) {
     var yo = celdaDe(miLugar().x, miLugar().y), el = celdaDe(a.x || 50, a.y || 50);
-    return Math.round((60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) / (buffActivo('velMarcha') ? 1.5 : 1)) * 1000;
+    var h = heroe !== undefined ? heroe : ((estado.ultimaMarcha && estado.ultimaMarcha.heroe !== undefined) ? estado.ultimaMarcha.heroe : liderActual()), vh = h && estado.heroes && estado.heroes[h] ? multiplicadoresHeroe(h).velMarcha : 0;
+    return Math.round((60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) / (buffActivo('velMarcha') ? 1.5 : 1) / (1 + vh / 100)) * 1000; // v7.84: Grebas del Vuelo Imperial
   }
   var marchas = [], entrantes = [], dejarDeEscuchar = null, resolviendo = {};
   function realizarAtaque(a, fuerzaElegida, nCarretas) {
@@ -9127,6 +9173,8 @@
     if (no) { consejoTemporal(no); sonar('error'); return; }
     nCarretas = Math.max(0, Math.min(nCarretas || 0, carretasLibres()));
     var f = Math.round(fuerzaElegida || fuerzaEjercito()), viaje = tiempoMarcha(a), bm = botinAtaque(a.nivel, nCarretas);
+    var hS = estado.ultimaMarcha && estado.ultimaMarcha.heroe, sq = hS && estado.heroes && estado.heroes[hS] ? multiplicadoresHeroe(hS).saqueo : 0;
+    if (sq) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { bm[k] = Math.min(65000, Math.round(bm[k] * (1 + sq / 100))); }); // v7.84: Sello del Trono de Fuego
     var doc = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
       gano: false, botin: { oro: bm.oro, comida: bm.comida, madera: bm.madera, piedra: bm.piedra }, fuerza: f, defensa: Math.round(a.defensa || 1),
       fecha: Date.now(), llega: Date.now() + viaje, visto: false, resuelto: false, cobrado: false, bajas: 0 };
@@ -9309,7 +9357,7 @@
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
         nuevoCorreo('guerras', L(r.atacanteNombre + ' te atacó: ', r.atacanteNombre + ' attacked you: ') + (r.gano ? L('perdiste', 'you lost') : L('resististe', 'you held')), r.atacanteNombre, htmlInformeBatalla({ gano: !r.gano, fecha: r.llega,
           atacante: { nombre: r.atacanteNombre, poder: r.fuerza || 0, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null },
-          defensor: { nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), heroe: (estado.equipo || [])[0], poder: r.defensa || 0, lucharon: tropasNormales(), sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { de: misMejoras() } }));
+          defensor: { nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), heroe: heroeDefensor(), poder: r.defensa || 0, lucharon: tropasNormales(), sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { de: misMejoras() } }));
         var _infViejo2 = (htmlInforme([[L('Resultado', 'Result'), r.gano ? '💔 ' + L('Te saquearon', 'You were raided') : '🛡️ ' + L('Resististe', 'You held')], [L('Su fuerza', 'Their strength'), formatoNumero(r.fuerza || 0)], [L('Tu defensa', 'Your defense'), formatoNumero(r.defensa || 0)]]));
         Cuentas.marcarVisto(r.id).catch(function () {});
       });
@@ -10379,7 +10427,8 @@
       var otra = marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); })[0];
       if (!otra) { consejoTemporal(L('No tienes ninguna marcha en camino.', 'You have no march on the way.')); sonar('error'); return; }
       cancelarMarcha(otra); msg = L('Tus tropas vuelven a casa.', 'Your troops come home.');
-    } else if (e === 'vip') { vipSumar(o.n); msg = '👑 VIP +' + o.n + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
+    } else if (e === 'elegirDragon') { abrirCofreDragon(k); return; }
+    else if (e === 'vip') { vipSumar(o.n); msg = '👑 VIP +' + o.n + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
     else if (e === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n; msg = '🪙 +' + o.n + ' ' + L('fichas', 'tokens'); }
     else if (e === 'expHeroe') { var h = liderActual() || Object.keys(estado.heroes || {})[0]; if (!h) { consejoTemporal(L('Todavía no tienes héroes.', 'You have no heroes yet.')); sonar('error'); return; } darExp(h, o.n); msg = '⚡ ' + NH(h) + ' +' + o.n + ' EXP'; }
     else if (e === 'abrirCofre') { gastar1(k); estado.mochila[o.cofre] = (estado.mochila[o.cofre] || 0) + 1; guardar(true); usarObjeto(o.cofre, true); return; }
@@ -10937,7 +10986,7 @@
   // v6.42: informe de batalla: resultado grande, recursos, atacantes y defensores lado a lado y mejoras
   function htmlInformeBatalla(o) {
     function lado(x, titulo, cls) {
-      var hz = x.heroe && HEROE[x.heroe] ? '<div class="ib-heroe"><div class="mc-foto chica">' + fotoHTML('h_' + x.heroe, '🦸') + '</div><b>' + NH(x.heroe) + '</b></div>' : '<div class="ib-heroe"><div class="mc-foto chica">❔</div><b>' + L('Sin héroe', 'No hero') + '</b></div>';
+      var hz = x.heroe && HEROE[x.heroe] ? '<div class="ib-heroe"><div class="mc-foto chica">' + fotoHTML('h_' + x.heroe, '🦸') + '</div><b>' + NH(x.heroe) + '</b>' + (x.dragon6 || (estado.heroes && estado.heroes[x.heroe] && piezasDragonDe(x.heroe) >= 6) ? etiquetaDragon(6) : '') + '</div>' : '<div class="ib-heroe"><div class="mc-foto chica">❔</div><b>' + L('Sin héroe', 'No hero') + '</b></div>';
       function f(n) { return n === null || n === undefined ? '?' : formatoNumero(n); }
       return '<div class="ib-lado ' + cls + '"><h4>' + titulo + '</h4><b class="ib-nom">' + escaparHTML(x.nombre || '?') + '</b>' + hz +
         '<div class="ib-filas"><span>💪 ' + L('Poder', 'Power') + '</span><b>' + f(x.poder) + '</b><span>⚔️ ' + L('Lucharon', 'Fought') + '</span><b>' + f(x.lucharon) + '</b><span>✅ ' + L('Sobrevivieron', 'Survived') + '</span><b>' + f(x.sobreviven) + '</b>' +
@@ -12671,7 +12720,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { estado: function () { return estado; }, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { estado: function () { return estado; }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

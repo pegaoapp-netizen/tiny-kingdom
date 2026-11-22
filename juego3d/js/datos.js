@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.83';
+var VERSION_JUEGO = '7.84';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -419,6 +419,7 @@ var NOMBRES = {
   mixto_1m: { es: 'Paquete de construcción', en: 'Building pack', des_es: '1.000.000 de oro, comida, madera y piedra.', des_en: '1,000,000 gold, food, wood and stone.' },
   ficha_x1: { es: 'Ficha de la suerte', en: 'Luck token', des_es: '1 ficha para la Ruleta del Azar.', des_en: '1 token for the Luck wheel.' },
   ficha_x5: { es: '5 fichas de la suerte', en: '5 luck tokens', des_es: '5 fichas para la Ruleta del Azar.', des_en: '5 tokens for the Luck wheel.' },
+  cofre_dragon: { es: 'Cofre del Dragón Imperial', en: 'Imperial Dragon Chest', des_es: 'Premio del Torneo de Temporada: elige 1 pieza del Set Dragón Imperial (Temporada 1).', des_en: 'Season Tournament prize: pick 1 piece of the Imperial Dragon Set (Season 1).' },
   vip_100: { es: '+100 Puntos VIP', en: '+100 VIP points', des_es: 'Suma 100 puntos a tu VIP para subir de nivel más rápido.', des_en: 'Adds 100 points to your VIP to level up faster.' },
   energia_heroe: { es: 'Energía de héroe', en: 'Hero energy', des_es: '+50 de experiencia para tu héroe principal.', des_en: '+50 XP for your main hero.' },
   llave_bronce: { es: 'Llave de bronce', en: 'Bronze key', des_es: 'Abre un Cofre de plata al momento.', des_en: 'Opens a Silver chest at once.' },
@@ -756,6 +757,7 @@ var OBJETOS = {
   ficha_x1:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 1 },
   ficha_x5:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 5 },
   energia_heroe:   { icono: '⚡', inv: 'reliquia', efecto: 'expHeroe', n: 50 },
+  cofre_dragon:    { icono: '🐉', inv: 'reliquia', efecto: 'elegirDragon' }, // v7.84
   vip_100:         { icono: '👑', inv: 'reliquia', efecto: 'vip', n: 100 }, // v7.79
   llave_bronce:    { icono: '🗝️', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_plata' },
   llave_plata:     { icono: '🔑', inv: 'reliquia', efecto: 'abrirCofre', cofre: 'cofre_oro' },

@@ -2218,3 +2218,26 @@ body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !importa
 
 /* v7.83: botón Cobrar todas en Misiones */
 .mis-todas { display: block; width: 100%; margin: 8px 0 10px; padding: 12px; font-size: 17px; font-weight: 800; }
+/* v7.84: Set Dragón Imperial */
+.et-dragon { display: inline-block; margin: 4px 0; padding: 2px 9px; border-radius: 10px; background: linear-gradient(#ffe38a, #c9860f); color: #3a1c00; border: 1.5px solid #7a4a00; font-weight: 800; font-size: 12px; box-shadow: 0 0 8px #ffcf4a88; }
+.et-dragon.gris { background: linear-gradient(#a08868, #6b5030); color: #fff3dc; box-shadow: none; }
+.ib-heroe .et-dragon { font-size: 10px; padding: 1px 6px; }
+.dg-caja { margin-top: 8px; }
+.dg-b { font-size: 12px; opacity: .6; margin-top: 3px; }
+.dg-b.si { opacity: 1; color: #ffd54a; }
+.ico-dragon { display: inline-flex; align-items: center; justify-content: center; font-size: 28px; }
+#dg-elegir { position: fixed; inset: 0; z-index: 9000; background: #000a; display: flex; align-items: center; justify-content: center; }
+.dg-ventana { width: min(94vw, 440px); max-height: 86vh; overflow: auto; background: #2a1a0c; border: 2px solid #c9860f; border-radius: 14px; color: #f3e3c3; padding: 8px; }
+.dg-ventana .mc-cab { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dg-ventana .mc-cab small { flex: 1; opacity: .8; }
+.dg-lista { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.dg-pieza { display: flex; gap: 8px; align-items: center; text-align: left; padding: 6px; border-radius: 10px; border: 2px solid #7a4a00; background: linear-gradient(#4a2c10, #2e1a08); color: #f3e3c3; }
+.dg-ico { flex: 0 0 56px; height: 56px; display: flex; align-items: center; justify-content: center; }
+.dg-ico img { width: 56px; height: 56px; object-fit: contain; }
+.dg-txt { display: flex; flex-direction: column; gap: 1px; }
+.dg-txt small { opacity: .8; font-size: 11px; }
+.dg-txt em { font-style: normal; font-size: 11.5px; color: #ffd54a; }
+.dg-temp { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
+.dg-temp span { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.dg-temp img { width: 40px; height: 40px; object-fit: contain; }
+.dg-temp p { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; }

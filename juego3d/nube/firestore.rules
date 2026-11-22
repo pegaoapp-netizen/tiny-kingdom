@@ -1,5 +1,5 @@
 rules_version = '2';
-// reglas v7.81: espía con santuario y héroe defensor (espia hasta 8 campos)
+// reglas v7.84: botín hasta 65.000 (Sello del Trono de Fuego +30% de saqueo)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -116,8 +116,8 @@ service cloud.firestore {
     // Ataques con marcha: se crean al salir, se resuelven al llegar (lo hace el defensor o el atacante, una sola vez)
     function botinOk(b) {
       return b.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
-        && b.oro is int && b.oro >= 0 && b.oro <= 50000 && b.comida is int && b.comida >= 0 && b.comida <= 50000
-        && b.madera is int && b.madera >= 0 && b.madera <= 50000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 50000;
+        && b.oro is int && b.oro >= 0 && b.oro <= 65000 && b.comida is int && b.comida >= 0 && b.comida <= 65000
+        && b.madera is int && b.madera >= 0 && b.madera <= 65000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 65000;
     }
     // v7.39: el Canciller (líder) de una alianza ve los ataques de sus miembros y contra ellos
     function esCanciller(tag) {
