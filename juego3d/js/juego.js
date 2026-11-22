@@ -48,6 +48,7 @@
       estado.heroe = tropas.some(function (u) { return u.tipo === 'heroe'; });
       estado.barricadas = barricadas.map(function (b) { return b.nivel; });
       estado.actualizado = Date.now();
+      ['monedas', 'comida', 'madera', 'piedra', 'hierro', 'gemas'].forEach(function (k) { if (estado[k] !== undefined && !isFinite(estado[k])) estado[k] = 0; }); // v7.91: nunca se guarda NaN
     } catch (e) {}
     var copia = JSON.parse(JSON.stringify(estado));
     try { localStorage.setItem(claveLocal(), JSON.stringify(copia)); } catch (e) { /* sin almacenamiento: se juega igual */ }
@@ -2933,7 +2934,7 @@
   // v6.45: un jugador nuevo (castillo nivel 3 o menos, sin lugar fijo) aparece cerca de otros reinos y no perdido en un rincón del mapa
   function ubicarCercaDeOtros(listo) {
     // v6.88: los reinos que quedaron solos en una esquina del mapa (300 × 300) se mudan UNA vez junto a los demás; el dueño no se mueve
-    if (!hayCuenta() || estado.dueno || (estado.lugar && estado.juntado)) { listo(); return; }
+    if (!hayCuenta() || estado.dueno || villaActiva() || (estado.lugar && estado.juntado)) { listo(); return; } // v7.91: una villa secundaria nunca se muda sola
     var yo = Cuentas.usuario().uid;
     Cuentas.aldeas().then(function (lista) {
       aldeasCache = unirExtra(lista);
@@ -7125,6 +7126,15 @@
     v.lista[k].datos = null; v.activa = k;
     estado.actualizado = Date.now();
     cambiandoVilla = true;
+    // v7.91: sin recargar la página: se guarda y se rehace la escena con la villa elegida (gemas, héroes, inventario, VIP y nivel son de la cuenta y no se tocan)
+    var copiaV = JSON.parse(JSON.stringify(estado));
+    try { localStorage.setItem(claveLocal(), JSON.stringify(copiaV)); } catch (e) {}
+    try { if (window.Cuentas && Cuentas.usuario() && !nubeFallo) Cuentas.guardarPartida(copiaV, true); } catch (e) {}
+    cambiandoVilla = false;
+    cerrarPanel(); if (enMundo) { try { cerrarMundo(); } catch (e) {} }
+    empezarPartida(JSON.parse(JSON.stringify(copiaV)));
+    sonar('magia'); consejoTemporal('🏘️ ' + L('Estás en ', 'You are in ') + nombreVilla(k));
+    return;
     var cap = document.createElement('div'); cap.id = 'villa-cambio'; cap.innerHTML = '<div><b>🏘️ ' + escaparHTML(nombreVilla(k)) + '</b><small>' + L('Llegando a tu villa…', 'Arriving at your village…') + '</small></div>'; document.body.appendChild(cap);
     var copia = JSON.parse(JSON.stringify(estado));
     try { localStorage.setItem(claveLocal(), JSON.stringify(copia)); } catch (e) {}
@@ -7358,7 +7368,12 @@
       b.addEventListener('click', function (ev) { ev.stopPropagation(); ev.preventDefault(); if (enMenu) return; sonar('click'); if (panelActual && panelActual.tipo === 'villas') cerrarPanel(); else abrirMisVillas(); });
     }
     b.style.display = ver ? '' : 'none';
-    var t = '🏘️ ' + (villaActiva() + 1) + '/' + n + ' ▾';
+    var t = '🏘️ ' + nombreVilla(villaActiva()) + ' ▼';
+    var vv = $('villa-volver');
+    if (villaActiva()) {
+      if (!vv) { vv = document.createElement('button'); vv.id = 'villa-volver'; document.body.appendChild(vv); vv.addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarVilla(0); }); }
+      var tv = '↩ ' + L('Volver a la Villa Principal', 'Back to the Main Village'); if (vv.textContent !== tv) vv.textContent = tv; vv.style.display = enMundo || oleadaActiva ? 'none' : '';
+    } else if (vv) vv.remove();
     window.__tkAbrirVillas = abrirMisVillas;
     if (b.textContent !== t) b.textContent = t;
   }
@@ -8241,7 +8256,7 @@
   Object.keys(EQ).forEach(function (t) { EQ[t].emoji = EQ[t].icono; EQ[t].icono = '<img class="ico-obj" src="iconos/ui/q_' + t + '.webp" alt="' + EQ[t].emoji + '" draggable="false">'; });
   // v6.90: las armaduras de cada héroe (las de torneo) con su propio dibujo: iconos/ui/q_<pieza>_<héroe>.webp
   var EQ_SET_IMG = { sol: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 }, luna: { arma: 1, casco: 1, pechera: 1, guantes: 1, botas: 1, amuleto: 1 } };
-  function icoPieza(p) { if (!p) return ''; if (p.s === 'dragon') return p.t === 'guantes' ? '<span class="ico-obj ico-dragon">🛡️</span>' : '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_dragon.webp?v=790" alt="🐉" draggable="false">'; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
+  function icoPieza(p) { if (!p) return ''; if (p.s === 'dragon') return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_dragon.webp?v=791" alt="🐉" draggable="false">'; if (p.s && EQ_SET_IMG[p.s] && EQ_SET_IMG[p.s][p.t]) return '<img class="ico-obj" src="iconos/ui/q_' + p.t + '_' + p.s + '.webp" alt="' + EQ[p.t].emoji + '" draggable="false">'; return EQ[p.t] ? EQ[p.t].icono : '🧰'; }
   // ---------- v7.84: SET DE TEMPORADA 1 · DRAGÓN IMPERIAL (calidad Temporada / Mítico) ----------
   // ranuras del juego: arma · guantes (aquí va el escudo) · casco · pechera (armadura) · botas · amuleto (anillo)
   var SET_DRAGON = { id: 'dragon', es: 'Set Dragón Imperial', en: 'Imperial Dragon Set', temporada: 1, piezas: {
@@ -12046,6 +12061,7 @@
     }
     // Sin cartel de bienvenida: con la sesión lista se entra directo al reino.
     // Idioma y cerrar sesión están siempre arriba, junto a los recursos.
+    if (g && typeof g.monedas !== 'number' && (progresoPartida(g) > 40 || (g.edificios || []).some(Boolean))) g.monedas = 0; // v7.91: un oro roto (NaN/null) ya no reinicia el reino
     var hayPartida = g && typeof g.monedas === 'number'; // v6.92 ARREGLO: antes, sin edificios hechos, cada recarga empezaba un reino nuevo (y regalaba todo otra vez)
     empezarPartida(hayPartida ? g : null);
     if (nube && Cuentas.usuario()) consejoTemporal(T('hola', { n: Cuentas.nombre() }) + (esCuentaDueno() ? ' 👑' : ''));
