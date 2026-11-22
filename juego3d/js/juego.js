@@ -180,11 +180,11 @@
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
   // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.5; }
-  function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? 1.75 : 1.6); } // v7.15: se puede alejar hasta ver TODA la villa con su muralla // v6.86: en la Ciudad no se aleja hasta ver los campos
+  function zoomMax() { return zoomBase() * 1.75; } // v7.61: mismo zoom en Ciudad y Campos (es un solo mapa seguido) // v7.15: se puede alejar hasta ver TODA la villa con su muralla // v6.86: en la Ciudad no se aleja hasta ver los campos
   function distInicial() { return Math.min(distEncuadre() * 1.3, (window.innerWidth < window.innerHeight ? 150 : 122) / 0.65); } // v7.52: la villa entera cabe al entrar // v7.44: la ciudad por barrios es más grande // v7.15: un poco más lejos // v7.04: un poco más lejos para ver casi todos los edificios sin mover el dedo // v6.86: la villa compacta llena la pantalla // v6.84: distancia media, como Kingdoms of Camelot (ni muy cerca ni muy lejos) // v6.54: como en las fotos del dueño: el castillo manda y se ve buena parte de la ciudad
   function distMaxima() { return vistaActual === 'campos' ? Math.max(distEncuadre() * 1.3, DIST_CAMPOS() + 15) : distEncuadre() * 1.3; }
   // v6.46: en Campos la cámara mira desde afuera hacia la ciudad: los campos adelante y la muralla con el castillo detrás
-  function DIST_CAMPOS() { return window.innerWidth < window.innerHeight ? 175 : 125; }
+  function DIST_CAMPOS() { return distInicial(); } // v7.61: los campos se ven del mismo tamaño que la ciudad, como en KoC
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = Math.PI; // v7.44: alineado con la muralla cuadrada (antes 3.55)
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
@@ -5772,6 +5772,12 @@
   // ------------------------------------------------------------------
   //  CÁMARA
   // ------------------------------------------------------------------
+  var SOL_Z = DIR_SOL.clone().normalize(), SOL_X = new V3(0, 1, 0).cross(SOL_Z).normalize(), SOL_Y = SOL_Z.clone().cross(SOL_X), _so = new V3();
+  function ajusteSombra(o, tx) {
+    var px = o.dot(SOL_X), py = o.dot(SOL_Y);
+    _so.copy(o).addScaledVector(SOL_X, Math.round(px / tx) * tx - px).addScaledVector(SOL_Y, Math.round(py / tx) * tx - py);
+    return _so;
+  }
   function actualizarCamara(dt) {
     // zoom y desplazamiento se deslizan (sin saltos); al soltar el dedo sigue un poco por inercia
     var lento = performance.now() < (cam.suaveHasta || 0), kz = 1 - Math.exp(-dt * (lento ? 2.2 : 7)), kp = 1 - Math.exp(-dt * (lento ? 2.6 : 11));
@@ -5782,18 +5788,31 @@
     }
     if (!arrastre) {
       cam.meta.addScaledVector(cam.vel, dt);
-      cam.vel.multiplyScalar(Math.exp(-dt * 4.5));
+      cam.vel.multiplyScalar(Math.exp(-dt * 3.6)); // v7.61: deslizamiento largo y suave al soltar, como en KoC
+      if (cam.vel.lengthSq() < 0.04) cam.vel.set(0, 0, 0);
     }
     // la cámara no se puede ir lejos del reino
     cam.meta.x = Math.max(CENTRO_REINO.x - LIMITE_CAM, Math.min(CENTRO_REINO.x + LIMITE_CAM, cam.meta.x));
     cam.meta.z = Math.max(CENTRO_REINO.z - LIMITE_CAM, Math.min(CENTRO_REINO.z + LIMITE_CAM, cam.meta.z));
-    // v6.86: en la Ciudad la cámara se queda sobre la villa (los campos solo se ven con el botón Campos)
-    if (vistaActual === 'ciudad' && !oleadaActiva) {
-      var rL = R_CIUDAD * 0.45, dxL = cam.meta.x - CENTRO_REINO.x, dzL = cam.meta.z - CENTRO_REINO.z, dL = Math.hypot(dxL, dzL);
-      if (dL > rL) { cam.meta.x = CENTRO_REINO.x + dxL * rL / dL; cam.meta.z = CENTRO_REINO.z + dzL * rL / dL; }
+    // v7.61: CIUDAD Y CAMPOS EN UN SOLO MAPA: con el dedo se pasa de la villa a los campos sin cambiar de vista
+    if (!enMundo && !oleadaActiva) {
+      var lc = aLocal(cam.meta.x, cam.meta.z), aMax = R_CIUDAD * 0.45 + 14, aMin = CAMPOS_RECT.a - 8;
+      var tB = Math.max(0, Math.min(1, (-R_CIUDAD - lc.a) / 30)), bMax = R_CIUDAD * 0.45 + tB * 10;
+      var na = Math.max(aMin, Math.min(aMax, lc.a)), nb = Math.max(-bMax, Math.min(bMax, lc.b));
+      if (na !== lc.a || nb !== lc.b) {
+        var pc = aMundo(na, nb); cam.meta.x = pc[0]; cam.meta.z = pc[1];
+        var va = cam.vel.x * EJE_U.x + cam.vel.z * EJE_U.z, vb = cam.vel.x * EJE_V.x + cam.vel.z * EJE_V.z;
+        if (na !== lc.a) va = 0; if (nb !== lc.b) vb = 0;
+        cam.vel.set(EJE_U.x * va + EJE_V.x * vb, 0, EJE_U.z * va + EJE_V.z * vb);
+      }
       if (cam.distMeta > zoomMax()) cam.distMeta = zoomMax();
+      // el botón de abajo dice dónde estás (Ciudad o Campos) según lo que se ve
+      var zona = aLocal(cam.objetivo.x, cam.objetivo.z).a < -R_CIUDAD - 12 ? 'campos' : 'ciudad';
+      if (zona !== vistaActual && (vistaActual === 'ciudad' || vistaActual === 'campos')) { vistaActual = zona; pintarVista(); }
     }
-    cam.objetivo.lerp(cam.meta, kp);
+    // v7.61: mientras el dedo arrastra (o la inercia corre) el mapa va pegado, sin retraso; los viajes con botón se deslizan
+    if (arrastre || cam.vel.lengthSq() > 0) cam.objetivo.copy(cam.meta);
+    else cam.objetivo.lerp(cam.meta, kp);
     // ángulo bajo y fijo: fachadas y techos, el castillo cerca. Alejar con la rueda sigue pudiendo.
     cam.polar = Math.PI / 2 - 35 * Math.PI / 180; // v7.46: vista de maqueta: 35 grados hacia abajo (antes 30), igual en Ciudad y Campos
     // la niebla se aleja con la cámara: nunca tapa el reino y el terreno llega hasta el horizonte
@@ -5807,21 +5826,24 @@
     // la caja de sombras sigue a la cámara y crece con el zoom
     var ts = Math.max(28, Math.min(88, cam.dist * 0.8));
     if (Math.abs(ts - tamSombra) > 2) { tamSombra = ts; sc.left = -ts; sc.right = ts; sc.top = ts; sc.bottom = -ts; sc.updateProjectionMatrix(); }
-    sol.position.set(o.x + DIR_SOL.x, DIR_SOL.y, o.z + DIR_SOL.z);
-    sol.target.position.copy(o);
+    // v7.61: el centro de las sombras salta de píxel en píxel del mapa de sombras: al mover el mapa no tiemblan los bordes
+    var tx = 2 * tamSombra / (sol.shadow.mapSize.x || 2048), so = ajusteSombra(o, tx);
+    sol.position.set(so.x + DIR_SOL.x, DIR_SOL.y, so.z + DIR_SOL.z);
+    sol.target.position.copy(so);
   }
 
   // ------------------------------------------------------------------
   //  TOQUES Y RATÓN
   // ------------------------------------------------------------------
   var punteros = {}, arrastre = null, pellizco = null;
+  function camVueltaCorta() { cam.suaveHasta = 0; }
   var lienzo = render.domElement;
   lienzo.addEventListener('pointerdown', function (ev) {
     lienzo.setPointerCapture(ev.pointerId);
     punteros[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var ids = Object.keys(punteros);
     if (oleadaActiva && ids.length === 1) camSigue = false;
-    if (ids.length === 1) { arrastre = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, t: performance.now(), movio: false }; cam.vel.set(0, 0, 0); }
+    if (ids.length === 1) { arrastre = { x: ev.clientX, y: ev.clientY, sx: ev.clientX, sy: ev.clientY, t: performance.now(), movio: false }; cam.vel.set(0, 0, 0); cam.meta.copy(cam.objetivo); camVueltaCorta(); } // v7.61: el dedo agarra el mapa donde está, sin salto
     if (ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       pellizco = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.distMeta };
@@ -5844,15 +5866,16 @@
     if (Math.hypot(ev.clientX - arrastre.sx, ev.clientY - arrastre.sy) > 7) arrastre.movio = true;
     arrastre.x = ev.clientX; arrastre.y = ev.clientY;
     // mover el punto que mira la cámara
-    var k = cam.dist / window.innerHeight * 1.1;
+    // v7.61: el suelo va pegado al dedo 1:1 (antes se movía casi el doble y se sentía resbaloso)
+    var k = 2 * cam.dist * Math.tan(fovBase() * Math.PI / 360) / window.innerHeight;
     var adelante = new V3(-Math.cos(cam.az), 0, -Math.sin(cam.az));
     var derecha = new V3(-adelante.z, 0, adelante.x);
-    var antes = cam.meta.clone();
-    cam.meta.addScaledVector(derecha, -dx * k).addScaledVector(adelante, dy * k * 1.3);
-    // velocidad del arrastre (para la inercia al soltar)
-    var ahora = performance.now(), dtm = Math.max(8, ahora - (arrastre.tm || ahora - 16)) / 1000;
-    arrastre.tm = ahora;
-    cam.vel.copy(cam.meta).sub(antes).divideScalar(dtm).clampLength(0, 60);
+    cam.meta.addScaledVector(derecha, -dx * k).addScaledVector(adelante, dy * k / Math.cos(cam.polar));
+    // velocidad del arrastre con los últimos 100 ms (para la inercia al soltar, sin tirones)
+    var ahora = performance.now(); arrastre.tm = ahora;
+    var mu = arrastre.muestras || (arrastre.muestras = []);
+    mu.push({ t: ahora, x: cam.meta.x, z: cam.meta.z });
+    while (mu.length > 2 && ahora - mu[0].t > 100) mu.shift();
   });
   function soltar(ev) {
     var era = punteros[ev.pointerId];
@@ -5861,6 +5884,10 @@
     if (arrastre && era && !arrastre.movio && performance.now() - arrastre.t < 600) tocar(ev.clientX, ev.clientY);
     // si el dedo se quedó quieto antes de soltar, no hay inercia
     if (arrastre && arrastre.tm && performance.now() - arrastre.tm > 90) cam.vel.set(0, 0, 0);
+    else if (arrastre && arrastre.muestras && arrastre.muestras.length > 1 && arrastre.movio) {
+      var m0 = arrastre.muestras[0], m1 = arrastre.muestras[arrastre.muestras.length - 1], st = Math.max(16, m1.t - m0.t) / 1000;
+      cam.vel.set((m1.x - m0.x) / st, 0, (m1.z - m0.z) / st).clampLength(0, cam.dist * 1.6);
+    }
     if (!Object.keys(punteros).length) arrastre = null;
   }
   lienzo.addEventListener('pointerup', soltar);
