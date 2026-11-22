@@ -1,5 +1,5 @@
 rules_version = '2';
-// v7.17: estas reglas se publican solas desde GitHub (cuenta de servicio de Tiny Kingdom)
+// reglas v7.45: regalos con mineral (hierro)
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -194,7 +194,7 @@ service cloud.firestore {
         && request.resource.data.alianza is string
         && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.alianza == request.resource.data.alianza
         && get(/databases/$(database)/documents/aldeas/$(request.resource.data.para)).data.alianza == request.resource.data.alianza
-        && request.resource.data.recursos.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
+        && request.resource.data.recursos.keys().hasOnly(['oro', 'comida', 'madera', 'piedra', 'hierro'])
         && recursoValido(request.resource.data.recursos.oro) && recursoValido(request.resource.data.recursos.comida)
         && recursoValido(request.resource.data.recursos.madera) && recursoValido(request.resource.data.recursos.piedra);
       allow delete: if request.auth != null && resource.data.para == request.auth.uid;

@@ -8745,7 +8745,7 @@
       '<label class="rg-celda"><span>' + L('Juego de héroe', 'Hero set') + '</span><select class="campo" id="rg-eq-s"><option value="">' + L('Ninguno (pieza normal)', 'None (normal piece)') + '</option>' + Object.keys(ARMADURA_HEROE).map(function (k) { return '<option value="' + k + '">' + NH(k) + ' · ' + ARMADURA_HEROE[k][en ? 'en' : 'es'] + '</option>'; }).join('') + '</select></label></div>' +
       '<button class="comprar morado" data-accion="rg-set-completo">👑 ' + L('Regalar el juego completo (6 piezas) del héroe elegido', 'Gift the full 6-piece set of the chosen hero') + '</button>' +
       '<h4>💰 ' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="rg-rejilla">' +
-      ['gemas', 'oro', 'comida', 'madera', 'piedra'].map(function (r) { return '<label class="rg-celda"><span>' + ICONO_RECURSO[r] + ' ' + (r === 'gemas' ? L('Gemas', 'Gems') : T('r_' + r) || r) + '</span><input class="campo rg-r" data-r="' + r + '" type="number" min="0" max="999999999999" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
+      ['gemas', 'oro', 'comida', 'madera', 'piedra', 'hierro'].map(function (r) { return '<label class="rg-celda"><span>' + ICONO_RECURSO[r] + ' ' + (r === 'gemas' ? L('Gemas', 'Gems') : r === 'hierro' ? L('Mineral (hierro)', 'Ore (iron)') : T('r_' + r) || r) + '</span><input class="campo rg-r" data-r="' + r + '" type="number" min="0" max="999999999999" inputmode="numeric" placeholder="0"></label>'; }).join('') + '</div>' +
       '<input class="campo" id="rg-nota" maxlength="120" placeholder="' + L('Mensaje (opcional)', 'Message (optional)') + '">' +
       '<button class="comprar oro rg-enviar" data-accion="rg-enviar">🎁 ' + L('Enviar regalo', 'Send gift') + '</button>' +
       '<button class="comprar morado" data-accion="rg-maximo" style="margin-top:8px">👑 ' + L('Poner su cuenta al máximo', 'Max out their account') + '</button>' +
@@ -8833,7 +8833,7 @@
           (g.piezas || []).slice(0, 30).forEach(function (p) { if (EQ[p.t] && MULT_RAREZA_EQ[p.r]) { var np = darPieza(p.t, p.r); if (np && p.s && ARMADURA_HEROE[p.s]) np.s = p.s; } });
           if ((g.piezas || []).length) partes.push((g.piezas || []).length + ' 🧰 ' + L('piezas de equipo', 'gear pieces'));
           var gm = Math.min(TOPE_REGALO, Math.floor(+g.gemas || 0)); if (gm > 0) { estado.gemas = (estado.gemas || 0) + gm; partes.push(gm + ' 💎'); }
-          var r = g.recursos || {}; ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { var n = Math.min(TOPE_REGALO_REC, Math.floor(+r[k] || 0)); if (n > 0) { sumarRecurso(k, n); partes.push(n + ' ' + ICONO_RECURSO[k]); } });
+          var r = g.recursos || {}; ['oro', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (k) { var n = Math.min(TOPE_REGALO_REC, Math.floor(+r[k] || 0)); if (n > 0) { if (k === 'hierro') { estado.hierro = (estado.hierro || 0) + n; try { actualizarHUD(); } catch (e) {} } else sumarRecurso(k, n); partes.push(n + ' ' + ICONO_RECURSO[k]); } }); // v7.45: también mineral
           // v7.43: regalo «todo al máximo» del dueño: se aplica en este reino (esperando a que no haya oleada)
           var esMax = String(g.nota || '').indexOf('[MAXIMO]') === 0; if (esMax) { g.nota = String(g.nota).slice(8).trim(); partes.push(L('👑 Tu reino al máximo', '👑 Your kingdom maxed out')); maximoPorRegalo(); }
           var de = g.deNombre || 'MaikelR';
