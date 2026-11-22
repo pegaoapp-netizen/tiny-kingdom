@@ -2240,7 +2240,7 @@ var M = (function () {
       if (r >= 3) { arc(0.5, ORO, 0.02); var cp2 = caja(0.58, 0.72, 0.04, 0x2a6a34, 0, 0.52, -0.35); cp2.rotation.x = 0.16; cuerpo.add(cp2); }
     }
   }
-  var FAMILIA_TROPA = { explorador: ['arquero', 0.88, 0x9fd46a], miliciano: ['espadachin', 0.9, 0xc9a06a], jinete: ['caballeria', 0.92, 0x7fd0ff], caballeria_pesada: ['caballeria', 1.1, 0xb0302a] };
+  var FAMILIA_TROPA = { ballestero: ['arquero', 1.0, 0x3f7fe0], arquero_largo: ['arquero', 1.05, 0xc03a3a], tirador_elite: ['arquero', 1.1, 0x9a5ad8], explorador: ['arquero', 0.88, 0x9fd46a], miliciano: ['espadachin', 0.9, 0xc9a06a], jinete: ['caballeria', 0.92, 0x7fd0ff], caballeria_pesada: ['caballeria', 1.1, 0xb0302a] };
   var ASEDIO = { balista: 1, ariete: 1, catapulta: 1, torre_asedio: 1 };
   // v6.84: los enemigos de las oleadas: guerreros trasgos con casco de hierro, escudo pintado,
   // armas oxidadas y pinturas de guerra (antes eran bolas verdes con un palo)

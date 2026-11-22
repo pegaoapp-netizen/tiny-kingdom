@@ -1,0 +1,22 @@
+# v7.86: VISTA PREVIA. Cada push a una rama «mejora-…» se publica en un canal de vista previa de Firebase Hosting
+# (no toca el juego de verdad: el canal «live» solo se publica desde main). La dirección sale en el registro del trabajo.
+name: Vista previa (ramas mejora-*)
+on:
+  push:
+    branches: ['mejora-**']
+    paths: ['juego3d/**', '.github/workflows/vista-previa.yml']
+jobs:
+  vista-previa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        id: previa
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: pegao-5ac07
+          entryPoint: juego3d
+          channelId: vista-previa
+          expires: 7d
+      - run: echo "VISTA PREVIA => ${{ steps.previa.outputs.details_url }}"

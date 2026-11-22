@@ -2241,3 +2241,66 @@ body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !importa
 .dg-temp span { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
 .dg-temp img { width: 40px; height: 40px; object-fit: contain; }
 .dg-temp p { flex-basis: 100%; margin: 2px 0 0; font-size: 12px; }
+/* v7.86: Mis objetos en lista (1 por fila) */
+#panel.mo-panel .fila-tienda { display: flex !important; width: auto !important; grid-column: 1 / -1 !important; flex-direction: row !important; text-align: left !important; }
+#panel.mo-panel .fila-tienda .ft-info { flex: 1 1 auto; min-width: 0; word-break: normal; overflow-wrap: normal; hyphens: none; }
+#panel.mo-panel .fila-tienda .ft-info b, #panel.mo-panel .fila-tienda .ft-info small { white-space: normal; word-break: normal; }
+#panel.mo-panel .fila-tienda .comprar { margin-left: auto; }
+/* v7.86: logística entre villas */
+.vl-bts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.vl-cerrada { opacity: .8; }
+.vl-req { font-weight: 800; color: #ffd54a; white-space: nowrap; }
+.vl-guia { margin: 6px 0 0 18px; padding: 0; font-size: 12.5px; line-height: 1.45; }
+.ev-desl { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.ev-desl .ev-r { flex: 0 0 104px; font-size: 13px; }
+.ev-desl input[type=range] { flex: 1 1 auto; min-width: 0; }
+.ev-desl b { flex: 0 0 64px; text-align: right; font-size: 13px; }
+.ev-desl select { flex: 1 1 auto; }
+/* v7.87: Altar de Invocación */
+.al-banner { position: relative; overflow: hidden; margin: 8px 0; padding: 18px 12px 14px; border-radius: 14px; border: 2px solid #c9860f; text-align: center; color: #f3e3c3;
+  background: radial-gradient(ellipse at 50% 30%, #6a3aa8 0%, #2a1440 45%, #160b06 100%); box-shadow: inset 0 0 30px #000a, 0 0 12px #c9860f55; }
+.al-banner h3 { margin: 6px 0 4px; font-family: Cinzel, Georgia, serif; font-size: 22px; color: #ffd54a; text-shadow: 0 2px 6px #000; }
+.al-banner p { margin: 0; font-size: 12.5px; opacity: .9; }
+.al-runa { font-size: 54px; filter: drop-shadow(0 0 14px #d59bff); animation: alGira 6s linear infinite; display: inline-block; }
+.al-luz { position: absolute; inset: -40% 25%; background: conic-gradient(from 0deg, #ffd54a00, #ffd54a33, #d59bff44, #ffd54a00); animation: alGira 9s linear infinite; pointer-events: none; }
+@keyframes alGira { to { transform: rotate(360deg); } }
+.al-caja { border: 2px solid #8a5a06 !important; background: linear-gradient(#3a2414, #24160a) !important; }
+.al-caja.elite { border-color: #ffd54a !important; box-shadow: 0 0 10px #ffd54a44; }
+.al-cab { display: flex; flex-direction: column; gap: 2px; }
+.al-cab b { font-size: 15px; color: #ffd54a; } .al-cab small { opacity: .85; }
+.al-probs { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0; }
+.al-p { flex: 0 0 64px; display: flex; flex-direction: column; align-items: center; gap: 1px; background: #1a0f06; border: 1px solid #6b4b2a; border-radius: 9px; padding: 4px 2px; }
+.al-f { width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.al-f img { width: 46px; height: 46px; object-fit: contain; }
+.al-p small { font-size: 9.5px; text-align: center; line-height: 1.1; } .al-p b { font-size: 12px; color: #ffd54a; }
+.al-bts { display: flex; gap: 8px; }
+.al-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 6px; border-radius: 11px; border: 2px solid #4a2a7a; color: #fff; font-weight: 800; background: linear-gradient(#8a5ad8, #4a2a9a); box-shadow: 0 3px 0 #2a1450; }
+.al-btn.elite { background: linear-gradient(#ffd54a, #c9860f); color: #3a2400; border-color: #7a4a00; box-shadow: 0 3px 0 #5a3400; }
+.al-btn i { font-style: normal; font-size: 11px; color: #9bff9b; } .al-btn:disabled { opacity: .5; }
+/* v7.87: Cargos con retratos */
+.cg-elegir { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 6px; padding: 5px 8px; border-radius: 10px; border: 2px solid #8a5a06; background: linear-gradient(#3a2414, #24160a); color: #f3e3c3; text-align: left; }
+.cg-elegir span:nth-child(2) { display: flex; flex-direction: column; flex: 1; } .cg-elegir small { font-size: 11px; opacity: .8; } .cg-elegir i { font-style: normal; color: #ffd54a; }
+.cg-foto { width: 42px; height: 42px; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #1a0f06; border: 1px solid #c9860f; font-size: 22px; flex: 0 0 42px; }
+.cg-foto img { width: 100%; height: 100%; object-fit: cover; } .cg-foto.vacio { color: #ffd54a; }
+#cg-pick { position: fixed; inset: 0; z-index: 9000; background: #000a; display: flex; align-items: center; justify-content: center; }
+.dg-pieza.activo { border-color: #ffd54a; }
+/* v7.88: tarjetas de pedido en el chat de la alianza */
+.chat-ped { border: 2px solid #ffd54a; border-radius: 12px; padding: 8px; background: linear-gradient(#3a2414, #24160a); color: #f3e3c3; box-shadow: 0 0 8px #ffd54a55; margin: 4px 0; }
+.chat-ped.lleno { border-color: #5fd35a; box-shadow: 0 0 8px #5fd35a55; }
+.chat-ped.viejo { border-color: #6b4b2a; box-shadow: none; opacity: .7; font-size: 12px; }
+.chat-ped .cp-cab { font-size: 13px; margin-bottom: 6px; }
+.chat-ped .cp-ok { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #9bff9b; }
+.chat-ped .cp-donar { margin-top: 6px; width: 100%; }
+.chat-pedir { display: flex; justify-content: flex-end; padding: 4px 0; }
+.chat-ped .ped-barra span { color: #fff; text-shadow: 0 1px 2px #000; }
+/* v7.89: caravanas y destacar */
+.ev-cars { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin: 6px 0; }
+.ev-cars span { display: flex; flex-direction: column; padding: 5px 7px; border-radius: 9px; background: #1a0f06; border: 1px solid #6b4b2a; font-size: 11.5px; }
+.ev-cars b { color: #ffd54a; font-size: 12px; }
+.ev-desl .ev-max { flex: 0 0 auto; padding: 4px 8px; }
+.dt-rapidos { display: flex; gap: 6px; margin: 8px 0; } .dt-rapidos .comprar { flex: 1; }
+.dt-fila { margin: 8px 0; padding: 6px; border-radius: 10px; background: #1a0f06; border: 1px solid #6b4b2a; }
+.dt-top { display: flex; align-items: center; gap: 8px; } .dt-top .ev-r { flex: 1; display: flex; flex-direction: column; } .dt-top small { font-size: 11px; opacity: .8; }
+.dt-foto { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 22px; } .dt-foto img { width: 40px; height: 40px; object-fit: contain; }
+.dt-num { width: 96px; text-align: right; }
+.dt-fila input[type=range] { width: 100%; margin-top: 4px; }

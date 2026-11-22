@@ -74,7 +74,7 @@
     }).join('') + '</div>';
   document.body.appendChild(tk);
   $('tk-jugador').addEventListener('click', function () { var p = $('perfil'); if (p) p.click(); });
-  $('tk-ciudad').addEventListener('click', function () { var c = $('btn-centrar'); if (c) c.click(); });
+  $('tk-ciudad').addEventListener('click', function () { if (window.__tkAbrirVillas) { window.__tkAbrirVillas(); return; } var c = $('btn-centrar'); if (c) c.click(); }); // v7.86: el cuadro central abre Mis villas
   $('tk-gemas').addEventListener('click', function () { if (window.TK_gemas) window.TK_gemas(); });
   tk.querySelectorAll('.tk-rec').forEach(function (r) { r.addEventListener('click', function () { var p = $('pill-' + r.dataset.de); if (p) p.click(); }); });
   // v6.50: sin el cuadro del Castillo arriba: idioma y salir van arriba a la derecha,
