@@ -1726,7 +1726,7 @@
     function grupos(comp, pos, m, foe, extraVida, escala) {
       return Object.keys(comp).filter(function (k) { return comp[k] > 0 && COMBATE_KOC[k]; }).map(function (k) {
         var c = COMBATE_KOC[k];
-        return { tipo: k, n: comp[k], ini: comp[k], pos: pos, rango: c.rango * (extraVida > 1 && c.distancia ? extraVida : 1), vel: c.velocidad, dist: !!c.distancia,
+        return { tipo: k, n: comp[k], ini: comp[k], pos: pos, rango: c.rango + (extraVida > 1 && c.distancia ? 20 * (op.muralla || 0) : 0), // v7.51: la muralla da +20 de alcance por nivel a las tropas a distancia del defensor vel: c.velocidad, dist: !!c.distancia,
           atk: c.ataque * FACTOR_DANO_KOC * (op.factor || 1) * mult(m.atk - foe.foeAtk) * (escala || 1) * (0.9 + Math.random() * 0.2), vida: c.vida * mult(m.vida - foe.foeVida) * extraVida };
       });
     }
@@ -8286,7 +8286,7 @@
     sonar('cuerno');
     Cuentas.atacar(doc).catch(function () { doc = docSin; return Cuentas.atacar(doc); }).then(function (ref) {
       doc.id = ref.id; marchas.push(doc);
-      estado.marchaTropas = estado.marchaTropas || {}; estado.marchaTropas[ref.id] = JSON.parse(JSON.stringify(estado.ultimaMarcha || { tropas: miComposicion(), heroe: liderActual() }));
+      estado.marchaTropas = estado.marchaTropas || {}; estado.marchaTropas[ref.id] = JSON.parse(JSON.stringify(estado.ultimaMarcha || { tropas: miComposicion(), heroe: liderActual() })); estado.marchaTropas[ref.id].dur = viaje; // v7.51: duración base del viaje (los aceleradores de la ida no acortan la vuelta)
       estado.destinos = estado.destinos || {}; estado.destinos[ref.id] = { x: a.x, y: a.y };
       if (nCarretas) { var cv = carretas(), ahoraC = Date.now(); cv.viajes.push({ id: 'va' + ref.id, tipo: 'ataque', de: miLugar(), a: { x: a.x, y: a.y }, sale: ahoraC, llega: ahoraC + viaje, vuelve: ahoraC + 2 * viaje, recursos: null, n: nCarretas, nombre: String(a.nombre || '') }); }
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
@@ -8324,7 +8324,7 @@
       marchas = marchas.filter(function (x) { return x.id !== m.id; });
       if (r.cancelado) { Cuentas.cobrarAtaque(r.id).catch(function () {}); consejoTemporal(T('mar_cancelada', { n: r.defensorNombre })); sonar('magia'); guardar(true); actualizarAlertas(); return; }
       var caidas = bajasEjercito(r.bajas || 0);
-      var destM = (estado.destinos || {})[r.id] || lugarDe(r.defensor), viajeV = Math.max(30000, (r.llega || Date.now()) - (r.fecha || Date.now()));
+      var destM = (estado.destinos || {})[r.id] || lugarDe(r.defensor), viajeV = Math.max(30000, ((estado.marchaTropas || {})[r.id] || {}).dur || ((r.llega || Date.now()) - (r.fecha || Date.now())));
       estado.regresos = estado.regresos || [];
       if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: Date.now(), llega: Date.now() + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
       else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
