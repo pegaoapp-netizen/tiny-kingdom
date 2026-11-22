@@ -604,6 +604,8 @@ var M = (function () {
       var sat = dd < 0.001 ? 0 : dd / (1 - Math.abs(2 * l - 1)), hue = dd < 0.001 ? 0 : (mx === r ? ((g - b) / dd + 6) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4) * 60, o = null;
       if ((hue < 24 || hue > 335) && sat > 0.4 && l > 0.18) o = hsl2rgb(tj[0], Math.min(1, Math.max(tj[1], sat * 0.9)), l); // tejas
       else if (sat < 0.22 && l > 0.32 && l < 0.85) o = hsl2rgb(40, 0.32, Math.min(0.9, l * 0.75 + 0.24)); // piedra -> crema claro
+      else if (PROTO3D && hue >= 18 && hue <= 55 && sat < 0.62 && l > 0.36) o = hsl2rgb(42, 0.3, Math.min(0.92, l * 0.6 + 0.36)); // v7.72 prototipo: arenisca -> piedra clara
+      else if (PROTO3D && sat > 0.18) o = hsl2rgb(hue, Math.min(1, sat * 1.35), l); // v7.72 prototipo: colores más vivos
       if (o) { p[i] = o[0]; p[i + 1] = o[1]; p[i + 2] = o[2]; }
     }
     x.putImageData(d, 0, 0);
@@ -667,6 +669,13 @@ var M = (function () {
     if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior
     if (!t) return null;
     var gT = new THREE.Group(), mT = t.clone(true); mT.scale.setScalar(esc); gT.add(mT); gT.userData.noFusionar = true; gT.userData.tripo = true; gT.userData.alturaDisparo = 3;
+    // v7.72 prototipo: estandarte medieval azul y oro en lo alto de cada edificio
+    if (PROTO3D && !ES_CAMPO_T[tipo]) { mT.updateMatrixWorld(true); var bB = new THREE.Box3().setFromObject(mT), hB = bB.max.y - bB.min.y, k = Math.max(0.5, hB / 4);
+      var fl = new THREE.Group(); fl.position.set(bB.min.x + (bB.max.x - bB.min.x) * 0.3, bB.max.y - hB * 0.12, bB.min.z + (bB.max.z - bB.min.z) * 0.35); fl.scale.setScalar(k);
+      fl.add(cil(0.05, 0.05, 1.6, 6, 0x4a2e1a, 0, 0.8, 0)); fl.add(esfera(0.09, 0xe2b84a, 0, 1.65, 0));
+      var tela = new THREE.PlaneGeometry(0.75, 0.5, 4, 2), pt = tela.attributes.position; for (var iv = 0; iv < pt.count; iv++) pt.setZ(iv, Math.sin(pt.getX(iv) * 5) * 0.05); tela.computeVertexNormals();
+      var tm = new THREE.Mesh(tela, new THREE.MeshLambertMaterial({ color: 0x1f5fd0, side: THREE.DoubleSide })); tm.position.set(0.4, 1.3, 0); tm.castShadow = true; fl.add(tm);
+      fl.add(caja(0.18, 0.18, 0.02, 0xe2b84a, 0.4, 1.3, 0.02)); fl.userData.noFusionar = true; gT.add(fl); }
     // v6.56: humo en los edificios que tienen fogón (sale de lo alto del techo)
     if (CON_HUMO[tipo]) { mT.updateMatrixWorld(true); var bh = new THREE.Box3().setFromObject(mT); gT.userData.chimenea = new THREE.Vector3(bh.min.x + (bh.max.x - bh.min.x) * 0.68, bh.max.y * 0.9, bh.min.z + (bh.max.z - bh.min.z) * 0.32); }
     return gT;
@@ -1987,12 +1996,13 @@ var M = (function () {
   // Muralla alrededor de TODO el reino: un óvalo con una puerta donde entra el camino.
   // nivel (visual) 1 madera, 2 piedra, 3 piedra con torres de techo azul.
   // forma = { cx, cz, rx, rz, puerta (ángulo), hueco (medio ángulo) }
+  // v7.72: MURALLA GRANDE Y CLARA como en la referencia: piedra crema, alta y gruesa, con talud, cornisa,
+  // tres almenas por tramo, torres cuadradas cada 3 tramos y torres redondas grandes en las puertas
   function muralla(nivel, forma) {
     var g = new THREE.Group();
     var f = forma;
-    var alto = nivel === 0 ? 1.05 : nivel === 1 ? 1.9 : nivel === 2 ? 2.6 : 3.3;
-    var color = C.piedra;
-    // v6.83: muralla cuadrada (formaX/formaZ en datos.js); el perímetro se mide de verdad para que los tramos queden parejos
+    var PM = 0xe6dcc3, PMS = 0xcfc3a6, PMO = 0xa89c82, PMZ = 0x938a76;
+    var alto = (nivel === 0 ? 1.05 : nivel === 1 ? 1.9 : nivel === 2 ? 2.6 : 3.3) * 1.55, grueso = nivel >= 1 ? 1.7 : 1.2;
     function punto(t) { return { x: f.cx + formaX(t) * f.rx, z: f.cz + formaZ(t) * f.rz }; }
     var per = 0; for (var pi = 0; pi < 720; pi++) { var p0 = punto(pi / 720 * Math.PI * 2), p1 = punto((pi + 1) / 720 * Math.PI * 2); per += Math.hypot(p1.x - p0.x, p1.z - p0.z); }
     var N = Math.round(per / 2.6);
@@ -2003,54 +2013,53 @@ var M = (function () {
       var t0 = i / N * Math.PI * 2, t1 = (i + 1) / N * Math.PI * 2, tm = (t0 + t1) / 2;
       if (enPuerta(tm)) continue;
       var a = punto(t0), b = punto(t1);
-      var dx = b.x - a.x, dz = b.z - a.z, largo = Math.hypot(dx, dz) * 1.08;
-      var seg = caja(largo, alto, nivel >= 1 ? 1.1 : 0.85, color, (a.x + b.x) / 2, alto / 2, (a.z + b.z) / 2);
-      seg.rotation.y = -Math.atan2(dz, dx);
-      g.add(seg);
-      if (nivel >= 1) { // talud de piedra oscura abajo: el muro "pisa" el suelo
-        var zc = caja(largo, 0.6, 1.45, C.piedraOsc, (a.x + b.x) / 2, 0.3, (a.z + b.z) / 2);
-        zc.rotation.y = seg.rotation.y; zc.castShadow = false; g.add(zc);
-      }
-      if (false) {
-        if (i % 2 === 0) { var pu = cono(0.25, 0.5, 4, C.maderaOsc, (a.x + b.x) / 2, alto + 0.22, (a.z + b.z) / 2); pu.castShadow = false; g.add(pu); }
-      } else {
-        // dos almenas por tramo: silueta de muralla de verdad
-        [-0.25, 0.25].forEach(function (u) {
-          var al = caja(0.6, 0.5, 0.95, C.piedra, a.x + dx * (0.5 + u), alto + 0.25, a.z + dz * (0.5 + u));
-          al.rotation.y = seg.rotation.y; g.add(al);
+      var dx = b.x - a.x, dz = b.z - a.z, largo = Math.hypot(dx, dz) * 1.08, rot = -Math.atan2(dz, dx), cx = (a.x + b.x) / 2, cz = (a.z + b.z) / 2;
+      var seg = caja(largo, alto, grueso, PM, cx, alto / 2, cz); seg.rotation.y = rot; g.add(seg);
+      // talud abajo, franja a media altura y cornisa arriba (el muro se ve hecho de piedra, no una caja lisa)
+      var zc = caja(largo, 0.9, grueso + 0.6, PMZ, cx, 0.45, cz); zc.rotation.y = rot; zc.castShadow = false; g.add(zc);
+      var fr = caja(largo, 0.14, grueso + 0.08, PMS, cx, alto * 0.55, cz); fr.rotation.y = rot; fr.castShadow = false; g.add(fr);
+      var co = caja(largo, 0.22, grueso + 0.3, PMS, cx, alto - 0.05, cz); co.rotation.y = rot; g.add(co);
+      [-0.33, 0, 0.33].forEach(function (u) {
+        [-1, 1].forEach(function (lado) {
+          var ox = -Math.sin(-rot) * 0, al = caja(0.55, 0.6, 0.36, PM, a.x + dx * (0.5 + u) + Math.sin(rot) * lado * (grueso / 2 - 0.18), alto + 0.3, a.z + dz * (0.5 + u) + Math.cos(rot) * lado * (grueso / 2 - 0.18));
+          al.rotation.y = rot; g.add(al);
         });
-      }
-      if (i % 5 === 0 && !enPuerta(t0 - 0.2) && !enPuerta(t0 + 0.2)) torres.push({ p: a, puerta: false });
+      });
+      if (i % 3 === 0 && !enPuerta(t0 - 0.2) && !enPuerta(t0 + 0.2)) torres.push({ p: a, puerta: false, rot: rot });
     }
-    // torres grandes a los dos lados de la puerta
     puertas.forEach(function (pp) {
       var pa = punto(pp - f.hueco - 0.03), pb = punto(pp + f.hueco + 0.03);
       torres.push({ p: pa, puerta: true }, { p: pb, puerta: true });
-      // arco de piedra encima de la puerta
-      var ldx = pb.x - pa.x, ldz = pb.z - pa.z, arco = caja(Math.hypot(ldx, ldz), 1.1, 1.5, C.piedra, (pa.x + pb.x) / 2, alto + 0.75, (pa.z + pb.z) / 2);
-      arco.rotation.y = -Math.atan2(ldz, ldx); g.add(arco);
-      var arco2 = caja(Math.hypot(ldx, ldz) * 0.7, 0.35, 1.6, C.piedraOsc, (pa.x + pb.x) / 2, alto + 0.12, (pa.z + pb.z) / 2); arco2.rotation.y = arco.rotation.y; g.add(arco2);
+      var ldx = pb.x - pa.x, ldz = pb.z - pa.z, rA = -Math.atan2(ldz, ldx), cxa = (pa.x + pb.x) / 2, cza = (pa.z + pb.z) / 2;
+      var arco = caja(Math.hypot(ldx, ldz), 1.4, grueso + 0.5, PM, cxa, alto + 0.85, cza); arco.rotation.y = rA; g.add(arco);
+      var arco2 = caja(Math.hypot(ldx, ldz) * 0.7, 0.4, grueso + 0.6, PMO, cxa, alto + 0.12, cza); arco2.rotation.y = rA; g.add(arco2);
+      for (var k = -2; k <= 2; k++) { var al2 = caja(0.6, 0.6, 0.5, PM, cxa + ldx * k * 0.17, alto + 1.85, cza + ldz * k * 0.17); al2.rotation.y = rA; g.add(al2); }
     });
     var _fin = function () { return fusionar(g); };
     torres.forEach(function (tq) {
-      var x = tq.p.x, z = tq.p.z, h = alto + (tq.puerta ? 1.8 : 1.1), r = tq.puerta ? 1.1 : 0.8;
-      g.add(cil(r, r + 0.12, h, 8, C.piedra, x, h / 2, z));
-      if (false) g.add(cono(r + 0.2, 0.9, 8, C.maderaOsc, x, h + 0.45, z));
-      else {
-        g.add(cil(r + 0.15, r + 0.15, 0.35, 8, C.piedraOsc, x, h + 0.17, z));
-        for (var am = 0; am < 6; am++) { var aa = am / 6 * Math.PI * 2; g.add(caja(0.35, 0.4, 0.35, C.piedra, x + Math.cos(aa) * (r + 0.05), h + 0.55, z + Math.sin(aa) * (r + 0.05))); }
-        if (tq.puerta) { antorcha(g, x + (f.cx - x) * 0.02, h - 0.4, z + r + 0.15); antorcha(g, x, h - 0.4, z - r - 0.15); }
-        else if (nivel >= 1) {
-          // saetera encendida mirando hacia fuera y antorcha arriba
+      var x = tq.p.x, z = tq.p.z;
+      if (tq.puerta) {
+        var h = alto + 2.6, r = 1.6;
+        g.add(cil(r + 0.3, r + 0.4, 1.0, 12, PMZ, x, 0.5, z));
+        g.add(cil(r, r + 0.12, h, 12, PM, x, h / 2, z));
+        g.add(cil(r + 0.06, r + 0.06, 0.16, 12, PMS, x, h * 0.55, z));
+        g.add(cil(r + 0.25, r + 0.25, 0.4, 12, PMS, x, h + 0.2, z));
+        for (var am = 0; am < 9; am++) { var aa = am / 9 * Math.PI * 2; g.add(caja(0.42, 0.5, 0.42, PM, x + Math.cos(aa) * (r + 0.1), h + 0.65, z + Math.sin(aa) * (r + 0.1))); }
+        antorcha(g, x, h - 0.6, z + r + 0.15); antorcha(g, x, h - 0.6, z - r - 0.15);
+        if (nivel >= 2) g.add(cono(r + 0.4, 2.2, 12, 0x2f6fd0, x, h + 1.5, z));
+        if (nivel >= 2) { var bd = bandera(C.telaRoja, 1.8); bd.userData.noFusionar = true; bd.position.set(x, h + 2.4, z); g.add(bd); (g.userData.banderas = g.userData.banderas || []).push(bd.userData.tela); }
+      } else {
+        var hT = alto + 1.5, w = 2.3, tt = caja(w, hT, w, PM, x, hT / 2, z); tt.rotation.y = tq.rot; g.add(tt);
+        var tz = caja(w + 0.5, 1.0, w + 0.5, PMZ, x, 0.5, z); tz.rotation.y = tq.rot; tz.castShadow = false; g.add(tz);
+        var tc = caja(w + 0.3, 0.26, w + 0.3, PMS, x, hT, z); tc.rotation.y = tq.rot; g.add(tc);
+        var cs = Math.cos(tq.rot), sn = Math.sin(tq.rot);
+        [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1], [-1, 0], [1, 0]].forEach(function (q) { var lx = q[0] * (w / 2), lz = q[1] * (w / 2), mm = caja(0.5, 0.6, 0.5, PM, x + lx * cs + lz * sn, hT + 0.4, z - lx * sn + lz * cs); mm.rotation.y = tq.rot; g.add(mm); });
+        if (nivel >= 1) {
           var ox = x - f.cx, oz = z - f.cz, ol = Math.hypot(ox, oz) || 1; ox /= ol; oz /= ol;
-          g.add(ventana(0.2, 0.5, 0.2, x + ox * (r + 0.06), h * 0.6, z + oz * (r + 0.06)));
-          brillo(g, x + ox * (r + 0.2), h * 0.6, z + oz * (r + 0.2), 1.1, true);
-          antorcha(g, x, h + 0.55, z);
+          g.add(ventana(0.22, 0.6, 0.2, x + ox * (w / 2 + 0.05), hT * 0.62, z + oz * (w / 2 + 0.05)));
+          antorcha(g, x, hT + 0.6, z);
         }
-        if (nivel >= 3) {
-          g.add(cono(r + 0.3, 1.4, 8, C.techoAzul, x, h + 1.05, z));
-          if (tq.puerta) { var bd = bandera(C.telaRoja, 1.8); bd.userData.noFusionar = true; bd.position.set(x, h + 1.6, z); g.add(bd); (g.userData.banderas = g.userData.banderas || []).push(bd.userData.tela); }
-        }
+        if (nivel >= 3) { var tp = cono(w * 0.85, 1.8, 4, 0x2f6fd0, x, hT + 1.1, z); tp.rotation.y = tq.rot + Math.PI / 4; g.add(tp); }
       }
     });
     return _fin();
