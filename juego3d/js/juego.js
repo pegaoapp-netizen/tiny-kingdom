@@ -4322,7 +4322,7 @@
     if (tipo === 'embajada') s.modelo.scale.multiplyScalar(0.525); else if (tipo === 'torre') s.modelo.scale.multiplyScalar(0.75); else if (tipo === 'cuartel') s.modelo.scale.multiplyScalar(0.75); // v7.54: ninguno compite con el castillo // v7.52: que no le hagan sombra al castillo
     if (!s.campo) { // v7.55: tope de ancho para que no se toquen (la cuadrícula es de 12: centro a centro 1.5 veces el ancho)
       var TOPE = 8;
-      if (s.modelo.userData.es2D) { var wS = s.modelo.scale.x * s.modelo.userData.ancho2D; if (wS > TOPE) s.modelo.scale.multiplyScalar(TOPE / wS); s.modelo.scale.multiplyScalar(1.4); // v7.56: los blancos/azules llenan su parcela
+      if (s.modelo.userData.es2D) { var wS = s.modelo.scale.x * s.modelo.userData.ancho2D; if (wS > TOPE) s.modelo.scale.multiplyScalar(TOPE / wS); s.modelo.scale.multiplyScalar(Math.min(1.4, 9.2 / (s.modelo.scale.x * s.modelo.userData.ancho2D))); // v7.56: los blancos/azules llenan su parcela · v7.57: sin salirse a la calle
         // v7.56: el dibujo se voltea en el lado derecho de la villa para que la entrada mire hacia la calle del centro
         var lcS = aLocal(s.pos.x, s.pos.z); if (lcS.b < 0) { s.modelo.children[0].scale.x = -Math.abs(s.modelo.children[0].scale.x); } }
       else { s.modelo.updateMatrixWorld(true); var bxT = new THREE.Box3().setFromObject(s.modelo), lT = Math.max(bxT.max.x - bxT.min.x, bxT.max.z - bxT.min.z); if (lT > TOPE) { s.modelo.scale.multiplyScalar(TOPE / lT); s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true); var bT = new THREE.Box3().setFromObject(s.modelo), cT = bT.getCenter(new V3()); s.modelo.position.set(-cT.x, 0.1 - bT.min.y, -cT.z); } }
