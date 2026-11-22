@@ -118,6 +118,8 @@
   render.setSize(window.innerWidth, window.innerHeight);
   render.shadowMap.enabled = true;
   render.shadowMap.type = THREE.PCFSoftShadowMap;
+  // v7.70: tono de cine (ACES): los claros no se queman y los colores se ven reales
+  render.toneMapping = THREE.ACESFilmicToneMapping; render.toneMappingExposure = 1.25;
   // Calidad: 'alta' (sombras, humo, polvo, nitidez) o 'baja' (más rápido)
   var calidad = (function () {
     try { var p = JSON.parse(localStorage.getItem('tinykingdom_pref')) || {}; if (p.calidad) return p.calidad; } catch (e) {}
@@ -160,7 +162,7 @@
   // v6.48: vista isométrica fija estilo 2D: la cámara se aleja ISO_K veces con un lente ISO_K veces más cerrado (casi sin perspectiva)
   // v7.67: con perspectiva de verdad, como en la referencia del dueño: lo de cerca se ve grande y lo de lejos se va achicando
   // iso: cuánta perspectiva (5 = casi plano), grados: inclinación de la cámara, luz: claridad de día, acerca: zoom de la Ciudad
-  var VISTA = { iso: 2.6, grados: 45, luz: 1.25, acerca: 0.68 }; // v7.68: más inclinada y más cerca
+  var VISTA = { iso: 1.7, grados: 40, luz: 1.0, sombra: 0.72, acerca: 0.7 }; // v7.70: luz natural: menos luz que rellena (sombras de verdad) y colores sin quemar
   var ISO_K = VISTA.iso;
   function fovBase() { return window.innerWidth < window.innerHeight ? 34 : 30; }
   function fovPantalla() { return 2 * Math.atan(Math.tan(fovBase() * Math.PI / 360) / ISO_K) * 180 / Math.PI; }
@@ -312,7 +314,7 @@
     sol.intensity = (1.12 - k * 0.6 - d * 0.14) * (1 + (VISTA.luz - 1) * (1 - k)); // v7.67: de día más claro
     hemi.color.copy(mezcla(CIELO.hemiCielo, k, d));
     hemi.groundColor.copy(mezcla(CIELO.hemiSuelo, k, d));
-    hemi.intensity = (0.56 - k * 0.04) * (1 + (VISTA.luz - 1) * 1.3 * (1 - k));
+    hemi.intensity = (0.56 - k * 0.04) * (1 + (VISTA.luz - 1) * 1.3 * (1 - k)) * (1 - (1 - VISTA.sombra) * (1 - k));
     M.matNube.color.copy(mezcla(CIELO.nube, k, d));
     escena.userData.estrellas.material.opacity = Math.max(0, k * 1.1 - 0.1);
     M.luzNoche(k, t);
@@ -426,7 +428,7 @@
       if (dc < 4.2) c.lerp(tierra, (1 - dc / 4.2) * 0.55);
       if (Math.hypot(x, z) < 11) c.lerp(tierra, 0.25 * (1 - Math.hypot(x, z) / 11));
       if (Math.hypot(x - ESTANQUE.x, z - ESTANQUE.z) < ESTANQUE.r + 3) c.lerp(humedo, 0.5);
-      colores.push(c.r, c.g, c.b);
+      colores.push(c.r * 0.8, c.g * 0.82, c.b * 0.9); // v7.70: pasto de color natural (antes verde amarillo chillón)
     }
     g.setAttribute('color', new THREE.Float32BufferAttribute(colores, 3));
     g.computeVertexNormals();
@@ -5869,7 +5871,8 @@
     if (!enMundo && !oleadaActiva && (vistaActual === 'ciudad' || vistaActual === 'campos')) {
       var lc = aLocal(cam.meta.x, cam.meta.z), aMin, aMax, bMax;
       // v7.69: cuanto más cerca, más se puede recorrer la villa (de lejos se queda centrada para que no se vean los campos)
-      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz; aMax = 14 + R_CIUDAD * kz; bMax = R_CIUDAD * kz; }
+      // v7.70: a los lados y hacia delante se llega a TODA la villa (antes el lado de la ruleta quedaba fuera); hacia atrás el tope depende del zoom para que no se vean los campos
+      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz; aMax = R_CIUDAD * 0.95; bMax = R_CIUDAD * 0.92; }
       else { aMin = CAMPOS_RECT.a - 14; aMax = CAMPOS_RECT.a + 14; bMax = CAMPOS_RECT.hb - 20; }
       var na = Math.max(aMin, Math.min(aMax, lc.a)), nb = Math.max(-bMax, Math.min(bMax, lc.b));
       if (na !== lc.a || nb !== lc.b) {
