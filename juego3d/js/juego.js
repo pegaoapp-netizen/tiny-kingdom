@@ -6144,19 +6144,9 @@
     modoColocar = tipo;
     cerrarPanel();
     $('btn-construir').classList.add('activo');
-    // vista previa transparente del edificio en cada terreno libre
-    slots.forEach(function (s) {
-      if (s.edificio || s.obra || cerrada(s) || !parcelaAcepta(s, tipo)) return;
-      var f = crearModelo(tipo, 1);
-      f.traverse(function (o) {
-        if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; o.material.opacity = 0.45; o.material.depthWrite = false; o.castShadow = false; }
-      });
-      f.scale.setScalar(ESCALA_EDIFICIO);
-      s.grupo.add(f);
-      s.fantasma = f;
-    });
+    // v7.62: las parcelas vacías se quedan planas: sin edificio transparente flotando encima, solo brilla su marco en el suelo
     $('barra-colocar-txt').textContent = T('colocando', { n: N(tipo) });
-    $('barra-colocar').classList.remove('oculto');
+    $('barra-colocar').classList.remove('oculto'); if (typeof subirBarraColocar === 'function') subirBarraColocar();
     document.body.classList.add('colocando');
   }
   function salirModoColocar() {
@@ -11359,6 +11349,14 @@
   function guardarDock() { try { localStorage.setItem('tinykingdom_dock', JSON.stringify({ p: dockPest, a: dockAbierto })); } catch (e) {} }
   function slotRelevo() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'relevo'; })[0]; }
   // v7.02: la misión se pone justo encima de la barra de procesos (antes quedaba escondida detrás)
+  // v7.62: el aviso de "Elige un terreno que brille para tu …" va siempre completo ENCIMA de la barra de procesos
+  function subirBarraColocar() {
+    var bc = $('barra-colocar'), dk = $('dock-procesos'); if (!bc || bc.classList.contains('oculto')) return;
+    bc.style.setProperty('z-index', '45', 'important');
+    var r = dk && getComputedStyle(dk).display !== 'none' ? dk.getBoundingClientRect() : null;
+    if (r && r.height > 0 && r.top < window.innerHeight) bc.style.setProperty('bottom', Math.round(window.innerHeight - r.top + 8) + 'px', 'important'); else bc.style.removeProperty('bottom');
+  }
+  setInterval(subirBarraColocar, 250);
   setInterval(function () {
     var m = $('mision'), dk = $('dock-procesos'); if (!m || m.classList.contains('oculto')) return;
     var r = dk && getComputedStyle(dk).display !== 'none' ? dk.getBoundingClientRect() : null;
@@ -11762,10 +11760,14 @@
     nubes.forEach(function (n) { var a = Math.atan2(n.position.z, n.position.x) + n.userData.v * dtReal / n.userData.r, r = n.userData.r; n.position.x = Math.cos(a) * r; n.position.z = Math.sin(a) * r; });
     // brillo de terrenos libres
     var b = (Math.sin(performance.now() / 250) + 1) / 2;
+    var mG = MISIONES[estado.mision || 0], pideConstruir = !!(mG && /^Construye/.test(mG.es) && !mG.ok());
     slots.forEach(function (s, i) {
       var libre = !s.edificio && !s.obra;
       var on = (modoColocar && libre && modoColocar !== 'barricada' && parcelaAcepta(s, modoColocar) && !cerrada(s)) || slotElegido === i;
-      s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : 0;
+      // v7.62: cuando la guía pide construir, las parcelas libres brillan suave en su marco
+      var guia = !on && libre && !modoColocar && pideConstruir && !cerrada(s);
+      s.terreno.userData.brillo.material.opacity = on ? 0.35 + b * 0.5 : guia ? 0.12 + b * 0.22 : 0;
+      if (s.terreno.userData.brillo) s.terreno.userData.brillo.visible = on;
       // v6.38: el letrero de nivel solo se ve en el edificio que tocaste
       if (s.insignia) s.insignia.visible = menuEdif.slot === i || (slotElegido === i && !!panelActual);
       if (s.chapa) s.chapa.visible = !!s.edificio && !(s.insignia && s.insignia.visible); if (s.chapa && s.chapa.visible) chapaSegunZoom(s.chapa);
@@ -11775,7 +11777,8 @@
       if (s.terreno.userData.marcas) s.terreno.userData.marcas.visible = !!on;
     });
     if (insigniaCastillo) insigniaCastillo.visible = !!menuEdif.castillo || !!(panelActual && panelActual.tipo === 'castillo');
-    slots.forEach(function (s) { if (s.fantasma) s.fantasma.position.y = 0.15 + Math.sin(performance.now() / 300) * 0.12; });
+    // v7.62: nada sube ni baja sobre una parcela vacía: el terreno libre queda pegado al césped
+    slots.forEach(function (s) { if (!s.edificio && !s.obra && s.terreno.position.y !== 0) s.terreno.position.y = 0; });
     barricadas.forEach(function (bq) { bq.marca.material.opacity = (modoColocar === 'barricada' && !bq.nivel) ? 0.3 + b * 0.4 : 0; if (bq.fantasma) bq.fantasma.position.y = 0.1 + Math.sin(performance.now() / 300) * 0.1; });
     actualizarRelojes();
     if (cupulaEscudo.visible) cupulaEscudo.material.uniforms.t.value = performance.now() / 1000;

@@ -1386,49 +1386,54 @@ var M = (function () {
   // Parcela libre (v5.0): el mismo estilo dentro y fuera de la muralla.
   // Caminito de arena alrededor, marco de pasto, borde de piedra, base de tierra lisa y un + para construir.
   var TAM_PARCELA = 7.0;
+  // v7.62: la parcela vacía es SOLO suelo plano al ras del pasto (nada flota ni sobresale): tierra arada marrón,
+  // un marco fino de piedra pegado al suelo, cerca baja de madera en la ciudad y un marco que brilla cuando toca construir
   function parcelaLibre(campo) {
-    var g = new THREE.Group();
-    var camino = caja(10, 0.04, 10, 0xb7ad9a, 0, 0.02, 0); camino.castShadow = false; camino.receiveShadow = true; g.add(camino);
-    var pasto = caja(8.5, 0.07, 8.5, 0x7fae4e, 0, 0.045, 0); pasto.castShadow = false; pasto.receiveShadow = true; g.add(pasto);
-    var borde = caja(7.6, 0.16, 7.6, 0xa7a196, 0, 0.09, 0); borde.castShadow = false; borde.receiveShadow = true; g.add(borde);
-    var bordeOsc = caja(7.62, 0.04, 7.62, 0x7f796f, 0, 0.17, 0); bordeOsc.castShadow = false; g.add(bordeOsc);
-    var tierra = caja(TAM_PARCELA, 0.2, TAM_PARCELA, campo ? 0x96724a : 0xc6a878, 0, 0.1, 0); tierra.castShadow = false; tierra.receiveShadow = true; g.add(tierra);
-    // en el campo: tierra arada con surcos
-    if (campo) for (var sf = -3; sf <= 3; sf++) { var su = caja(TAM_PARCELA - 0.5, 0.04, 0.24, 0x7c5c38, 0, 0.215, sf * (TAM_PARCELA / 7.6)); su.castShadow = false; g.add(su); }
-    // piedras de las esquinas
-    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (s) { var p = caja(0.7, 0.26, 0.7, 0x948e84, s[0] * 3.62, 0.13, s[1] * 3.62); p.castShadow = false; g.add(p); });
-    // símbolo de construir: un + dentro de un aro (se esconde cuando hay edificio)
+    var g = new THREE.Group(), T2 = TAM_PARCELA / 2;
+    function plano(o) { o.castShadow = false; o.receiveShadow = true; g.add(o); return o; }
+    // tierra arada (alto 0.04, centro en y = 0.02: queda al ras del césped)
+    plano(caja(TAM_PARCELA, 0.04, TAM_PARCELA, 0x7d5a38, 0, 0.02, 0));
+    for (var sf = -3; sf <= 3; sf++) plano(caja(TAM_PARCELA - 0.6, 0.012, 0.26, 0x5e4127, 0, 0.044, sf * (TAM_PARCELA / 7.6)));
+    // marco fino de piedra, también plano
+    [[0, -T2, TAM_PARCELA + 0.4, 0.4], [0, T2, TAM_PARCELA + 0.4, 0.4], [-T2, 0, 0.4, TAM_PARCELA], [T2, 0, 0.4, TAM_PARCELA]].forEach(function (q) { plano(caja(q[2], 0.03, q[3], 0xa39a8a, q[0], 0.02, q[1])); });
+    // símbolo de construir: un + dentro de un aro, pintado sobre la tierra (se esconde cuando hay edificio)
     var mas = new THREE.Group();
     var aro = new THREE.Mesh(geo('masAro', function () { return new THREE.RingGeometry(1.25, 1.55, 36); }), new THREE.MeshBasicMaterial({ color: 0xf2c45a, side: THREE.DoubleSide }));
-    aro.rotation.x = -Math.PI / 2; aro.position.y = 0.215; mas.add(aro);
-    var fondo = new THREE.Mesh(geo('masFondo', function () { return new THREE.CircleGeometry(1.25, 36); }), new THREE.MeshBasicMaterial({ color: 0x8a6a3e, transparent: true, opacity: 0.45, side: THREE.DoubleSide }));
-    fondo.rotation.x = -Math.PI / 2; fondo.position.y = 0.212; mas.add(fondo);
+    aro.rotation.x = -Math.PI / 2; aro.position.y = 0.05; mas.add(aro);
+    var fondo = new THREE.Mesh(geo('masFondo', function () { return new THREE.CircleGeometry(1.25, 36); }), new THREE.MeshBasicMaterial({ color: 0x4a3218, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthWrite: false }));
+    fondo.rotation.x = -Math.PI / 2; fondo.position.y = 0.048; mas.add(fondo);
     var matMas = new THREE.MeshBasicMaterial({ color: 0xfff4cc });
-    var h = new THREE.Mesh(geo('masH', function () { return new THREE.BoxGeometry(1.5, 0.06, 0.38); }), matMas); h.position.y = 0.24; mas.add(h);
-    var v = new THREE.Mesh(geo('masV', function () { return new THREE.BoxGeometry(0.38, 0.06, 1.5); }), matMas); v.position.y = 0.24; mas.add(v);
+    var h = new THREE.Mesh(geo('masHp', function () { return new THREE.PlaneGeometry(1.5, 0.38); }), matMas); h.rotation.x = -Math.PI / 2; h.position.y = 0.052; mas.add(h);
+    var v = new THREE.Mesh(geo('masVp', function () { return new THREE.PlaneGeometry(0.38, 1.5); }), matMas); v.rotation.x = -Math.PI / 2; v.position.y = 0.052; mas.add(v);
     mas.userData.noFusionar = true;
     g.add(mas);
     g.userData.mas = mas;
-    // v6.56: cerca de madera alrededor de la parcela libre de la ciudad (con entrada hacia el camino)
+    // cerca baja de madera alrededor de la parcela de la ciudad (con entrada hacia el camino)
     if (!campo) {
-      var cerca = new THREE.Group(), L2 = 3.55, MP = 0x7a4a24, MR = 0x9c6a38;
+      var cerca = new THREE.Group(), L2 = T2 + 0.05, MP = 0x7a4a24, MR = 0x9c6a38;
       for (var k = -L2; k <= L2 + 0.01; k += L2 / 3) {
-        [[k, -L2], [k, L2], [-L2, k], [L2, k]].forEach(function (q) { if (q[1] === L2 && Math.abs(q[0]) < 1.1) return; cerca.add(caja(0.24, 0.95, 0.24, MP, q[0], 0.62, q[1])); });
+        [[k, -L2], [k, L2], [-L2, k], [L2, k]].forEach(function (q) { if (q[1] === L2 && Math.abs(q[0]) < 1.1) return; cerca.add(caja(0.2, 0.5, 0.2, MP, q[0], 0.25, q[1])); });
       }
-      [0.5, 0.82].forEach(function (y) {
-        cerca.add(caja(L2 * 2, 0.11, 0.1, MR, 0, y, -L2)); cerca.add(caja(0.1, 0.11, L2 * 2, MR, -L2, y, 0)); cerca.add(caja(0.1, 0.11, L2 * 2, MR, L2, y, 0));
-        var tr = L2 - 1.1; cerca.add(caja(tr, 0.11, 0.1, MR, -(1.1 + tr / 2), y, L2)); cerca.add(caja(tr, 0.11, 0.1, MR, 1.1 + tr / 2, y, L2));
+      [0.2, 0.4].forEach(function (y) {
+        cerca.add(caja(L2 * 2, 0.08, 0.08, MR, 0, y, -L2)); cerca.add(caja(0.08, 0.08, L2 * 2, MR, -L2, y, 0)); cerca.add(caja(0.08, 0.08, L2 * 2, MR, L2, y, 0));
+        var tr = L2 - 1.1; cerca.add(caja(tr, 0.08, 0.08, MR, -(1.1 + tr / 2), y, L2)); cerca.add(caja(tr, 0.08, 0.08, MR, 1.1 + tr / 2, y, L2));
       });
       cerca.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
       cerca.userData.noFusionar = true; g.add(cerca); g.userData.cerca = cerca;
     }
-    var brillo = new THREE.Mesh(
-      geo('brilloParcela', function () { return new THREE.PlaneGeometry(7.4, 7.4); }),
-      new THREE.MeshBasicMaterial({ color: 0xfff27a, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide })
-    );
-    brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.23; brillo.renderOrder = 2;
+    // brillo: relleno suave y un marco dorado pegado al suelo (los dos usan el mismo material)
+    var matBrillo = new THREE.MeshBasicMaterial({ color: 0xfff27a, transparent: true, opacity: 0.0, depthWrite: false, side: THREE.DoubleSide });
+    var brillo = new THREE.Mesh(geo('brilloParcela', function () { return new THREE.PlaneGeometry(7.4, 7.4); }), matBrillo);
+    brillo.rotation.x = -Math.PI / 2; brillo.position.y = 0.055; brillo.renderOrder = 2; brillo.scale.setScalar(0.96);
     g.add(brillo);
-    g.userData.brillo = brillo;
+    var marco = new THREE.Mesh(geo('marcoParcela', function () {
+      var f = new THREE.Shape(); f.moveTo(-T2 - 0.25, -T2 - 0.25); f.lineTo(T2 + 0.25, -T2 - 0.25); f.lineTo(T2 + 0.25, T2 + 0.25); f.lineTo(-T2 - 0.25, T2 + 0.25); f.lineTo(-T2 - 0.25, -T2 - 0.25);
+      var hu = new THREE.Path(); hu.moveTo(-T2 + 0.2, -T2 + 0.2); hu.lineTo(-T2 + 0.2, T2 - 0.2); hu.lineTo(T2 - 0.2, T2 - 0.2); hu.lineTo(T2 - 0.2, -T2 + 0.2); hu.lineTo(-T2 + 0.2, -T2 + 0.2); f.holes.push(hu);
+      return new THREE.ShapeGeometry(f);
+    }), matBrillo);
+    marco.rotation.x = -Math.PI / 2; marco.position.y = 0.058; marco.renderOrder = 3;
+    g.add(marco);
+    g.userData.brillo = brillo; g.userData.marcoBrillo = marco;
     return fusionar(g);
   }
   function parcelaCerrada() {
