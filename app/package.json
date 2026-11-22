@@ -6,7 +6,8 @@
   "scripts": {
     "copiar-web": "node scripts/copiar-web.js",
     "sync": "node scripts/copiar-web.js && npx cap sync ios",
-    "revisar": "node scripts/revisar.js"
+    "revisar": "node scripts/revisar.js",
+    "sync-android": "node scripts/copiar-web.js && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/core": "^7.6.9",

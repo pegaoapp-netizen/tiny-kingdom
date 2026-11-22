@@ -7,5 +7,9 @@
     "contentInset": "never",
     "backgroundColor": "#2a1a10",
     "scrollEnabled": false
+  },
+  "android": {
+    "backgroundColor": "#2a1a10",
+    "allowMixedContent": false
   }
 }

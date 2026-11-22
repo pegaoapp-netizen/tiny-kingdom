@@ -12,3 +12,4 @@ juego3d/nube/.firebase/
 *.log
 .DS_Store
 Thumbs.db
+app/android/

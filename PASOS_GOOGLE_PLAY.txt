@@ -1,0 +1,37 @@
+PASOS PARA SUBIR TINY KINGDOM A GOOGLE PLAY (con Codemagic)
+==============================================================
+Identificador de la app (igual que en iPhone):  com.pegao.tinykingdom
+La versión Android se arma sola en Codemagic con el flujo
+"Tiny Kingdom - Android (Google Play)" del archivo codemagic.yaml.
+
+PASO 1 — Cuenta de desarrollador de Google Play
+  play.google.com/console -> crear cuenta de desarrollador (pago único de 25 USD
+  y verificación de identidad). Si ya la tienes, sigue.
+
+PASO 2 — Crear la app en Play Console
+  Crear app -> Nombre: Tiny Kingdom · Idioma: Español · Tipo: Juego · Gratis
+  -> marca las declaraciones -> Crear app.
+
+PASO 3 — Crear la llave de firma en Codemagic (una sola vez)
+  codemagic.io -> Team settings -> Code signing identities -> Android keystores
+  -> Generate keystore -> nombre de referencia EXACTO:  tinykingdom_upload
+  Descárgala y guárdala en un lugar seguro: sin ella no se pueden subir
+  versiones nuevas de la app.
+
+PASO 4 — Construir
+  Codemagic -> tu app -> Start new build -> workflow
+  "Tiny Kingdom - Android (Google Play)". Tarda unos 10 minutos.
+  Al terminar, descarga el archivo  tiny-kingdom.aab  (en Artifacts).
+
+PASO 5 — Primera subida (a mano) y testers
+  Play Console -> Tiny Kingdom -> Probar y publicar -> Pruebas -> Prueba interna
+  -> Crear versión -> sube tiny-kingdom.aab -> acepta "Firma de apps de Google
+  Play" -> Guardar -> Revisar versión -> Lanzar.
+  Pestaña Testers -> Crear lista de correo -> añade los correos de los testers
+  -> Guardar -> copia el "enlace de participación" y mándaselo.
+  El tester abre el enlace en su Android con ese Gmail -> "Ser tester" ->
+  descarga Tiny Kingdom desde Google Play.
+
+PASO 6 — Versiones nuevas
+  Cada vez: Start new build en Codemagic -> sube el nuevo .aab en
+  Prueba interna -> Crear versión. El número de versión sube solo.
