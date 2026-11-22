@@ -3691,13 +3691,14 @@
   var ESQUINAS = (function () {
     var vistas = {}, l = [];
     slots.forEach(function (s) { if (s.campo) return; [[-5, -5], [5, -5], [-5, 5], [5, 5]].forEach(function (q) { var x = s.pos.x + q[0], z = s.pos.z + q[1], k = x + '_' + z; if (!vistas[k]) { vistas[k] = 1; l.push(new V3(x, 0, z)); } }); });
+    l = l.filter(function (q) { return Math.hypot(q.x, q.z) > COLINA.foso1 + 1.5; });
     return l;
   })();
   function esquinaCerca(p) { var m = null, d = 1e9; ESQUINAS.forEach(function (q) { var e = Math.hypot(q.x - p.x, q.z - p.z); if (e < d) { d = e; m = q; } }); return m; }
   function rutaAldeano(desde) {
     var a = esquinaCerca(desde), b = ESQUINAS[Math.floor(Math.random() * ESQUINAS.length)];
     // a veces van a la plaza del castillo por el camino grande
-    if (Math.random() < 0.15) return [a, puntoCamino(largoCamino * (0.82 + Math.random() * 0.12)).p.clone()];
+    if (Math.random() < 0.15) { var pq = aMundo(33 + (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6); return [a, new V3(pq[0], 0, pq[1])]; } // a la placita de la fuente
     if (Math.hypot(b.x - a.x, b.z - a.z) > 32) b = ESQUINAS.filter(function (q) { return Math.hypot(q.x - a.x, q.z - a.z) < 30; })[Math.floor(Math.random() * 6)] || b;
     return [a, new V3(b.x, 0, a.z), b];
   }
@@ -3726,7 +3727,7 @@
     else { a.meta = puntoPueblo(); a.espera = 1 + Math.random() * 4; }
     a.mejorD = 1e9; a.atasco = 0;
   }
-  var R_CASTILLO = 6.2;
+  var R_CASTILLO = COLINA.foso1 + 1; // v7.57: los aldeanos rodean la colina y el foso (no caminan por el agua)
   function moverAldeanos(dt, t) {
     dt = Math.min(dt, 0.1);
     aldeanos.forEach(function (a, i) {
