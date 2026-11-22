@@ -160,7 +160,7 @@
   // v6.48: vista isométrica fija estilo 2D: la cámara se aleja ISO_K veces con un lente ISO_K veces más cerrado (casi sin perspectiva)
   // v7.67: con perspectiva de verdad, como en la referencia del dueño: lo de cerca se ve grande y lo de lejos se va achicando
   // iso: cuánta perspectiva (5 = casi plano), grados: inclinación de la cámara, luz: claridad de día, acerca: zoom de la Ciudad
-  var VISTA = { iso: 2.6, grados: 38, luz: 1.25, acerca: 0.75 };
+  var VISTA = { iso: 2.6, grados: 45, luz: 1.25, acerca: 0.68 }; // v7.68: más inclinada y más cerca
   var ISO_K = VISTA.iso;
   function fovBase() { return window.innerWidth < window.innerHeight ? 34 : 30; }
   function fovPantalla() { return 2 * Math.atan(Math.tan(fovBase() * Math.PI / 360) / ISO_K) * 180 / Math.PI; }
@@ -1374,7 +1374,7 @@
     slots.forEach(function (s) {
       var c = cerrada(s);
       s.terreno.visible = !c;
-      if (s.tierraCerrada) s.tierraCerrada.visible = c;
+      if (s.tierraCerrada) s.tierraCerrada.visible = c && s.campo; // v7.68: en la ciudad las parcelas cerradas no se dibujan (antes parecían campos de cultivo)
       // solo se marcan con candado las 3 parcelas que abre el siguiente nivel del castillo
       var nvP = s.campo ? nivelParaCampo(s) : nivelParaParcela(s), proxima = c && nvP === (estado.castillo || 1) + 1;
       if (proxima && !s.candado) { s.candado = M.etiquetaEdificio('🔒 ' + T('castillo'), nvP); s.candado.position.set(0, 1.4, 0); s.candado.scale.multiplyScalar(0.8); s.grupo.add(s.candado); }
