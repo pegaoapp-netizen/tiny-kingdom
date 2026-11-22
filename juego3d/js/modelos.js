@@ -2027,6 +2027,32 @@ var M = (function () {
   // forma = { cx, cz, rx, rz, puerta (ángulo), hueco (medio ángulo) }
   // v7.72: MURALLA GRANDE Y CLARA como en la referencia: piedra crema, alta y gruesa, con talud, cornisa,
   // tres almenas por tramo, torres cuadradas cada 3 tramos y torres redondas grandes en las puertas
+  // v7.74 SILLARES: material de piedra por bloques calculado en la tarjeta gráfica con la posición del mundo
+  // (sin imágenes: sirve igual para tramos largos y torres redondas, y es barato en teléfonos)
+  var CACHE_SILLAR = {};
+  function matSillar(color, tam) {
+    var k = color + '_' + tam; if (CACHE_SILLAR[k]) return CACHE_SILLAR[k];
+    var m = new THREE.MeshLambertMaterial({ color: color });
+    m.onBeforeCompile = function (sh) {
+      sh.uniforms.tamSillar = { value: tam || 1 };
+      sh.vertexShader = 'varying vec3 vPosS; varying vec3 vNorS;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vPosS = (modelMatrix * vec4(transformed, 1.0)).xyz; vNorS = normalize(mat3(modelMatrix) * objectNormal);');
+      sh.fragmentShader = 'uniform float tamSillar; varying vec3 vPosS; varying vec3 vNorS;\n' + sh.fragmentShader.replace('#include <color_fragment>', [
+        '#include <color_fragment>',
+        'vec3 nS = abs(normalize(vNorS));',
+        'vec2 uvS = nS.y > 0.7 ? vPosS.xz : (nS.x > nS.z ? vPosS.zy : vPosS.xy);',
+        'float altoS = 0.62 * tamSillar, anchoS = 1.25 * tamSillar;',
+        'float filaS = floor(uvS.y / altoS);',
+        'float xS = uvS.x / anchoS + mod(filaS, 2.0) * 0.5;',
+        'vec2 idS = vec2(floor(xS), filaS), fS = vec2(fract(xS), fract(uvS.y / altoS));',
+        'float juntaS = smoothstep(0.0, 0.045, fS.x) * smoothstep(1.0, 0.955, fS.x) * smoothstep(0.0, 0.09, fS.y) * smoothstep(1.0, 0.91, fS.y);',
+        'float hS = fract(sin(dot(idS, vec2(12.9898, 78.233))) * 43758.5453);',
+        'float bordeS = 1.0 - 0.07 * (1.0 - smoothstep(0.0, 0.25, fS.y));',
+        'diffuseColor.rgb *= mix(0.66, 1.0, juntaS) * (0.88 + 0.17 * hS) * bordeS;'
+      ].join('\n'));
+    };
+    m.customProgramCacheKey = function () { return 'sillar' + tam; };
+    return (CACHE_SILLAR[k] = m);
+  }
   function muralla(nivel, forma) {
     var g = new THREE.Group();
     var f = forma;
@@ -2064,7 +2090,8 @@ var M = (function () {
       var arco2 = caja(Math.hypot(ldx, ldz) * 0.7, 0.4, grueso + 0.6, PMO, cxa, alto + 0.12, cza); arco2.rotation.y = rA; g.add(arco2);
       for (var k = -2; k <= 2; k++) { var al2 = caja(0.6, 0.6, 0.5, PM, cxa + ldx * k * 0.17, alto + 1.85, cza + ldz * k * 0.17); al2.rotation.y = rA; g.add(al2); }
     });
-    var _fin = function () { return fusionar(g); };
+    // v7.74: muros y torres con sillares de piedra (bloques, juntas y tonos variados) en vez de cajas lisas
+    var _fin = function () { g.traverse(function (o) { if (o.isMesh && o.material && o.material.color && !o.material.transparent) { var hx = o.material.color.getHex(); if (hx === PM || hx === PMZ || hx === PMO) o.material = matSillar(hx, hx === PMZ ? 0.8 : 1); } }); return fusionar(g); };
     torres.forEach(function (tq) {
       var x = tq.p.x, z = tq.p.z;
       if (tq.puerta) {
@@ -3134,6 +3161,11 @@ var M = (function () {
       nueva.reset();
       // el golpe dura lo mismo que el movimiento del brazo de las demás tropas (1/3 de segundo)
       if (quiere === 'Ataque') nueva.timeScale = nueva.getClip().duration * 3;
+      else {
+        // v7.73: cada soldado con su propio paso: empieza en otro punto del ciclo y va un poco más rápido o más lento (antes iban todos sincronizados, como clones)
+        if (p.ritmo === undefined) p.ritmo = 0.9 + Math.random() * 0.2;
+        nueva.timeScale = p.ritmo; nueva.time = Math.random() * nueva.getClip().duration;
+      }
       nueva.play();
       if (vieja && vieja !== nueva) nueva.crossFadeFrom(vieja, quiere === 'Ataque' ? 0.05 : 0.2, false);
       p.actual = quiere;

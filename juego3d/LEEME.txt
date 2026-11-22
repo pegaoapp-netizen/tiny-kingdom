@@ -9,6 +9,14 @@ CÓMO JUGAR EN LA COMPUTADORA
 CONTROLES
   - Arrastra con el mouse (o el dedo) para mover la cámara.
   - Rueda del mouse (o pellizcar) para acercar / alejar.
+  - Dos dedos girando: rota la ciudad 360°. Dos dedos subiendo/bajando: inclina la cámara.
+    La brújula de la izquierda vuelve la vista de frente. En el ordenador: Q/E giran, R/F inclinan.
+  - OLEADAS (v7.74): se pelean en el campo de batalla de fuera, delante de la puerta de la muralla.
+    El ejército forma en bloques con los héroes delante; los enemigos no pasan del estandarte del frente.
+    Si tu ejército cae, atacan el frente y el castillo pierde vida igual que antes.
+    Abajo salen las cartas de los héroes: con "Auto" lanzan su poder solos; sin "Auto" tocas la carta.
+    Con ?oleadaclasica=1 en la dirección las oleadas vuelven a entrar por la ciudad.
+    Con ?clasico=1 se ven los edificios 2D de antes.
   - Toca un terreno vacío para construir. Toca un edificio para mejorarlo.
   - CONSTRUIR: Granja (da monedas), Cuartel (permite entrenar), Torre (dispara flechas).
   - TROPAS: Espadachín, Arquero, Guardián.

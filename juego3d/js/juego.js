@@ -332,6 +332,15 @@
   var curva = new THREE.CatmullRomCurve3(CAMINO.map(function (p) { return new V3(p[0], alturaCiudad(p[0], p[1]), p[1]); }), false, 'centripetal');
   var largoCamino = curva.getLength();
   var muestras = curva.getSpacedPoints(400);
+  // v7.74 CAMPO DE BATALLA: las oleadas se pelean fuera, en la explanada delante de la puerta de la muralla (como en el vídeo del dueño).
+  // Los enemigos nunca pasan la línea del frente: si vencen a tus tropas, atacan el frente y el castillo pierde vida igual que antes.
+  // Con ?oleadaclasica=1 vuelven a entrar por la ciudad como antes.
+  var MODO_CAMPO = !/[?&]oleadaclasica\b/.test(location.search);
+  var A_FRENTE = 62, A_FORMA = 55.5, A_PUERTA = 49;
+  var dFrente = (function () { for (var i = 0; i < muestras.length; i++) if (aLocal(muestras[i].x, muestras[i].z).a <= A_FRENTE) return i / (muestras.length - 1) * curva.getLength(); return curva.getLength(); })();
+  function finCamino() { return MODO_CAMPO ? dFrente : largoCamino; }
+  var posFrente = (function () { var p = aMundo(A_FRENTE - 0.6, 0); return new V3(p[0], 0, p[1]); })();
+  var posPuertaMuralla = (function () { var p = aMundo(A_PUERTA, 0); return new V3(p[0], 0, p[1]); })();
   function distCamino(x, z) {
     var m = Infinity;
     for (var i = 0; i < muestras.length; i++) {
@@ -930,6 +939,7 @@
       for (var t = 0; t < 2600 && puestas.length < 70; t++) {
         var la = (r2() - 0.5) * 2 * R_CIUDAD, lb = (r2() - 0.5) * 2 * R_CIUDAD, w = aMundo(la, lb), x = w[0], z = w[1];
         var esCasa = r2() < 0.72, sep = esCasa ? 2.6 : 1.2; if (!esCasa && window.__proto3d) { if (!okCasa(x, z, sep)) continue; var ad = M.adornoMedieval(r2); ad.position.set(x, 0, z); ad.rotation.y = giroCalle + r2() * 6; DETALLES_LOD.add(ad); puestas.push([x, z, sep]); continue; }
+        if (esCasa && window.__proto3d) continue; // v7.74: el dueño pidió quitar las casas de relleno de la villa (no son edificios del juego); en ?clasico=1 siguen
         if (!okCasa(x, z, sep)) continue;
         var m = esCasa ? M.casaMedieval(r2) : M.adornoMedieval(r2);
         m.position.set(x, 0, z); m.rotation.y = giroCalle + Math.floor(r2() * 4) * Math.PI / 2 + (r2() - 0.5) * 0.12;
@@ -1459,7 +1469,7 @@
   //  BARRICADAS: puntos marcados en el camino
   // ------------------------------------------------------------------
   var barricadas = PUNTOS_BARRICADA.map(function (u, i) {
-    var d = u * largoCamino, pc = puntoCamino(d);
+    var d = MODO_CAMPO ? dFrente - 1.2 - (0.79 - u) / 0.13 * 2.2 : u * largoCamino, pc = puntoCamino(d); // v7.74: en el campo de batalla van justo delante del frente
     var g = new THREE.Group();
     g.position.copy(pc.p);
     g.rotation.y = Math.atan2(pc.t.x, pc.t.z);
@@ -5115,6 +5125,7 @@
     dirLado.set(dirFrente.z, 0, -dirFrente.x);
   })();
   var reunion = new V3(PUNTO_REUNION[0], 0, PUNTO_REUNION[1]);
+  if (MODO_CAMPO) { var pr0 = aMundo(A_FORMA, 0); reunion.set(pr0[0], 0, pr0[1]); dirFrente.set(EJE_U.x, 0, EJE_U.z); dirLado.set(dirFrente.z, 0, -dirFrente.x); } // v7.74: el ejército forma en la explanada mirando al enemigo
 
   // bonus de la investigación de cada tipo de tropa (Ataque, Vida, Defensa, Velocidad)
   function bonoTropa(tipo, stat) { var tc = buscarTec('t_' + tipo + '_' + stat); return tc ? ((estado.invest && estado.invest[tc.id]) || 0) * tc.cada : 0; }
@@ -5160,6 +5171,8 @@
     var u = {
       tipo: tipo, d: d, vida: hd ? d.vida : vidaTropa(tipo, na), max: hd ? d.vida : vidaTropa(tipo, na), heroeId: heroeId || null, defensa: hd ? (d.defensa || 0) : ARMADURA.defensa * na + bonoTropa(tipo, 'defensa'), armadura: na, pos: m.grupo.position, m: m, aliado: true,
       cd: Math.random() * 0.5, ataque: 0, puesto: reunion.clone(), radio: 0.42 * m.escala, invocada: !!invocada,
+      // v7.73 (solo visual): fase propia de animación, espacio personal entre compañeros (más ancho que el radio de combate) y desde qué lado rodea al enemigo
+      fase: Math.random() * 10, sep: 0.48 * m.escala * (tipo === 'caballeria' ? 1.25 : 1), rodeo: (Math.random() - 0.5) * 1.8,
       barra: M.barraVida(false, tipo === 'heroe' ? 1.8 : 1.3), altoBarra: m.alto || 1.75 * m.escala
     };
     u.barra.visible = false;
@@ -5168,6 +5181,7 @@
     u.volviendo = !oleadaActiva;
     tropas.push(u);
     asignarPuestos();
+    if (MODO_CAMPO && !oleadaActiva) guardarDentro(u); // v7.74: fuera de la batalla esperan tras la puerta (no caminan por fuera de la muralla)
     return u;
   }
   // ---- TROPAS DENTRO DEL CUARTEL ----
@@ -5176,6 +5190,7 @@
   var turnoCasa = 0;
   function puertaDe(c) { return c.pos.clone().add(new V3(Math.sin(c.grupo.rotation.y), 0, Math.cos(c.grupo.rotation.y)).multiplyScalar(1.9)); }
   function casaTropa() {
+    if (MODO_CAMPO) return posPuertaMuralla.clone().addScaledVector(dirLado, (Math.random() - 0.5) * 3); // v7.74: salen y vuelven por la puerta de la muralla (no cruzan la ciudad)
     var cs = cuartelesListos();
     if (!cs.length) return reunion.clone();
     return puertaDe(cs[turnoCasa++ % cs.length]);
@@ -5203,7 +5218,7 @@
     var m = M.unidad(tipo);
     var u = {
       tipo: tipo, d: d, vida: d.vida * f, max: d.vida * f, dano: d.dano * f, pos: m.grupo.position, m: m, aliado: false,
-      cd: 0, ataque: 0, dist: 0, lat: (Math.random() - 0.5) * 1.6, radio: 0.42 * m.escala,
+      cd: 0, ataque: 0, dist: 0, lat: (Math.random() - 0.5) * 1.6, radio: 0.42 * m.escala, sep: 0.6 * m.escala, // v7.73: espacio entre enemigos (solo visual)
       barra: M.barraVida(true, tipo === 'ogro' ? 3.0 : 1.3), altoBarra: 1.75 * m.escala
     };
     var pc = puntoCamino(0);
@@ -5214,7 +5229,36 @@
     enemigos.push(u);
   }
 
+  // v7.74: en el campo de batalla el ejército forma en BLOQUES (un bloque por tipo de tropa, uno al lado del otro),
+  // los héroes delante de los bloques y los arqueros en su propio bloque detrás, como un ejército de verdad
+  function asignarPuestosCampo() {
+    var PASO = 1.75, HUECO = 2.8; // el paso es algo mayor que el espacio personal (0.48 × escala × 2): las filas no se empujan
+    var heroes = tropas.filter(function (u) { return u.heroeId; });
+    var cuerpo = tropas.filter(function (u) { return !u.heroeId && !u.d.distancia; }), lejos = tropas.filter(function (u) { return !u.heroeId && u.d.distancia; });
+    var orden = ['guardian', 'caballeria', 'espadachin'], grupos = {};
+    cuerpo.forEach(function (u) { (grupos[u.tipo] = grupos[u.tipo] || []).push(u); });
+    var tipos = Object.keys(grupos).sort(function (a, b) { var ia = orden.indexOf(a), ib = orden.indexOf(b); return (ia < 0 ? 9 : ia) - (ib < 0 ? 9 : ib); });
+    function anchoDe(n) { return Math.max(3, Math.min(8, Math.ceil(Math.sqrt(n) * 1.25))); }
+    function bloque(lista, centro, base) {
+      var an = anchoDe(lista.length);
+      lista.forEach(function (u, k) {
+        var fila = Math.floor(k / an), col = k % an, enFila = Math.min(an, lista.length - fila * an);
+        u.puesto = reunion.clone().addScaledVector(dirFrente, base - fila * PASO).addScaledVector(dirLado, centro + (col - (enFila - 1) / 2) * PASO);
+      });
+      return Math.ceil(lista.length / an);
+    }
+    var anchos = tipos.map(function (t) { return anchoDe(grupos[t].length) * PASO; }), total = anchos.reduce(function (a, b) { return a + b; }, 0) + HUECO * Math.max(0, tipos.length - 1);
+    var x = -total / 2, centros = [], filasMax = 0;
+    tipos.forEach(function (t, i) { var c = x + anchos[i] / 2; centros.push(c); filasMax = Math.max(filasMax, bloque(grupos[t], c, 1.5)); x += anchos[i] + HUECO; });
+    // héroes: uno delante de cada bloque (si hay más héroes que bloques, se reparten a lo ancho)
+    heroes.forEach(function (u, k) {
+      var c = centros.length ? centros[k % centros.length] + (k >= centros.length ? (k - centros.length + 1) * 1.6 : 0) : (k - (heroes.length - 1) / 2) * 2.2;
+      u.puesto = reunion.clone().addScaledVector(dirFrente, u.d.distancia ? 1.5 - filasMax * PASO - 2 : 3.6).addScaledVector(dirLado, c);
+    });
+    if (lejos.length) bloque(lejos, 0, 1.5 - filasMax * PASO - 2.2);
+  }
   function asignarPuestos() {
+    if (MODO_CAMPO) return asignarPuestosCampo();
     var cuerpo = tropas.filter(function (u) { return !u.d.distancia; });
     var orden = { heroe: 0, guardian: 1, caballeria: 2, espadachin: 3 };
     cuerpo.sort(function (a, b) { return orden[a.tipo] - orden[b.tipo]; });
@@ -5226,7 +5270,7 @@
         var enFila = Math.min(ancho, lista.length - fila * ancho);
         u.puesto = reunion.clone()
           .addScaledVector(dirFrente, base - fila * paso)
-          .addScaledVector(dirLado, (col - (enFila - 1) / 2) * sep);
+          .addScaledVector(dirLado, (col - (enFila - 1) / 2 + (fila % 2 && enFila === ancho ? 0.5 : 0)) * sep); // v7.73: filas escalonadas (se ve a los de atrás)
       });
     }
     poner(cuerpo, 2.2, 1.8, 1.8);
@@ -5422,9 +5466,10 @@
     oleadaActual = n;
     oleadaActiva = true;
     sacarTropas();
-    camSigue = true;
+    camSigue = !MODO_CAMPO;
     cam.meta.copy(puntoCamino(largoCamino * 0.5).p); cam.vel.set(0, 0, 0);
     cam.distMeta = Math.min(cam.distMeta, window.innerWidth < window.innerHeight ? 42 : 32);
+    if (MODO_CAMPO) { var pc0 = aMundo(A_FRENTE + 1, 0); cam.meta.set(pc0[0], 0, pc0[1]); cam.distMeta = window.innerWidth < window.innerHeight ? 66 : 50; CAMV.giroMeta = Math.round(CAMV.giroMeta / (2 * Math.PI)) * 2 * Math.PI; abrirBarraBatalla(); } // v7.74: la cámara viaja al campo de batalla
     $('btn-oleada').classList.add('oculto');
     avisoGrande(T('aviso_oleada', { n: n }));
     sonar('cuerno');
@@ -5440,6 +5485,7 @@
     var n = oleadaActual; sumarXP(15 + 5 * n);
     var ultima = n === OLEADAS.length && !estado.infinito;
     var g = GEMAS_POR_OLEADA + (ultima ? GEMAS_VICTORIA : 0);
+    if (MODO_CAMPO) { cam.meta.copy(cam.objetivo); cerrarBarraBatalla(); setTimeout(function () { pantallaVictoriaCampo(n, g); }, 900); } // v7.74: primero se ve la victoria en el campo
     sumarGemas(g, castilloPos.clone().setY(10));
     sonar('gemas');
     premioHeroesOleada(n);
@@ -5530,13 +5576,14 @@
       if (ed.tipo === 'torre') {
         s.cd -= dt;
         var arq = s.modelo.userData.arquero;
-        var obj = masCercano(enemigos, s.pos, d.alcance[ed.nivel - 1]);
+        var obj = masCercano(enemigos, MODO_CAMPO ? posFrente : s.pos, d.alcance[ed.nivel - 1] + (MODO_CAMPO ? 6 : 0)); // v7.74: en el campo de batalla las torres ayudan desde la muralla
         if (obj) {
           var ang = Math.atan2(obj.pos.x - s.pos.x, obj.pos.z - s.pos.z) - s.grupo.rotation.y;
           arq.grupo.rotation.y = ang;
           if (s.cd <= 0) {
             s.cd = d.ritmo;
             var o = s.pos.clone(); o.y = s.modelo.userData.alturaDisparo * ESCALA_EDIFICIO;
+            if (MODO_CAMPO) { o.copy(posPuertaMuralla).addScaledVector(dirLado, (s.i % 5 - 2) * 3); o.y = 6; }
             disparar(o, obj, d.dano[ed.nivel - 1] * (1 + bono('flechas')));
             arq.ataque = 1;
           }
@@ -5611,8 +5658,9 @@
     // ---- castillo dispara ----
     castilloCd -= dt;
     if (castilloCd <= 0) {
-      var oc = masCercano(enemigos, castilloPos, CASTILLO.alcance);
-      if (oc) {
+      var oc = masCercano(enemigos, MODO_CAMPO ? posFrente : castilloPos, CASTILLO.alcance);
+      if (oc && MODO_CAMPO) { castilloCd = CASTILLO.ritmo; disparar(posFrente.clone().setY(3.4), oc, danoCastillo()); } // v7.74: los arqueros del castillo disparan desde el frente
+      else if (oc) {
         castilloCd = CASTILLO.ritmo;
         var esquinas = [[-3.4, -3.4], [-3.4, 3.4], [3.4, -3.4], [3.4, 3.4]];
         var es = esquinas.reduce(function (a, q) { return Math.hypot(q[0] - oc.pos.x, q[1] - oc.pos.z) < Math.hypot(a[0] - oc.pos.x, a[1] - oc.pos.z) ? q : a; });
@@ -5665,12 +5713,13 @@
       if (!oleadaActiva && !enemigos.length && !u.volviendo) u.volviendo = true;
       if (u.heroeId && oleadaActiva && enemigos.length && !u.volviendo) {
         u.cdHab = (u.cdHab === undefined ? 3 : u.cdHab) - dt;
-        if (u.cdHab <= 0 && usarHabilidad(u)) u.cdHab = recargaHab(u.heroeId);
+        // v7.74: con «Auto» los héroes lanzan su poder solos (como siempre); sin «Auto» lo lanzas tú tocando su carta
+        if (u.cdHab <= 0 && (habAuto() || u.lanzar) && usarHabilidad(u)) { u.cdHab = recargaHab(u.heroeId); u.lanzar = false; }
       }
       if (u.volviendo) {
         u.barra.visible = false;
         var llego = moverHacia(u, u.casa.x, u.casa.z, velU(u) * 1.3, dt) || Math.hypot(u.pos.x - u.casa.x, u.pos.z - u.casa.z) < 1.2;
-        M.animarUnidad(u.m, tiempo + u.radio * 10, !llego, 0);
+        M.animarUnidad(u.m, tiempo + (u.fase || 0), !llego, 0);
         if (llego) guardarDentro(u);
         return;
       }
@@ -5689,11 +5738,19 @@
           caminando = lejos ? !moverHacia(u, lejos.pos.x, lejos.pos.z, velU(u), dt) : !moverHacia(u, u.puesto.x, u.puesto.z, velU(u), dt);
         }
       } else {
-        var correa = u.tipo === 'heroe' ? 13 : 9.5;
+        var correa = (u.tipo === 'heroe' ? 13 : 9.5) + (MODO_CAMPO ? 5 : 0); // v7.74: en el campo todo el bloque entra en combate
         obj = masCercano(enemigos.filter(function (e) { return e.pos.distanceTo(u.puesto) < correa; }), u.pos, 99);
         if (obj) {
           var dist = u.pos.distanceTo(obj.pos) - obj.radio - u.radio;
-          if (dist > d.alcance - 0.3) caminando = !moverHacia(u, obj.pos.x, obj.pos.z, velU(u), dt);
+          if (dist > d.alcance - 0.3) {
+            // v7.73: se acerca por su propio lado del enemigo (lo rodean en vez de apilarse todos en el mismo punto); de lejos va derecho
+            var ex = u.pos.x - obj.pos.x, ez = u.pos.z - obj.pos.z, el = Math.hypot(ex, ez) || 1;
+            if (el < 6) {
+              var ca = Math.cos(u.rodeo || 0), sa = Math.sin(u.rodeo || 0), anillo = obj.radio + u.radio + Math.max(0.2, d.alcance - 0.5);
+              var rx = (ex * ca - ez * sa) / el, rz = (ex * sa + ez * ca) / el;
+              caminando = !moverHacia(u, obj.pos.x + rx * anillo, obj.pos.z + rz * anillo, velU(u), dt);
+            } else caminando = !moverHacia(u, obj.pos.x, obj.pos.z, velU(u), dt);
+          }
           else {
             encararHacia(u, obj.pos.x, obj.pos.z, dt);
             if (u.cd <= 0) { u.cd = d.ritmo; u.ataque = 1; danar(obj, d.dano * (hambre ? COMIDA_TROPA.debilidad : 1) * (1 + bono('espadas') + bonoTropa(u.tipo, 'ataque')) * furia(u) * factorArmas(u.tipo), u); sonar('golpe'); }
@@ -5701,7 +5758,7 @@
         } else caminando = !moverHacia(u, u.puesto.x, u.puesto.z, velU(u), dt);
         if (!obj && !caminando) encararHacia(u, u.pos.x + dirFrente.x, u.pos.z + dirFrente.z, dt);
       }
-      M.animarUnidad(u.m, tiempo + u.radio * 10, caminando, u.ataque);
+      M.animarUnidad(u.m, tiempo + (u.fase || 0), caminando, u.ataque);
       if (caminando && Math.random() < dt * 2.5) bocanada(u.pos.clone().setY(0.15), true);
     }));
 
@@ -5716,10 +5773,13 @@
       if (victima) {
         encararHacia(e, victima.pos.x, victima.pos.z, dt);
         if (e.cd <= 0) { e.cd = d.ritmo; e.ataque = 1; danar(victima, e.dano, e); sonar('golpe'); }
-      } else if (e.dist >= largoCamino - 0.1) {
-        // en la puerta: atacar el castillo
-        encararHacia(e, 0, 0, dt);
-        if (e.cd <= 0) {
+      } else if (e.dist >= finCamino() - 0.1) {
+        // en la puerta: atacar el castillo (v7.74: en el campo de batalla atacan el estandarte del frente; el daño va al castillo igual)
+        if (MODO_CAMPO) encararHacia(e, posFrente.x, posFrente.z, dt); else encararHacia(e, 0, 0, dt);
+        // v7.74: mientras queden tropas tuyas en el campo, el enemigo va a por ellas (el castillo solo recibe daño si el ejército cayó, como antes)
+        var rival = MODO_CAMPO ? masCercano(afuera, e.pos, 30) : null;
+        if (rival) caminando = !moverHacia(e, rival.pos.x, rival.pos.z, d.vel, dt);
+        else if (e.cd <= 0) {
           e.cd = d.ritmo; e.ataque = 1;
           estado.vidaCastillo -= e.dano;
           chispas(e.pos.clone().setY(1.2).lerp(castilloPos, 0.2), 0xc9c2b5, 4, 2);
@@ -5742,12 +5802,12 @@
       } else {
         var pc = puntoCamino(e.dist);
         var lado = new V3(pc.t.z, 0, -pc.t.x).normalize();
-        var meta = pc.p.clone().addScaledVector(lado, e.lat);
+        var meta = pc.p.clone().addScaledVector(lado, e.lat * (MODO_CAMPO ? 2.6 : 1));
         if (e.pos.distanceTo(meta) > 0.6) caminando = !moverHacia(e, meta.x, meta.z, d.vel, dt);
         else {
-          e.dist = Math.min(largoCamino, e.dist + d.vel * dt);
+          e.dist = Math.min(finCamino(), e.dist + d.vel * dt);
           var pn = puntoCamino(e.dist), ln = new V3(pn.t.z, 0, -pn.t.x).normalize();
-          var m2 = pn.p.clone().addScaledVector(ln, e.lat);
+          var m2 = pn.p.clone().addScaledVector(ln, e.lat * (MODO_CAMPO ? 2.6 : 1));
           caminando = !moverHacia(e, m2.x, m2.z, d.vel * 1.5, dt);
           caminando = true;
         }
@@ -5755,7 +5815,7 @@
       // v7.35: un enemigo que lleva 8 s sin moverse, sin pegar y sin recibir daño (encajado entre otros o en una esquina) avanza un tramo del camino (solo si no hay tropas tuyas cerca peleando)
       var movE = e._px === undefined ? 1 : Math.hypot(e.pos.x - e._px, e.pos.z - e._pz); e._px = e.pos.x; e._pz = e.pos.z;
       if (movE > 0.01 || e.ataque > 0.3 || e.vida !== e._v) { e.quieto = 0; e._v = e.vida; } else e.quieto = (e.quieto || 0) + dt;
-      if (e.quieto > 8 && !masCercano(afuera, e.pos, 15)) { e.quieto = 0; e.dist = Math.min(largoCamino, e.dist + 3); var pq = puntoCamino(e.dist).p; e.pos.x = pq.x; e.pos.z = pq.z; }
+      if (e.quieto > 8 && !masCercano(afuera, e.pos, 15)) { e.quieto = 0; e.dist = Math.min(finCamino(), e.dist + 3); var pq = puntoCamino(e.dist).p; e.pos.x = pq.x; e.pos.z = pq.z; }
       M.animarUnidad(e.m, tiempo + e.lat * 7, caminando, e.ataque);
       if (caminando && Math.random() < dt * 1.5) bocanada(e.pos.clone().setY(0.15), true);
     }));
@@ -5766,7 +5826,8 @@
       var A = todos[a];
       for (var b = a + 1; b < todos.length; b++) {
         var B = todos[b];
-        var dx = B.pos.x - A.pos.x, dz = B.pos.z - A.pos.z, dd = Math.hypot(dx, dz), min = A.radio + B.radio;
+        // v7.73: entre compañeros se guarda el espacio del cuerpo entero (no se pisan); contra el enemigo sigue el radio de combate de siempre
+        var dx = B.pos.x - A.pos.x, dz = B.pos.z - A.pos.z, dd = Math.hypot(dx, dz), min = (A.aliado === B.aliado) ? (A.sep || A.radio) + (B.sep || B.radio) : A.radio + B.radio;
         if (dd < min && dd > 0.0001) {
           var emp = (min - dd) * 0.5;
           A.pos.x -= dx / dd * emp; A.pos.z -= dz / dd * emp;
@@ -6371,6 +6432,7 @@
         var viejo = u.m, nuevo = M.unidad(tipo, undefined, nivelArmadura(tipo));
         nuevo.grupo.position.copy(viejo.grupo.position); nuevo.grupo.rotation.copy(viejo.grupo.rotation); nuevo.grupo.visible = viejo.grupo.visible;
         escena.remove(viejo.grupo); escena.add(nuevo.grupo); u.m = nuevo;
+        u.pos = nuevo.grupo.position; // v7.74 ARREGLO: antes la figura nueva se quedaba quieta donde nació mientras el soldado peleaba en otro sitio (se veían "invisibles" o amontonados)
       });
     });
     if (id === 'caballo' || id === 'gallina') animales.forEach(function (o) { if (o.a.tipo === id) M.ponerFiguraAnimal(o.a); });
@@ -7345,7 +7407,7 @@
   function HB(hab) { var h = HABILIDADES[hab]; return { nombre: h.icono + ' ' + h[estado.idioma], des: h['des_' + estado.idioma] }; }
   function hoyTexto() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   function reclutaGratisHoy() { return estado.reclutaGratis !== hoyTexto(); }
-  function puertaCastillo() { return puntoCamino(largoCamino).p.clone().add(new V3(-0.6, 0, 0.6)); }
+  function puertaCastillo() { if (MODO_CAMPO) return posPuertaMuralla.clone(); return puntoCamino(largoCamino).p.clone().add(new V3(-0.6, 0, 0.6)); }
   function furia(u) { return u.furia && u.furia > tiempo ? 1.4 : 1; }
   function statsHeroe(id) {
     var h = HEROE[id], e = estado.heroes[id] || { nivel: 1, estrellas: 1 };
@@ -11324,10 +11386,83 @@
       { texto: T('seguir_infinito'), accion: function () { estado.infinito = true; guardar(); ocultarPantalla(); $('btn-oleada').classList.remove('oculto'); actualizarHUD(); } }
     ]);
   }
+  // ------------------------------------------------------------------
+  //  v7.74 CAMPO DE BATALLA: barra de héroes (cartas con su poder), Auto, x2 y pantalla de Victoria
+  // ------------------------------------------------------------------
+  function habAuto() { return estado.habAuto !== false; }
+  function volverDelCampo() { cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial(); cam.suaveHasta = performance.now() + 1400; }
+  function abrirBarraBatalla() {
+    cerrarBarraBatalla();
+    var b = document.createElement('div'); b.id = 'barra-batalla';
+    b.innerHTML = '<div class="bb-cartas"></div><div class="bb-botones"><button class="bb-auto" aria-label="Auto">Auto</button><button class="bb-x2">x2</button></div>';
+    document.body.appendChild(b); document.body.classList.add('en-batalla');
+    b.querySelector('.bb-auto').addEventListener('click', function () { estado.habAuto = !habAuto(); sonar('click'); pintarBarraBatalla(true); });
+    b.querySelector('.bb-x2').addEventListener('click', function () { cambiarVelocidad(velocidad === 1 ? 2 : 1); sonar('click'); pintarBarraBatalla(true); });
+    pintarBarraBatalla(true);
+  }
+  function cerrarBarraBatalla() { var b = $('barra-batalla'); if (b) b.remove(); document.body.classList.remove('en-batalla'); }
+  function pintarBarraBatalla(todo) {
+    var b = $('barra-batalla'); if (!b) return;
+    var hs = tropas.filter(function (u) { return u.heroeId; }), cont = b.querySelector('.bb-cartas');
+    if (todo || cont.children.length !== hs.length) {
+      cont.innerHTML = hs.map(function (u) {
+        var hab = HABILIDADES[HEROE[u.heroeId].hab] || {};
+        return '<button class="bb-carta" data-h="' + u.heroeId + '">' + fotoHTML('h_' + u.heroeId, '🛡️') + '<span class="bb-icono">' + (hab.icono || '✨') + '</span><span class="bb-recarga"></span><span class="bb-nombre">' + escaparHTML(NH(u.heroeId)) + '</span><span class="bb-vida"><i></i></span></button>';
+      }).join('');
+      cont.querySelectorAll('.bb-carta').forEach(function (c) {
+        c.addEventListener('click', function () {
+          var u = tropas.filter(function (t) { return t.heroeId === c.getAttribute('data-h'); })[0];
+          if (!u || u.vida <= 0 || u.dentro) return;
+          if ((u.cdHab || 0) > 0) { sonar('error'); return; }
+          u.lanzar = true; sonar('click'); c.classList.add('pedida');
+        });
+      });
+      b.querySelector('.bb-auto').classList.toggle('activo', habAuto());
+      b.querySelector('.bb-x2').classList.toggle('activo', velocidad >= 2);
+      b.querySelector('.bb-x2').textContent = 'x' + (velocidad >= 2 ? velocidad : 2);
+    }
+    cont.querySelectorAll('.bb-carta').forEach(function (c) {
+      var u = tropas.filter(function (t) { return t.heroeId === c.getAttribute('data-h'); })[0];
+      var vivo = u && u.vida > 0, cd = u ? Math.max(0, u.cdHab === undefined ? 3 : u.cdHab) : 0, tot = u ? recargaHab(u.heroeId) || 1 : 1;
+      c.classList.toggle('caido', !vivo);
+      c.classList.toggle('lista', vivo && cd <= 0 && !u.dentro);
+      if (!u || !u.lanzar) c.classList.remove('pedida');
+      c.querySelector('.bb-recarga').style.height = (vivo ? Math.min(1, cd / tot) * 100 : 100) + '%';
+      c.querySelector('.bb-vida i').style.width = (u ? Math.max(0, u.vida / u.max) * 100 : 0) + '%';
+    });
+  }
+  function pantallaVictoriaCampo(n, gemas) {
+    var v = document.createElement('div'); v.id = 'victoria-campo';
+    v.innerHTML = '<div class="vc-caja"><div class="vc-rayos"></div><div class="vc-titulo">' + T('victoria') + '</div><div class="vc-sub">' + L('Oleada ' + n + ' superada', 'Wave ' + n + ' cleared') + '</div>' +
+      (gemas > 0 ? '<div class="vc-premio">💎 +' + gemas + '</div>' : '') + '<button class="comprar naranja boton-oleada-grande" id="vc-volver">' + L('Volver a la ciudad', 'Back to the city') + '</button></div>';
+    document.body.appendChild(v);
+    sonar('victoria');
+    $('vc-volver').addEventListener('click', function () { sonar('click'); v.remove(); volverDelCampo(); });
+    setTimeout(function () { if (v.parentNode) { v.remove(); volverDelCampo(); } }, 12000);
+  }
+  // estandarte del frente: empalizada de estacas con dos banderas del reino a los lados del camino (solo se ve con el campo de batalla)
+  var frenteGrupo = null;
+  if (MODO_CAMPO) (function () {
+    var g = new THREE.Group(); g.position.copy(posFrente); g.rotation.y = Math.atan2(dirLado.x, dirLado.z);
+    var madera = new THREE.MeshLambertMaterial({ color: 0x6b4423 }), punta = new THREE.MeshLambertMaterial({ color: 0x8a5a32 });
+    for (var i = -9; i <= 9; i++) {
+      if (Math.abs(i) < 2) continue; // hueco del camino
+      var h = 1.3 + ((i * 7919) % 5) * 0.08, e = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, h, 6), madera); e.position.set(0, h / 2, i * 0.72); e.rotation.x = 0.28; e.castShadow = true; g.add(e);
+      var pc = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.4, 6), punta); pc.position.set(0, h + 0.15, i * 0.72 + 0.4); pc.rotation.x = 0.28; g.add(pc);
+    }
+    [-1, 1].forEach(function (lado) {
+      var asta = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 4.6, 6), madera); asta.position.set(-0.6, 2.3, lado * 1.6); asta.castShadow = true; g.add(asta);
+      var tela = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.9, 6, 2), new THREE.MeshLambertMaterial({ color: 0x1f5fd0, side: THREE.DoubleSide })); tela.position.set(-0.6, 3.9, lado * 1.6 + 0.68); tela.rotation.y = Math.PI / 2; tela.castShadow = true; g.add(tela);
+      var oro = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe2b84a })); oro.position.set(-0.6, 4.65, lado * 1.6); g.add(oro);
+      g.userData.telas = (g.userData.telas || []).concat([tela]);
+    });
+    escena.add(g); frenteGrupo = g;
+  })();
   function pantallaDerrota() {
     pantallaModo = 'derrota';
     mostrarPantalla('💔', T('derrota'), T('derrota_txt', { n: oleadaActual }), [
       { texto: T('reintentar'), accion: function () {
+        if (MODO_CAMPO) { volverDelCampo(); cerrarBarraBatalla(); }
         limpiarEnemigos();
         estado.vidaCastillo = vidaMaxCastillo();
         curarHeridos();
@@ -12034,7 +12169,7 @@
     slots.forEach(function (s) { if (s.barra) s.barra.quaternion.copy(camara.quaternion); });
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
-    if (cuentaHUD > 0.2) { cuentaHUD = 0; pintarColas(); actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); procesarRegresos(); }
+    if (cuentaHUD > 0.2) { cuentaHUD = 0; pintarColas(); actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); procesarRegresos(); if (MODO_CAMPO) pintarBarraBatalla(); }
     render.render(escena, camara);
   }
 

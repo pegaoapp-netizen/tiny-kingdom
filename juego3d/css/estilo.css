@@ -2135,7 +2135,7 @@ html body #panel .tl-volver { margin: 6px 0; padding: 6px 12px; border-radius: 1
 .gu-vacio p { font-size: 14px; margin: 6px 0 0; }
 
 /* v7.73: brújula de la cámara libre (giro 360°): marco dorado como los botones redondos del juego */
-#brujula-cam { position: fixed; left: 10px; top: 46%; z-index: 60; width: 46px; height: 46px; padding: 0; border-radius: 50%;
+#brujula-cam { position: fixed; left: 10px; top: 46%; z-index: 12; width: 46px; height: 46px; padding: 0; border-radius: 50%;
   border: 2px solid #d9a441; background: radial-gradient(circle at 35% 30%, #4a2f17, #1d1108 70%);
   box-shadow: 0 3px 8px rgba(0,0,0,.55), inset 0 0 0 2px rgba(255,220,140,.18); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #brujula-cam:active { transform: scale(.92); }
@@ -2144,3 +2144,31 @@ html body #panel .tl-volver { margin: 6px 0; padding: 6px 12px; border-radius: 1
 #brujula-cam .bruj-aguja { position: absolute; left: 50%; top: 50%; width: 8px; height: 30px; margin: -15px 0 0 -4px;
   background: linear-gradient(#e8483a 0 50%, #f1e2bd 50% 100%); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); filter: drop-shadow(0 1px 1px #000); }
 #brujula-cam .bruj-n { position: absolute; left: 50%; top: -3px; transform: translateX(-50%); font: 900 9px Cinzel, Georgia, serif; color: #ffd76a; font-style: normal; text-shadow: 0 1px 1px #000; }
+
+/* v7.74: CAMPO DE BATALLA — cartas de héroe con su poder, Auto y x2 (abajo, encima de la barra de menús) */
+#barra-batalla { position: fixed; left: 6px; right: 6px; bottom: calc(104px + env(safe-area-inset-bottom)); z-index: 25; display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; pointer-events: none; }
+#barra-batalla .bb-cartas { display: flex; gap: 7px; pointer-events: auto; }
+#barra-batalla .bb-carta { position: relative; width: 62px; height: 78px; padding: 0; border-radius: 10px; overflow: hidden; border: 2px solid #7a5a2a; background: linear-gradient(#3a2614, #1c120a); box-shadow: 0 3px 8px rgba(0,0,0,.55); cursor: pointer; }
+#barra-batalla .bb-carta img, #barra-batalla .bb-carta .foto { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+#barra-batalla .bb-carta.lista { border-color: #ffd45a; box-shadow: 0 0 0 2px rgba(255,212,90,.35), 0 0 14px rgba(255,200,60,.75); animation: bbLatido 1.2s ease-in-out infinite; }
+#barra-batalla .bb-carta.pedida { border-color: #7ef0ff; box-shadow: 0 0 16px rgba(126,240,255,.9); }
+#barra-batalla .bb-carta.caido { filter: grayscale(1) brightness(.55); }
+#barra-batalla .bb-recarga { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(10,14,30,.68); transition: height .2s linear; }
+#barra-batalla .bb-icono { position: absolute; right: 3px; top: 2px; font-size: 16px; filter: drop-shadow(0 1px 1px #000); z-index: 2; }
+#barra-batalla .bb-nombre { position: absolute; left: 0; right: 0; bottom: 7px; font: 800 9.5px Georgia, serif; color: #fff1cf; text-shadow: 0 1px 2px #000; z-index: 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 2px; }
+#barra-batalla .bb-vida { position: absolute; left: 4px; right: 4px; bottom: 2px; height: 4px; border-radius: 3px; background: rgba(0,0,0,.6); z-index: 2; }
+#barra-batalla .bb-vida i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(#7ee05a, #2f9a24); }
+#barra-batalla .bb-botones { display: flex; flex-direction: column; gap: 7px; pointer-events: auto; }
+#barra-batalla .bb-botones button { min-width: 50px; height: 34px; border-radius: 9px; border: 2px solid #c9902a; background: linear-gradient(#5a3a1c, #2a180b); color: #f3e2bb; font: 900 13px Georgia, serif; box-shadow: 0 2px 6px rgba(0,0,0,.5); cursor: pointer; }
+#barra-batalla .bb-botones button.activo { background: linear-gradient(#ffe27a, #d29a12); color: #3a2414; border-color: #7a4a00; }
+@keyframes bbLatido { 50% { transform: translateY(-3px); } }
+#victoria-campo { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: radial-gradient(circle, rgba(20,12,4,.35), rgba(10,6,2,.75)); animation: vcEntra .35s ease-out; }
+#victoria-campo .vc-caja { position: relative; text-align: center; padding: 26px 28px 22px; min-width: 260px; border-radius: 18px; border: 3px solid #d9a441; background: linear-gradient(#4a2f17, #1d1108); box-shadow: 0 10px 30px rgba(0,0,0,.7), inset 0 0 0 2px rgba(255,220,140,.15); overflow: hidden; }
+#victoria-campo .vc-rayos { position: absolute; left: 50%; top: -60%; width: 220%; aspect-ratio: 1; transform: translateX(-50%); background: repeating-conic-gradient(rgba(255,215,110,.12) 0 8deg, transparent 8deg 22deg); animation: vcGira 14s linear infinite; pointer-events: none; }
+#victoria-campo .vc-titulo { position: relative; font: 900 34px Cinzel, Georgia, serif; color: #ffd76a; text-shadow: 0 3px 0 #6a3d00, 0 6px 14px rgba(0,0,0,.6); }
+#victoria-campo .vc-sub { position: relative; margin: 4px 0 12px; color: #f1e2bd; font: 700 14px Georgia, serif; }
+#victoria-campo .vc-premio { position: relative; margin: 0 auto 16px; display: inline-block; padding: 6px 16px; border-radius: 999px; background: rgba(0,0,0,.35); color: #b9e8ff; font: 900 18px Georgia, serif; }
+#victoria-campo button { position: relative; }
+@keyframes vcEntra { from { opacity: 0; transform: scale(1.08); } }
+@keyframes vcGira { to { transform: translateX(-50%) rotate(360deg); } }
+body.en-batalla #brujula-cam, body.en-batalla #dock-procesos, body.en-batalla #mision { display: none !important; } /* en la batalla solo se ve lo de la batalla */
