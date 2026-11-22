@@ -503,6 +503,7 @@
         inv3: c === 'pelvis' ? new T.Matrix3().setFromMatrix4(new T.Matrix4().compose(pp, padreRep, ps)).invert() : null });
     });
     this.pelvisRep = rp.pelvis.clone();
+    this._prepararDedos();
     this.W = {}; LISTA.forEach(function (n) { self.W[n] = new Q(); });
   };
   var _w = new Q(), _pw = new Q();
@@ -517,6 +518,30 @@
       it.w.copy(_w); porC[it.c] = it;
       if (it.inv3) { _a.copy(pose.pelvisPos).sub(self.pelvisRep).applyMatrix3(it.inv3); it.b.position.copy(it.posRep).add(_a); }
     });
+  };
+  // DEDOS (si el modelo los tiene, como los de Mixamo/Tripo): cada falange se dobla hacia la palma
+  var DEDO = /^(left|right)hand(thumb|index|middle|ring|pinky)([1-3])$/;
+  Retarget.prototype._prepararDedos = function () {
+    var self = this, invE = this.invE; this.dedos = [];
+    this.modelo.traverse(function (b) {
+      var mt = b.isBone && DEDO.exec(normalizar(b.name)); if (!mt) return;
+      var l = mt[1] === 'left' ? 'L' : 'R', s = l === 'L' ? 1 : -1, mano = 'mano.' + l, hijo = null;
+      b.children.forEach(function (c) { if (c.isBone) hijo = c; }); if (!hijo || !self.C[mano]) return;
+      var p = new V3(), q = new Q(), sc = new V3(), ph = new V3();
+      relEspacio(b, invE, p, q, sc); relEspacio(hijo, invE, ph, new Q(), new V3());
+      var Cm = self.C[mano], dir = ph.sub(p).applyQuaternion(Cm).normalize(), palma = new V3(-s, 0, 0);
+      var eje = new V3().crossVectors(dir, palma); if (eje.lengthSq() < 1e-6) eje.set(0, 0, -s); eje.normalize();
+      var Wf = Cm.clone().multiply(q), invWf = Wf.clone().invert(), local = eje.clone().applyQuaternion(invWf); // eje en el espacio del propio hueso
+      self.dedos.push({ b: b, l: l, pulgar: mt[2] === 'thumb', fal: +mt[3], eje: local, rep: b.quaternion.clone() });
+    });
+  };
+  var _qd = new Q();
+  // cierre de cada mano: 0 = abierta, ~0,25 = relajada, 1 = puño
+  Retarget.prototype.aplicarDedos = function (cierreL, cierreR) {
+    for (var i = 0; i < this.dedos.length; i++) {
+      var d = this.dedos[i], c = d.l === 'L' ? cierreL : cierreR, ang = c * (d.pulgar ? 0.55 : (d.fal === 1 ? 1.25 : 1.45));
+      d.b.quaternion.copy(d.rep).multiply(_qd.setFromAxisAngle(d.eje, ang));
+    }
   };
   Retarget.prototype.restaurar = function () { this.items.forEach(function (it) { it.b.position.copy(it.posRep); it.b.quaternion.copy(it.quatRep); }); };
   // grupo pegado al hueso con la orientación del esqueleto estándar (para armas y armaduras)
@@ -661,7 +686,7 @@
     var acc = (vt > this.v ? 5 : 8) * esc * dt; this.v += clamp(vt - this.v, -acc, acc); if (this.v < 1e-4) this.v = 0;
     this.pos.x += Math.sin(this.yaw) * this.v * dt; this.pos.z += Math.cos(this.yaw) * this.v * dt;
     this.grupo.rotation.y = this.yaw;
-    var pose = a.actualizar(dt, { pos: this.pos, yaw: this.yaw, v: this.v, yawRate: this.yawRate, yawObj: this.yawObj });
+    this._dt = dt; var pose = a.actualizar(dt, { pos: this.pos, yaw: this.yaw, v: this.v, yawRate: this.yawRate, yawObj: this.yawObj });
     this._aplicar(pose);
     for (var i = 0; i < a.avisos.length; i++) this._emitir(a.avisos[i][0], a.avisos[i][1]);
     var es = this.estado(); if (es !== this._estado) { this._estado = es; this._emitir('estado', es); }
@@ -669,7 +694,17 @@
   };
   Personaje.prototype._aplicar = function (pose) {
     this.pivote.position.copy(pose.raizPos); this.pivote.quaternion.copy(pose.raizQ);
-    if (this.ret) { this.ret.aplicar(pose); return; }
+    if (this.ret) {
+      this.ret.aplicar(pose);
+      if (this.ret.dedos.length) { // manos relajadas; en puño si sujetan algo o al atacar con la derecha
+        var a = this.anim, k = this._dt ? Math.min(1, this._dt * 10) : 1, golpea = a.ataque >= 0 ? 0.35 : 0;
+        this.cierre = this.cierre || { L: 0.28, R: 0.28 };
+        this.cierre.L += ((this.equipo.manoI ? 0.95 : 0.28) - this.cierre.L) * k;
+        this.cierre.R += ((this.equipo.manoD ? 0.95 : 0.28 + golpea) - this.cierre.R) * k;
+        this.ret.aplicarDedos(this.cierre.L, this.cierre.R);
+      }
+      return;
+    }
     var h = this.huesos; for (var i = 1; i < LISTA.length; i++) h[LISTA[i]].quaternion.copy(pose.q[LISTA[i]]);
     h.pelvis.position.copy(pose.pelvisPos);
   };
