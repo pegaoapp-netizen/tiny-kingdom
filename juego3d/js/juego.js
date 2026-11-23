@@ -1662,6 +1662,7 @@
     var btn = $('btn-guerra'); if (!btn) return;
     if (!estado.alianza || !hayCuenta() || !Cuentas.alianza || !Cuentas.usuario()) { guerra.canciller = false; btn.classList.add('oculto'); return; }
     Cuentas.alianza(estado.alianza).then(function (al) {
+      guardarAlNube(al); // v7.99: bonificaciones de alianza al día
       guerra.canciller = !!(al && al.lider === Cuentas.usuario().uid);
       btn.classList.toggle('oculto', !guerra.canciller);
       if (guerra.canciller) cargarGuerra(false);
@@ -3142,6 +3143,7 @@
     (tag ? Cuentas.alianza(tag) : Promise.resolve(null)).then(function (al) {
       if (abrirPanelAlianza.pedido !== pedido || !panelActual || panelActual.tipo !== 'alianza') return;
       if (tag && !al) { estado.alianza = null; guardar(); publicarAldea(true); consejoTemporal(T('al_borrada')); }
+      guardarAlNube(al); // v7.99
       if (al) return Promise.all([Cuentas.miembros(tag), Cuentas.pedidos(tag).catch(function () { return []; }), Cuentas.refuerzosRecibidos().catch(function () { return []; }), Cuentas.refuerzosEnviados().catch(function () { return []; })])
         .then(function (r) { if (panelActual && panelActual.tipo === 'alianza') pintarMiAlianza(al, r[0], r[1], r[2], r[3]); });
       return Cuentas.alianzas().then(function (lista) { pintarListaAlianzas(lista); });
@@ -3171,7 +3173,43 @@
     defensa: { icono: '🛡️', es: 'Defensa unida', en: 'United defense', des_es: '+4% de defensa del reino por nivel', des_en: '+4% kingdom defense per level' },
     carretas: { icono: '🛒', es: 'Caminos', en: 'Roads', des_es: '-6% de tiempo de viaje por nivel', des_en: '-6% travel time per level' }
   };
-  var TIENDA_AL = [['acel_15m', 30], ['libro_peq', 40], ['acel_1h', 90], ['libro_gra', 150], ['oro', 60, 2000], ['comida', 60, 3000]];
+  var TIENDA_AL = [['escudo_8h', 400], ['escudo_12h', 600], ['portal_azar', 500], ['portal_elegir', 1500], ['acel_15m', 30], ['acel_1h', 90], ['acel_8h', 600], ['carreta_sum', 40], ['carretas_x10', 350], ['libro_peq', 40], ['libro_gra', 150], ['oro', 60, 2000], ['comida', 60, 3000]]; // v7.99: se paga con Mérito Personal (MP)
+  // v7.99: MÉRITO, DONAR Y BONIFICACIONES DE ALIANZA (compartidas: viven en la alianza de la nube)
+  var DONAR_AL = { cant: 100000, xp: 100, ma: 100, mp: 50, dia: 10 };
+  var BONIF_AL = {
+    ataque: { ico: '⚔️', es: 'Ataque de alianza', en: 'Alliance attack', paso: 2, des_es: '+{v}% de ataque para tus tropas', des_en: '+{v}% attack for your troops' },
+    marcha: { ico: '🚩', es: 'Capacidad de marcha', en: 'March capacity', paso: 3, des_es: '+{v}% de tropas por marcha', des_en: '+{v}% troops per march' },
+    obras: { ico: '🔨', es: 'Velocidad de construcción', en: 'Building speed', paso: 2, des_es: '+{v}% de velocidad en las obras', des_en: '+{v}% building speed' },
+    recoleccion: { ico: '🌾', es: 'Recolección', en: 'Gathering', paso: 6, des_es: '+{v}% en las casillas del mundo', des_en: '+{v}% on world tiles' },
+    defensa: { ico: '🛡️', es: 'Defensa unida', en: 'United defense', paso: 4, des_es: '+{v}% de defensa del reino', des_en: '+{v}% kingdom defense' },
+    carretas: { ico: '🛣️', es: 'Caminos', en: 'Roads', paso: 6, des_es: '-{v}% de tiempo de viaje', des_en: '-{v}% travel time' }
+  };
+  var BONIF_AL_MAX = 10;
+  function costoBonifAl(n) { return 1000 * (n + 1) * (n + 1); }
+  function bonifAl(k) { return estado.alianza ? Math.min(BONIF_AL_MAX, ((estado.alBonif || {})[k]) || 0) : 0; }
+  function guardarAlNube(al) { if (!al) return; estado.alBonif = al.bonif || {}; }
+  function mayus(t) { t = String(t || ''); return t.charAt(0).toUpperCase() + t.slice(1); }
+  function donHoy() { var a = alLoc(); if (!a.don || a.don.dia !== hoyClave()) a.don = { dia: hoyClave(), n: 0 }; return a.don; }
+  function donarAlianza(r) {
+    var al = alCache && alCache.al; if (!al || !estado.alianza) return;
+    var d = donHoy(); if (d.n >= DONAR_AL.dia && !esDueno()) { consejoTemporal(L('Ya donaste ' + DONAR_AL.dia + ' veces hoy. Vuelve mañana.', 'You already donated ' + DONAR_AL.dia + ' times today. Come back tomorrow.')); sonar('error'); return; }
+    if (cantRec(r) < DONAR_AL.cant) { consejoTemporal(L('No tienes ', 'You do not have ') + formatoNumero(DONAR_AL.cant) + ' ' + T('r_' + r)); sonar('error'); return; }
+    if (r === 'hierro') quitarRec('hierro', DONAR_AL.cant); else { var c = {}; c[r] = DONAR_AL.cant; if (!pagar(c)) return; }
+    d.n++;
+    Cuentas.donarAlianza(al.tag, DONAR_AL.xp, DONAR_AL.ma).then(function () {
+      alLoc().puntos += DONAR_AL.mp; al.xp = (al.xp || 0) + DONAR_AL.xp; al.ma = (al.ma || 0) + DONAR_AL.ma;
+      sonar('moneda'); consejoTemporal('🤝 +' + DONAR_AL.xp + ' ' + L('exp. de alianza', 'alliance exp') + ' · +' + DONAR_AL.ma + ' MA · +' + DONAR_AL.mp + ' MP');
+      guardar(true); actualizarHUD(); pintarHubAlianza();
+    }).catch(function () { d.n--; if (r === 'hierro') estado.hierro = (estado.hierro || 0) + DONAR_AL.cant; else sumarRecurso(r, DONAR_AL.cant); consejoTemporal(T('ref_error')); sonar('error'); pintarHubAlianza(); });
+  }
+  function mejorarBonifAl(k) {
+    var al = alCache && alCache.al; if (!al || !BONIF_AL[k]) return;
+    if (al.lider !== Cuentas.usuario().uid) { consejoTemporal(L('Solo el Canciller mejora las bonificaciones.', 'Only the Chancellor upgrades bonuses.')); sonar('error'); return; }
+    var n = ((al.bonif || {})[k]) || 0; if (n >= BONIF_AL_MAX) return;
+    var c = costoBonifAl(n); if ((al.ma || 0) < c) { consejoTemporal(L('Falta Mérito de Alianza (MA).', 'Not enough Alliance Merit (MA).')); sonar('error'); return; }
+    Cuentas.mejorarBonifAlianza(al.tag, k, n + 1, c).then(function () { al.ma -= c; al.bonif = al.bonif || {}; al.bonif[k] = n + 1; guardarAlNube(al); sonar('listo'); guardar(true); pintarHubAlianza(); })
+      .catch(function () { consejoTemporal(T('ref_error')); sonar('error'); });
+  }
   var LIMITE_REGALOS_DIA = 20;
   function hoyClave() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
   function alLoc() {
@@ -3184,7 +3222,7 @@
     if (a.dia !== hoyClave()) { a.dia = hoyClave(); a.reclamadosHoy = 0; }
     return a;
   }
-  function tecAl(k) { return estado.alianza ? ((alLoc().tec || {})[k] || 0) : 0; }
+  function tecAl(k) { return estado.alianza ? Math.max((alLoc().tec || {})[k] || 0, bonifAl(k)) : 0; } // v7.99: la bonificación compartida de la alianza (o la vieja propia, la mayor)
   function premioRegalo(grande) {
     var n = grande ? 3 : 1, r = Math.random(), p = {};
     if (r < 0.3) p.oro = 300 * n; else if (r < 0.55) p.comida = 450 * n; else if (r < 0.75) p.madera = 300 * n; else if (r < 0.88) p.piedra = 200 * n; else p.objeto = grande ? 'acel_1h' : 'acel_15m';
@@ -3244,7 +3282,7 @@
     Cuentas.ajustesAlianza(alCache.al.tag, { idioma: idioma, descripcion: des }).then(function () { alCache.al.idioma = idioma; alCache.al.descripcion = des; consejoTemporal(L('Ajustes guardados.', 'Settings saved.')); sonar('listo'); pintarHubAlianza(); })
       .catch(function () { b.disabled = false; consejoTemporal(T('ref_error')); sonar('error'); });
   }
-  var SECCIONES_AL = [['guerra', '⚔️', 'Guerra', 'War'], ['cajas', '🎁', 'Cajas', 'Boxes'], ['territorio', '🗺️', 'Territorio', 'Territory'], ['batalla', '🏆', 'Batalla de alianza', 'Alliance battle'], ['tienda', '🛍️', 'Tienda', 'Shop'], ['tecnologia', '📜', 'Tecnología', 'Technology'], ['poder', '💪', 'Poder', 'Power'], ['ayuda', '🤝', 'Ayuda', 'Help'], ['miembros', '👥', 'Miembros', 'Members'], ['incentivo', '📅', 'Incentivo', 'Incentive'], ['ajustes', '⚙️', 'Ajustes', 'Settings']];
+  var SECCIONES_AL = [['donar', '🤝', 'Donar', 'Donate'], ['guerra', '⚔️', 'Guerra', 'War'], ['cajas', '🎁', 'Cajas', 'Boxes'], ['territorio', '🗺️', 'Territorio', 'Territory'], ['batalla', '🏆', 'Batalla de alianza', 'Alliance battle'], ['tienda', '🛍️', 'Tienda de alianza', 'Alliance shop'], ['tecnologia', '📜', 'Bonif. de alianza', 'Alliance bonuses'], ['poder', '🎖️', 'Mi mérito', 'My merit'], ['ayuda', '🤝', 'Ayuda', 'Help'], ['miembros', '👥', 'Miembros', 'Members'], ['incentivo', '📅', 'Incentivo', 'Incentive'], ['ajustes', '⚙️', 'Ajustes', 'Settings']];
   function avisoSeccionAl(k) {
     if (k === 'cajas') return alLoc().regalos.length;
     if (k === 'incentivo') return incentivoListo() ? 1 : 0;
@@ -3256,13 +3294,13 @@
     if (!alCache || !panelActual || panelActual.tipo !== 'alianza') return;
     var al = alCache.al, mi = alCache.miembros, a = alLoc(), total = mi.reduce(function (s, m) { return s + (m.poder || 0); }, 0);
     var h = '<div class="carta al-cab"><div class="al-escudo">' + escaparHTML(al.tag) + '</div><div class="al-datos"><h3>' + escaparHTML(al.nombre) + '</h3>' +
-      '<p>👑 ' + escaparHTML(al.liderNombre) + ' · 💪 ' + formatoNumero(total) + '</p><p>👥 ' + mi.length + '/100 · 🌐 ' + (IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es) + ' · 🛡️ ' + formatoNumero(a.puntos) + ' ' + L('pts', 'pts') + '</p></div></div>';
+      '<p>👑 ' + escaparHTML(al.liderNombre) + ' · 💪 ' + formatoNumero(total) + '</p><p>👥 ' + mi.length + '/100 · 🌐 ' + (IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es) + ' · 🎖️ ' + formatoNumero(a.puntos) + ' MP · 🏅 ' + formatoNumero(al.ma || 0) + ' MA</p></div></div>';
     if (!alSeccion) { $('panel-cuerpo').innerHTML = htmlAlianzaPestanas(); return; }
     if (false) {
       h += '<div class="al-rejilla">' + SECCIONES_AL.map(function (s) { var n = avisoSeccionAl(s[0]); return '<button class="al-boton" data-accion="al-sec" data-sec="' + s[0] + '"><span class="al-ic">' + s[1] + '</span><span>' + (estado.idioma === 'en' ? s[3] : s[2]) + '</span>' + (n ? '<i class="al-n">' + (n > 99 ? '99+' : n) + '</i>' : '') + '</button>'; }).join('') + '</div>';
       if (al.descripcion) h += '<p class="nota" style="margin-top:8px">📢 ' + escaparHTML(al.descripcion) + '</p>';
     } else {
-      var s = SECCIONES_AL.filter(function (q) { return q[0] === alSeccion; })[0];
+      var s = SECCIONES_AL.filter(function (q) { return q[0] === alSeccion; })[0] || ['', '', '', ''];
       h += '<div class="al-sec-cab"><button class="comprar mini" data-accion="al-sec" data-sec="">◀ ' + L('Volver', 'Back') + '</button><b>' + s[1] + ' ' + (estado.idioma === 'en' ? s[3] : s[2]) + '</b></div>' + htmlSeccionAl(alSeccion);
     }
     $('panel-cuerpo').innerHTML = h;
@@ -3288,7 +3326,7 @@
     var total = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0);
     var h = htmlTabsAlianza();
     if (alTab === 'info') {
-      var nv = nivelAlianza(a.puntos || 0), soyLider = al.lider === yoU;
+      var nv = nivelAlianza(al.xp || 0), soyLider = al.lider === yoU; // v7.99: nivel compartido (donaciones de todos)
       // v7.17: como Kingdoms of Camelot: Canciller, Clasificación entre todas las alianzas y tu puesto de verdad (Vicecanciller, Mariscal…)
       var clas = '…';
       if (alListaTodas) { var ix = alListaTodas.map(function (x) { return x.tag; }).indexOf(al.tag); clas = ix >= 0 ? String(ix + 1) : '—'; }
@@ -3302,8 +3340,8 @@
         '<div class="kb-al-links"><button data-accion="al-sec" data-sec="ajustes">' + L('Detalles', 'Details') + '</button><button data-accion="al-sec" data-sec="ajustes">' + L('Requisitos', 'Requirements') + '</button></div>' +
         (al.descripcion ? '<p class="al-desc">📢 ' + escaparHTML(al.descripcion) + '</p>' : '') +
         '<div class="al-nivel"><div class="al-nv-ic">🤝<b>' + L('Nv', 'Lv') + nv.n + '</b></div><div class="pr-barra al-nv-barra"><i style="width:' + Math.round(nv.act / nv.need * 100) + '%"></i><span>' + formatoNumero(nv.act) + ' / ' + formatoNumero(nv.need) + '</span></div></div>' +
-        '<div class="al-3b"><button data-accion="al-sec" data-sec="poder">' + L('Mi mérito', 'My merit') + '</button><button data-accion="al-sec" data-sec="cajas">' + L('Regalos', 'Gifts') + (alLoc().regalos.length ? ' (' + alLoc().regalos.length + ')' : '') + '</button><button data-accion="al-sec" data-sec="ayuda">' + L('Ayudar', 'Help') + '</button></div>' +
-        '<div class="al-filas">' + [['tecnologia', L('Ver bonificaciones de alianza', 'See alliance bonuses'), L('Mejóralas con los puntos de alianza.', 'Upgrade them with alliance points.')], ['tienda', L('Ver tienda de alianza', 'See alliance shop'), L('Compra objetos con tus puntos.', 'Buy items with your points.')],
+        '<div class="al-3b"><button data-accion="al-sec" data-sec="poder">' + L('Mi mérito', 'My merit') + '</button><button data-accion="al-sec" data-sec="cajas">' + L('Regalos', 'Gifts') + (alLoc().regalos.length ? ' (' + alLoc().regalos.length + ')' : '') + '</button><button data-accion="al-sec" data-sec="donar">' + L('Donar', 'Donate') + '</button></div>' +
+        '<div class="al-filas">' + [['tecnologia', L('Ver bonif. de alianza', 'See alliance bonuses'), L('Mejora las bonif. con mérito de alianza (MA).', 'Upgrade bonuses with alliance merit (AM).')], ['tienda', L('Ver tienda de alianza', 'See alliance shop'), L('Compra objetos con tu mérito personal (MP).', 'Buy items with your personal merit (PM).')], ['ayuda', L('Ayuda de la alianza', 'Alliance help'), L('Pedidos de recursos y refuerzos.', 'Resource and reinforcement requests.')],
           ['incentivo', L('Incentivo diario', 'Daily incentive'), L('Entra cada día y cobra tu racha.', 'Log in daily and claim your streak.')], ['guerra', L('Guerras de la alianza', 'Alliance wars'), L('Ataques y defensas recientes.', 'Recent attacks and defenses.')],
           ['territorio', L('Territorio', 'Territory'), L('Las casillas de tu alianza en el mundo.', 'Your alliance tiles on the world map.')], ['batalla', L('Batalla de alianza', 'Alliance battle'), L('Compite con otras alianzas.', 'Compete with other alliances.')], ['ajustes', L('Ajustes de la alianza', 'Alliance settings'), L('Idioma, anuncio y salir.', 'Language, notice and leave.')]].map(function (q) {
           var av = avisoSeccionAl(q[0]); return '<button class="al-fila" data-accion="al-sec" data-sec="' + q[0] + '"><span><b>' + q[1] + (av ? ' <i class="al-new">' + av + '</i>' : '') + '</b><small>' + q[2] + '</small></span><i class="al-chev">›</i></button>';
@@ -3336,12 +3374,16 @@
       if (!lista) { h += '<p class="iv-vacio">' + T('cargando') + '</p>'; Cuentas.alianzas().then(function (l) { alListaTodas = l || []; if (panelActual && panelActual.tipo === 'alianza' && alTab === 'alianzas') pintarHubAlianza(); }).catch(function () { alListaTodas = []; }); }
       else {
         var lf = lista.filter(function (x) { return !q || String(x.nombre).toLowerCase().indexOf(q) >= 0 || String(x.tag).toLowerCase() === q; });
-        h += '<div class="al-tabla"><div class="al-th al-th3"><span>' + L('Puesto', 'Rank') + '</span><span>' + L('Alianza / Líder', 'Alliance / Leader') + '</span><span>' + L('Idioma', 'Language') + '</span><span></span></div>' + (lf.length ? lf.map(function (x, i) {
-          return '<div class="al-tr al-th3 al-toca" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '"><span><i class="al-ok">✓</i> ' + (i + 1) + '</span><span class="al-al"><b class="al-ban">' + escaparHTML(x.tag) + '</b><span>' + escaparHTML(x.nombre) + '<small>' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + escaparHTML((IDIOMAS_AL[x.idioma] || IDIOMAS_AL.es).slice(0, 3)) + '</span><span><button class="al-chev" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '">›</button></span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
+        contarMiembrosAl(lf.slice(0, 25)); // v7.99: miembros y nivel de cada alianza
+        h += '<div class="al-tabla al-lista5"><div class="al-th al-th5"><span>' + L('Puesto', 'Rank') + '</span><span>' + L('Escudo', 'Banner') + '</span><span>' + L('Nombre / Líder', 'Name / Leader') + '</span><span>' + L('Miembros', 'Members') + '</span><span>' + L('Nivel', 'Level') + '</span></div>' + (lf.length ? lf.map(function (x, i) {
+          var nm = alMiembrosN[x.tag];
+          return '<div class="al-tr al-th5 al-toca" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '"><span class="al-pos">' + (i + 1) + '</span><span><b class="al-ban">' + escaparHTML(x.tag) + '</b></span><span class="al-al"><span>' + escaparHTML(x.nombre) + '<small>👑 ' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + (nm === undefined ? '…' : nm) + '</span><span>' + nivelAlianza(x.xp || 0).n + '</span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
         }).join('') : '<p class="iv-vacio">' + L('No hay alianzas con ese nombre.', 'No alliances with that name.') + '</p>') + '</div>';
       }
     }
-    if (alTab === 'muro') {
+    if (alTab === 'muro') h += '<div class="al-submuro"><button data-accion="al-submuro" data-t="muro" class="' + (alSubMuro === 'muro' ? 'activo' : '') + '">' + L('Muro', 'Wall') + '</button><button data-accion="al-submuro" data-t="informes" class="' + (alSubMuro === 'informes' ? 'activo' : '') + '">' + L('Informes', 'Reports') + '</button></div>';
+    if (alTab === 'muro' && alSubMuro === 'informes') h += htmlInformesAl();
+    else if (alTab === 'muro') {
       var c = canalAlianza(), ms = (chat.msgs[c] || []).slice().reverse();
       if (hayCuenta()) iniciarChat();
       h += '<div class="al-muro">' + (al.descripcion ? '<div class="al-aviso"><span>👑</span><div><b>' + L('Aviso de la alianza', 'Alliance notice') + '</b><p>' + escaparHTML(al.descripcion) + '</p></div></div>' : '') +
@@ -3350,6 +3392,56 @@
         '<div class="al-escribe"><input id="al-muro-txt" maxlength="140" placeholder="' + L('Máx. 140 caracteres', 'Max. 140 characters') + '"><button class="iv-boton" data-accion="al-muro-enviar">' + L('Enviar', 'Send') + '</button></div>';
     }
     return h;
+  }
+  // v7.99: MURO › INFORMES: los ataques que reciben (Llegada) y lanzan (Salida) todos los miembros, en vivo
+  var alSubMuro = 'muro', alInf = { filtro: 'todos', pag: 0, datos: null, t: 0, cargando: false, error: false, ver: null };
+  function cargarInformesAl(forzar) {
+    if (!estado.alianza || !Cuentas.guerraAlianza || alInf.cargando) return;
+    if (!forzar && alInf.datos && Date.now() - alInf.t < 30000) return;
+    alInf.cargando = true;
+    Cuentas.guerraAlianza(estado.alianza).then(function (d) { alInf.cargando = false; alInf.error = false; alInf.datos = d; alInf.t = Date.now(); if (panelActual && panelActual.tipo === 'alianza' && alTab === 'muro' && alSubMuro === 'informes') pintarHubAlianza(); })
+      .catch(function () { alInf.cargando = false; alInf.error = true; if (panelActual && panelActual.tipo === 'alianza' && alTab === 'muro' && alSubMuro === 'informes') pintarHubAlianza(); });
+  }
+  function listaInformesAl() {
+    var d = alInf.datos; if (!d) return [];
+    var l = [], vistos = {};
+    if (alInf.filtro !== 'salida') d.recibidos.forEach(function (x) { if (!x.cancelado) { vistos[x.id] = 1; l.push({ x: x, lado: 'llegada' }); } });
+    if (alInf.filtro !== 'llegada') d.hechos.forEach(function (x) { if (!x.cancelado && !(alInf.filtro === 'todos' && vistos[x.id])) l.push({ x: x, lado: 'salida' }); });
+    return l.sort(function (a, b) { return b.x.fecha - a.x.fecha; });
+  }
+  function fechaInf(t) { var f = new Date(t); return '<span>' + f.toLocaleDateString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short' }) + '</span><span>' + ('0' + f.getHours()).slice(-2) + ':' + ('0' + f.getMinutes()).slice(-2) + '</span>'; }
+  function htmlInformesAl() {
+    if (alInf.ver) return htmlInformeAl(alInf.ver);
+    cargarInformesAl(false);
+    var ahora = new Date(), h = '<div class="al-inf"><div class="al-inf-filtro"><span class="al-inf-hora">🌍 ' + ('0' + ahora.getHours()).slice(-2) + ':' + ('0' + ahora.getMinutes()).slice(-2) + '</span>' +
+      [['todos', L('Todos', 'All')], ['llegada', L('Llegada', 'Incoming')], ['salida', L('Salida', 'Outgoing')]].map(function (q) { return '<button class="al-inf-radio' + (alInf.filtro === q[0] ? ' sel' : '') + '" data-accion="al-inf-filtro" data-f="' + q[0] + '"><i></i>' + q[1] + '</button>'; }).join('') + '</div>';
+    if (!alInf.datos) return h + '<p class="iv-vacio">' + (alInf.error ? L('No se pudieron cargar los informes.', 'Could not load reports.') : T('cargando')) + '</p></div>';
+    var l = listaInformesAl(), porPag = 6, pags = Math.max(1, Math.ceil(l.length / porPag)); alInf.pag = Math.max(0, Math.min(alInf.pag, pags - 1));
+    h += '<div class="al-inf-tabla"><div class="al-inf-th"><span>' + L('Fecha', 'Date') + '</span><span>' + L('Tipo', 'Type') + '</span><span>' + L('Vista', 'View') + '</span></div>' +
+      (l.length ? l.slice(alInf.pag * porPag, alInf.pag * porPag + porPag).map(function (q) { var x = q.x, vivo = !x.resuelto;
+        return '<button class="al-inf-tr" data-accion="al-inf-ver" data-id="' + escaparHTML(x.id) + '" data-lado="' + q.lado + '"><span class="al-inf-f">' + fechaInf(x.fecha) + '</span><span class="al-inf-ico ' + q.lado + '">⚔️</span>' +
+          '<span class="al-inf-quien"><span>' + L('De: ', 'From: ') + '<b class="' + (q.lado === 'llegada' ? 'rojo' : 'verde') + '">' + escaparHTML(x.atacanteNombre || '?') + '</b></span><span>' + L('A: ', 'To: ') + escaparHTML(x.defensorNombre || '?') + '</span></span>' +
+          '<span class="al-inf-ban">' + (vivo ? '⏳' : x.gano ? '🏳️' : '🛡️') + '</span><i class="al-inf-flecha">›</i></button>'; }).join('')
+        : '<p class="iv-vacio">' + L('No hay ataques en los últimos 7 días.', 'No attacks in the last 7 days.') + '</p>') + '</div>' +
+      '<div class="al-pag"><button data-accion="al-inf-pag" data-p="0">⏮</button><button data-accion="al-inf-pag" data-p="' + Math.max(0, alInf.pag - 1) + '">‹</button><span>' + (alInf.pag + 1) + ' / ' + pags + '</span><button data-accion="al-inf-pag" data-p="' + Math.min(pags - 1, alInf.pag + 1) + '">›</button><button data-accion="al-inf-pag" data-p="' + (pags - 1) + '">⏭</button></div>' +
+      '<button class="comprar mini" data-accion="al-inf-recargar" style="margin-top:6px">🔄 ' + L('Actualizar', 'Refresh') + '</button>';
+    return h + '</div>';
+  }
+  function htmlInformeAl(v) {
+    var d = alInf.datos || { recibidos: [], hechos: [] }, x = d.recibidos.concat(d.hechos).filter(function (q) { return q.id === v.id; })[0];
+    var h = '<div class="al-rep"><button class="al-rep-volver" data-accion="al-inf-volver" aria-label="' + L('Volver', 'Back') + '">‹</button>';
+    if (!x) return h + '<p class="iv-vacio">' + L('Ese informe ya no está.', 'That report is gone.') + '</p></div>';
+    var llegada = v.lado === 'llegada', res = x.resuelto && !x.cancelado, nosGano = llegada ? !x.gano : !!x.gano;
+    var titulo = !res ? L('Marcha en camino', 'March on the way') : nosGano ? (llegada ? L('¡DEFENSA VICTORIOSA!', 'DEFENSE HELD!') : L('¡VICTORIA!', 'VICTORY!')) : (llegada ? L('¡TE HAN DERROTADO!', 'YOU WERE DEFEATED!') : L('¡DERROTA!', 'DEFEAT!'));
+    var b = x.botin || {}, f = new Date(x.fecha);
+    h += '<div class="al-rep-cab ' + (res ? (nosGano ? 'gana' : 'pierde') : '') + '"><small>' + L('Combate · ', 'Battle · ') + f.toLocaleString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '</small><b>' + titulo + '</b></div>';
+    if (res) h += '<div class="al-rep-botin">' + ['oro', 'comida', 'madera', 'piedra'].map(function (r) { return '<span>' + ICONO_RECURSO[r] + ' ' + (b[r] ? '-' + cortoNum(b[r]) : '0') + '</span>'; }).join('') + '</div>' +
+      '<p class="al-rep-txt">' + (x.gano ? L('¡Los atacantes han atravesado la muralla!', 'The attackers broke through the wall!') : L('La muralla resistió el ataque.', 'The wall held the attack.')) + '</p>';
+    else h += '<p class="al-rep-txt">' + estadoAtaqueHTML(x) + '</p>';
+    h += '<div class="al-rep-sec">' + L('Detalles del combate', 'Battle details') + '</div><div class="al-rep-vs"><div><small>' + L('ATACANTES', 'ATTACKERS') + '</small><b class="' + (llegada ? 'rojo' : 'verde') + '">' + escaparHTML(x.atacanteNombre || '?') + '</b>' + (x.alA ? '<i>[' + escaparHTML(x.alA) + ']</i>' : '') +
+      '<span>' + L('Poder: ', 'Power: ') + cortoNum(x.fuerza || 0) + '</span><span>' + L('Bajas: ', 'Losses: ') + cortoNum(x.bajas || 0) + '</span></div><div class="al-rep-x">⚔️</div><div><small>' + L('DEFENSORES', 'DEFENDERS') + '</small><b>' + escaparHTML(x.defensorNombre || '?') + '</b>' + (x.alD ? '<i>[' + escaparHTML(x.alD) + ']</i>' : '') +
+      '<span>' + L('Defensa: ', 'Defense: ') + cortoNum(x.defensa || 0) + '</span><span>' + L('Resultado: ', 'Result: ') + (res ? (x.gano ? L('Derrotado', 'Defeated') : L('Resistió', 'Held')) : '—') + '</span></div></div>';
+    return h + '</div>';
   }
   function htmlSeccionAl(k) {
     var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
@@ -3365,14 +3457,25 @@
       });
       return h + '</div>';
     }
-    if (k === 'tienda') return '<div class="carta"><p class="nota">' + L('Tienes ', 'You have ') + '<b>🛡️ ' + formatoNumero(a.puntos) + '</b> ' + L('puntos de alianza.', 'alliance points.') + '</p>' + TIENDA_AL.map(function (q, i) {
+    if (k === 'donar') {
+      var dh = donHoy();
+      return '<div class="carta"><p class="nota">' + L('Dona recursos para subir el nivel de la alianza. Cada donación de ', 'Donate resources to level up the alliance. Each donation of ') + '<b>' + cortoNum(DONAR_AL.cant) + '</b> ' + L('da', 'gives') + ' <b>+' + DONAR_AL.xp + ' ' + L('exp.', 'exp') + '</b>, <b>+' + DONAR_AL.ma + ' MA</b> ' + L('(mérito de alianza) y', '(alliance merit) and') + ' <b>+' + DONAR_AL.mp + ' MP</b> ' + L('(tu mérito personal).', '(your personal merit).') + '</p>' +
+        '<p class="nota"><b>' + L('Donaciones de hoy: ', 'Donations today: ') + dh.n + ' / ' + DONAR_AL.dia + '</b> · MP: <b>' + formatoNumero(a.puntos) + '</b></p>' +
+        ['comida', 'madera', 'piedra', 'hierro', 'oro'].map(function (r) { var ok = cantRec(r) >= DONAR_AL.cant && dh.n < DONAR_AL.dia;
+          return '<div class="fila-miembro al-don"><span class="al-don-ico">' + ICONO_RECURSO[r] + '</span><b>' + mayus(T('r_' + r)) + '</b><small>' + L('Tienes ', 'You have ') + cortoNum(cantRec(r)) + '</small><button class="comprar mini azul" data-accion="al-donar" data-r="' + r + '"' + (ok ? '' : ' disabled') + '>' + L('Donar ', 'Donate ') + cortoNum(DONAR_AL.cant) + '</button></div>'; }).join('') + '</div>';
+    }
+    if (k === 'tienda') return '<div class="carta"><p class="nota">' + L('Tu Mérito Personal: ', 'Your Personal Merit: ') + '<b>🎖️ ' + formatoNumero(a.puntos) + ' MP</b>. ' + L('Lo ganas donando y ayudando a tu alianza.', 'Earn it by donating and helping your alliance.') + '</p>' + TIENDA_AL.map(function (q, i) {
       var nom = q[2] ? ICONO_RECURSO[q[0]] + ' ' + formatoNumero(q[2]) + ' ' + T('r_' + q[0]) : OBJETOS[q[0]].icono + ' ' + N(q[0]);
-      return '<div class="fila-miembro"><b>' + nom + '</b><button class="comprar mini naranja" data-accion="al-tienda" data-i="' + i + '">🛡️ ' + q[1] + '</button></div>';
+      return '<div class="fila-miembro"><b>' + nom + '</b><button class="comprar mini naranja" data-accion="al-tienda" data-i="' + i + '">🎖️ ' + q[1] + ' MP</button></div>';
     }).join('') + '</div>';
-    if (k === 'tecnologia') return '<div class="carta"><p class="nota">' + L('Puntos: ', 'Points: ') + '<b>🛡️ ' + formatoNumero(a.puntos) + '</b></p>' + Object.keys(TEC_AL).map(function (t) {
-      var d = TEC_AL[t], n = a.tec[t] || 0;
-      return '<div class="fila-miembro"><span>' + d.icono + '</span><div style="flex:1"><b>' + (estado.idioma === 'en' ? d.en : d.es) + ' ' + n + '/5</b><p class="nota">' + (estado.idioma === 'en' ? d.des_en : d.des_es) + '</p></div>' + (n < 5 ? '<button class="comprar mini naranja" data-accion="al-tec" data-k="' + t + '">🛡️ ' + costoTecAl(n) + '</button>' : '<span class="chip">MAX</span>') + '</div>';
-    }).join('') + '</div>';
+    if (k === 'tecnologia') { // v7.99: bonificaciones COMPARTIDAS: el Canciller las sube con el Mérito de Alianza (MA) y valen para todos
+      var lid = al.lider === yoU, bf = al.bonif || {};
+      return '<div class="carta"><p class="nota">' + L('Mérito de Alianza: ', 'Alliance Merit: ') + '<b>🏅 ' + formatoNumero(al.ma || 0) + ' MA</b>. ' + (lid ? L('Como Canciller, tú las mejoras: valen para todos los miembros.', 'As Chancellor, you upgrade them: they apply to all members.') : L('Solo el Canciller las mejora; valen para todos los miembros.', 'Only the Chancellor upgrades them; they apply to all members.')) + '</p>' + Object.keys(BONIF_AL).map(function (t) {
+        var d = BONIF_AL[t], n = Math.min(BONIF_AL_MAX, bf[t] || 0), c = costoBonifAl(n);
+        return '<div class="fila-miembro al-bonif"><span>' + d.ico + '</span><div style="flex:1"><b>' + L(d.es, d.en) + ' ' + n + '/' + BONIF_AL_MAX + '</b><p class="nota">' + L(d.des_es, d.des_en).replace('{v}', n * d.paso) + (n < BONIF_AL_MAX ? ' → ' + (n + 1) * d.paso + '%' : '') + '</p></div>' +
+          (n < BONIF_AL_MAX ? (lid ? '<button class="comprar mini naranja" data-accion="al-bonif" data-k="' + t + '"' + ((al.ma || 0) >= c ? '' : ' disabled') + '>🏅 ' + cortoNum(c) + '</button>' : '<span class="chip">🏅 ' + cortoNum(c) + '</span>') : '<span class="chip">MAX</span>') + '</div>';
+      }).join('') + '</div>';
+    }
     if (k === 'incentivo') {
       var inc = a.incentivo, listo = incentivoListo(), sig = listo ? (function () { var ay = new Date(Date.now() - 86400000); return inc.dia === ay.getFullYear() + '-' + (ay.getMonth() + 1) + '-' + ay.getDate() ? Math.min(7, inc.racha + 1) : 1; })() : inc.racha;
       return '<div class="carta"><p class="nota">' + L('Entra cada día para subir la racha (máximo 7 días).', 'Log in every day to raise your streak (max 7 days).') + '</p><div class="al-dias">' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<div class="al-dia' + (d < sig || (!listo && d <= inc.racha) ? ' hecho' : '') + (d === sig && listo ? ' hoy' : '') + '"><b>' + L('Día ', 'Day ') + d + '</b><span>🪙 ' + formatoNumero(premioIncentivo(d).oro) + '</span>' + (premioIncentivo(d).gemas ? '<span>💎 ' + premioIncentivo(d).gemas + '</span>' : '') + '</div>'; }).join('') + '</div>' +
@@ -3389,6 +3492,9 @@
     }
     if (k === 'batalla' || k === 'poder') {
       var total = mi.reduce(function (s, m) { return s + (m.poder || 0); }, 0);
+      if (k === 'poder') { var nvA = nivelAlianza(al.xp || 0), dh2 = donHoy(); return '<div class="carta casilla-tabla al-merito"><span>' + L('Mérito Personal (MP)', 'Personal Merit (PM)') + '</span><b>🎖️ ' + formatoNumero(a.puntos) + '</b><span>' + L('Mérito de Alianza (MA)', 'Alliance Merit (AM)') + '</span><b>🏅 ' + formatoNumero(al.ma || 0) + '</b><span>' + L('Nivel de la alianza', 'Alliance level') + '</span><b>' + L('Nv ', 'Lv ') + nvA.n + ' · ' + formatoNumero(nvA.act) + '/' + formatoNumero(nvA.need) + '</b><span>' + L('Donaciones de hoy', 'Donations today') + '</span><b>' + dh2.n + ' / ' + DONAR_AL.dia + '</b></div>' +
+        '<div class="stats" style="margin-top:8px"><button class="comprar azul" data-accion="al-sec" data-sec="donar">' + L('Donar', 'Donate') + '</button><button class="comprar azul" data-accion="al-sec" data-sec="tienda">' + L('Tienda', 'Shop') + '</button><button class="comprar azul" data-accion="al-sec" data-sec="tecnologia">' + L('Bonif.', 'Bonuses') + '</button></div>' +
+        '<div class="carta" style="margin-top:8px">' + mi.map(function (m, i) { return '<div class="fila-miembro' + (m.uid === yoU ? ' yo' : '') + '"><b>' + (['🥇', '🥈', '🥉'][i] || '#' + (i + 1)) + '</b><b>' + escaparHTML(m.nombre) + '</b><span class="chip">💪 ' + formatoNumero(m.poder) + '</span></div>'; }).join('') + '</div>'; }
       var h2 = k === 'poder' ? '<div class="carta casilla-tabla"><span>' + L('Poder total', 'Total power') + '</span><b>💪 ' + formatoNumero(total) + '</b><span>' + L('Promedio', 'Average') + '</span><b>' + formatoNumero(Math.round(total / Math.max(1, mi.length))) + '</b><span>' + L('Miembros', 'Members') + '</span><b>' + mi.length + '/100</b></div>' :
         '<div class="carta"><p class="nota">' + L('Clasificación de la semana por poder. Los 3 primeros llevan medalla.', 'Weekly ranking by power. The top 3 get a medal.') + '</p></div>';
       return h2 + '<div class="carta" style="margin-top:8px">' + mi.map(function (m, i) { return '<div class="fila-miembro' + (m.uid === yoU ? ' yo' : '') + '"><b>' + (['🥇', '🥈', '🥉'][i] || '#' + (i + 1)) + '</b><b>' + escaparHTML(m.nombre) + '</b><span class="chip">💪 ' + formatoNumero(m.poder) + '</span>' + (k === 'poder' ? '<span class="chip">' + Math.round((m.poder || 0) / Math.max(1, total) * 100) + '%</span>' : '') + '</div>'; }).join('') + '</div>';
@@ -3680,7 +3786,7 @@
   }
   function abrirDonar(p) {
     var falta = Math.max(0, p.cantidad - (p.recibido || 0)), r = p.recurso;
-    var max = Math.max(0, Math.min(falta, Math.floor(cantidad(r)), capCarreta() * carretasLibres(), 100000));
+    var max = Math.max(0, Math.min(falta, Math.floor(cantidad(r)), capCarreta() * carretasLibres(), TOPE_ENVIO));
     var h = '<div class="carta"><h3>📦 ' + T('ped_de', { n: escaparHTML(p.nombre) }) + ' · ' + ICONO_RECURSO[r] + ' ' + T('r_' + r) + '</h3><p class="nota">' + T('ped_donar_txt') + '</p><p class="nota">' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + ' · ' + T('car_tienes', { n: carretas().n, l: carretasLibres(), c: formatoNumero(capCarreta()) }) + '</p>' +
       '<div class="tropa-cantidad"><input type="range" id="don-n" min="0" max="' + max + '" step="' + Math.max(1, Math.round(max / 50)) + '" value="' + max + '"' + (max ? '' : ' disabled') + '><span class="tropa-num" id="don-num">' + formatoNumero(max) + '</span></div>' +
       '<button class="comprar naranja boton-oleada-grande" data-accion="ped-mandar" data-id="' + escaparHTML(p.id) + '"' + (max ? '' : ' disabled') + '>🛒 ' + T('ped_donar') + '</button></div>';
@@ -3695,7 +3801,7 @@
     var faltaP = function (r) { if (!pedido || !pedido.recursos) return Infinity; return Math.max(0, Math.ceil(((pedido.recursos[r] || 0) - ((pedido.recibidos || {})[r] || 0)) / (1 - impuestoTransporte()))); };
     var capT = capCarreta() * carretasLibres();
     var h = '<div class="rf-hoja"><p class="rf-para">' + L('Mandar recursos a ', 'Send resources to ') + '<b>' + escaparHTML(nombre) + '</b></p><p class="nota">🧾 ' + L('Impuesto de transporte: ', 'Transport tax: ') + '<b>' + Math.round(impuestoTransporte() * 1000) / 10 + '%</b> · ' + L('baja al subir el Mercado (2% en el Nv 16)', 'drops as the Market levels up (2% at Lv 16)') + '</p><div class="rf-lista">' + REC_ALIADO.map(function (r) {
-      var n = Math.max(0, Math.min(cantRec(r), capT, 100000, faltaP(r))), v0 = pedido ? n : 0; // v7.98: donando a una solicitud, ya viene puesto lo que falta
+      var n = Math.max(0, Math.min(cantRec(r), capT, TOPE_ENVIO, faltaP(r))), v0 = pedido ? n : 0; // v7.98: donando a una solicitud, ya viene puesto lo que falta
       return '<div class="rf-fila' + (n ? '' : ' vacia') + '"><div class="rf-foto rf-rec">' + ICONO_RECURSO[r] + '</div><div class="rf-dat"><div class="rf-top"><b>' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="rf-num" id="trn-' + r + '" min="0" max="' + n + '" value="' + v0 + '"' + (n ? '' : ' disabled') + '></div>' +
         '<div class="rf-barra"><button class="rf-pm" data-accion="tr-menos" data-r="' + r + '"' + (n ? '' : ' disabled') + '>−</button><input type="range" id="tr-' + r + '" min="0" max="' + n + '" step="' + Math.max(1, Math.round(n / 100)) + '" value="' + v0 + '"' + (n ? '' : ' disabled') + '><button class="rf-pm" data-accion="tr-mas" data-r="' + r + '"' + (n ? '' : ' disabled') + '>+</button>' +
         '<button class="rf-max" data-accion="tr-max" data-r="' + r + '"' + (n ? '' : ' disabled') + ' title="' + T('maximo') + '">⏭</button></div><div class="rf-lim"><span>0</span><span>' + cortoNum(n) + '</span></div></div></div>';
@@ -3719,7 +3825,7 @@
   function mandarTransporte(b) {
     if (!trSel) return;
     var rec = { oro: 0, comida: 0, madera: 0, piedra: 0, hierro: 0 }, tot = 0;
-    REC_ALIADO.forEach(function (r) { var nu = $('trn-' + r); var n = nu ? Math.max(0, Math.min(Math.floor(+nu.value || 0), +nu.max, cantRec(r), 100000)) : 0; rec[r] = n; tot += n; });
+    REC_ALIADO.forEach(function (r) { var nu = $('trn-' + r); var n = nu ? Math.max(0, Math.min(Math.floor(+nu.value || 0), +nu.max, cantRec(r), TOPE_ENVIO)) : 0; rec[r] = n; tot += n; });
     if (!tot) { $('tr-error').textContent = L('Elige cuánto quieres mandar.', 'Choose how much to send.'); sonar('error'); return; }
     var nc = carretasPara(tot); if (carretasLibres() < nc) { $('tr-error').textContent = T('car_faltan', { n: nc, l: carretasLibres() }); sonar('error'); return; }
     if (rec.hierro > cantRec('hierro')) return;
@@ -3832,6 +3938,13 @@
 
   function htmlTabsAlianza() { return '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall'], ['ranking', 'Ranking', 'Ranking']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>'; }
   // v7.21: ficha de cualquier alianza (como KoC): escudo, líder, miembros, poder y liquidación totales, descripción, unirse o ver miembros
+  var alMiembrosN = {}, alMiembrosPend = {};
+  function contarMiembrosAl(l) {
+    l.forEach(function (x) { if (alMiembrosN[x.tag] !== undefined || alMiembrosPend[x.tag]) return; alMiembrosPend[x.tag] = 1;
+      Cuentas.miembros(x.tag).then(function (m) { alMiembrosN[x.tag] = (m || []).length; delete alMiembrosPend[x.tag];
+        clearTimeout(contarMiembrosAl.t); contarMiembrosAl.t = setTimeout(function () { if (panelActual && panelActual.tipo === 'alianza' && alTab === 'alianzas' && !alSeccion && $('al-buscar') && document.activeElement !== $('al-buscar')) pintarHubAlianza(); }, 400); })
+        .catch(function () { alMiembrosN[x.tag] = '—'; delete alMiembrosPend[x.tag]; }); });
+  }
   function abrirPerfilAlianza(tag, verMiembros) {
     if (!tag || !$('panel-cuerpo')) return;
     var cuerpo = $('panel-cuerpo'); abrirPerfilAlianza.desde = panelActual ? panelActual.tipo : 'alianza';
@@ -3843,7 +3956,8 @@
       if (!al) { cuerpo.innerHTML = '<div class="carta"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p>' + T('al_borrada') + '</p></div>'; return; }
       var poder = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0), kp = mi.reduce(function (t, m) { return t + (m.kp || 0); }, 0);
       var ix = (alListaTodas || []).map(function (x) { return x.tag; }).indexOf(tag);
-      var filas = [['👑', L('Canciller', 'Chancellor'), escaparHTML(al.liderNombre || '')], ['👥', L('Miembros', 'Members'), mi.length + ' / 100'],
+      alMiembrosN[tag] = mi.length;
+      var filas = [['🌿', L('Nombre', 'Name'), escaparHTML(al.nombre || '')], ['👑', L('Canciller', 'Chancellor'), escaparHTML(al.liderNombre || '')], ['🤝', L('Nivel', 'Level'), String(nivelAlianza(al.xp || 0).n)], ['👥', L('Miembros', 'Members'), mi.length + ' / 100'],
         ['✴️', L('Poder total', 'Total power'), formatoNumero(poder)], ['⚔️', L('Liquidación total', 'Total kills'), '<b class="al-kp">' + formatoNumero(kp) + '</b>'],
         ['🛡️', L('Liga', 'League'), ligaDe(poder).replace(/^[^A-Za-z]+/, '')], ['🌐', L('Idioma', 'Language'), IDIOMAS_AL[al.idioma] || IDIOMAS_AL.es]];
       if (ix >= 0) filas.splice(1, 0, ['🏆', L('Clasificación', 'Ranking'), String(ix + 1)]);
@@ -4988,7 +5102,8 @@
   }
   // ---------- CARRETAS: se entrenan en el Mercado, se mejoran y viajan por el mapa ----------
   function carretas() { return estado.carretas || (estado.carretas = { n: CARRETA.inicio, nivel: 1, cola: [], viajes: [] }); }
-  function capCarreta() { return Math.round((CARRETA.capacidad[carretas().nivel] || CARRETA.capacidad[1]) * (1 + bono('carga'))); }
+  function capCarreta() { return Math.round((CARRETA.capacidad[carretas().nivel] || CARRETA.capacidad[1]) * (1 + bono('carga') + bono('carretas_ref') + 0.1 * mercadoNivel())); } // v7.99: +10% por nivel del Mercado y por Carretas reforzadas
+  var TOPE_ENVIO = 100000000; // v7.99: hasta 100 millones de cada recurso por viaje
   // v6.94: tropas de suministro: carretillas, carretas (tropa de suministro) y convoyes.
   // Para todo el juego la carga se cuenta en «carretas»: carretilla = 0,4 · carreta = 1 · convoy = 3.
   function sumin() { var c = carretas(); if (!c.tipos) c.tipos = { carretilla: 0, convoy: 0 }; if (!c.colaT) c.colaT = []; return c; }
@@ -9172,7 +9287,7 @@
     var h = heroe === undefined ? liderActual() : heroe, base = Math.max(5000, nivelRelevo() * 10000);
     if (h && estado.heroes && estado.heroes[h]) base += nivelHeroe(h) * 250 + 1000 * piezasDe(h).filter(function (p) { return p.s === h; }).length;
     var mh = h && estado.heroes && estado.heroes[h] ? multiplicadoresHeroe(h).marcha : 0;
-    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')) * (1 + mh / 100)); // v7.84: set del dragón
+    return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')) * (1 + mh / 100) * (1 + 0.03 * bonifAl('marcha'))); // v7.84: set del dragón
   }
   function maxMarchas() { return Math.min(12, Math.max(1, nivelRelevo())); }
   function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length; }
@@ -9756,6 +9871,8 @@
     CARGOS.forEach(function (x) { if (x.bonos.indexOf(id) >= 0 && c[x.id] && estado.heroes[c[x.id]]) b += bonoCargoDe(c[x.id]); });
     if (id === 'obras' || id === 'cosecha' || id === 'lenadores' || id === 'canteros' || id === 'impuestos') b += vipProd();
     if (id === 'espadas' || id === 'escudos') b += vipCombate();
+    if (id === 'espadas') b += 0.02 * bonifAl('ataque'); // v7.99: bonificaciones de alianza
+    if (id === 'obras') b += 0.02 * bonifAl('obras');
     b += bonoTalento(id); // v7.79
     return b;
   }
@@ -11608,6 +11725,14 @@
     else if (a === 'al-reclamar-todo') reclamarRegalos(null);
     else if (a === 'al-tienda') comprarTiendaAl(+b.getAttribute('data-i'));
     else if (a === 'al-tec') mejorarTecAl(b.getAttribute('data-k'));
+    else if (a === 'al-submuro') { alSubMuro = b.getAttribute('data-t'); alInf.ver = null; sonar('click'); pintarHubAlianza(); }
+    else if (a === 'al-inf-filtro') { alInf.filtro = b.getAttribute('data-f'); alInf.pag = 0; sonar('click'); pintarHubAlianza(); }
+    else if (a === 'al-inf-pag') { alInf.pag = +b.getAttribute('data-p') || 0; sonar('click'); pintarHubAlianza(); }
+    else if (a === 'al-inf-ver') { alInf.ver = { id: b.getAttribute('data-id'), lado: b.getAttribute('data-lado') }; sonar('click'); pintarHubAlianza(); var pcI = $('panel-cuerpo'); if (pcI) pcI.scrollTop = 0; }
+    else if (a === 'al-inf-volver') { alInf.ver = null; sonar('click'); pintarHubAlianza(); }
+    else if (a === 'al-inf-recargar') { sonar('click'); cargarInformesAl(true); }
+    else if (a === 'al-donar') { if (!b.disabled) { b.disabled = true; donarAlianza(b.getAttribute('data-r')); } }
+    else if (a === 'al-bonif') { if (!b.disabled) { b.disabled = true; mejorarBonifAl(b.getAttribute('data-k')); } }
     else if (a === 'al-incentivo') cobrarIncentivo();
     else if (a === 'al-ajustes') cambiarAjustesAl(b);
     else if (a === 'mail-ir') { cerrarPanel(); setTimeout(function () { abrirCorreo(b.getAttribute('data-tab')); }, 50); }
@@ -12975,7 +13100,10 @@
       (lleno ? '<p class="cp-ok">✅ ' + L('¡Solicitud completada!', 'Request completed!') + '</p>' : mio ? '<p class="cp-ok">' + L('Tu solicitud', 'Your request') + '</p>' : '<button class="comprar mini verde cp-donar" data-accion="chat-donar" data-id="' + escaparHTML(id) + '">🎁 ' + L('Donar', 'Donate') + '</button>') + '</div>';
   }
   // v7.98: SOLICITAR AYUDA A LA ALIANZA (botón + del chat): Recursos (los 5 juntos) · Reforzar · Marcha, con la villa de destino
-  var AYUDA_REC = ['oro', 'comida', 'madera', 'piedra', 'hierro'], AYUDA_MAX = 3000000, ayuda = { pest: 'recursos', villa: 0, rec: {}, mx: '', my: '', mtipo: 'atacar' };
+  var AYUDA_REC = ['oro', 'comida', 'madera', 'piedra', 'hierro'], AYUDA_MAX = 50000000, AYUDA_MARCAS = [0, 500000, 1000000, 5000000, 10000000, 50000000], ayuda = { pest: 'recursos', villa: 0, rec: {}, mx: '', my: '', mtipo: 'atacar' };
+  // v7.99: la barra va por tramos (0 · 500k · 1m · 5m · 10m · 50m) para poder elegir poco o mucho; la caja acepta cualquier número
+  function aValor(pos) { var M = AYUDA_MARCAS, t = Math.max(0, Math.min(1000, pos)) / 200, k = Math.min(M.length - 2, Math.floor(t)), v = M[k] + (M[k + 1] - M[k]) * (t - k); var paso = v >= 10000000 ? 1000000 : v >= 1000000 ? 100000 : 10000; return Math.round(v / paso) * paso; }
+  function aPos(v) { var M = AYUDA_MARCAS; v = Math.max(0, Math.min(AYUDA_MAX, v || 0)); for (var k = 0; k < M.length - 1; k++) if (v <= M[k + 1]) return Math.round((k + (v - M[k]) / (M[k + 1] - M[k])) * 200); return 1000; }
   function textoDestino(d) { return d ? escaparHTML(d.n || '') + ' (' + d.x + ',' + d.y + ')' : ''; }
   function destinoAyuda() { var l = lugarVilla(ayuda.villa) || miLugar(); return { n: String(nombreVilla(ayuda.villa)).slice(0, 30), x: Math.round(l.x), y: Math.round(l.y) }; }
   function embajadaLibre() { var cap = nivelMayor('embajada') * EMB_POR_NIVEL, hay = tropas.filter(function (u) { return u.refuerzo; }).length; return { cap: cap, hay: hay }; }
@@ -12993,8 +13121,8 @@
       return '<label class="aa-radio' + (ayuda.villa === i ? ' sel' : '') + '"><input type="radio" name="aa-villa" value="' + i + '"' + (ayuda.villa === i ? ' checked' : '') + '><i></i><span>' + escaparHTML(nombreVilla(i)) + ' (' + Math.round(l.x) + ',' + Math.round(l.y) + ')</span></label>'; }).join('') + '</div></div>';
     if (ayuda.pest === 'recursos') {
       h += '<div class="aa-recs">' + AYUDA_REC.map(function (r) { var n = Math.max(0, Math.min(AYUDA_MAX, ayuda.rec[r] || 0));
-        return '<div class="aa-rec"><span class="aa-ico">' + ICONO_RECURSO[r] + '</span><b class="aa-nom">' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="aa-num" id="aan-' + r + '" min="0" max="' + AYUDA_MAX + '" step="1000" value="' + n + '">' +
-          '<div class="aa-barra"><input type="range" id="aar-' + r + '" min="0" max="' + AYUDA_MAX + '" step="50000" value="' + n + '"><div class="aa-marcas"><span style="left:0%">0</span><span style="left:16.67%">500k</span><span style="left:33.33%">1m</span><span style="left:66.67%">2m</span><span style="left:100%">3m</span></div></div></div>';
+        return '<div class="aa-rec"><span class="aa-ico">' + ICONO_RECURSO[r] + '</span><b class="aa-nom">' + T('r_' + r) + '</b><input type="number" inputmode="numeric" class="aa-num" id="aan-' + r + '" min="0" max="' + AYUDA_MAX + '" step="1" value="' + n + '">' +
+          '<div class="aa-barra"><input type="range" id="aar-' + r + '" min="0" max="1000" step="1" value="' + aPos(n) + '"><div class="aa-marcas">' + AYUDA_MARCAS.map(function (v, k) { return '<span style="left:' + (k * 20) + '%">' + (v ? cortoNum(v) : '0') + '</span>'; }).join('') + '</div></div></div>';
       }).join('') + '</div><p class="aa-total">' + L('Total pedido: ', 'Total requested: ') + '<b id="aa-total">0</b></p>';
     } else if (ayuda.pest === 'reforzar') {
       var e = embajadaLibre();
@@ -13012,8 +13140,8 @@
     d.innerHTML = h; document.body.appendChild(d);
     function total() { var t = 0; AYUDA_REC.forEach(function (r) { t += ayuda.rec[r] || 0; }); var e2 = $('aa-total'); if (e2) e2.textContent = formatoNumero(t); }
     AYUDA_REC.forEach(function (r) { var rg = $('aar-' + r), nu = $('aan-' + r); if (!rg) return;
-      rg.addEventListener('input', function () { ayuda.rec[r] = +rg.value; nu.value = rg.value; total(); });
-      nu.addEventListener('input', function () { var x = Math.max(0, Math.min(AYUDA_MAX, Math.floor(+nu.value || 0))); ayuda.rec[r] = x; rg.value = x; total(); });
+      rg.addEventListener('input', function () { ayuda.rec[r] = aValor(+rg.value); nu.value = ayuda.rec[r]; total(); });
+      nu.addEventListener('input', function () { var x = Math.max(0, Math.min(AYUDA_MAX, Math.floor(+nu.value || 0))); ayuda.rec[r] = x; rg.value = aPos(x); total(); });
       nu.addEventListener('change', function () { nu.value = ayuda.rec[r] || 0; }); });
     total();
     d.addEventListener('change', function (ev) { if (ev.target.name === 'aa-villa') { ayuda.villa = +ev.target.value; d.querySelectorAll('.aa-radio').forEach(function (lb) { lb.classList.toggle('sel', lb.querySelector('input').checked); }); } });
@@ -13089,7 +13217,7 @@
     var p = pedidosChat[id]; if (!p) return;
     if (p.recursos) { abrirTransportar(p.uid, p.nombre, p); return; } // v7.98: varios recursos: eliges cuánto de cada uno
     var falta = Math.max(0, (p.cantidad || 0) - (p.recibido || 0)), r = p.recurso, t = impuestoTransporte();
-    var n = Math.min(Math.ceil(falta / (1 - t)), cantRec(r), capCarreta() * carretasLibres(), 100000);
+    var n = Math.min(Math.ceil(falta / (1 - t)), cantRec(r), capCarreta() * carretasLibres(), TOPE_ENVIO);
     if (!falta) { consejoTemporal(L('Esa solicitud ya está completa.', 'That request is already complete.')); return; }
     if (n <= 0) { consejoTemporal(cantRec(r) <= 0 ? L('No tienes ', 'You have no ') + T('r_' + r) : T('car_faltan', { n: 1, l: carretasLibres() })); sonar('error'); return; }
     mandarDonacion(null, p, n, function () { pintarMensajes(true); cargarPedidosChat(true); });
@@ -13315,7 +13443,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { alPrueba: function (c, tab, sec, sub) { alCache = c; estado.alianza = c.al.tag; alTab = tab || 'info'; alSeccion = sec || ''; alSubMuro = sub || 'muro'; abrirPanel(T('p_alianza'), '', { tipo: 'alianza' }); pintarHubAlianza(); }, alInfPrueba: function (d) { alInf.datos = d; alInf.t = Date.now(); }, ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },

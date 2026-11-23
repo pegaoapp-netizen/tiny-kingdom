@@ -268,6 +268,9 @@ var Cuentas = (function () {
     alianza: function (tag) {
       return db.collection('alianzas').doc(tag).get().then(function (d) { return d.exists ? d.data() : null; });
     },
+    // v7.99: DONAR a la alianza: sube la experiencia (nivel) y el Mérito de Alianza que gasta el Canciller en bonificaciones
+    donarAlianza: function (tag, xp, ma) { var FV = firebase.firestore.FieldValue; return db.collection('alianzas').doc(tag).update({ xp: FV.increment(Math.floor(xp)), ma: FV.increment(Math.floor(ma)) }); },
+    mejorarBonifAlianza: function (tag, k, nivel, costo) { var FV = firebase.firestore.FieldValue, u = { ma: FV.increment(-Math.floor(costo)) }; u['bonif.' + k] = nivel; return db.collection('alianzas').doc(tag).update(u); },
     alianzas: function () {
       return db.collection('alianzas').orderBy('creada', 'desc').limit(50).get().then(function (q) {
         return q.docs.map(function (d) { return d.data(); });

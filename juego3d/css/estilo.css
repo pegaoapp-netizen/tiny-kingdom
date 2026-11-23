@@ -2417,3 +2417,55 @@ body.en-batalla #villa-volver { display: none !important; }
 #ayuda-al .aa-caja .aa-radio span { line-height: 1.2; }
 #ayuda-al .aa-caja .aa-pie .aa-btn { background: linear-gradient(#2e6fb0, #12416e) !important; color: #fff !important; border: 2px solid #0a2440 !important; text-shadow: 0 1px 1px #0008; cursor: pointer; }
 #ayuda-al .aa-caja .aa-tit { background: none; }
+
+/* v7.99: lista de alianzas: Puesto · Escudo · Nombre/Líder · Miembros · Nivel */
+.al-th5 { display: grid !important; grid-template-columns: 44px 54px 1fr 64px 48px !important; align-items: center; gap: 4px; text-align: center; }
+.al-th5 .al-al { text-align: left; }
+.al-th5 .al-pos { font-weight: 800; }
+/* v7.99: Muro › Muro / Informes */
+.al-submuro { display: flex; justify-content: center; gap: 14px; margin: 6px 0 10px; }
+.al-submuro button { flex: 0 1 140px; padding: 7px 6px; border-radius: 4px; border: 1px solid #3a240e; font: 600 15px system-ui, sans-serif; color: #f6e6c4; background: linear-gradient(#8a5a2c, #5c3614); box-shadow: inset 0 1px 0 #fff3, 0 2px 3px #0005; cursor: pointer; }
+.al-submuro button.activo { background: linear-gradient(#e8c98a, #b88c4c); color: #fff; text-shadow: 0 1px 1px #5a3a10; }
+.al-inf-filtro { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.al-inf-hora { font-size: 13px; opacity: .85; }
+.al-inf-radio { display: flex; align-items: center; gap: 6px; background: none; border: 0; color: inherit; font-size: 14px; cursor: pointer; padding: 2px; }
+.al-inf-radio i { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #b8a07a; background: radial-gradient(#fff8e8, #e6d2aa); }
+.al-inf-radio.sel i { background: radial-gradient(#2a1a0a 0 32%, #fff8e8 36%, #e6d2aa); border-color: #7a5a30; }
+.al-inf-tabla { border-radius: 8px; overflow: hidden; border: 1.5px solid #8a6a3a; background: linear-gradient(#cfb487, #b89566); }
+.al-inf-th { display: grid; grid-template-columns: 70px 1fr 70px; padding: 8px 10px; font-weight: 700; color: #fff4dc; background: linear-gradient(#8a5a2c, #6b4320); text-align: center; }
+.al-inf-tr { display: grid; width: 100%; grid-template-columns: 62px 34px 1fr 32px 22px; align-items: center; gap: 4px; padding: 7px 8px; border: 0; border-top: 1px solid rgba(90,58,26,.35);
+  background: transparent; color: #3a2410; text-align: left; font-size: 13px; cursor: pointer; }
+.al-inf-tr:active { background: rgba(255,255,255,.15); }
+.al-inf-f { display: flex; flex-direction: column; line-height: 1.2; font-size: 12px; }
+.al-inf-ico { font-size: 20px; text-align: center; }
+.al-inf-ico.llegada { filter: drop-shadow(0 0 2px #c0392b) hue-rotate(-20deg); }
+.al-inf-ico.salida { filter: drop-shadow(0 0 2px #2e8b2e); }
+.al-inf-quien { display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+.al-inf-quien span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.al-inf-quien b.rojo { color: #c0261b; font-weight: 600; }
+.al-inf-quien b.verde { color: #1f7a1f; font-weight: 600; }
+.al-inf-ban { font-size: 18px; text-align: center; }
+.al-inf-flecha { font-style: normal; font: 900 22px/1 Georgia, serif; color: #d79a16; text-shadow: 0 1px 0 #6b4316; }
+/* informe completo */
+.al-rep { position: relative; border-radius: 8px; padding: 10px; color: #4a2e12; background: radial-gradient(ellipse at 30% 20%, #f6ead0 0%, #ecd9b0 60%, #d9bf8e 100%); border: 2px solid #8a6a3a; }
+.al-rep-volver { position: absolute; left: 6px; top: 6px; width: 36px; height: 44px; border-radius: 6px; border: 2px solid #3a2410; background: linear-gradient(#e0b04a, #9a6a12); color: #3a2400; font: 900 28px/1 Georgia, serif; cursor: pointer; }
+.al-rep-cab { margin: 0 0 8px 44px; padding: 14px 10px; border-radius: 6px; text-align: center; color: #fff; background: linear-gradient(135deg, #2b3440, #151b22); }
+.al-rep-cab.pierde { background: linear-gradient(135deg, #3a2a2a, #1a1010); }
+.al-rep-cab.gana { background: linear-gradient(135deg, #2a3a26, #10180e); }
+.al-rep-cab small { display: block; color: #7fc6ff; font-size: 11px; margin-bottom: 4px; }
+.al-rep-cab b { font: 800 20px Georgia, serif; text-shadow: 0 2px 3px #000; }
+.al-rep-botin { display: flex; justify-content: space-around; flex-wrap: wrap; gap: 4px; font-size: 13px; font-weight: 600; }
+.al-rep-txt { text-align: center; font-size: 13px; margin: 6px 0; }
+.al-rep-sec { text-align: center; font-weight: 700; color: #fff4dc; padding: 5px; margin: 6px 0; border-radius: 4px; background: linear-gradient(90deg, transparent, #8a6a3a 15%, #8a6a3a 85%, transparent); }
+.al-rep-vs { display: grid; grid-template-columns: 1fr 34px 1fr; gap: 6px; align-items: start; background: rgba(120,80,30,.12); border-radius: 6px; padding: 8px; }
+.al-rep-vs > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.al-rep-vs small { font-weight: 800; color: #8a5a1a; }
+.al-rep-vs b { font-size: 14px; }
+.al-rep-vs b.rojo { color: #c0261b; } .al-rep-vs b.verde { color: #1f7a1f; }
+.al-rep-vs i { font-style: normal; color: #2a6db0; font-size: 12px; }
+.al-rep-x { font-size: 24px; text-align: center; align-self: center; }
+/* donar y mérito */
+.al-don { align-items: center; }
+.al-don .al-don-ico { font-size: 22px; }
+.al-don small { opacity: .75; margin-left: auto; margin-right: 6px; }
+.al-merito b { white-space: nowrap; }

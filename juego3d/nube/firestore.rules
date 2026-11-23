@@ -107,12 +107,21 @@ service cloud.firestore {
       // solo el canciller (líder) cambia el idioma, el anuncio, los puestos (vicecanciller, mariscal, oficial) y puede ceder la cancillería
       // v7.17: antes solo dejaba idioma y anuncio, por eso no se podía nombrar un vicecanciller ni ceder la cancillería
       allow update: if request.auth != null && resource.data.lider == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion', 'rangos', 'lider', 'liderNombre'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion', 'rangos', 'lider', 'liderNombre', 'bonif', 'ma'])
+        && (!('ma' in request.resource.data) || (request.resource.data.ma is int && request.resource.data.ma >= 0))
+        && (!('bonif' in request.resource.data) || (request.resource.data.bonif is map && request.resource.data.bonif.size() <= 10))
         && (!('idioma' in request.resource.data) || (request.resource.data.idioma is string && request.resource.data.idioma.size() <= 12))
         && (!('descripcion' in request.resource.data) || (request.resource.data.descripcion is string && request.resource.data.descripcion.size() <= 120))
         && (!('rangos' in request.resource.data) || (request.resource.data.rangos is map && request.resource.data.rangos.size() <= 200))
         && request.resource.data.lider is string && request.resource.data.lider.size() > 0
         && request.resource.data.liderNombre is string && request.resource.data.liderNombre.size() <= 30;
+      // v7.99: cualquier miembro dona: solo suben la experiencia (xp) y el Mérito de Alianza (ma), poco a poco
+      allow update: if request.auth != null
+        && exists(/databases/$(database)/documents/aldeas/$(request.auth.uid))
+        && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.get('alianza', '') == tag
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['xp', 'ma'])
+        && request.resource.data.xp is int && request.resource.data.xp > resource.data.get('xp', 0) && request.resource.data.xp <= resource.data.get('xp', 0) + 5000
+        && request.resource.data.ma is int && request.resource.data.ma >= resource.data.get('ma', 0) && request.resource.data.ma <= resource.data.get('ma', 0) + 5000;
     }
 
     // Ataques entre jugadores: el atacante crea el reporte; el defensor lo lee y lo marca como visto.
@@ -136,6 +145,11 @@ service cloud.firestore {
         && b.madera is int && b.madera >= 0 && b.madera <= 65000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 65000;
     }
     // v7.39: el Canciller (líder) de una alianza ve los ataques de sus miembros y contra ellos
+    function esMiembroAl(tag) {
+      return tag is string && tag.size() >= 2 && tag.size() <= 6
+        && exists(/databases/$(database)/documents/aldeas/$(request.auth.uid))
+        && get(/databases/$(database)/documents/aldeas/$(request.auth.uid)).data.get('alianza', '') == tag;
+    }
     function esCanciller(tag) {
       return tag is string && tag.size() >= 2 && tag.size() <= 6
         && get(/databases/$(database)/documents/alianzas/$(tag)).data.lider == request.auth.uid;
@@ -143,7 +157,8 @@ service cloud.firestore {
     match /ataques/{id} {
       allow read: if request.auth != null
         && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid
-          || esCanciller(resource.data.get('alD', '')) || esCanciller(resource.data.get('alA', '')));
+          || esCanciller(resource.data.get('alD', '')) || esCanciller(resource.data.get('alA', ''))
+          || esMiembroAl(resource.data.get('alD', '')) || esMiembroAl(resource.data.get('alA', ''))); // v7.99: Muro › Informes
       allow create: if request.auth != null
         && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto', 'llega', 'resuelto', 'cobrado', 'bajas', 'alA', 'alD', 'dia'])
         && request.resource.data.atacante == request.auth.uid
@@ -208,7 +223,7 @@ service cloud.firestore {
     // El que envía crea el documento y lo puede borrar (retirar). El que recibe solo puede
     // bajar el número de tropas (las que murieron) o marcarlo como devuelto.
     // Envíos de recursos entre miembros de la misma hermandad (máximo 5000 de cada uno por envío)
-    function recursoValido(v) { return v is int && v >= 0 && v <= 100000; }
+    function recursoValido(v) { return v is int && v >= 0 && v <= 100000000; } // v7.99: carretas masivas
     match /envios/{id} {
       allow read: if request.auth != null && (resource.data.de == request.auth.uid || resource.data.para == request.auth.uid);
       allow create: if request.auth != null
@@ -308,7 +323,7 @@ service cloud.firestore {
         && request.resource.data.alianza is string
         && exists(/databases/$(database)/documents/alianzas/$(request.resource.data.alianza))
         && request.resource.data.fecha is int
-        && (!('cantidad' in request.resource.data) || (request.resource.data.cantidad is int && request.resource.data.cantidad >= 1 && request.resource.data.cantidad <= 15000000))
+        && (!('cantidad' in request.resource.data) || (request.resource.data.cantidad is int && request.resource.data.cantidad >= 1 && request.resource.data.cantidad <= 250000000))
         && (!('recibido' in request.resource.data) || (request.resource.data.recibido is int && request.resource.data.recibido >= 0))
         && (!('recursos' in request.resource.data) || (request.resource.data.recursos is map && request.resource.data.recursos.keys().hasOnly(['oro', 'comida', 'madera', 'piedra', 'hierro'])))
         && (!('recibidos' in request.resource.data) || request.resource.data.recibidos is map)

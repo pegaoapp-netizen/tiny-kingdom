@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.98';
+var VERSION_JUEGO = '7.99';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -474,6 +474,7 @@ var NOMBRES = {
   inv_cosecha:   { es: 'Cosecha', en: 'Harvest', des_es: 'Las Granjas dan {v}% más comida.', des_en: 'Farms give {v}% more food.' },
   inv_lenadores: { es: 'Leñadores', en: 'Lumberjacks', des_es: 'Los Aserraderos dan {v}% más madera.', des_en: 'Sawmills give {v}% more wood.' },
   inv_canteros:  { es: 'Canteros', en: 'Stonecutters', des_es: 'Las Canteras dan {v}% más piedra.', des_en: 'Quarries give {v}% more stone.' },
+  inv_carretas_ref: { es: 'Carretas reforzadas', en: 'Reinforced wagons', des_es: 'Tus carretas de suministro cargan {v}% más al mandar recursos.', des_en: 'Your supply wagons carry {v}% more when sending resources.' },
   inv_carga: { es: 'Carga', en: 'Cargo', des_es: 'Tus carretas cargan {v}% más: llevas y robas más recursos.', des_en: 'Your carts carry {v}% more: you move and steal more resources.' },
   inv_impuestos: { es: 'Impuestos', en: 'Taxes', des_es: 'El castillo cobra {v}% más oro.', des_en: 'The castle collects {v}% more gold.' },
   inv_espadas:   { es: 'Espadas afiladas', en: 'Sharp swords', des_es: 'Tus tropas pegan {v}% más.', des_en: 'Your troops hit {v}% harder.' },
@@ -563,12 +564,12 @@ var SUMINISTRO = {
   carretilla: { img: 't_carretilla', icono: '🛒', carga: 0.4, vel: 0.75, costo: { oro: 15, madera: 30 }, tiempo: 25, mercado: 1,
     es: 'Carreta Ligera', en: 'Light Wagon', des_es: 'Pequeña y rápida. Entre tus villas carga 5.000 por unidad y llega antes.', des_en: 'Small and fast: a villager pushes it. Carries little but arrives sooner.' },
   carreta: { img: 't_carreta', icono: '🐴', carga: 1, vel: 1, costo: { oro: 40, madera: 80 }, tiempo: 60, mercado: 1,
-    es: 'Carreta Pesada', en: 'Heavy Wagon', des_es: 'La carreta con caballo de siempre. Entre tus villas carga 25.000 por unidad.', des_en: 'The classic horse cart: normal cargo and speed.' },
-  convoy: { img: 't_convoy', icono: '🚚', carga: 3, vel: 1.35, costo: { oro: 200, madera: 350, piedra: 120 }, tiempo: 240, mercado: 5,
-    es: 'Caravana Real', en: 'Royal Caravan', des_es: 'Caravana blindada con escolta. Entre tus villas carga 100.000 por unidad, pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
+    es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: 'La carreta estándar: carga 10.000 recursos por unidad a tus aliados (+10% por nivel del Mercado y por Carretas reforzadas).', des_en: 'The standard wagon: carries 10,000 resources per unit to allies (+10% per Market level and Reinforced Wagons).' },
+  convoy: { img: 't_convoy', icono: '🚚', carga: 5, vel: 1.35, costo: { oro: 200, madera: 350, piedra: 120 }, tiempo: 240, mercado: 5,
+    es: 'Caravana Real', en: 'Royal Caravan', des_es: 'Caravana Real o Pesada: carga 50.000 recursos por unidad a tus aliados (5 carretas), pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
 };
 var SUMINISTRO_ORDEN = ['carretilla', 'carreta', 'convoy'];
-var CARRETA = { costo: { oro: 40, madera: 80 }, tiempo: 60, inicio: 2, capacidad: [0, 1000, 2000, 3500, 6000],
+var CARRETA = { costo: { oro: 40, madera: 80 }, tiempo: 60, inicio: 2, capacidad: [0, 10000, 12500, 15000, 20000], // v7.99: 10.000 por carreta (más con el Mercado y Carretas reforzadas)
   mejora: [null, null, { oro: 600, madera: 900, piedra: 250 }, { oro: 1800, madera: 2800, piedra: 900 }, { oro: 5000, madera: 7000, piedra: 2800 }] };
 // Lo que produce por hora cada casilla conquistada del mundo (por nivel de la casilla) y cuántas horas guarda
 var CASILLA_RECOGER = { porNivel: 150, horas: 8 };
@@ -873,7 +874,8 @@ var INVESTIGACION = {
     { id: 'lenadores', icono: '🪵', max: 15, cada: 0.1 },
     { id: 'canteros', icono: '🪨', max: 15, cada: 0.1 },
     { id: 'impuestos', icono: '🪙', max: 15, cada: 0.1 },
-    { id: 'carga', icono: '📦', max: 15, cada: 0.1 }       // las carretas cargan más (y roban más)
+    { id: 'carga', icono: '📦', max: 15, cada: 0.1 },      // las carretas cargan más (y roban más)
+    { id: 'carretas_ref', icono: '🛒', max: 15, cada: 0.1 } // v7.99: Carretas reforzadas: +10% de carga de suministro por nivel
   ],
   batalla: [
     { id: 'espadas', icono: '🗡️', max: 15, cada: 0.05 },   // tropas pegan más
