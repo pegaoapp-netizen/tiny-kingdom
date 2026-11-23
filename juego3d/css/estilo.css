@@ -2469,3 +2469,10 @@ body.en-batalla #villa-volver { display: none !important; }
 .al-don .al-don-ico { font-size: 22px; }
 .al-don small { opacity: .75; margin-left: auto; margin-right: 6px; }
 .al-merito b { white-space: nowrap; }
+
+/* v8.00: candados por nivel y botón «Ir» de los requisitos */
+.candado-nivel { margin: 14px 6px; padding: 18px 14px; text-align: center; border-radius: 12px; background: radial-gradient(ellipse at 50% 0%, rgba(255,210,90,.18), rgba(0,0,0,.25)); border: 2px solid rgba(224,176,74,.6); }
+.candado-nivel .cn-ico { font-size: 44px; filter: drop-shadow(0 3px 4px #0008); }
+.candado-nivel p { margin: 8px 0 6px; font-size: 15px; line-height: 1.4; }
+.candado-nivel small { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(0,0,0,.35); font-weight: 700; }
+.req-ir { margin-left: 6px; padding: 2px 9px; border-radius: 6px; border: 1.5px solid #6b4206; background: linear-gradient(#ffd54a, #d48a10); color: #3a2400; font: 800 12px system-ui, sans-serif; cursor: pointer; vertical-align: middle; }

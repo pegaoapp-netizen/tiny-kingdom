@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '7.99';
+var VERSION_JUEGO = '8.00';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -424,7 +424,7 @@ var NOMBRES = {
   mixto_1m: { es: 'Paquete de construcción', en: 'Building pack', des_es: '1.000.000 de oro, comida, madera y piedra.', des_en: '1,000,000 gold, food, wood and stone.' },
   ficha_x1: { es: 'Ficha de la suerte', en: 'Luck token', des_es: '1 ficha para la Ruleta del Azar.', des_en: '1 token for the Luck wheel.' },
   ficha_x5: { es: '5 fichas de la suerte', en: '5 luck tokens', des_es: '5 fichas para la Ruleta del Azar.', des_en: '5 tokens for the Luck wheel.' },
-  carreta_sum: { es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: '+1 Carreta de Suministro: lleva recursos entre tus villas y carga botín.', des_en: '+1 Supply Wagon: carries resources between your villages and hauls loot.' },
+  carreta_sum: { es: 'Carreta Pesada', en: 'Heavy Wagon', des_es: '+1 Carreta de Suministro: lleva recursos entre tus villas y carga botín.', des_en: '+1 Supply Wagon: carries resources between your villages and hauls loot.' },
   carretas_x10: { es: '10 Carretas de Suministro', en: '10 Supply Wagons', des_es: '+10 Carretas de Suministro para caravanas grandes.', des_en: '+10 Supply Wagons for big caravans.' },
   cofre_dragon: { es: 'Cofre del Dragón Imperial', en: 'Imperial Dragon Chest', des_es: 'Premio del Torneo de Temporada: elige 1 pieza del Set Dragón Imperial (Temporada 1).', des_en: 'Season Tournament prize: pick 1 piece of the Imperial Dragon Set (Season 1).' },
   vip_100: { es: '+100 Puntos VIP', en: '+100 VIP points', des_es: 'Suma 100 puntos a tu VIP para subir de nivel más rápido.', des_en: 'Adds 100 points to your VIP to level up faster.' },
@@ -474,7 +474,14 @@ var NOMBRES = {
   inv_cosecha:   { es: 'Cosecha', en: 'Harvest', des_es: 'Las Granjas dan {v}% más comida.', des_en: 'Farms give {v}% more food.' },
   inv_lenadores: { es: 'Leñadores', en: 'Lumberjacks', des_es: 'Los Aserraderos dan {v}% más madera.', des_en: 'Sawmills give {v}% more wood.' },
   inv_canteros:  { es: 'Canteros', en: 'Stonecutters', des_es: 'Las Canteras dan {v}% más piedra.', des_en: 'Quarries give {v}% more stone.' },
-  inv_carretas_ref: { es: 'Carretas reforzadas', en: 'Reinforced wagons', des_es: 'Tus carretas de suministro cargan {v}% más al mandar recursos.', des_en: 'Your supply wagons carry {v}% more when sending resources.' },
+  inv_ballesteria: { es: 'Ballestería', en: 'Crossbowry', des_es: 'Desbloquea el Ballestero (nivel 2, con Galería de Tiro Nv 4).', des_en: 'Unlocks the Crossbowman (level 2, with Range Lv 4).' },
+  inv_arco_compuesto: { es: 'Arco compuesto', en: 'Composite bow', des_es: 'Desbloquea el Arquero largo (Nv 2) y el Tirador élite (Nv 4).', des_en: 'Unlocks the Longbowman (Lv 2) and the Elite marksman (Lv 4).' },
+  inv_equitacion: { es: 'Equitación', en: 'Horsemanship', des_es: 'Desbloquea el Jinete ligero (nivel 1, con Establo Nv 1).', des_en: 'Unlocks the Light rider (level 1, with Stable Lv 1).' },
+  inv_monturas: { es: 'Monturas de guerra', en: 'War mounts', des_es: 'Desbloquea la Caballería (nivel 2, con Establo Nv 4).', des_en: 'Unlocks the Cavalry (level 2, with Stable Lv 4).' },
+  inv_armadura_placas: { es: 'Armadura de placas', en: 'Plate armor', des_es: 'Desbloquea la Caballería pesada (nivel 4, con Establo Nv 8).', des_en: 'Unlocks the Heavy cavalry (level 4, with Stable Lv 8).' },
+  inv_ingenieria: { es: 'Ingeniería', en: 'Engineering', des_es: 'Desbloquea las máquinas de asedio: Balista (Nv 1), Ariete (Nv 2), Catapulta (Nv 3) y Torre de asedio (Nv 4), con la Herrería.', des_en: 'Unlocks siege engines: Ballista (Lv 1), Ram (Lv 2), Catapult (Lv 3) and Siege tower (Lv 4), with the Forge.' },
+  inv_logistica: { es: 'Logística Imperial', en: 'Imperial logistics', des_es: 'Desbloquea la Caravana Real (nivel 5, con Mercado Nv 9).', des_en: 'Unlocks the Royal Caravan (level 5, with Market Lv 9).' },
+  inv_carretas_ref: { es: 'Carretas reforzadas', en: 'Reinforced wagons', des_es: 'Tus carretas de suministro cargan {v}% más al mandar recursos. El nivel 2 desbloquea la Carreta Pesada.', des_en: 'Your supply wagons carry {v}% more when sending resources.' },
   inv_carga: { es: 'Carga', en: 'Cargo', des_es: 'Tus carretas cargan {v}% más: llevas y robas más recursos.', des_en: 'Your carts carry {v}% more: you move and steal more resources.' },
   inv_impuestos: { es: 'Impuestos', en: 'Taxes', des_es: 'El castillo cobra {v}% más oro.', des_en: 'The castle collects {v}% more gold.' },
   inv_espadas:   { es: 'Espadas afiladas', en: 'Sharp swords', des_es: 'Tus tropas pegan {v}% más.', des_en: 'Your troops hit {v}% harder.' },
@@ -564,7 +571,7 @@ var SUMINISTRO = {
   carretilla: { img: 't_carretilla', icono: '🛒', carga: 0.4, vel: 0.75, costo: { oro: 15, madera: 30 }, tiempo: 25, mercado: 1,
     es: 'Carreta Ligera', en: 'Light Wagon', des_es: 'Pequeña y rápida. Entre tus villas carga 5.000 por unidad y llega antes.', des_en: 'Small and fast: a villager pushes it. Carries little but arrives sooner.' },
   carreta: { img: 't_carreta', icono: '🐴', carga: 1, vel: 1, costo: { oro: 40, madera: 80 }, tiempo: 60, mercado: 1,
-    es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: 'La carreta estándar: carga 10.000 recursos por unidad a tus aliados (+10% por nivel del Mercado y por Carretas reforzadas).', des_en: 'The standard wagon: carries 10,000 resources per unit to allies (+10% per Market level and Reinforced Wagons).' },
+    es: 'Carreta de Suministro', en: 'Supply Wagon', des_es: 'La carreta de suministro de siempre: carga 10.000 recursos por unidad a tus aliados (+10% por nivel del Mercado y por Carretas reforzadas).', des_en: 'The standard wagon: carries 10,000 resources per unit to allies (+10% per Market level and Reinforced Wagons).' },
   convoy: { img: 't_convoy', icono: '🚚', carga: 5, vel: 1.35, costo: { oro: 200, madera: 350, piedra: 120 }, tiempo: 240, mercado: 5,
     es: 'Caravana Real', en: 'Royal Caravan', des_es: 'Caravana Real o Pesada: carga 50.000 recursos por unidad a tus aliados (5 carretas), pero va más despacio.', des_en: 'Several escorted wagons: carries a lot but travels slower.' }
 };
@@ -881,7 +888,11 @@ var INVESTIGACION = {
     { id: 'espadas', icono: '🗡️', max: 15, cada: 0.05 },   // tropas pegan más
     { id: 'escudos', icono: '🛡️', max: 15, cada: 0.05 },   // tropas con más vida
     { id: 'flechas', icono: '🏹', max: 15, cada: 0.1 },    // torres pegan más
-    { id: 'muros', icono: '🧱', max: 15, cada: 0.1 }       // muralla y barricadas con más vida
+    { id: 'muros', icono: '🧱', max: 15, cada: 0.1 },      // muralla y barricadas con más vida
+    // v8.00: investigaciones que desbloquean tropas
+    { id: 'ballesteria', icono: '🎯', max: 5, cada: 0 }, { id: 'arco_compuesto', icono: '🏹', max: 5, cada: 0 },
+    { id: 'equitacion', icono: '🐎', max: 5, cada: 0 }, { id: 'monturas', icono: '🏇', max: 5, cada: 0 }, { id: 'armadura_placas', icono: '🛡️', max: 5, cada: 0 },
+    { id: 'ingenieria', icono: '⚙️', max: 5, cada: 0 }, { id: 'logistica', icono: '🗺️', max: 5, cada: 0 }
   ]
 };
 // Rama "Tropas": Ataque, Vida, Defensa y Velocidad para cada tipo de tropa (v5.1)
@@ -963,11 +974,18 @@ var COMBATE_KOC = {
 };
 // % que da cada pieza de equipo según su rareza (ataque y vida), y cuánto le quita al rival (ataque y vida enemigos)
 var EQ_KOC = { comun: { pct: 20, foe: 0 }, raro: { pct: 60, foe: 0 }, legendario: { pct: 120, foe: 3 }, mitico: { pct: 300, foe: 6 } };
-var TROPA_REQ = {
-  explorador: { ed: 'cuartel', n: 1 }, espadachin: { ed: 'cuartel', n: 1 }, guardian: { ed: 'cuartel', n: 1 }, miliciano: { ed: 'cuartel', n: 2 },
-  arquero: { ed: 'galeria', n: 1 }, ballestero: { ed: 'galeria', n: 3 }, arquero_largo: { ed: 'galeria', n: 5, otro: ['herreria', 2] }, tirador_elite: { ed: 'galeria', n: 8, jugador: 10 }, caballeria: { ed: 'establo', n: 1 }, jinete: { ed: 'establo', n: 1 }, caballeria_pesada: { ed: 'establo', n: 3, jugador: 6 },
-  balista: { ed: 'cuartel', n: 4, otro: ['herreria', 1] }, ariete: { ed: 'cuartel', n: 5 }, catapulta: { ed: 'cuartel', n: 6, otro: ['herreria', 3] }, torre_asedio: { ed: 'cuartel', n: 8, jugador: 10 }
+var TROPA_REQ = { // v8.00: árbol de desbloqueo (edificio + investigación de la Academia), como en los juegos de castillos
+  explorador: { ed: 'cuartel', n: 1 }, miliciano: { ed: 'cuartel', n: 1 },
+  espadachin: { ed: 'cuartel', n: 3, inv: ['espadas', 1] }, guardian: { ed: 'cuartel', n: 6, inv: ['escudos', 2] },
+  arquero: { ed: 'galeria', n: 1 }, ballestero: { ed: 'galeria', n: 4, inv: ['ballesteria', 2] }, arquero_largo: { ed: 'galeria', n: 6, inv: ['arco_compuesto', 2] }, tirador_elite: { ed: 'galeria', n: 8, inv: ['arco_compuesto', 4] },
+  jinete: { ed: 'establo', n: 1, inv: ['equitacion', 1] }, caballeria: { ed: 'establo', n: 4, inv: ['monturas', 2] }, caballeria_pesada: { ed: 'establo', n: 8, inv: ['armadura_placas', 4] },
+  balista: { ed: 'cuartel', n: 1, otro: ['herreria', 3], inv: ['ingenieria', 1] }, ariete: { ed: 'cuartel', n: 1, otro: ['herreria', 5], inv: ['ingenieria', 2] },
+  catapulta: { ed: 'cuartel', n: 1, otro: ['herreria', 7], inv: ['ingenieria', 3] }, torre_asedio: { ed: 'cuartel', n: 1, otro: ['herreria', 10], inv: ['ingenieria', 4] }
 };
+// v8.00: tropas de suministro: Mercado + investigación
+var SUMINISTRO_REQ = { carretilla: { mercado: 2 }, carreta: { mercado: 5, inv: ['carretas_ref', 2] }, convoy: { mercado: 9, inv: ['logistica', 5] } };
+// v8.00: funciones que se abren con el nivel del jugador o del castillo
+var DESBLOQUEO = { azarPremium: { jugador: 10 }, temporada: { castillo: 5 }, equipoHeroe: { jugador: 8 } };
 // Orden de la lista del cuartel (de la tropa ligera a las máquinas de asedio)
 var TROPAS_ORDEN = ['explorador', 'jinete', 'miliciano', 'arquero', 'ballestero', 'arquero_largo', 'tirador_elite', 'carreta', 'caballeria', 'espadachin', 'guardian', 'balista', 'caballeria_pesada', 'ariete', 'catapulta', 'torre_asedio'];
 var INVOCAR = { tres: 10, heroe: 30 }; // precio en gemas

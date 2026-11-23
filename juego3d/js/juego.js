@@ -3599,6 +3599,11 @@
   function nivelCaballero() { return nivelJugador(); }
   // ---------- CADENA DE DESBLOQUEO: lo que pide cada obra ----------
   var REQ_CONSTRUIR = { academia: [['cuartel', 1], ['jugador', 2]], establo: [['cuartel', 2], ['jugador', 3]], galeria: [['cuartel', 1]], herreria: [['academia', 1]], vigia: [['muralla', 1]], enfermeria: [['cuartel', 1]], almacen: [['castillo', 2]], mercado: [['castillo', 2]] };
+  // v8.00: fila de requisito de una investigación de la Academia
+  function filaInvReq(id, pide) { var t = buscarTec(id), lv = (estado.invest || {})[id] || 0; return { nombre: (t ? t.icono : '📜') + ' ' + N('inv_' + id), pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + lv, ok: lv >= pide || !!estado.dueno, k: 'academia', inv: id, n: pide }; }
+  // v8.00: ÁRBOL DE CONSTRUCCIÓN: qué edificios pide cada uno (para construirlo y para subirlo: al menos ese nivel o el suyo)
+  var REQ_ARBOL = { academia: [['castillo', 2], ['almacen', 2]], establo: [['cuartel', 3], ['granja', 3]], galeria: [['cuartel', 2], ['aserradero', 2]], herreria: [['academia', 3], ['mina', 3]],
+    embajada: [['castillo', 3], ['mercado', 2]], enfermeria: [['academia', 2], ['cabana', 3]], relevo: [['cuartel', 1]] };
   function filaReq(que, pide) {
     if (que === 'jugador') pide = nivelReq(pide); // v7.79
     var tiene = que === 'jugador' ? nivelJugador() : que === 'castillo' ? (estado.castillo || 1) : que === 'muralla' ? (estado.muralla || 0) : nivelMayor(que);
@@ -3629,10 +3634,19 @@
     if (L2 >= 2) l.push(filaReq('castillo', L2));
     if (que === 'cuartel' && L2 >= 2) l.push(filaReq('jugador', L2));
     if (que === 'academia' && L2 >= 2) l.push(filaReq('jugador', L2 + 1));
-    if (L2 === 1) (REQ_CONSTRUIR[que] || []).forEach(function (q) { l.push(filaReq(q[0], q[1])); });
+    if (REQ_ARBOL[que]) REQ_ARBOL[que].forEach(function (q) { if (q[0] === 'castillo' && L2 >= 2) return; l.push(filaReq(q[0], Math.min(NIVEL_MAX, Math.max(q[1], L2)))); }); // v8.00
+    else if (L2 === 1) (REQ_CONSTRUIR[que] || []).forEach(function (q) { l.push(filaReq(q[0], q[1])); });
     return l;
   }
-  function faltaObra(que, L2) { var f = requisitosObra(que, L2).filter(function (x) { return !x.ok; })[0]; return f ? L('Falta: ', 'Missing: ') + f.nombre.replace(/^\S+ /, '') + ' ' + f.pide : null; }
+  // v8.00: botón «Ir» de los requisitos: te lleva al edificio (o a la Academia, o a construirlo si no lo tienes)
+  function irARequisito(k, inv) {
+    if (inv) { var ac = academiaLista(); if (ac) { cerrarPanel(); ramaArbol = 'militar'; nodoArbol = inv; vistaInv = 'arbol'; abrirArbolTalentos(); return; } k = 'academia'; }
+    if (k === 'castillo' || k === 'muralla') { cerrarPanel(); abrirPanelCastillo(); return; }
+    var s = edificiosDe(k).sort(function (a, b) { return b.edificio.nivel - a.edificio.nivel; })[0];
+    if (s) { cerrarPanel(); pestCuartel = 'detalles'; tropaDetalle = null; abrirPanelEdificio(s.i); return; }
+    cerrarPanel(); consejoTemporal('🔨 ' + L('Construye ', 'Build ') + N(k) + L(' en una parcela libre.', ' on a free plot.')); abrirPanelConstruir();
+  }
+  function faltaObra(que, L2) { var f = requisitosObra(que, L2).filter(function (x) { return !x.ok; }); return f.length ? L('Requiere: ', 'Requires: ') + f.slice(0, 3).map(function (x) { return x.nombre.replace(/^\S+ /, '') + ' ' + x.pide; }).join(L(' y ', ' and ')) : null; }
   function botonFalta(txt) { return '<button class="comprar bloqueado-tr" disabled>🔒 ' + txt + '</button>'; }
   var pedidosCache = [];
   function htmlPedido(p, mio) {
@@ -4993,9 +5007,14 @@
   // qué edificio entrena cada tropa
   function edificioTropa(tipo) { return (TROPA_REQ[tipo] || {}).ed || 'cuartel'; }
   function faltaTropa(tipo) {
-    // v6.39: cualquier tipo de tropa se entrena mientras haya recursos (sin pedir niveles ni edificios extra)
-    return null;
+    // v8.00: vuelve el árbol de desbloqueo: edificio + investigación de la Academia (la cuenta del dueño lo tiene todo)
     var r = TROPA_REQ[tipo]; if (!r || estado.dueno) return null;
+    var f = [];
+    if (nivelMayor(r.ed) < r.n) f.push(N(r.ed) + ' ' + L('Nv ', 'Lv ') + r.n);
+    if (r.otro && nivelMayor(r.otro[0]) < r.otro[1]) f.push(N(r.otro[0]) + ' ' + L('Nv ', 'Lv ') + r.otro[1]);
+    if (r.inv && ((estado.invest || {})[r.inv[0]] || 0) < r.inv[1]) f.push(N('inv_' + r.inv[0]) + ' ' + L('Nv ', 'Lv ') + r.inv[1]);
+    if (r.jugador && nivelJugador() < nivelReq(r.jugador)) f.push(L('Tu nivel ', 'Your level ') + nivelReq(r.jugador));
+    return f.length ? L('Requiere: ', 'Requires: ') + f.join(L(' y ', ' and ')) : null;
     if (nivelMayor(r.ed) < r.n) return r.n > 1 ? L('Necesitas ' + N(r.ed) + ' nivel ' + r.n, 'You need ' + N(r.ed) + ' level ' + r.n) : T(r.ed === 'establo' ? 'necesitas_establo' : r.ed === 'galeria' ? 'necesitas_galeria' : 'necesitas_cuartel_t');
     if (r.otro && nivelMayor(r.otro[0]) < r.otro[1]) return L('Necesitas ' + N(r.otro[0]) + ' nivel ' + r.otro[1], 'You need ' + N(r.otro[0]) + ' level ' + r.otro[1]);
     if (r.jugador && nivelJugador() < nivelReq(r.jugador)) return L('Necesitas nivel de jugador ' + nivelReq(r.jugador), 'You need player level ' + nivelReq(r.jugador));
@@ -5144,11 +5163,17 @@
       guardar();
     }
   }
+  function faltaSum(tipo) { // v8.00: Mercado + investigación
+    var q = SUMINISTRO_REQ[tipo] || { mercado: (SUMINISTRO[tipo] || {}).mercado || 1 }, f = []; if (estado.dueno) return null;
+    if (mercadoNivel() < q.mercado) f.push(N('mercado') + ' ' + L('Nv ', 'Lv ') + q.mercado);
+    if (q.inv && ((estado.invest || {})[q.inv[0]] || 0) < q.inv[1]) f.push(N('inv_' + q.inv[0]) + ' ' + L('Nv ', 'Lv ') + q.inv[1]);
+    return f.length ? L('Requiere: ', 'Requires: ') + f.join(L(' y ', ' and ')) : null;
+  }
   function entrenarCarretas(k, tipo) {
     tipo = SUMINISTRO[tipo] ? tipo : 'carreta';
     var d = SUMINISTRO[tipo];
     if (!edificiosDe('mercado').length) { consejoTemporal(T('car_necesitas_mercado')); sonar('error'); return; }
-    if (mercadoNivel() < d.mercado) { consejoTemporal(L('Necesitas el Mercado nivel ', 'You need Market level ') + d.mercado + ' (' + nombreSum(tipo) + ')'); sonar('error'); return; }
+    var fs = faltaSum(tipo); if (fs) { consejoTemporal(fs + ' (' + nombreSum(tipo) + ')'); sonar('error'); return; }
     var costo = {}; Object.keys(d.costo).forEach(function (r) { costo[r] = d.costo[r] * k; });
     if (!pagar(costo)) return;
     var c = sumin(), ahora = Date.now(), vel = estado.dueno ? velReal() : 1;
@@ -5173,13 +5198,13 @@
     var fila = c.cola.map(function (f) { return { t: 'carreta', fin: f }; }).concat(c.colaT).sort(function (a, b) { return a.fin - b.fin; });
     if (fila.length) h += '<p class="nota reloj-panel">⏱ ' + L('En el Mercado: ', 'At the Market: ') + fila.length + ' · ' + L('la próxima en ', 'next in ') + fmtTiempo((fila[0].fin - Date.now()) / 1000) + '</p>';
     h += SUMINISTRO_ORDEN.map(function (t) {
-      var d = SUMINISTRO[t], ok = mn >= d.mercado, en = fila.filter(function (q) { return q.t === t; }).length;
+      var d = SUMINISTRO[t], ok = !faltaSum(t), en = fila.filter(function (q) { return q.t === t; }).length;
       var velTxt = d.vel < 1 ? L('Rápida', 'Fast') : d.vel > 1 ? L('Lenta', 'Slow') : L('Normal', 'Normal');
       return '<div class="sum-fila' + (ok ? '' : ' bloq') + '"><div class="sum-cab"><span class="sum-foto"><img src="iconos/ui/' + d.img + '.webp" alt="' + d.icono + '" onerror="this.replaceWith(document.createTextNode(\'' + d.icono + '\'))"></span>' +
         '<span class="sum-dat"><b>' + nombreSum(t) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaSum(t)) + (en ? ' · 🔨 ' + en : '') + '</small><span class="sum-frase">' + (estado.idioma === 'en' ? d.des_en : d.des_es) + '</span></span></div>' +
         '<div class="sum-stats"><span>📦 ' + L('Carga ', 'Cargo ') + formatoNumero(Math.round(d.carga * cap)) + '</span><span>🏃 ' + velTxt + ' (×' + String(d.vel).replace('.', ',') + ')</span><span>⏱ ' + fmtTiempo(d.tiempo) + '</span><span>🏪 ' + L('Mercado nv ', 'Market lv ') + d.mercado + '</span></div>' +
         (ok ? '<div class="car-botones">' + [1, 5, 10].map(function (k) { var cs = {}; Object.keys(d.costo).forEach(function (r) { cs[r] = d.costo[r] * k; }); return botonCosto(cs, 'car-entrenar', 'data-n="' + k + '" data-t="' + t + '"', '×' + k + ' '); }).join('') + '</div>'
-          : '<p class="nota aviso-rojo">🔒 ' + L('Falta: Mercado nivel ', 'Needs: Market level ') + d.mercado + '</p>') + '</div>';
+          : '<p class="nota aviso-rojo">🔒 ' + faltaSum(t) + '</p>') + '</div>';
     }).join('');
     h += CARRETA.mejora[sig] ? botonCosto(CARRETA.mejora[sig], 'car-mejorar', '', '⬆️ ' + T('car_mejorar', { n: sig, c: formatoNumero(CARRETA.capacidad[sig]) }) + ' ') : '<p class="nota"><b>' + T('car_max') + '</b></p>';
     return h + '</div>';
@@ -7038,7 +7063,7 @@
       (al ? '<span class="etiqueta-al">' + escaparHTML(al) + '</span>' : '') + '<b class="rk-nom">' + escaparHTML(nombre || '?') + (yo ? ' · ' + L('Tú', 'You') : '') + '</b>' + extra + '</div>';
   }
   function abrirPanelRanking(tab) {
-    tab = tab || abrirPanelRanking.tab || 'temporada'; abrirPanelRanking.tab = tab;
+    tab = tab || abrirPanelRanking.tab || (bloqueo('temporada') ? 'poder' : 'temporada'); abrirPanelRanking.tab = tab;
     var tabs = '<div class="subtabs rk-tabs"><button class="' + (tab === 'poder' ? 'activo' : '') + '" data-accion="rk-tab" data-t="poder">💪 ' + L('Poder', 'Power') + '</button>' +
       '<button class="' + (tab === 'temporada' ? 'activo' : '') + '" data-accion="rk-tab" data-t="temporada">👑 ' + L('Temporada', 'Season') + '</button>' +
       '<button class="' + (tab === 'torneo' ? 'activo' : '') + '" data-accion="rk-tab" data-t="torneo">🏆 ' + L('Torneo semanal', 'Weekly tournament') + '</button>' +
@@ -7060,6 +7085,7 @@
       }).catch(error);
       return;
     }
+    if (tab === 'temporada' && bloqueo('temporada')) { listo(htmlCandado('temporada', L('El Torneo de Temporada se desbloquea con el Castillo nivel ' + DESBLOQUEO.temporada.castillo + '.', 'The Season Tournament unlocks at Castle level ' + DESBLOQUEO.temporada.castillo + '.'))); return; } // v8.00
     if (tab === 'temporada') {
       publicarTemporada();
       Cuentas.topTemporada(TT.idTemporada(), 50).then(function (lista) { listo(htmlTemporada(lista, yo)); }).catch(function () { listo(htmlTemporada([], yo)); });
@@ -7144,7 +7170,8 @@
   var NOMBRE_R = { oro: ['Oro', 'Gold'], comida: ['Comida', 'Food'], madera: ['Madera', 'Wood'], piedra: ['Piedra', 'Stone'] };
   function tablaRequisitos(costo, filas, seg) {
     var h = '<table class="req"><tr><th>' + L('Tipo', 'Type') + '</th><th>' + L('Pide', 'Required') + '</th><th>' + L('Tienes', 'You own') + '</th></tr>';
-    (filas || []).forEach(function (f) { h += '<tr class="' + (f.ok ? 'si' : 'no') + '"><td>' + f.nombre + '</td><td>' + f.pide + '</td><td>' + (f.ok ? '✅ ' : '❌ ') + f.tiene + '</td></tr>'; });
+    (filas || []).forEach(function (f) { var ir = !f.ok && f.k && (EDIFICIOS[f.k] || f.k === 'castillo' || f.k === 'muralla') ? ' <button class="req-ir" data-accion="req-ir" data-k="' + f.k + '"' + (f.inv ? ' data-inv="' + f.inv + '"' : '') + '>' + L('Ir', 'Go') + '</button>' : ''; // v8.00: «Ir» al edificio que falta
+      h += '<tr class="' + (f.ok ? 'si' : 'no') + '"><td>' + f.nombre + '</td><td>' + f.pide + '</td><td>' + (f.ok ? '✅ ' : '❌ ') + f.tiene + ir + '</td></tr>'; });
     ['comida', 'madera', 'piedra', 'oro'].forEach(function (r) {
       if (!costo[r]) return;
       var ok = estado.oroInfinito || cantidad(r) >= costo[r];
@@ -7877,6 +7904,7 @@
       var filas = [filaReq('jugador', r.jugador || 1), { nombre: '👥 ' + L('Espacio en el ejército', 'Army space'), pide: 1, tiene: Math.min(1e9, Math.max(0, capacidad() - tropasOcupadas())), ok: capacidad() - tropasOcupadas() >= 1 }];
       if (r.ed) filas.push(filaReq(r.ed, r.n || 1));
       if (r.otro) filas.push(filaReq(r.otro[0], r.otro[1]));
+      if (r.inv) filas.push(filaInvReq(r.inv[0], r.inv[1])); // v8.00
       return h + '<p class="ft-no">' + L('No cumples los requisitos', 'You do not meet the requirements') + '</p>' + tablaRequisitos(costoTropa(t), filas).replace(/<div class="banner-rojo">[\s\S]*?<\/div>/, '') + '<button class="comprar boton-oleada-grande cq-oro" disabled>' + L('No cumples los requisitos', 'Requirements not met') + '</button></div>';
     }
     var max = Math.max(1, maxEntrenar(t)); cantDetalle = Math.max(1, Math.min(cantDetalle, max));
@@ -7977,7 +8005,7 @@
     var IMG = { comida: 'r_comida', madera: 'r_madera', piedra: 'r_piedra', oro: 'r_oro' };
     function ok(b) { return '<span class="ve-ok ' + (b ? 'si' : 'no') + '">' + (b ? '✔' : '✖') + '</span>'; }
     var h = '<table class="ve-tabla"><tr><th>' + L('Tipo', 'Type') + '</th><th>' + L('Necesitas', 'Required') + '</th><th>' + L('Tienes', 'You have') + '</th></tr>';
-    (filas || []).forEach(function (q) { h += '<tr class="' + (q.ok ? 'si' : 'no') + '"><td>' + q.nombre + '</td><td>' + q.pide + '</td><td>' + ok(q.ok) + q.tiene + '</td></tr>'; });
+    (filas || []).forEach(function (q) { var ir = !q.ok && q.k && (EDIFICIOS[q.k] || q.k === 'castillo' || q.k === 'muralla') ? ' <button class="req-ir" data-accion="req-ir" data-k="' + q.k + '"' + (q.inv ? ' data-inv="' + q.inv + '"' : '') + '>' + L('Ir', 'Go') + '</button>' : ''; h += '<tr class="' + (q.ok ? 'si' : 'no') + '"><td>' + q.nombre + '</td><td>' + q.pide + '</td><td>' + ok(q.ok) + q.tiene + ir + '</td></tr>'; }); // v8.00: «Ir»
     ['comida', 'madera', 'piedra', 'oro'].forEach(function (r) {
       if (!costo[r]) return;
       var b = estado.oroInfinito || cantidad(r) >= costo[r];
@@ -8556,6 +8584,7 @@
     return '<div class="eqn' + (d > 0 ? ' sube' : d < 0 ? ' baja' : '') + '"><span class="eqn-ico">' + ico + '</span><small>' + nom + '</small><b>' + (d ? '<s>' + antes + '</s> → ' : '') + ahora + '</b>' + (d ? '<em>' + (d > 0 ? '+' : '') + d + '</em>' : '') + '</div>';
   }
   function htmlEquipo(id) {
+    if (bloqueo('equipoHeroe')) return htmlCandado('equipoHeroe', L('La forja y los sets de equipo de tus héroes se desbloquean al llegar al nivel ' + DESBLOQUEO.equipoHeroe.jugador + '.', 'The forge and your heroes\' gear sets unlock at level ' + DESBLOQUEO.equipoHeroe.jugador + '.')); // v8.00
     var e = estado.heroes[id], sE = statsHeroe(id), ant = eqAntes && eqAntes.id === id ? eqAntes : { dano: sE.dano, vida: sE.vida }; eqAntes = null;
     var h = '<div class="eq-numeros">' + numeroSube(L('Ataque', 'Attack'), '⚔', ant.dano, sE.dano) + numeroSube(L('Salud', 'Health'), '❤', ant.vida, sE.vida) + '<button class="eq-guia-btn" data-accion="eq-guia" title="' + L('¿Cómo funciona?', 'How does it work?') + '">?</button></div>';
     h += '<div class="eq-rejilla">' + TIPOS_EQ.map(function (t) {
@@ -8960,8 +8989,8 @@
   // v6.69: ÁRBOL DE TALENTOS: pestañas Militar / Civil, el talento principal arriba y los demás unidos con líneas
   var vistaInv = 'arbol', ramaArbol = 'militar', nodoArbol = null;
   var ARBOL = {
-    militar: [['espadas'], ['t_espadachin_ataque', 't_caballeria_ataque', 't_arquero_ataque'], ['t_espadachin_vida', 't_caballeria_vida', 't_arquero_vida'], ['escudos', 'flechas', 'muros']],
-    civil: [['obras'], ['cosecha', 'lenadores', 'canteros'], ['impuestos', 'carga', 'entreno'], ['cuarteles']]
+    militar: [['espadas'], ['t_espadachin_ataque', 't_caballeria_ataque', 't_arquero_ataque'], ['t_espadachin_vida', 't_caballeria_vida', 't_arquero_vida'], ['escudos', 'flechas', 'muros'], ['ballesteria', 'arco_compuesto', 'equitacion'], ['monturas', 'armadura_placas', 'ingenieria']],
+    civil: [['obras'], ['cosecha', 'lenadores', 'canteros'], ['impuestos', 'carga', 'entreno'], ['cuarteles'], ['carretas_ref', 'logistica']]
   };
   function abrirArbolTalentos() {
     cobrarAmatista();
@@ -10574,11 +10603,19 @@
     return estado.fichas || 0;
   }
   function sortearAzar(lista) { var t = lista.reduce(function (a, x) { return a + x[1]; }, 0), n = Math.random() * t; for (var i = 0; i < lista.length; i++) { n -= lista[i][1]; if (n <= 0) return lista[i][0]; } return lista[0][0]; }
+  // v8.00: CANDADOS por nivel (Azar Premium, Torneo de Temporada, Equipo de héroe)
+  function bloqueo(k) { var q = DESBLOQUEO[k]; if (!q || estado.dueno) return null; if (q.jugador && nivelJugador() < q.jugador) return { que: 'jugador', n: q.jugador }; if (q.castillo && (estado.castillo || 1) < q.castillo) return { que: 'castillo', n: q.castillo }; return null; }
+  function htmlCandado(k, texto) { var b = bloqueo(k); return '<div class="candado-nivel"><div class="cn-ico">🔒</div><p>' + texto + '</p><small>' + (b.que === 'jugador' ? L('Tu nivel: ', 'Your level: ') + nivelJugador() + ' / ' + b.n : L('Tu castillo: Nv ', 'Your castle: Lv ') + (estado.castillo || 1) + ' / ' + b.n) + '</small></div>'; }
   function abrirAzar(modo) {
     if (modo) { modoAzar = modo; azarGrid = null; }
     var evP = eventoActivo('premium'); if (modoAzar === 'premium' && !evP) { modoAzar = 'normal'; azarGrid = null; }
     var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 2 : 1;
     if (!azarGrid) azarGrid = [null, null, null, null, null, null, null, null, null];
+    if (prem && bloqueo('azarPremium')) { // v8.00
+      var hb = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal">' + L('Azar', 'Lucky') + '</button><button data-accion="azar-modo" data-m="premium" class="activo">🔒 ' + L('Azar Premium', 'Premium Lucky') + '</button></div>' +
+        htmlCandado('azarPremium', L('Cuando alcances el nivel ' + DESBLOQUEO.azarPremium.jugador + ', se desbloqueará el juego del azar premium y tendrás más posibilidades de ganar valiosísimos objetos y tropas.', 'When you reach level ' + DESBLOQUEO.azarPremium.jugador + ', Premium Lucky unlocks with better chances to win very valuable items and troops.'));
+      abrirPanel(L('Azar', 'Lucky'), hb, { tipo: 'azar' }); $('panel').classList.add('iv-panel', 'az-panel'); return;
+    }
     var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button>' + (evP ? '<button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + ' ⏳' + fmtTiempo(Math.ceil((evP.fin - Date.now()) / 1000)) + '</button>' : '') + '</div>' +
       '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
@@ -11725,6 +11762,7 @@
     else if (a === 'al-reclamar-todo') reclamarRegalos(null);
     else if (a === 'al-tienda') comprarTiendaAl(+b.getAttribute('data-i'));
     else if (a === 'al-tec') mejorarTecAl(b.getAttribute('data-k'));
+    else if (a === 'req-ir') { sonar('click'); irARequisito(b.getAttribute('data-k'), b.getAttribute('data-inv')); }
     else if (a === 'al-submuro') { alSubMuro = b.getAttribute('data-t'); alInf.ver = null; sonar('click'); pintarHubAlianza(); }
     else if (a === 'al-inf-filtro') { alInf.filtro = b.getAttribute('data-f'); alInf.pag = 0; sonar('click'); pintarHubAlianza(); }
     else if (a === 'al-inf-pag') { alInf.pag = +b.getAttribute('data-p') || 0; sonar('click'); pintarHubAlianza(); }
@@ -13443,7 +13481,7 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
-  window.__juego = { alPrueba: function (c, tab, sec, sub) { alCache = c; estado.alianza = c.al.tag; alTab = tab || 'info'; alSeccion = sec || ''; alSubMuro = sub || 'muro'; abrirPanel(T('p_alianza'), '', { tipo: 'alianza' }); pintarHubAlianza(); }, alInfPrueba: function (d) { alInf.datos = d; alInf.t = Date.now(); }, ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
+  window.__juego = { fichaTropa: function (t) { var c = edificiosDe('cuartel')[0]; if (!c) return 'sin cuartel'; pestCuartel = 'entrenar'; tropaDetalle = t || null; abrirPanelEdificio(c.i); return faltaTropa(t || 'espadachin'); }, rankingT: function (t) { abrirPanelRanking(t); }, faltaObraP: function (q, n) { return faltaObra(q, n); }, alPrueba: function (c, tab, sec, sub) { alCache = c; estado.alianza = c.al.tag; alTab = tab || 'info'; alSeccion = sec || ''; alSubMuro = sub || 'muro'; abrirPanel(T('p_alianza'), '', { tipo: 'alianza' }); pintarHubAlianza(); }, alInfPrueba: function (d) { alInf.datos = d; alInf.t = Date.now(); }, ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },
     refuerzos: function () { revisarRefuerzos(true); }, chatPrueba: function (l) { chat.msgs.global = l; pintarBarraChat(); }, ubicarPrueba: function () { var g = estado.lugar, c = estado.castillo, guardarAntes = guardar; estado.lugar = null; estado.castillo = 1; guardar = function () {}; var antes = miLugar(); ubicarCercaDeOtros(function () { window.__ubic = { antes: antes, despues: estado.lugar }; estado.lugar = g; estado.castillo = c; guardar = guardarAntes; }); }, marcha: function (a) { abrirMarcha(a); }, mundoDebug: function () { if (!M3) return null; return Object.keys(M3.columnas || {}).map(function (k) { var g = M3.columnas[k]; g.updateMatrixWorld(true); var b = new THREE.Box3().setFromObject(g.userData.col), n = 0, vis = 0; g.userData.col.traverse(function (o) { if (o.isMesh || o.isSkinnedMesh) { n++; if (o.visible) vis++; } }); return { k: k, pos: g.position.toArray().map(function (v) { return +v.toFixed(1); }), tam: b.getSize(new THREE.Vector3()).toArray().map(function (v) { return +v.toFixed(2); }), mallas: n, visibles: vis, us: g.userData.col.userData.us.length, mallasVis: (function () { var r = []; g.userData.col.traverse(function (o) { if ((o.isMesh || o.isSkinnedMesh) && o.visible && r.length < 3) { var w = new THREE.Vector3(); o.getWorldPosition(w); var vis = true, p = o.parent; while (p) { if (!p.visible) vis = false; p = p.parent; } var sc = w.clone().project(M3.cam); r.push({ skin: !!o.isSkinnedMesh, vis: vis, pant: [+sc.x.toFixed(2), +sc.y.toFixed(2), +sc.z.toFixed(2)], op: o.material.opacity, transp: o.material.transparent }); } }); return r; })(), glb: g.userData.col.userData.us.map(function (u) { return !!(u.p && (u.p.glb || u.p.mixer)); }) }; }); }, marchaPrueba: function (dx, dy) { var yo = celdaDe(miLugar().x, miLugar().y); marcharA({ x: yo.x + dx, y: yo.y + dy }, '⚔️ Prueba', function () {}); }, informePrueba: function () { nuevoCorreo('guerras', 'Ataque a Reino Rival: victoria', 'Prueba', htmlInformeBatalla({ gano: true, fecha: Date.now(), lugar: { x: 44, y: 15 }, botin: { oro: 12000, comida: 8000, madera: 6000, piedra: 3000 }, atacante: { nombre: 'Prueba', heroe: 'fenix', poder: 234299, lucharon: 52, muertos: 4, heridos: 2, revivir: 2, sobreviven: 46 }, defensor: { nombre: 'Reino Rival', poder: 120000, lucharon: null, sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { at: misMejoras() } }), { gemas: 5, objeto: 'libro_peq' }, { informe: true }); }, ponerNivel: function (i, t, n) { ponerEdificio(slots[i], t, n); }, nivelCastillo: function (n) { estado.castillo = n; ponerCastillo(); actualizarParcelas(); }, modelo: function (t, tr) { return t === 'castillo' ? M.mejorarPorTramo(M.castillo(TRAMO_INTERNO[tr]), tr, 'castillo') : crearModelo(t, tr); }, tocar: function (i) { tocarSlot(i); }, nivelNuevo: function (n) { mostrarNivelNuevo(n); }, visorImg: function () { if (!visor) return null; dibujarVisor(0); return visor.r.domElement.toDataURL('image/png'); }, simularAtaque: function (seg, nombre) { entrantes.push({ id: 'prueba' + Date.now(), prueba: true, atacanteNombre: nombre || 'Rival', llega: Date.now() + (seg || 120) * 1000, fuerza: 5000, resuelto: false }); actualizarAlertas(); }, abrir: function (q, id, tipo) { if (q === 'castillo') abrirPanelCastillo(); else if (q === 'heroe') abrirPanelHeroe(id || 'sol'); else if (q === 'tropas') abrirPanelTropas(); else if (q === 'vista') { pestCuartel = id || 'entrenar'; tropaDetalle = tipo || null; if (slotElegido !== null) abrirPanelEdificio(slotElegido); } else abrirPanelEdificio(q); }, az: function (v) { if (v !== undefined) { AZ_CAM = v; cam.az = v; } return AZ_CAM; },
