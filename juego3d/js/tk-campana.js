@@ -12,6 +12,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function num(n) { n = Math.round(n); return n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : n.toLocaleString('es'); }
 
+  var CSS_TR = '.tkc-trs{display:flex;flex-direction:column;gap:5px;max-height:30vh;overflow-y:auto;margin:4px 0}.tkc-tr{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:9px;background:#0006;border:1px solid #6b4a1a}.tkc-tr.sel{border-color:#ffd23a;background:rgba(80,60,10,.5)}.tkc-ti{font-size:22px;width:30px;text-align:center}.tkc-td{flex:1;min-width:0;display:flex;flex-direction:column}.tkc-td b{font-size:12px;color:#ffe08a}.tkc-td small{font-size:11px;color:#fff}.tkc-tb{min-width:34px;height:28px;border-radius:7px;border:1px solid #8a6a2a;background:#3a2610;color:#ffe08a;font:800 12px system-ui;cursor:pointer}.tkc-tb.on{background:#c98a1a;color:#fff}.tkc-tn{font-size:11px;opacity:.85;margin:4px 2px}.tkc-perd{color:#ffb0a0;font-weight:800}';
   var CSS = '' +
     '#tkc{position:fixed;inset:0;z-index:9000;background:#1c2a14;color:#fff;font:600 13px system-ui,sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}' +
     '#tkc canvas{position:absolute;inset:0;width:100%;height:100%;display:block}' +
@@ -60,6 +61,7 @@
 
   // ---------------- estado de la pantalla ----------------
   var raiz, cv, cx, W = 0, H = 0, DPR = 1, fondo = null, modo = 'formacion', etapa = 1, sel = [], heroes = [], lado = { az: [], ro: [] };
+  var tropasD = [], selT = {}, MAX_TIPOS = 4; /* v8.47: tropas elegidas para la campaña { tipo: cantidad } */
   var efectos = [], vel = 1, auto = false, tPelea = 0, corriendo = false, ultimo = 0, terminado = false, imgs = {};
   function img(src) { if (!src) return null; if (!imgs[src]) { var i = new Image(); i.src = src; imgs[src] = i; } return imgs[src]; }
 
@@ -106,6 +108,10 @@
     var vida = h.vida * 3, atk = h.dano * 2.2;
     return { lado: 'az', h: h, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: h.distancia ? 0.30 : 0.07, ritmo: h.distancia ? 1.1 : 0.85, cd: 0.3 + i * 0.12, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: img(h.foto) };
   }
+  function escuadronTropa(t, n, i) {
+    var p = punto(0.05, -0.75 + i * 0.5), fz = Math.cbrt(n) * 0.5, vida = t.vida * 3 * fz, atk = t.dano * 2.2 * fz;
+    return { lado: 'az', tropa: t.k, nT: n, h: { nombre: t.nombre, foto: '', hab: 'golpe', clase: t.distancia ? 'arquero' : 'infanteria', nivel: 1 }, ico: t.ico, i: 100 + i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: t.distancia ? 0.30 : 0.07, ritmo: t.distancia ? 1.1 : 0.9, cd: 0.5 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: null };
+  }
   // v8.29: los enemigos suben con la etapa Y con el nivel de tus héroes (crecen igual que un héroe al subir de nivel);
   // lo que te da ventaja es el equipo, las estrellas, la Maestría y los talentos
   var nivelRival = 1;
@@ -117,7 +123,8 @@
   function armarLados() {
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
     lado.az = sel.filter(function (id) { return mapa[id]; }).map(function (id, i) { return escuadronHeroe(mapa[id], i); });
-    var nh = lado.az.map(function (u) { return u.h.nivel || 1; }); nivelRival = nh.length ? nh.reduce(function (a, b) { return a + b; }, 0) / nh.length : 1;
+    var nh = lado.az.map(function (u) { return u.h.nivel || 1; });
+    tropasD.filter(function (t) { return selT[t.k] > 0; }).slice(0, MAX_TIPOS).forEach(function (t, i) { lado.az.push(escuadronTropa(t, Math.min(selT[t.k], t.n), i)); }); /* v8.47 */ nivelRival = nh.length ? nh.reduce(function (a, b) { return a + b; }, 0) / nh.length : 1;
     lado.ro = [0, 1, 2, 3, 4].map(function (i) { return escuadronEnemigo(etapa, i); });
   }
   function poderLado(l) { return l.reduce(function (a, u) { return a + poderDe(u); }, 0); }
@@ -251,19 +258,30 @@
       '<div class="tkc-pod tkc-ro">' + L('Poder enemigo', 'Enemy power') + '<b>' + num(poderLado(lado.ro)) + '</b></div></div>' +
       '<button class="tkc-x" data-c="cerrar">✕</button>';
   }
+  function htmlTropas() {
+    if (!tropasD.length) return '<p class="tkc-tn">' + L('No tienes tropas en casa. Entrénalas para llevarlas a la Campaña.', 'No troops at home. Train some to bring them to the Campaign.') + '</p>';
+    var nTipos = Object.keys(selT).filter(function (k) { return selT[k] > 0; }).length;
+    return '<div class="tkc-tit"><span>⚔️ ' + L('Tus tropas (elige cuáles y cuántas van)', 'Your troops (choose which and how many)') + '</span><span>' + nTipos + ' / ' + MAX_TIPOS + '</span></div><div class="tkc-trs">' + tropasD.map(function (t) {
+      var v = Math.min(selT[t.k] || 0, t.n);
+      return '<div class="tkc-tr' + (v ? ' sel' : '') + '"><span class="tkc-ti">' + t.ico + '</span><span class="tkc-td"><b>' + esc(t.nombre) + '</b><small>' + (G ? G.num(v) : v) + ' / ' + (G ? G.num(t.n) : t.n) + '</small></span>' +
+        [[0, '0'], [0.25, '¼'], [0.5, '½'], [1, L('Todas', 'All')]].map(function (q) { return '<button class="tkc-tb' + (v === Math.floor(t.n * q[0]) && (q[0] || !v) ? ' on' : '') + '" data-c="tropa" data-k="' + esc(t.k) + '" data-f="' + q[0] + '">' + q[1] + '</button>'; }).join('') + '</div>';
+    }).join('') + '</div><p class="tkc-tn">' + L('Las tropas que caen en la batalla se pierden. Si pierdes, cambia tus tropas o manda más y vuelve a intentarlo.', 'Troops that fall in battle are lost. If you lose, change your troops or send more and try again.') + '</p>';
+  }
   function pantallaFormacion() {
+    if (G && G.tropas) { tropasD = G.tropas(); Object.keys(selT).forEach(function (k) { if (!tropasD.some(function (t) { return t.k === k; })) delete selT[k]; }); }
     modo = 'formacion'; terminado = false; efectos = []; medir(); armarLados();
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
     var lista = heroes.slice().sort(function (a, b) { return (b.dano * 6 + b.vida / 3) - (a.dano * 6 + a.vida / 3); });
     raiz.querySelector('.tkc-ui').innerHTML = arriba() +
       '<div class="tkc-abajo"><div class="tkc-tit"><span>🦸 ' + L('Elige hasta 5 héroes', 'Choose up to 5 heroes') + '</span><span>' + sel.length + ' / 5</span></div>' +
       (lista.length ? '<div class="tkc-grid">' + lista.map(function (h) { var k = sel.indexOf(h.id); return '<button class="tkc-h' + (k >= 0 ? ' sel' : '') + '" data-c="heroe" data-id="' + esc(h.id) + '" data-n="' + (k + 1) + '">' + (h.foto ? '<img src="' + esc(h.foto) + '" alt="">' : '🦸') + '<i>' + L('Nv ', 'Lv ') + h.nivel + '</i><small>' + esc(h.nombre) + '</small></button>'; }).join('') + '</div>' : '<p>' + L('Todavía no tienes héroes. Recluta uno en Tropas › Héroes.', 'You have no heroes yet. Recruit one in Troops › Heroes.') + '</p>') +
+      htmlTropas() +
       '<div class="tkc-bts"><button class="tkc-b azul" data-c="rapido">⚡ ' + L('Despliegue rápido', 'Quick deploy') + '</button><button class="tkc-b naranja" data-c="luchar">⚔️ ' + L('Luchar', 'Fight') + '</button></div></div>';
   }
   function pantallaPelea() {
     modo = 'pelea'; terminado = false; efectos = []; medir(); armarLados();
     raiz.querySelector('.tkc-ui').innerHTML = arriba() +
-      '<div class="tkc-abajo"><div class="tkc-ret"><div class="tkc-ret" id="tkc-rets" style="flex:1">' + lado.az.map(function (u, i) { return '<div class="tkc-r" data-c="hab" data-i="' + i + '">' + (u.h.foto ? '<img src="' + esc(u.h.foto) + '" alt="">' : '🦸') + '<div class="bv"><i></i></div><div class="be"><i></i></div></div>'; }).join('') + '</div>' +
+      '<div class="tkc-abajo"><div class="tkc-ret"><div class="tkc-ret" id="tkc-rets" style="flex:1">' + lado.az.map(function (u, i) { return '<div class="tkc-r" data-c="hab" data-i="' + i + '">' + (u.h.foto ? '<img src="' + esc(u.h.foto) + '" alt="">' : (u.ico || '🦸')) + '<div class="bv"><i></i></div><div class="be"><i></i></div></div>'; }).join('') + '</div>' +
       '<div class="tkc-ctl"><button class="tkc-c' + (vel > 1 ? ' on' : '') + '" data-c="vel">x2</button><button class="tkc-c' + (auto ? ' on' : '') + '" data-c="auto">' + L('Auto', 'Auto') + '</button></div></div></div>' +
       '<div class="tkc-vs">VS</div>';
     pintarRetratos();
@@ -283,11 +301,14 @@
     setTimeout(function () {
       var ui = raiz.querySelector('.tkc-ui'), n = etapa, items = [];
       if (gano && G) { try { items = G.ganar(n, sel.slice()); } catch (e) { console.error(e); } etapa = G.etapa(); }
+      var perd = {}, nPerd = 0; lado.az.forEach(function (u) { if (!u.tropa) return; var q = Math.round(u.nT * (1 - Math.max(0, u.hp) / u.max) * (gano ? 0.2 : 0.35)); if (q > 0) { perd[u.tropa] = (perd[u.tropa] || 0) + q; } });
+      if (G && G.perder) { try { nPerd = G.perder(perd); } catch (e) {} } Object.keys(perd).forEach(function (k) { if (selT[k]) selT[k] = Math.max(0, selT[k] - perd[k]); });
+      var txtPerd = nPerd ? '<p class="tkc-perd">💀 ' + L('Tropas perdidas: ', 'Troops lost: ') + (G ? G.num(nPerd) : nPerd) + '</p>' : '';
       if (G) G.sonar(gano ? 'victoria' : 'derrota');
       var d = document.createElement('div'); d.className = 'tkc-fin';
       d.innerHTML = gano
-        ? '<div class="tkc-fc"><h2>🏆 ' + L('¡Victoria!', 'Victory!') + '</h2><p>' + L('Etapa ', 'Stage ') + n + L(' superada', ' cleared') + '</p><div class="tkc-pr">' + items.map(function (x) { return '<div>' + (x.img ? '<img src="' + esc(x.img) + '" alt="">' : '<span>' + x.ico + '</span>') + esc(x.nom) + '<b>' + esc(x.n) + '</b></div>'; }).join('') + '</div><div class="tkc-bts"><button class="tkc-b gris" data-c="cerrar">' + L('Salir', 'Exit') + '</button><button class="tkc-b verde" data-c="siguiente">' + L('Etapa ', 'Stage ') + etapa + ' ▶</button></div></div>'
-        : '<div class="tkc-fc mal"><h2>💔 ' + L('¡Derrota!', 'Defeat!') + '</h2><p>' + L('Los enemigos de la etapa ', 'The enemies of stage ') + n + L(' fueron más fuertes. Mejora tus héroes o cambia tu alineación.', ' were stronger. Upgrade your heroes or change your lineup.') + '</p><div class="tkc-bts"><button class="tkc-b azul" data-c="mejorar">🦸 ' + L('Mejorar héroes', 'Upgrade heroes') + '</button><button class="tkc-b naranja" data-c="alineacion">🔁 ' + L('Cambiar alineación', 'Change lineup') + '</button></div></div>';
+        ? '<div class="tkc-fc"><h2>🏆 ' + L('¡Victoria!', 'Victory!') + '</h2><p>' + L('Etapa ', 'Stage ') + n + L(' superada', ' cleared') + '</p>' + txtPerd + '<div class="tkc-pr">' + items.map(function (x) { return '<div>' + (x.img ? '<img src="' + esc(x.img) + '" alt="">' : '<span>' + x.ico + '</span>') + esc(x.nom) + '<b>' + esc(x.n) + '</b></div>'; }).join('') + '</div><div class="tkc-bts"><button class="tkc-b gris" data-c="cerrar">' + L('Salir', 'Exit') + '</button><button class="tkc-b verde" data-c="siguiente">' + L('Etapa ', 'Stage ') + etapa + ' ▶</button></div></div>'
+        : '<div class="tkc-fc mal"><h2>💔 ' + L('¡Derrota!', 'Defeat!') + '</h2><p>' + L('Los enemigos de la etapa ', 'The enemies of stage ') + n + L(' fueron más fuertes. Mejora tus héroes o cambia tu alineación.', ' were stronger. Upgrade your heroes or change your lineup.') + '</p>' + txtPerd + '<p>' + L('Puedes cambiar tus tropas o mandar más y reintentar ya.', 'You can change your troops or send more and retry now.') + '</p><div class="tkc-bts"><button class="tkc-b azul" data-c="mejorar">🦸 ' + L('Mejorar héroes', 'Upgrade heroes') + '</button><button class="tkc-b naranja" data-c="alineacion">🔁 ' + L('Cambiar alineación', 'Change lineup') + '</button></div></div>';
       ui.appendChild(d);
       if (gano && auto) setTimeout(function () { if (d.parentNode && raiz) { pantallaFormacion(); } }, 6000);
     }, 900);
@@ -301,7 +322,8 @@
     if (G) G.sonar('click');
     if (c === 'heroe') { var id = b.getAttribute('data-id'), k = sel.indexOf(id); if (k >= 0) sel.splice(k, 1); else if (sel.length < 5) sel.push(id); else { G && G.consejo(L('Ya tienes 5 héroes: quita uno para cambiarlo.', 'You already have 5 heroes: remove one first.')); return; } G && G.equipo(sel); pantallaFormacion(); }
     else if (c === 'rapido') { sel = heroes.slice().sort(function (a, b2) { return (b2.dano * 6 + b2.vida / 3) - (a.dano * 6 + a.vida / 3); }).slice(0, 5).map(function (h) { return h.id; }); G && G.equipo(sel); pantallaFormacion(); }
-    else if (c === 'luchar') { if (!sel.length) { G && G.consejo(L('Elige al menos un héroe.', 'Choose at least one hero.')); return; } tPelea = 0; pantallaPelea(); }
+    else if (c === 'luchar') { if (!sel.length && !Object.keys(selT).some(function (k) { return selT[k] > 0; })) { G && G.consejo(L('Elige al menos un héroe o una tropa.', 'Choose at least one hero or troop.')); return; } tPelea = 0; pantallaPelea(); }
+    else if (c === 'tropa') { var tk = b.getAttribute('data-k'), fr = +b.getAttribute('data-f'), tt = tropasD.filter(function (x) { return x.k === tk; })[0]; if (!tt) return; var ya = Object.keys(selT).filter(function (k) { return selT[k] > 0 && k !== tk; }).length; if (fr > 0 && ya >= MAX_TIPOS) { G && G.consejo(L('Máximo ' + MAX_TIPOS + ' tipos de tropa: quita uno.', 'Max ' + MAX_TIPOS + ' troop types: remove one.')); return; } selT[tk] = Math.floor(tt.n * fr); pantallaFormacion(); }
     else if (c === 'hab') { var u = lado.az[+b.getAttribute('data-i')]; if (u) lanzar(u); }
     else if (c === 'vel') { vel = vel > 1 ? 1 : 2; b.classList.toggle('on', vel > 1); }
     else if (c === 'auto') { auto = !auto; G && G.auto(auto); b.classList.toggle('on', auto); }
@@ -312,7 +334,7 @@
   function alCambiar() { if (raiz) medir(); }
   function abrir() {
     G = window.__tkCamp; if (!G) return false;
-    if (!$('tkc-css')) { var st = document.createElement('style'); st.id = 'tkc-css'; st.textContent = CSS; document.head.appendChild(st); }
+    if (!$('tkc-css')) { var st = document.createElement('style'); st.id = 'tkc-css'; st.textContent = CSS + CSS_TR; document.head.appendChild(st); }
     if (raiz) cerrar();
     heroes = G.heroes(); etapa = G.etapa(); auto = G.auto(); vel = 1;
     sel = G.equipo().filter(function (id) { return heroes.some(function (h) { return h.id === id; }); });

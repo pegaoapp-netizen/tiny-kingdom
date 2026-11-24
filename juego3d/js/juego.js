@@ -2612,8 +2612,11 @@
     var e = misVillas().lista[i]; if (!e) return;
     var act = i === villaActiva(), d = e.datos || {};
     $('mundo-info').innerHTML = '<div class="carta casilla-info pergamino tarjeta-terreno"><h3 class="perg-tit">🏘️ ' + escaparHTML(nombreVilla(i)) + '</h3><p class="perg-sub">' + e.x + ', ' + e.y + '</p><div class="tt-datos"><div class="tt-dueno">' + L('Tu villa', 'Your village') + '</div><div>🏰 ' + L('Castillo nv ', 'Castle lv ') + (act ? (estado.castillo || 1) : (d.castillo || 1)) + '</div></div>' +
-      '<div class="perg-botones">' + (act ? '<span class="nota">' + L('Estás aquí', 'You are here') + '</span>' : '<button class="comprar verde" id="mv-ir">🏘️ ' + L('Ir a esta villa', 'Go to this village') + '</button>') + '</div></div>';
+      '<div class="perg-botones">' + (act ? '<span class="nota">' + L('Estás aquí', 'You are here') + '</span>' : '<button class="comprar verde" id="mv-ir">🏘️ ' + L('Ir a esta villa', 'Go to this village') + '</button>') + '</div>' +
+      (act ? '' : '<div class="perg-botones mv-rapido"><button class="comprar azul" id="mv-destacar">⚔️ ' + L('Destacar / Reforzar', 'Station / Reinforce') + '</button><button class="comprar azul" id="mv-transp">🐴 ' + L('Transportar', 'Transport') + '</button></div>') + '</div>'; /* v8.47: menú rápido de tu villa */
     var b = $('mv-ir'); if (b) b.addEventListener('click', function () { cambiarVilla(i); });
+    var bd = $('mv-destacar'); if (bd) bd.addEventListener('click', function () { sonar('click'); abrirDestacar(i); });
+    var bt = $('mv-transp'); if (bt) bt.addEventListener('click', function () { sonar('click'); abrirEnvioVillas(i); });
   }
   function tarjetaMundo(tit, x, y, lineas, idEspiar, idAtacar, aviso) {
     return '<div class="carta casilla-info pergamino tarjeta-terreno"><h3 class="perg-tit">' + tit + '</h3><p class="perg-sub">' + x + ', ' + y + '</p>' +
@@ -10772,6 +10775,10 @@
     equipo: function (l) { if (l) { estado.campEquipo = l.slice(0, 5); guardar(); } return (estado.campEquipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; }); },
     auto: function (v) { if (v !== undefined) { estado.campAuto = !!v; guardar(); } return !!estado.campAuto; },
     heroesPanel: function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); },
+    /* v8.47: TROPAS EN LA CAMPAÑA: el jugador elige cuáles y cuántas van; las que caen se pierden */
+    tropas: function () { return Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; }).map(function (k) { var t = TROPAS[k]; return { k: k, nombre: N(k), ico: t.icono, n: cuentaTipo(k), vida: t.vida || 100, dano: t.dano || 10, distancia: (t.alcance || 1) > 3 }; }); },
+    perder: function (m) { var tot = 0; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (q > 0) { quitarDeCasa(k, q); tot += q; } }); if (tot) { guardar(true); actualizarHUD(); } return tot; },
+    num: formatoNumero,
     abierta: function (v) { window.__tkCampanaAbierta = !!v; if (!v) { actualizarHUD(); } },
     // premios de la etapa (sin gemas: las gemas no se regalan)
     ganar: function (n, ids) {
