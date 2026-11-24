@@ -10402,15 +10402,37 @@
       h += '<div class="sp-lista" id="sp-lista"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>';
     }
     abrirPanel('🛟 ' + L('Soporte', 'Support'), h, { tipo: 'soporte' });
+    clearInterval(relojSoporte); relojSoporte = setInterval(function () { if (!panelActual || panelActual.tipo !== 'soporte' || $('panel').classList.contains('oculto')) { clearInterval(relojSoporte); return; } if (soporteVista === 'mios' && Cuentas.misSoportes) Cuentas.misSoportes().then(function (l) { soporteCache = l.sort(function (a, b) { return b.fecha - a.fecha; }); pintarSoporteMios(); revisarSoporte(); }).catch(function () {}); else if (soporteVista === 'bandeja' && esCuentaDueno()) Cuentas.todosSoportes().then(function (l) { soporteDueno = l; pintarSoporteBandeja(); }).catch(function () {}); }, 20000); // v8.22
     if (!hayCuenta()) return;
     if (soporteVista === 'mios') Cuentas.misSoportes().then(function (l) { soporteCache = l.sort(function (a, b) { return b.fecha - a.fecha; }); pintarSoporteMios(); revisarSoporte(); }).catch(function () { var e = $('sp-lista'); if (e) e.innerHTML = '<p class="nota aviso-rojo">' + L('No se pudo cargar. Revisa tu internet.', 'Could not load. Check your internet.') + '</p>'; });
     if (soporteVista === 'bandeja' && dueno) Cuentas.todosSoportes().then(function (l) { soporteDueno = l; pintarSoporteBandeja(); }).catch(function (er) { var e = $('sp-lista'); if (e) e.innerHTML = '<p class="nota aviso-rojo">' + L('No se pudo cargar', 'Could not load') + ' (' + ((er && er.code) || '?') + ')</p>'; });
   }
+  // v8.22: ayuda automática: al escribir, el jugador ve al momento la respuesta de la guía según lo que pregunta (el equipo igual lo ve y puede contestar)
+  var AYUDA_SOPORTE = [
+    [/march|atac|ataq|conquist|terren|acamp|llam|bestia|b[aá]rbar/i, ['Para atacar: toca el lugar en el Mundo › Ataque › elige tropas y héroe › Marchar. El viaje tarda de 20 s a 2 min y aunque cierres el juego la marcha sigue. En un terreno ganado tus tropas se quedan acampadas (⛺) hasta que las llames con ↩ en la pestaña Marchar de abajo.', 'To attack: tap the place on the World › Attack › choose troops and hero › March. Travel takes 20 s to 2 min and continues even if you close the game. On a conquered tile your troops stay camped (⛺) until you recall them with ↩ in the March tab.']],
+    [/inform|correo|report/i, ['Cada ataque manda su informe a Correo › Informe (resultado, bajas y rondas). Si cerraste el juego, al volver la marcha llega y el informe aparece.', 'Every attack sends its report to Mail › Report (result, losses and rounds). If you closed the game, the march arrives when you come back and the report shows up.']],
+    [/azar|ficha|suerte/i, ['Azar: cada día tienes fichas gratis según tu nivel (Nv 1-9: 1 · Nv 10-19: 2 · Nv 20+: 3). Las gratis se pierden si no las usas ese día; las compradas se guardan. El Azar Premium cuesta 6 fichas. Hay fichas y cofres de fichas en la Tienda.', 'Lucky: every day you get free tokens by level (Lv 1-9: 1 · Lv 10-19: 2 · Lv 20+: 3). Free ones expire that day; bought ones are kept. Premium costs 6 tokens. Tokens and token chests are in the Shop.']],
+    [/ruleta|llave|gale[oó]n|wheel/i, ['La Ruleta abre en fechas de evento. Cada tirada usa 1 ficha de Ruleta o gemas. Las llaves solo salen en la Ruleta: con 5 abres el Cofre del Galeón.', 'The Wheel opens on event dates. Each spin uses 1 Wheel token or gems. Keys only come from the Wheel: 5 keys open the Galleon Chest.']],
+    [/vip/i, ['VIP: +15 puntos cada día que entras, +1 por cada 10 gemas que gastas y +100 por cada US$ 1 de compra. VIP 1 = 200 puntos, VIP 2 = 600, VIP 3 = 1.500 … hasta VIP 15.', 'VIP: +15 points each day you play, +1 per 10 gems spent and +100 per US$ 1 purchased. VIP 1 = 200 points, VIP 2 = 600, VIP 3 = 1,500 … up to VIP 15.']],
+    [/gema|pag|compr|cobr|dinero|tarjeta/i, ['Las compras se entregan solas en 1 minuto. Si pagaste y no te llegó, cierra el juego y ábrelo otra vez. Si sigue sin llegar, escríbenos la fecha, la hora y el monto, y el equipo lo revisa.', 'Purchases are delivered automatically within 1 minute. If you paid and it did not arrive, close and reopen the game. If it still is missing, tell us the date, time and amount and the team will check.']],
+    [/alianza|expuls|canciller|miembro/i, ['Alianza: el Canciller o el Vicecanciller expulsa en Alianza › Miembros › toca su puesto › Expulsar. Para salir, el Canciller primero cede la cancillería a otro miembro.', 'Alliance: the Chancellor or Vice expels in Alliance › Members › tap their rank › Remove. To leave, the Chancellor first hands over the chancellery.']],
+    [/villa|ciudad 2|segunda/i, ['Cambia de villa con el selector de arriba (Villa Principal ▾). Antes de cambiar, espera a que vuelvan tus marchas.', 'Switch village with the selector at the top (Main Village ▾). Wait for your marches to return before switching.']],
+    [/h[eé]roe|maestr|ascens|nivel/i, ['Tu héroe sube hasta su tope. Con Ascensión y Maestría el tope sube 10 niveles cada paso, gastando los materiales que pide (se ven en su ficha).', 'Your hero levels up to its cap. Ascension and Mastery raise the cap 10 levels each step, using the materials shown on its card.']],
+    [/potenci|cuerno|tambor|furia|bono/i, ['En la ventana de Marcha están los Potenciadores (ataque, vida, velocidad y tamaño de marcha): tócalo y se activa 1 hora.', 'Boosts are in the March window (attack, HP, speed and march size): tap one and it is active for 1 hour.']],
+    [/tropa|entren|cuartel|reserva/i, ['Entrena tropas en el Cuartel. Si se llena, las nuevas pasan a la reserva y siguen contando para atacar y defender.', 'Train troops in the Barracks. When it is full, new ones go to the reserve and still count for attack and defense.']],
+    [/error|falla|bug|cierra|carga|traba|congel|negro/i, ['Cierra el juego del todo y ábrelo otra vez (así baja la última versión). Si sigue pasando, cuéntanos en qué pantalla estabas y qué tocaste.', 'Close the game completely and open it again (that loads the latest version). If it keeps happening, tell us which screen you were on and what you tapped.']]
+  ];
+  function ayudaSoporte(txt) { var l = AYUDA_SOPORTE.filter(function (q) { return q[0].test(txt || ''); }).slice(0, 2); return l.map(function (q) { return L(q[1][0], q[1][1]); }); }
+  function htmlAyudaSoporte(txt) {
+    var l = ayudaSoporte(txt);
+    return '<div class="sp-resp sp-auto"><b>🤖 ' + L('Respuesta automática', 'Automatic answer') + '</b>' + (l.length ? l.map(function (x) { return '<p>' + x + '</p>'; }).join('') : '<p>' + L('¡Gracias por escribir! Tu mensaje ya le llegó al equipo de Tiny Kingdom. La respuesta sale aquí mismo y te llega al Correo.', 'Thanks for writing! Your message reached the Tiny Kingdom team. The answer shows up here and in your Mail.') + '</p>') + '</div>';
+  }
+  var relojSoporte = null;
   function pintarSoporteMios() {
     var e = $('sp-lista'); if (!e) return;
     e.innerHTML = soporteCache.length ? soporteCache.map(function (m) {
       return '<div class="carta sp-msg"><div class="sp-cab"><b>' + nombreTipoSoporte(m.tipo) + '</b><small>' + fechaCorta(m.fecha) + '</small></div><p class="sp-cuerpo">' + escaparHTML(m.texto) + '</p>' +
-        (m.respuesta ? '<div class="sp-resp"><b>🛟 ' + L('Respuesta', 'Answer') + '</b> <small>' + fechaCorta(m.respondido) + '</small><p>' + escaparHTML(m.respuesta) + '</p></div>' : '<p class="sp-espera">⏳ ' + L('Esperando respuesta', 'Waiting for an answer') + '</p>') + '</div>';
+        (m.respuesta ? '<div class="sp-resp"><b>🛟 ' + L('Respuesta', 'Answer') + '</b> <small>' + fechaCorta(m.respondido) + '</small><p>' + escaparHTML(m.respuesta) + '</p></div>' : htmlAyudaSoporte(m.texto) + '<p class="sp-espera">⏳ ' + L('El equipo también lo va a leer y te contesta aquí.', 'The team will also read it and answer here.') + '</p>') + '</div>';
     }).join('') : '<p class="iv-vacio">' + L('Todavía no le has escrito a Soporte.', 'You have not written to Support yet.') + '</p>';
   }
   function pintarSoporteBandeja() {
@@ -10444,7 +10466,10 @@
       if (hubo) { guardar(true); sonar('moneda'); consejoTemporal('🛟 ' + L('Soporte te respondió: mira tu Correo.', 'Support answered: check your Mail.')); }
     }).catch(function () {});
   }
-  setTimeout(revisarSoporte, 20000); setInterval(function () { if (!enMenu) revisarSoporte(); }, 180000);
+  setTimeout(revisarSoporte, 20000); setInterval(function () { if (!enMenu) revisarSoporte(); }, 60000); // v8.22: cada minuto (antes 3)
+  // v8.22: al dueño le avisan los mensajes de Soporte sin responder (antes solo se veían abriendo la Bandeja)
+  function avisarSoporteDueno() { if (!hayCuenta() || !esCuentaDueno() || !Cuentas.todosSoportes || enMenu) return; Cuentas.todosSoportes().then(function (l) { var sin = l.filter(function (m) { return !m.respuesta; }), nuevos = sin.filter(function (m) { return (m.fecha || 0) > (estado.spAvisado || 0); }); if (nuevos.length) { estado.spAvisado = Math.max.apply(null, nuevos.map(function (m) { return m.fecha || 0; })); guardar(); sonar('cuerno'); consejoTemporal('🛟 ' + sin.length + L(' mensaje(s) de Soporte sin responder. Ábrelo en 🛟 Soporte › Bandeja.', ' unanswered Support message(s). Open 🛟 Support › Inbox.')); } }).catch(function () {}); }
+  setTimeout(avisarSoporteDueno, 25000); setInterval(avisarSoporteDueno, 120000);
   setTimeout(recibirRegalos, 8000);
   // +EXP: usa un libro (primero el grande) en ese caballero
   function unLibroCaballero(id) {

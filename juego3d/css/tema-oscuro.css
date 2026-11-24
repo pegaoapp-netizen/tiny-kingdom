@@ -1420,3 +1420,7 @@ html body .st-base { opacity: .6; font-weight: 400; } html body .st-mas { font-s
 .mc-pot-i { font-size: 22px; }
 .mc-pot-b.on { border-color: #4fd06a; background: rgba(40,120,50,.35); box-shadow: 0 0 8px rgba(79,208,106,.45); }
 .mc-pot-b.sin { opacity: .55; }
+
+/* v8.22: respuesta automática de Soporte */
+.sp-resp.sp-auto { border-color: rgba(90,170,255,.45); background: rgba(40,80,140,.25); }
+.sp-resp.sp-auto p { margin: 4px 0 0; }
