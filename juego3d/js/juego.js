@@ -7071,12 +7071,16 @@
     volverCamara();
   }
   // ================= v6.34: RANKING DE TODOS Y TORNEO SEMANAL =================
-  var PUNTOS_TORNEO = { tropas: 2, recolectas: 5, acel: 5, campamentos: 60, oleada: 40, obra: 25, ataque: 120 };
+  var PUNTOS_TORNEO = { tropas: 2, recolectas: 5, acel: 5, campamentos: 60, oleada: 40, obra: 25, ataque: 120, gema: 1, dolar: 100 }; // v8.38: también gastar gemas (+1 por gema) y comprar (+100 por US$ 1)
   var PREMIOS_TORNEO_SIN = function (l) { l.forEach(function (q) { delete q.gemas; }); return l; };
+  // v8.38 (decisión del dueño, 24-nov): el TORNEO DE GEMAS. Solo el podio gana gemas y solo con un mínimo alto de puntos,
+  // para que haga falta entrenar mucho, acelerar y gastar. Es la única excepción a «las gemas no se regalan».
+  var MIN_GEMAS_TORNEO = 30000, GEMAS_PODIO = [2000, 1200, 800];
   var PREMIOS_TORNEO = PREMIOS_TORNEO_SIN([
     { hasta: 1, gemas: 500, oro: 200000, objeto: 'acel_15m', piezas: 3, mitico: true }, { hasta: 2, gemas: 300, oro: 120000, piezas: 2, mitico: true }, { hasta: 3, gemas: 200, oro: 80000, piezas: 2, mitico: true },
     { hasta: 10, gemas: 100, oro: 40000, piezas: 1 }, { hasta: 50, gemas: 50, oro: 15000, piezas: 1 }, { hasta: 1e9, gemas: 20, oro: 5000 }
   ]);
+  GEMAS_PODIO.forEach(function (g, k) { if (PREMIOS_TORNEO[k]) PREMIOS_TORNEO[k].gemas = g; });
   function semanaActual() { return Math.floor((Date.now() / 86400000 + 3) / 7); } // la semana empieza el lunes
   function finDeSemana(sem) { return ((sem + 1) * 7 - 3) * 86400000; }
   function premioTorneo(pos) { for (var i = 0; i < PREMIOS_TORNEO.length; i++) if (pos <= PREMIOS_TORNEO[i].hasta) return PREMIOS_TORNEO[i]; return PREMIOS_TORNEO[PREMIOS_TORNEO.length - 1]; }
@@ -7111,6 +7115,7 @@
       var yo = Cuentas.usuario().uid, i = lista.map(function (x) { return x.uid; }).indexOf(yo), pos = i >= 0 ? i + 1 : 101;
       var p = premioTorneo(pos);
       t.cobrada = sem; t.semana = semanaActual(); var hechos = t.puntos; t.puntos = 0; guardar(true);
+      if (p.gemas && hechos < MIN_GEMAS_TORNEO) { p = JSON.parse(JSON.stringify(p)); delete p.gemas; } // v8.38: las gemas solo con 30.000 puntos o más
       var items = (p.gemas ? [{ ico: '💎', n: p.gemas, nom: L('Gemas', 'Gems') }] : []).concat([{ ico: '🪙', n: p.oro, nom: T('r_oro') }]); // v8.07: sin línea de gemas vacía
       if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) });
       nuevoCorreo('sistema', '🏆 ' + L('Torneo de la semana: puesto ', 'Weekly tournament: place ') + (pos > 100 ? '100+' : pos), L('Torneo', 'Tournament'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos > 100 ? '100+' : '#' + pos], [L('Ganador', 'Winner'), lista[0] ? '🥇 ' + escaparHTML(lista[0].nombre || '?') + ' · ' + formatoNumero(Math.round(lista[0].puntos || 0)) : '—'], [L('Premio', 'Prize'), (p.gemas ? p.gemas + ' 💎 · ' : '') + formatoNumero(p.oro) + ' 🪙' + (p.objeto && OBJETOS[p.objeto] ? ' · ' + N(p.objeto) : '') + (p.piezas ? ' · ' + p.piezas + ' 🛡️' : '')]])); // v8.07
@@ -7292,12 +7297,13 @@
         var i = lista.map(function (x) { return x.uid; }).indexOf(yo), misP = t.semana === sem ? Math.round(t.puntos) : 0;
         var faltan = Math.max(0, finDeSemana(sem) - Date.now()) / 1000;
         var como = [[L('Ganar una oleada', 'Win a wave'), PUNTOS_TORNEO.oleada], [L('Ganar un ataque a otro jugador', 'Win an attack on a player'), PUNTOS_TORNEO.ataque], [L('Vencer un campamento bárbaro', 'Beat a barbarian camp'), PUNTOS_TORNEO.campamentos],
+          [L('Gastar 1 gema', 'Spend 1 gem'), PUNTOS_TORNEO.gema], [L('Comprar en la Tienda (por US$ 1)', 'Buy in the Shop (per US$ 1)'), PUNTOS_TORNEO.dolar],
           [L('Terminar una obra', 'Finish a building'), PUNTOS_TORNEO.obra], [L('Recolectar un campo', 'Collect a field'), PUNTOS_TORNEO.recolectas], [L('Usar un acelerador', 'Use a speed-up'), PUNTOS_TORNEO.acel], [L('Entrenar una tropa', 'Train a troop'), PUNTOS_TORNEO.tropas]];
         // v8.37: Torneo semanal renovado: sin «undefined» (las gemas no se regalan), podio con sus premios dibujados, mejores arriba,
         // barra hacia el siguiente puesto, iconos del juego y el mismo formato de tiempo que el botón de la ciudad
         function IMG(n, c) { return '<img class="' + (c || 'tq-ico') + '" src="iconos/ui/' + n + '.webp" alt="">'; }
         function premiosHTML(p, grande) {
-          var h = '<span class="tq-pr">' + IMG('r_oro') + '<b>' + formatoNumero(p.oro || 0) + '</b><small>' + L('oro', 'gold') + '</small></span>';
+          var h = (p.gemas ? '<span class="tq-pr tq-gem">' + IMG('r_gemas') + '<b>' + formatoNumero(p.gemas) + '</b><small>' + L('gemas', 'gems') + '</small></span>' : '') + '<span class="tq-pr">' + IMG('r_oro') + '<b>' + formatoNumero(p.oro || 0) + '</b><small>' + L('oro', 'gold') + '</small></span>';
           if (p.objeto && OBJETOS[p.objeto]) h += '<span class="tq-pr">' + (ICONOS_IMG && ICONOS_IMG[p.objeto] ? IMG(ICONOS_IMG[p.objeto]) : '<i>' + OBJETOS[p.objeto].icono + '</i>') + '<b>×1</b><small>' + escaparHTML(N(p.objeto)) + '</small></span>';
           if (p.piezas) h += '<span class="tq-pr">' + IMG('q_pechera_sol') + '<b>×' + p.piezas + '</b><small>' + L('Pieza de armadura mítica', 'Mythic armor piece') + '</small></span>';
           if (p.mitico) h += '<span class="tq-pr tq-mit">' + (grande ? '<span class="tq-heroes">' + ['leon', 'fenix', 'titan', 'aguila'].map(function (k) { return IMG('h_' + k, 'tq-h'); }).join('') + '</span>' : IMG('h_leon')) + '<b>×1</b><small>' + L('Héroe mítico', 'Mythic hero') + '</small></span>';
@@ -7311,13 +7317,14 @@
         else if (i > 0) { meta = Math.max(misP + 1, (lista[i - 1].puntos || 0) + 1); txtMeta = L('Te faltan ', 'You need ') + formatoNumero(meta - misP) + L(' puntos para el puesto #', ' points for place #') + i; }
         else { meta = lista.length >= 50 ? (lista[lista.length - 1].puntos || 0) + 1 : Math.max(1, lista.length ? (lista[lista.length - 1].puntos || 0) : 1); txtMeta = L('Te faltan ', 'You need ') + formatoNumero(Math.max(0, meta - misP)) + L(' puntos para entrar al ranking', ' points to enter the ranking'); }
         var barra = '<div class="tq-barra"><i style="width:' + (i === 0 ? 100 : Math.min(100, Math.round(misP / Math.max(1, meta) * 100))) + '%"></i></div><p class="nota">' + txtMeta + '</p>';
-        var ICO_COMO = ['b_campana', 'b_mundo', 'e_relevo', 'b_edificios', 'e_granja', 'o_acel', 'e_cuartel'];
+        var ICO_COMO = ['b_campana', 'b_mundo', 'e_relevo', 'r_gemas', 'b_tienda', 'b_edificios', 'e_granja', 'o_acel', 'e_cuartel'];
         var top10 = lista.slice(0, 10), mas = lista.slice(10);
         function filas(l, desde) { return l.map(function (a, k) { return filaRanking(desde + k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span>', a.uid === yo); }).join(''); }
         listo('<div class="carta rk-tuyo"><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b><span class="chip">' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</span>' +
           '<p class="reloj-panel">⏳ ' + L('Termina en ', 'Ends in ') + fmtLargo(faltan) + '</p>' + barra + '</div>' +
           '<div class="carta" style="margin-top:8px"><h3>🏆 ' + L('Mejores de la semana', 'Top of the week') + '</h3>' + (top10.length ? filas(top10, 0) : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>' +
           '<div class="carta tq-premios" style="margin-top:8px"><h3>🎁 ' + L('Premios del lunes', 'Monday prizes') + '</h3>' + podio + resto +
+          '<p class="tq-aviso">💎 ' + L('Torneo de gemas: el podio gana 2.000, 1.200 y 800 gemas, pero solo si llegas a ' + formatoNumero(MIN_GEMAS_TORNEO) + ' puntos. Entrena mucho, acelera y compra para lograrlo.', 'Gem tournament: the podium wins 2,000, 1,200 and 800 gems, but only with at least ' + formatoNumero(MIN_GEMAS_TORNEO) + ' points. Train hard, speed up and buy to make it.') + '</p>' +
           '<p class="nota">' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila. Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle. You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>' +
           '<div class="carta" style="margin-top:8px"><h3>' + L('Cómo ganar puntos', 'How to earn points') + '</h3>' + como.map(function (c, k) { return '<div class="fila-miembro tq-como">' + IMG(ICO_COMO[k] || 'b_campana') + '<b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</div>' +
           (mas.length ? '<div class="carta" style="margin-top:8px"><h3>' + L('Resto del ranking', 'Rest of the ranking') + '</h3>' + filas(mas, 10) + '</div>' : ''));
@@ -10207,7 +10214,7 @@
   // v8.19 (VIP opción 3): puntos para llegar a cada VIP (VIP_PUNTOS[i] = puntos para VIP i+1). Con menos de 200 eres VIP 0.
   var VIP_PUNTOS = [200, 600, 1500, 3000, 5000, 8000, 12000, 17000, 24000, 33000, 45000, 60000, 80000, 105000, 135000];
   var VIP_DIARIO = 15, VIP_POR_DOLAR = 100, VIP_GEMAS = 10; // +15 al día · +100 por cada US$ 1 · +1 por cada 10 gemas gastadas
-  function vipGemasGastadas(g) { if (!g || g <= 0 || estado.gemasInfinitas) return; var v = vip(); v.gr = (v.gr || 0) + g; var n = Math.floor(v.gr / VIP_GEMAS); if (n > 0) { v.gr -= n * VIP_GEMAS; vipSumar(n); } }
+  function vipGemasGastadas(g) { if (!g || g <= 0 || estado.gemasInfinitas) return; sumarTorneo(g * PUNTOS_TORNEO.gema); /* v8.38 */ var v = vip(); v.gr = (v.gr || 0) + g; var n = Math.floor(v.gr / VIP_GEMAS); if (n > 0) { v.gr -= n * VIP_GEMAS; vipSumar(n); } }
   function vipMinGratis(n) { return 5 + 2 * ((n || vipNivel()) - 1); }
   function vipProd(n) { return 0.03 * (n || vipNivel()); }
   function vipCombate(n) { return Math.max(0, (n || vipNivel()) - 5) * 0.01; }
@@ -11625,7 +11632,7 @@
           if (c.gemas > 0) { estado.gemas = (estado.gemas || 0) + c.gemas; items.push({ ico: '💎', n: c.gemas, nom: L('gemas', 'gems') }); }
           Object.keys(c.objetos || {}).forEach(function (k) { if (!OBJETOS[k]) return; estado.mochila[k] = (estado.mochila[k] || 0) + c.objetos[k]; items.push({ ico: OBJETOS[k].icono, n: c.objetos[k], nom: N(k) }); });
           var usdC = +c.usd || (window.Pagos && Pagos.CATALOGO && c.sku && Pagos.CATALOGO[c.sku] ? +Pagos.CATALOGO[c.sku].usd : 0) || 0; // v8.19: +100 VIP por cada US$ 1
-          if (usdC > 0) vipSumar(Math.round(usdC * VIP_POR_DOLAR));
+          if (usdC > 0) { vipSumar(Math.round(usdC * VIP_POR_DOLAR)); sumarTorneo(Math.round(usdC * PUNTOS_TORNEO.dolar)); } // v8.38
           guardar(true); actualizarHUD(); sonar('gemas');
           mostrarRecompensas('💳 ' + L('¡Gracias por tu compra!', 'Thanks for your purchase!'), items);
         }).catch(function () {});

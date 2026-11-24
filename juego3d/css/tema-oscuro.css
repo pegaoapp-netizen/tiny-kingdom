@@ -1475,3 +1475,8 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .tq-fila { display: flex; align-items: center; gap: 8px; margin: 6px 0; } .tq-fila > b { min-width: 64px; }
 .tq-como { gap: 8px; } .tq-como b { flex: 1; }
 .rk-tuyo .tq-barra { width: 100%; align-self: stretch; flex: none; min-height: 8px; }
+
+/* v8.38: torneo de gemas */
+.tq-pr.tq-gem { background: linear-gradient(135deg, rgba(60,200,120,.35), rgba(10,80,40,.45)); border: 1px solid #5fe08a; }
+.tq-pr.tq-gem b { color: #9dffbe; }
+.tq-aviso { margin: 8px 0 4px; padding: 7px 9px; border-radius: 9px; background: rgba(20,110,60,.35); border: 1px solid #5fe08a; color: #dfffe9; font: 700 12px system-ui, sans-serif; }
