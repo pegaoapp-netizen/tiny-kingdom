@@ -2659,7 +2659,7 @@
   function segPVE(dist) { return Math.max(20, Math.min(120, 15 + dist * 1.5)); } // v8.13
   function marcharA(dest, txt, alLlegar, desc) {
     // v7.33: varias marchas a la vez también contra aldeas, bestias y casillas (una por nivel del Punto de reunión, máximo 12)
-    if (totalMarchando() >= maxMarchas()) { consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marcha' + (maxMarchas() > 1 ? 's' : '') + ' en camino. Sube el Punto de reunión para mandar más a la vez (una por nivel).', 'You already have ' + maxMarchas() + ' march(es) out. Upgrade the Rally point to send more (one per level).')); sonar('error'); return; }
+    if (totalMarchando() >= maxMarchas()) { consejoTemporal(avisoMarchasLlenas()); sonar('error'); return; }
     var yo = celdaDe(miLugar().x, miLugar().y), dist = Math.hypot(dest.x - yo.x, dest.y - yo.y);
     var seg = segPVE(dist), ahora = Date.now(); // v8.13: antes 4-15 s; con 10 marchas las primeras ya habían vuelto
     var m = { id: 'p' + (++idPVE), de: { x: aCoord(yo.x), y: aCoord(yo.y) }, a: { x: aCoord(dest.x), y: aCoord(dest.y) }, sale: ahora, llega: ahora + seg * 1000, txt: txt, alLlegar: alLlegar, seg: seg };
@@ -9763,6 +9763,8 @@
     return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')) * (1 + mh / 100) * (1 + 0.03 * bonifAl('marcha'))); // v7.84: set del dragón
   }
   function maxMarchas() { return estado.dueno ? 12 : Math.min(12, Math.max(1, nivelRelevo())); } // v8.13: los dueños, todo a full
+  /* v8.53: por qué no te deja marchar, con el detalle de qué ocupa cada marcha */
+  function avisoMarchasLlenas() { var at = marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length, ac = guarniciones().length; return '🚩 ' + L('Tienes ' + maxMarchas() + ' de ' + maxMarchas() + ' marchas ocupadas', 'All ' + maxMarchas() + ' marches are busy') + ' (' + (at ? at + ' ' + L('en camino', 'on the way') : '') + (at && ac ? ' · ' : '') + (ac ? ac + ' ' + L('acampadas ⛺', 'camped ⛺') : '') + '). ' + (ac ? L('Llama a las acampadas (⛺ ↩ en Marchar) para liberar una. ', 'Recall camped ones (⛺ ↩ in March) to free one. ') : '') + L('Con cada nivel del Punto de reunión tienes una marcha más (ahora Nv ' + nivelRelevo() + ').', 'Each Rally point level gives one more march (now Lv ' + nivelRelevo() + ').'); }
   function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length + guarniciones().length; } // v8.13: las acampadas ocupan una marcha
   function marchasActivas() { return marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }); }
   // tropas que ya van en otra marcha (no se pueden mandar dos veces)
@@ -9949,7 +9951,7 @@
         if (total() <= 0) { consejoTemporal(L('Elige al menos una tropa.', 'Choose at least one troop.')); sonar('error'); return; }
         var f = fuerza(); b.disabled = true;
         // v7.18: varias marchas a la vez según el Punto de reunión (antes la nueva cancelaba la anterior)
-        if (totalMarchando() >= maxMarchas()) { b.disabled = false; consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marchas en camino. Sube el Punto de reunión para mandar más a la vez.', 'You already have ' + maxMarchas() + ' marches out. Upgrade the Rally point to send more.')); sonar('error'); return; }
+        if (totalMarchando() >= maxMarchas()) { b.disabled = false; consejoTemporal(avisoMarchasLlenas()); sonar('error'); return; }
         if (total() > tamanoMarcha(sel.heroe)) { b.disabled = false; consejoTemporal(L('Te pasaste del límite de la marcha.', 'Over the march limit.')); sonar('error'); return; }
         estado.ultimaMarcha = { heroe: sel.heroe, tropas: JSON.parse(JSON.stringify(sel.tropas)) };
         cerrar(); realizarAtaque(a, f, Math.min(2, carretasLibres())); return;
