@@ -7323,7 +7323,7 @@
     } else {
       var t = torneo(), sem = semanaActual();
       if (t.semana === sem) publicarTorneo();
-      Cuentas.topTorneo(sem, 50).then(function (lista) {
+      Cuentas.topTorneo(sem, 100).then(function (lista) { /* v8.42: los 100 mejores, por páginas */
         var i = lista.map(function (x) { return x.uid; }).indexOf(yo), misP = t.semana === sem ? Math.round(t.puntos) : 0;
         var faltan = Math.max(0, finDeSemana(sem) - Date.now()) / 1000;
         var como = [[L('Ganar una oleada', 'Win a wave'), PUNTOS_TORNEO.oleada], [L('Ganar un ataque a otro jugador', 'Win an attack on a player'), PUNTOS_TORNEO.ataque], [L('Vencer un campamento bárbaro', 'Beat a barbarian camp'), PUNTOS_TORNEO.campamentos],
@@ -7348,16 +7348,28 @@
         else { meta = lista.length >= 50 ? (lista[lista.length - 1].puntos || 0) + 1 : Math.max(1, lista.length ? (lista[lista.length - 1].puntos || 0) : 1); txtMeta = L('Te faltan ', 'You need ') + formatoNumero(Math.max(0, meta - misP)) + L(' puntos para entrar al ranking', ' points to enter the ranking'); }
         var barra = '<div class="tq-barra"><i style="width:' + (i === 0 ? 100 : Math.min(100, Math.round(misP / Math.max(1, meta) * 100))) + '%"></i></div><p class="nota">' + txtMeta + '</p>';
         var ICO_COMO = ['b_campana', 'b_mundo', 'e_relevo', 'r_gemas', 'b_tienda', 'b_edificios', 'e_granja', 'o_acel', 'e_cuartel'];
-        var top10 = lista.slice(0, 10), mas = lista.slice(10);
-        function filas(l, desde) { return l.map(function (a, k) { return filaRanking(desde + k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span>', a.uid === yo); }).join(''); }
-        listo('<div class="carta rk-tuyo"><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b><span class="chip">' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</span>' +
-          '<p class="reloj-panel">⏳ ' + L('Termina en ', 'Ends in ') + fmtLargo(faltan) + '</p>' + barra + '</div>' +
-          '<div class="carta" style="margin-top:8px"><h3>🏆 ' + L('Mejores de la semana', 'Top of the week') + '</h3>' + (top10.length ? filas(top10, 0) : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>' +
-          '<div class="carta tq-premios" style="margin-top:8px"><h3>🎁 ' + L('Premios del lunes', 'Monday prizes') + '</h3>' + podio + resto +
-          '<p class="tq-aviso">💎 ' + L('Torneo de gemas: el podio gana 2.000, 1.200 y 800 gemas, pero solo si llegas a ' + formatoNumero(MIN_GEMAS_TORNEO) + ' puntos. Entrena mucho, acelera y compra para lograrlo.', 'Gem tournament: the podium wins 2,000, 1,200 and 800 gems, but only with at least ' + formatoNumero(MIN_GEMAS_TORNEO) + ' points. Train hard, speed up and buy to make it.') + '</p>' +
-          '<p class="nota">' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila. Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle. You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>' +
-          '<details class="carta tq-det" style="margin-top:8px"><summary>' + L('Cómo ganar puntos', 'How to earn points') + '</summary>' + como.map(function (c, k) { return '<div class="fila-miembro tq-como">' + IMG(ICO_COMO[k] || 'b_campana') + '<b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</details>' + // v8.39: cerrado al abrir
-          (mas.length ? '<div class="carta" style="margin-top:8px"><h3>' + L('Resto del ranking', 'Rest of the ranking') + '</h3>' + filas(mas, 10) + '</div>' : ''));
+        // v8.42: como un evento: cabecera con «Ver premios», tu premio, tabla por páginas (8 por página) y tu fila fija abajo
+        var miPremio = null; if (misP > 0) { var pos = i >= 0 ? i + 1 : 1e8; miPremio = PREMIOS_TORNEO.filter(function (q) { return pos <= q.hasta; })[0] || PREMIOS_TORNEO[PREMIOS_TORNEO.length - 1]; if (miPremio && miPremio.gemas && misP < MIN_GEMAS_TORNEO) { miPremio = JSON.parse(JSON.stringify(miPremio)); delete miPremio.gemas; } }
+        var POR_PAG = 8, pags = Math.max(1, Math.ceil(lista.length / POR_PAG));
+        if (abrirPanelRanking.tqPag === undefined || abrirPanelRanking.tqPag >= pags) abrirPanelRanking.tqPag = i >= 0 ? Math.floor(i / POR_PAG) : 0;
+        function tabla() {
+          var pg = abrirPanelRanking.tqPag || 0;
+          return '<div class="ev-tabla"><div class="ev-th"><span>' + L('Puesto', 'Place') + '</span><span>' + L('Nombre', 'Name') + '</span><span>' + L('Puntos', 'Points') + '</span></div>' +
+            (lista.length ? lista.slice(pg * POR_PAG, pg * POR_PAG + POR_PAG).map(function (a, k) { var n = pg * POR_PAG + k + 1; return '<div class="ev-tr' + (a.uid === yo ? ' yo' : '') + (n % 2 ? '' : ' par') + '"><span>' + (['🥇', '🥈', '🥉'][n - 1] || n) + '</span><span><b>' + escaparHTML(a.nombre || '?') + '</b>' + (a.alianza ? '<small>[' + escaparHTML(a.alianza) + ']</small>' : '') + '</span><span>' + formatoNumero(a.puntos || 0) + '</span></div>'; }).join('') : '<p class="iv-vacio">' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') +
+            '<div class="ev-yo"><span>' + (i >= 0 ? i + 1 : (misP > 0 ? '100+' : '—')) + '</span><span><b>' + escaparHTML(Cuentas.nombrePublico ? Cuentas.nombrePublico() : L('Tú', 'You')) + '</b></span><span>' + formatoNumero(misP) + '</span></div></div>' +
+            '<div class="ev-pie"><small>' + L('Última actualización: ', 'Last update: ') + new Date().toTimeString().slice(0, 5) + '</small></div>' +
+            '<div class="ev-pag"><button data-accion="tq-pag" data-p="0">⏮</button><button data-accion="tq-pag" data-p="' + Math.max(0, pg - 1) + '">◀</button><span>' + (pg + 1) + ' / ' + pags + '</span><button data-accion="tq-pag" data-p="' + Math.min(pags - 1, pg + 1) + '">▶</button><button data-accion="tq-pag" data-p="' + (pags - 1) + '">⏭</button></div>';
+        }
+        abrirPanelRanking.tqTabla = tabla;
+        abrirPanelRanking.tqPremios = '<div class="tq-premios">' + podio + resto + '<p class="tq-aviso">💎 ' + L('Torneo de gemas: el podio gana 2.000, 1.200 y 800 gemas, pero solo si llegas a ' + formatoNumero(MIN_GEMAS_TORNEO) + ' puntos.', 'Gem tournament: the podium wins 2,000, 1,200 and 800 gems, but only with at least ' + formatoNumero(MIN_GEMAS_TORNEO) + ' points.') + '</p>' +
+          '<p class="nota">' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila. Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle. You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>';
+        abrirPanelRanking.tqComo = como.map(function (c, k) { return '<div class="fila-miembro tq-como">' + IMG(ICO_COMO[k] || 'b_campana') + '<b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('');
+        listo('<div class="ev-cab"><div class="ev-ico">🏆</div><div class="ev-dat"><b>' + L('Torneo semanal', 'Weekly tournament') + '</b><small>' + L('¡Ganan los que más puntos sumen esta semana!', 'Whoever scores the most points this week wins!') + '</small>' +
+          '<div class="ev-reloj"><span>' + L('Termina en', 'Ends in') + '</span><b>⏳ ' + fmtLargo(faltan) + '</b></div></div><button class="ev-info" data-accion="tq-como" title="' + L('Cómo ganar puntos', 'How to earn points') + '">i</button></div>' +
+          '<button class="ev-ver" data-accion="tq-ver-premios">🎁 ' + L('Ver premios', 'See prizes') + '</button>' +
+          '<div class="ev-tuyo"><small>' + L('Tu premio ahora', 'Your prize now') + '</small>' + (miPremio ? '<div class="tq-prs">' + premiosHTML(miPremio, false) + '</div>' : '<p class="nota">' + L('Suma al menos 1 punto para ganar premio.', 'Score at least 1 point to win a prize.') + '</p>') + barra + '</div>' +
+          '<p class="nota ev-nota">' + L('Toca «Ver premios» para ver lo que gana cada puesto.', 'Tap «See prizes» to see what each place wins.') + '</p>' +
+          '<div id="tq-tabla">' + tabla() + '</div>');
       }).catch(error);
     }
   }
@@ -12441,6 +12453,8 @@
     else if (a === 'lz-tog') { var lz = abrirLanzarHeroes.sel || [], lzi = b.getAttribute('data-id'), lzk = lz.indexOf(lzi); if (lzk >= 0) lz.splice(lzk, 1); else lz.push(lzi); sonar('click'); abrirLanzarHeroes.pintar(); } // v8.40
     else if (a === 'lz-tog-a') { var lza = abrirLanzarHeroes.selA || [], lzai = b.getAttribute('data-id'), lzak = lza.indexOf(lzai); if (lzak >= 0) lza.splice(lzak, 1); else lza.push(lzai); sonar('click'); abrirLanzarHeroes.pintar(); } /* v8.41 */
     else if (a === 'lz-guardar') { b.disabled = true; Cuentas.guardarConfigHeroes(abrirLanzarHeroes.sel, abrirLanzarHeroes.selA).then(function () { heroesLanzados = abrirLanzarHeroes.sel.slice(); armadurasLanzadas = (abrirLanzarHeroes.selA || armadurasLanzadas).slice(); sonar('moneda'); consejoTemporal('✅ ' + L('Héroes lanzados guardados: ', 'Released heroes saved: ') + heroesLanzados.length); }).catch(function (er) { b.disabled = false; consejoTemporal(L('No se pudo guardar', 'Could not save') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
+    else if (a === 'tq-pag') { sonar('click'); abrirPanelRanking.tqPag = +b.getAttribute('data-p'); var tqt = $('tq-tabla'); if (tqt && abrirPanelRanking.tqTabla) tqt.innerHTML = abrirPanelRanking.tqTabla(); } /* v8.42 */
+    else if (a === 'tq-ver-premios' || a === 'tq-como') { sonar('click'); var tqm = $('tq-modal'); if (tqm) tqm.remove(); tqm = document.createElement('div'); tqm.id = 'tq-modal'; tqm.innerHTML = '<div class="tqm-caja"><div class="tqm-cab"><b>' + (a === 'tq-como' ? L('Cómo ganar puntos', 'How to earn points') : '🎁 ' + L('Premios por puesto', 'Prizes by place')) + '</b><button class="tqm-x">✕</button></div><div class="tqm-cuerpo">' + (a === 'tq-como' ? abrirPanelRanking.tqComo : abrirPanelRanking.tqPremios) + '</div></div>'; document.body.appendChild(tqm); tqm.addEventListener('click', function (ev) { if (ev.target === tqm || ev.target.closest('.tqm-x')) tqm.remove(); }); } /* v8.42 */
     else if (a === 'tm-sub') { sonar('click'); htmlTemporada.sub = b.getAttribute('data-s'); document.querySelectorAll('.tm-subs button').forEach(function (x) { x.classList.toggle('activo', x === b); }); document.querySelectorAll('.tm-sec').forEach(function (x) { x.hidden = x.getAttribute('data-s') !== htmlTemporada.sub; }); } // v8.39
     else if (a === 'reparar-defensas') { sonar('click'); repararDefensas(); } // v8.35
     else if (a === 'ir-atacante') { sonar('click'); irAlAtacante(b.getAttribute('data-uid')); } // v8.33
