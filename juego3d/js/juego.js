@@ -10869,11 +10869,13 @@
         }
       }
       if (s.k !== 'llave') { estado.mochila[s.k] = (estado.mochila[s.k] || 0) + 1; ganados.push({ ico: OBJETOS[s.k].icono, nom: N(s.k), cat: subcatObjeto(s.k) }); }
+      if (s.k !== 'llave') { // v8.09: si cae en la llave, solo da la llave (sin premios extra)
       if (Math.random() < 0.12) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; ganados.push({ ico: OBJETOS.vip_100.icono, nom: N('vip_100'), cat: 'reliquia', extra: true }); } // v7.79
       if (Math.random() < 0.1) { estado.mochila.carreta_sum = (estado.mochila.carreta_sum || 0) + 1; ganados.push({ ico: OBJETOS.carreta_sum.icono, nom: N('carreta_sum'), cat: 'tropas', extra: true }); } // v7.86
       var rAm = Math.random(), kAm = rAm < 0.02 ? 'amatista_500' : rAm < 0.1 ? 'amatista_100' : null; // v7.97: Amatista rúnica en la Ruleta Élite
       if (kAm) { estado.mochila[kAm] = (estado.mochila[kAm] || 0) + 1; ganados.push({ ico: OBJETOS[kAm].icono, nom: N(kAm), cat: 'recursos', gordo: kAm === 'amatista_500', extra: true }); }
       if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true, extra: true }); }
+      }
       if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
       else r.sinLlave++;
     }
@@ -13052,11 +13054,11 @@
     var m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m || m.resuelto) return;
     var v = $('acelerar-elegir'); if (v) v.remove();
     var falta = (m.llega - Date.now()) / 1000, gem = estado.gemas || 0, moch = estado.mochila || {};
-    if (falta < 17) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; }
+    if (falta < 2) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; } // v8.09
     var lista = ['marcha_rapida'].concat(ACELERADORES.filter(function (k) { return !OBJETOS[k].soloInv; }).sort(function (a, b) { return OBJETOS[a].segundos - OBJETOS[b].segundos; }));
     var tengo = lista.filter(function (k) { return (moch[k] || 0) > 0; });
     var filas = (tengo.length ? tengo : lista).map(function (k) {
-      var n = moch[k] || 0, o = OBJETOS[k] || {}, it = TIENDA.filter(function (x) { return x.id === k; })[0], mitad = k === 'marcha_rapida', cubre = !mitad && o.segundos >= falta - 15;
+      var n = moch[k] || 0, o = OBJETOS[k] || {}, it = TIENDA.filter(function (x) { return x.id === k; })[0], mitad = k === 'marcha_rapida', cubre = !mitad && o.segundos >= falta;
       return '<div class="ac-fila' + (cubre ? ' ac-cubre' : '') + '"><span class="ac-ico">' + (o.icono || '🏇') + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>' + L('Tienes ', 'Owned ') + '×' + formatoNumero(n) + ' · ' + (mitad ? '−50 %' : '−' + fmtTiempo(o.segundos)) + (cubre ? ' · <em>' + L('¡llegan ya!', 'arrive now!') + '</em>' : '') + '</span></div><div class="ac-bts">' +
         (n > 0 ? '<button class="comprar mini naranja" data-acm="' + k + '">' + L('Usar', 'Use') + '</button>' : it ? '<button class="comprar mini verde ac-cyu" data-acm-cyu="' + k + '"' + (gem >= it.gemas ? '' : ' disabled') + '><small>' + L('Compra y usa', 'Buy & use') + '</small><span><span class="ico gema"></span>' + it.gemas + '</span></button>' : '') + '</div></div>';
     }).join('');
@@ -13074,7 +13076,7 @@
       var it = TIENDA.filter(function (x) { return x.id === k; })[0];
       if (compra && (!it || (estado.gemas || 0) < it.gemas)) { sonar('error'); return; }
       var ahoraF = m.llega - Date.now(), quita = k === 'marcha_rapida' ? ahoraF / 2 : OBJETOS[k].segundos * 1000;
-      var nueva = Math.round(Math.max(Date.now() + 16000, m.llega - quita));
+      var nueva = Math.round(Math.max(Date.now() + 1000, m.llega - quita)); // v8.09: quita el tiempo exacto (15 min con 15 min faltando = llega ya)
       b.disabled = true;
       Cuentas.acelerarMarcha(id, nueva).then(function () {
         if (compra) estado.gemas -= it.gemas; else { moch[k]--; if (moch[k] <= 0) delete moch[k]; }

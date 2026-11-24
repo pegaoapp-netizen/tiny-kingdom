@@ -206,7 +206,7 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['llega'])
           && request.resource.data.llega is int
           && request.resource.data.llega < resource.data.llega
-          && request.resource.data.llega >= request.time.toMillis() + 15000)
+          && request.resource.data.llega >= request.time.toMillis() - 10000) // v8.09: un acelerador que cubre todo el tiempo hace llegar la marcha ya
         // el defensor se muda con un portal antes de que llegue (o el atacante cancela su marcha): se cancela sin botín ni bajas
         || ((resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid)
           && resource.data.get('resuelto', true) == false

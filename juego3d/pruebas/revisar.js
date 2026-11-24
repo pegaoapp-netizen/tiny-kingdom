@@ -89,6 +89,8 @@ if (D.TEXTOS && D.TEXTOS.es && D.TEXTOS.en) {
 // 8) regla del dueño: las gemas NO se regalan (ningún cofre, saco, paquete ni el Galeón da gemas)
 if (D.OBJETOS) for (const [k, o] of Object.entries(D.OBJETOS)) {
   if ((o.cofre && o.cofre.gemas) || (o.da && o.da.gemas) || (o.paquete && o.paquete.gemas)) err('El objeto "' + k + '" regala gemas, y las gemas no se regalan (regla del dueño).');
+  // v8.09: ningún cofre ni paquete puede traer llaves (las llaves solo salen en la Ruleta)
+  if (JSON.stringify([o.cofre || {}, o.paquete || {}, o.da || {}]).indexOf('llave') >= 0) err('El objeto "' + k + '" trae llaves dentro, y los cofres no pueden traer llaves (regla del dueño).');
 }
 try {
   const jg = fs.readFileSync(path.join(RAIZ, 'js', 'juego.js'), 'utf8');
