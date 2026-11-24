@@ -5956,10 +5956,13 @@
     // ---- barricadas: barra de vida mirando a la cámara ----
     barricadas.forEach(function (b) { if (b.barra) b.barra.quaternion.copy(camara.quaternion); });
     // ---- investigación en curso ----
+    // v8.03: la investigación avanza con la HORA REAL (también con el juego cerrado o el teléfono bloqueado), no con los cuadros dibujados
     if (estado.investigando) {
-      var aca = academiaLista();
-      if (aca) estado.investigando.t += dt * rapidezAcademia();
-      if (estado.investigando.t >= estado.investigando.total) terminarInvestigacion();
+      var aca = academiaLista(), iiR = estado.investigando, ahoraR = Date.now();
+      if (!iiR.ultimo) iiR.ultimo = ahoraR;
+      var pasoR = Math.max(0, Math.min(30 * 86400, (ahoraR - iiR.ultimo) / 1000)); iiR.ultimo = ahoraR;
+      if (aca && pasoR > 0) iiR.t += pasoR * rapidezAcademia();
+      if (iiR.t >= iiR.total) terminarInvestigacion();
     }
     // ---- muralla en construcción ----
     if (obraMuralla) {
@@ -8263,7 +8266,7 @@
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>✨ ' + L('Ascensión de héroe', 'Hero ascension') + ' ' + k + '/' + ASC_HEROE.length + '</b></div>' +
       '<p>' + L('Sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + '.', 'Raises the max level from ' + tope + ' to ' + (tope + 10) + '.') + '</p><ul class="kb-req">' +
       fila(okN, L('Nivel ', 'Level ') + tope + ' (' + L('tiene ', 'has ') + e.nivel + ')') + fila(tR >= 1, OBJETOS[q.r].icono + ' ' + N(q.r) + ' ×1 (' + L('tienes ', 'you have ') + tR + ')') + fila(tC >= q.n, OBJETOS[q.c].icono + ' ' + N(q.c) + ' ×' + q.n + ' (' + L('tienes ', 'you have ') + tC + ')') + '</ul>' +
-      '<button class="comprar dorado" data-accion="heroe-ascender" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>✨ ' + L('Ascender', 'Ascend') + '</button></div>';
+      '<button class="comprar dorado" data-accion="heroe-ascender" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>✨ ' + L('Ascender', 'Ascend') + '</button></div>';
   }
   function htmlMaestriaHeroe(id) {
     var e = estado.heroes[id], m = e.maes || 0, tope = topeNivel(id);
@@ -8274,16 +8277,17 @@
     Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) ok = false; filas += fila(t >= c[k], OBJETOS[k].icono + ' ' + N(k) + ' ×' + c[k] + ' (' + L('tienes ', 'you have ') + t + ')'); });
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>👑 ' + L('Maestría', 'Mastery') + ' ' + m + '/' + MAESTRIA_MAX + '</b></div>' +
       '<p>' + L('Ascensión completa. La Maestría sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + ' (sin techo) y con cada nivel sigue ganando poder.', 'Ascension complete. Mastery raises the max level from ' + tope + ' to ' + (tope + 10) + ' (no limit 200); every level keeps adding power.') + '</p><ul class="kb-req">' + filas + '</ul>' +
-      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
+      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
   }
   function maestriaHeroe(id) {
     var e = estado.heroes[id]; if (!e || (e.asc || 0) < ASC_HEROE.length) return;
     var m = e.maes || 0; if (m >= MAESTRIA_MAX) return;
     var c = costoMaestria(m);
-    if (!estado.dueno) {
-      if (e.nivel < topeNivel(id) || Object.keys(c).some(function (k) { return (estado.mochila[k] || 0) < c[k]; })) { consejoTemporal(L('Te falta algo para la Maestría.', 'Something is missing for Mastery.')); sonar('error'); return; }
-      Object.keys(c).forEach(function (k) { estado.mochila[k] -= c[k]; });
-    }
+    // v8.03: se gasta lo que marca, en todas las cuentas (también la del dueño); si falta algo, no sube y dice qué falta
+    var faltaM = []; if (e.nivel < topeNivel(id)) faltaM.push(L('nivel ', 'level ') + topeNivel(id));
+    Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) faltaM.push(N(k) + ' ×' + (c[k] - t)); });
+    if (faltaM.length) { consejoTemporal('🔒 ' + L('Falta: ', 'Missing: ') + faltaM.join(', ')); sonar('error'); return; }
+    Object.keys(c).forEach(function (k) { estado.mochila[k] -= c[k]; });
     e.maes = m + 1; sonar('magia'); chispas(castilloPos.clone().setY(8), 0xffd24a, 30, 5);
     consejoTemporal('👑 ' + NH(id) + ': ' + L('nivel máximo ', 'max level ') + topeNivel(id));
     guardar(true); abrirPanelHeroe(id);
@@ -8292,10 +8296,10 @@
     var e = estado.heroes[id]; if (!e || (e.estrellas || 1) < 5) return;
     var k = e.asc || 0; if (k >= ASC_HEROE.length) return;
     var q = ASC_HEROE[k];
-    if (!estado.dueno) {
-      if (e.nivel < topeNivel(id) || (estado.mochila[q.r] || 0) < 1 || (estado.mochila[q.c] || 0) < q.n) { consejoTemporal(L('Te falta algo para ascender.', 'Something is missing to ascend.')); sonar('error'); return; }
-      estado.mochila[q.r]--; estado.mochila[q.c] -= q.n;
-    }
+    // v8.03: se gasta en todas las cuentas y dice qué falta
+    var faltaA = []; if (e.nivel < topeNivel(id)) faltaA.push(L('nivel ', 'level ') + topeNivel(id)); if ((estado.mochila[q.r] || 0) < 1) faltaA.push(N(q.r) + ' ×1'); if ((estado.mochila[q.c] || 0) < q.n) faltaA.push(N(q.c) + ' ×' + (q.n - (estado.mochila[q.c] || 0)));
+    if (faltaA.length) { consejoTemporal('🔒 ' + L('Falta: ', 'Missing: ') + faltaA.join(', ')); sonar('error'); return; }
+    estado.mochila[q.r]--; estado.mochila[q.c] -= q.n;
     e.asc = k + 1; sonar('magia'); chispas(castilloPos.clone().setY(8), 0xc9a0ff, 30, 5);
     consejoTemporal('✨ ' + NH(id) + ': ' + L('nivel máximo ', 'max level ') + topeNivel(id));
     guardar(true); abrirPanelHeroe(id);
@@ -8484,7 +8488,7 @@
     var pz = darPieza(t, 'mitico'); if (pz) { pz.s = 'dragon'; pz.temp = 1; }
     return pz;
   }
-  var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 60;
+  var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 200; // v8.03: antes 60 (al llenarse se borraban piezas subidas)
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
   function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
   function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
@@ -8511,7 +8515,8 @@
     return b;
   }
   function darPieza(tipo, rareza) {
-    if (piezas().length >= EQ_MAX_PIEZAS) { var floja = piezas().filter(function (p) { return !p.h; }).sort(function (a, b) { return puntosPieza(a) - puntosPieza(b); })[0]; if (floja) piezas().splice(piezas().indexOf(floja), 1); else return null; }
+    // v8.03: si se llena, solo se va la pieza más floja que esté en nivel 1, sin poner y sin juego de héroe; las subidas o de un juego nunca se borran
+    if (piezas().length >= EQ_MAX_PIEZAS) { var floja = piezas().filter(function (p) { return !p.h && (p.n || 1) <= 1 && !p.s; }).sort(function (a, b) { return puntosPieza(a) - puntosPieza(b); })[0]; if (floja) piezas().splice(piezas().indexOf(floja), 1); }
     var p = { i: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: tipo || TIPOS_EQ[Math.floor(Math.random() * 6)], r: rareza || 'comun', n: 1, h: null };
     piezas().push(p);
     consejoTemporal(T('eq_nueva', { n: nombrePieza(p) }));
@@ -8641,7 +8646,9 @@
       }
     });
   }
-  (function () {
+  // v8.03: APAGADO. Quitar una pieza manteniendo el dedo o con doble toque hacía que, al tocar «Mejorar» rápido, la pieza se quitara sola.
+  // Ahora las piezas solo se quitan con el botón «Quitar» de su ventana.
+  if (false) (function () {
     var tmr = null, saltar = false, ult = { t: 0, el: null };
     function quitar(el) {
       var id = el.getAttribute('data-id'), t = el.getAttribute('data-t'), p = piezasDe(id).filter(function (x) { return x.t === t; })[0];
@@ -8758,6 +8765,7 @@
     var e = estado.heroes[id]; if (!e) return 0;
     e.exp = (e.exp || 0) + cant;
     var subio = 0, tope = topeNivel(id);
+    if (e.nivel > tope) { e.nivel = tope; e.exp = 0; } // v8.03
     while (e.nivel < tope && e.exp >= expNivel(e.nivel)) { e.exp -= expNivel(e.nivel); e.nivel++; subio++; }
     if (e.nivel >= tope) e.exp = Math.min(e.exp, expNivel(e.nivel));
     return subio;
@@ -9074,7 +9082,7 @@
     if (am && (estado.amatista || 0) < am && !estado.gemasInfinitas) { consejoTemporal('🔮 ' + L('Te faltan ' + formatoNumero(am - (estado.amatista || 0)) + ' de Amatista rúnica. Se gana en torneos, cofres de mejora III/IV, la Ruleta y combates de nivel alto.', 'You need ' + formatoNumero(am - (estado.amatista || 0)) + ' more Runic amethyst. Win it in tournaments, upgrade chests III/IV, the Wheel and high-level battles.')); sonar('error'); return; }
     if (!pagar(costoInvestigacion(sig))) return;
     if (am && !estado.gemasInfinitas) estado.amatista -= am; // v7.97
-    estado.investigando = { id: id, nivel: sig, t: 0, total: tiempoInvestigacion(sig) };
+    estado.investigando = { id: id, nivel: sig, t: 0, total: tiempoInvestigacion(sig), ultimo: Date.now() };
     sonar('martillo');
     guardar(true);
     reabrirPanel();
@@ -12672,6 +12680,7 @@
       var topeProt = Date.now() + BURBUJA.dias * 86400000;
       if (estado.escudoHasta > topeProt) estado.escudoHasta = topeProt;
       estado.heroes = g.heroes || { sol: { nivel: 1, estrellas: 1, frag: 0 } };
+      Object.keys(estado.heroes).forEach(function (hid) { var he = estado.heroes[hid]; if (he && HEROE[hid] && he.nivel > topeNivel(hid)) { he.nivel = topeNivel(hid); he.exp = 0; } }); // v8.03: ningún héroe por encima de su tope (Sir Sol salía en Nv 3960)
       estado.equipo = (g.equipo || ['sol']).filter(function (id) { return estado.heroes[id]; }).slice(0, 3);
       estado.reclutaGratis = g.reclutaGratis || '';
       estado.ofertaFrag = g.ofertaFrag || '';
@@ -12726,6 +12735,7 @@
       estado.castillo = g.castillo || maxEd;
       estado.obraCastillo = g.obraCastillo || null;
       estado.investigando = g.investigando || null;
+      if (estado.investigando && !estado.investigando.ultimo) estado.investigando.ultimo = g.actualizado || Date.now(); // v8.03: lo que pasó con el juego cerrado también cuenta
       estado.diario = g.diario || { ultimo: '', racha: 0 };
       estado.reserva = g.reserva || {};
       estado.formacion = g.formacion || null; estado.vistoGuiaMarcha = !!g.vistoGuiaMarcha;
