@@ -400,7 +400,8 @@ var Cuentas = (function () {
     enviarSoporte: function (d) { return db.collection('soporte').add(d); },
     misSoportes: function () { if (!usuario) return Promise.resolve([]); return db.collection('soporte').where('de', '==', usuario.uid).limit(30).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }); },
     todosSoportes: function () { return db.collection('soporte').orderBy('fecha', 'desc').limit(60).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }); },
-    responderSoporte: function (id, txt) { return db.collection('soporte').doc(id).update({ respuesta: String(txt).slice(0, 600), respondido: Date.now() }); },
+    responderSoporte: function (id, txt) { return db.collection('soporte').doc(id).update({ respuesta: String(txt).slice(0, 600), respondido: Date.now(), ia: false }); },
+    premioSoporteListo: function (id) { return db.collection('soporte').doc(id).update({ premioListo: Date.now() }); }, // v8.23
     borrarSoporte: function (id) { return db.collection('soporte').doc(id).delete(); },
     regalosRecibidos: function () {
       if (!usuario) return Promise.resolve([]);

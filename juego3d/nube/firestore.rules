@@ -398,9 +398,14 @@ service cloud.firestore {
         && request.resource.data.equipo is string && request.resource.data.equipo.size() <= 80
         && request.resource.data.fecha is int;
       allow update: if esDueno()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['respuesta', 'respondido'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['respuesta', 'respondido', 'ia'])
         && request.resource.data.respuesta is string && request.resource.data.respuesta.size() <= 600
-        && request.resource.data.respondido is int;
+        && request.resource.data.respondido is int
+        && request.resource.data.get('ia', false) == false;
+      // v8.23: el dueño marca que ya dio el premio que pidió la IA
+      allow update: if esDueno()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['premioListo'])
+        && request.resource.data.premioListo is int;
       allow delete: if esDueno();
     }
 

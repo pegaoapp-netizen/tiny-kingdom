@@ -69,3 +69,6 @@ exports.webhookStripe = onRequest({ secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECR
   }
   res.json({ recibido: true });
 });
+
+// v8.23: Soporte con IA (contesta sola y avisa al dueño si hay que dar premio)
+Object.assign(exports, require('./soporte-ia'));

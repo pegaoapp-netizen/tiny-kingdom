@@ -1424,3 +1424,8 @@ html body .st-base { opacity: .6; font-weight: 400; } html body .st-mas { font-s
 /* v8.22: respuesta automática de Soporte */
 .sp-resp.sp-auto { border-color: rgba(90,170,255,.45); background: rgba(40,80,140,.25); }
 .sp-resp.sp-auto p { margin: 4px 0 0; }
+
+/* v8.23: premio pendiente que marca la IA de Soporte */
+.sp-premio { margin-top: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(242,196,90,.6); background: rgba(120,80,10,.35); }
+.sp-premio p { margin: 4px 0 6px; }
+.sp-premio.listo { opacity: .6; border-color: rgba(79,208,106,.5); background: rgba(40,120,50,.25); }
