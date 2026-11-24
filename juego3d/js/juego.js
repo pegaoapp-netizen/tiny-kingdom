@@ -10756,12 +10756,16 @@
   var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4]];
   var RAROS_AZAR = ['cofre_oro', 'libro_gra', 'acel_8h'];
   var modoAzar = 'normal', azarGrid = null;
+  // v8.19: fichas gratis de cada día según tu nivel (Nv 1-9: 1 · Nv 10-19: 2 · Nv 20+: 3). Las gratis NO se acumulan: si no las usas hoy, se pierden.
+  // Las fichas compradas o ganadas (estado.fichas) sí se guardan.
+  function gratisPorNivel() { var n = nivelJugador(); return n >= 20 ? 3 : n >= 10 ? 2 : 1; }
+  function fichasGratisHoy() { var hoy = hoyTexto(); if (estado.gratisDia !== hoy) { estado.gratisDia = hoy; estado.gratisAzar = gratisPorNivel(); } return Math.max(0, estado.gratisAzar || 0); }
   function fichasAzar() {
-    // cada día te regalan 2 fichas de la suerte (se ganan jugando, no se pierden)
-    var hoy = hoyTexto(); if (estado.fichaDia !== hoy) { estado.fichaDia = hoy; estado.fichas = (estado.fichas || 0) + 2; }
     if (estado.gemasInfinitas) return 9999; // v6.65: la cuenta del dueño tiene todo ilimitado
-    return estado.fichas || 0;
+    return fichasGratisHoy() + (estado.fichas || 0);
   }
+  function gastarFichasAzar(c) { if (estado.gemasInfinitas) return; var g = fichasGratisHoy(), deG = Math.min(g, c); estado.gratisAzar = g - deG; estado.fichas = Math.max(0, (estado.fichas || 0) - (c - deG)); }
+  function fichasRuleta() { return estado.gemasInfinitas ? 9999 : Math.max(0, estado.fichasRul || 0); }
   function sortearAzar(lista) { var t = lista.reduce(function (a, x) { return a + x[1]; }, 0), n = Math.random() * t; for (var i = 0; i < lista.length; i++) { n -= lista[i][1]; if (n <= 0) return lista[i][0]; } return lista[0][0]; }
   // v8.00: CANDADOS por nivel (Azar Premium, Torneo de Temporada, Equipo de héroe)
   function bloqueo(k) { var q = DESBLOQUEO[k]; if (!q || estado.dueno) return null; if (q.jugador && nivelJugador() < q.jugador) return { que: 'jugador', n: q.jugador }; if (q.castillo && (estado.castillo || 1) < q.castillo) return { que: 'castillo', n: q.castillo }; return null; }
@@ -10769,7 +10773,7 @@
   function abrirAzar(modo) {
     if (modo) { modoAzar = modo; azarGrid = null; }
     var evP = eventoActivo('premium'); if (modoAzar === 'premium' && !evP) { modoAzar = 'normal'; azarGrid = null; }
-    var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 2 : 1;
+    var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 6 : 1; // v8.19: el Premium cuesta 6 fichas
     if (!azarGrid) azarGrid = [null, null, null, null, null, null, null, null, null];
     if (prem && bloqueo('azarPremium')) { // v8.00
       var hb = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal">' + L('Azar', 'Lucky') + '</button><button data-accion="azar-modo" data-m="premium" class="activo">🔒 ' + L('Azar Premium', 'Premium Lucky') + '</button></div>' +
@@ -10783,16 +10787,16 @@
       }).join('') +
       (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta" data-accion="azar-sacar" data-n="1">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
         L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
-      '<p class="az-tienes">' + ICONO_FICHA + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + L('Cada día te regalan 2.', 'You get 2 free every day.') + '</p>' +
+      '<p class="az-tienes">' + ICONO_FICHA + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + (estado.gemasInfinitas ? '' : '🎁 ' + L('Gratis hoy: ', 'Free today: ') + fichasGratisHoy() + ' / ' + gratisPorNivel() + ' · ') + L('Nv 1-9: 1 gratis al día · Nv 10-19: 2 · Nv 20+: 3. Las gratis se pierden si no las usas hoy.', 'Lv 1-9: 1 free a day · Lv 10-19: 2 · Lv 20+: 3. Free ones expire at the end of the day.') + '</p>' +
       '<div class="az-botones"><button class="az-b verde" data-accion="azar-sacar" data-n="1"' + (n >= costo ? '' : ' disabled') + '>' + L('Sacar 1', 'Draw 1') + '</button>' +
       (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : '<button class="az-b azul" data-accion="azar-sacar" data-n="9"' + (n >= 9 ? '' : ' disabled') + '>' + L('Sacar 9', 'Draw 9') + '</button>') + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
     $('panel').classList.add('iv-panel', 'az-panel');
   }
   function sacarAzar(cuantos) {
-    var prem = modoAzar === 'premium', costo = (prem ? 2 : 1) * cuantos;
+    var prem = modoAzar === 'premium', costo = (prem ? 6 : 1) * cuantos;
     if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
-    if (!estado.gemasInfinitas) estado.fichas -= costo;
+    gastarFichasAzar(costo); // v8.19: primero se gastan las gratis de hoy
     azarGrid = [null, null, null, null, null, null, null, null, null];
     var libres = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(function () { return Math.random() - 0.5; }).slice(0, cuantos), ganado = {};
     libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; estado.mochila[k] = (estado.mochila[k] || 0) + 1; ganado[k] = (ganado[k] || 0) + 1; });
@@ -10803,7 +10807,7 @@
   }
   function comprarFichas() {
     if (!pagar(0, 20)) return;
-    estado.fichas = fichasAzar() + 10; sonar('moneda'); guardar(true); abrirAzar();
+    estado.fichas = (estado.fichas || 0) + 10; sonar('moneda'); guardar(true); abrirAzar(); // v8.19: las compradas se guardan aparte de las gratis
   }
   // ================= v6.88: EVENTOS CON FECHA FIJA (Ruleta y Azar Premium, 2 veces al mes cada uno) =================
   // Cada evento dura 11 horas: de 10:00 a 21:00 (hora de Nueva York, se calcula en UTC: 15:00 a 02:00).
@@ -10919,7 +10923,7 @@
   function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; r.llaves = Math.max(0, Math.floor(+r.llaves || 0)); r.sinLlave = Math.max(0, Math.floor(+r.sinLlave || 0)); return r; }
   function htmlRueda() {
     var n = RULETA.length, paso = 360 / n;
-    return '<div class="rul-marco timon"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda"><img class="rul-timon" src="iconos/ui/rul_timon.webp" alt=""></div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasAzar() >= RUL_FICHAS ? '🪙 ' + RUL_FICHAS : '💎 ' + RUL_GEMAS) + '</small></button></div>';
+    return '<div class="rul-marco timon"><div class="rul-flecha">▼</div><div class="rul-rueda" id="rul-rueda"><img class="rul-timon" src="iconos/ui/rul_timon.webp" alt=""></div><button class="rul-centro" data-accion="rul-tirar" data-n="1">' + L('Tira', 'Spin') + '<small>' + (fichasRuleta() >= 1 ? '🎡 1' : '💎 ' + RUL_GEMAS) + '</small></button></div>';
   }
   function htmlTableroRuleta(r) {
     var tab = r.tablero || [], nl = rulNoLlaves();
@@ -10932,7 +10936,7 @@
   function abrirRuleta() {
     var a = eventoActivo('ruleta');
     if (!a) { var p = proximoEvento('ruleta'); consejoTemporal(L('La Ruleta no está abierta. Vuelve el ', 'The Wheel is closed. Back on ') + (p ? new Date(p).toLocaleDateString(estado.idioma === 'en' ? 'en' : 'es', { day: 'numeric', month: 'long' }) : '')); return; }
-    var r = estadoRuleta(a.id), f = fichasAzar(), g = estado.gemasInfinitas ? Infinity : (estado.gemas || 0);
+    var r = estadoRuleta(a.id), f = fichasRuleta(), g = estado.gemasInfinitas ? Infinity : (estado.gemas || 0); // v8.19: fichas de Ruleta
     var falta = Math.max(0, 5 - r.llaves);
     var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b class="rul-fichas">' + (estado.gemasInfinitas ? '∞' : f) + '</b> · ' + L('o gemas', 'or gems') + '</small></div>' +
       htmlRueda() +
@@ -10940,8 +10944,8 @@
       '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre' + (falta ? ' cerrado' : '') + '"' + (falta ? '' : ' data-accion="rul-galeon"') + '><img src="iconos/ui/rul_galeon.webp" alt="🎁"></div>' +
       (falta ? '<p>' + L('Junta 5 llaves para abrir el Cofre del Galeón', 'Collect 5 keys to open the Galleon Chest') + ' <b>(' + r.llaves + '/5)</b></p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
       '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
-        var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
-        return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🪙 ' + (RUL_FICHAS * n) : '💎 ' + precioRuleta(n)) + '</small></button>';
+        var n = q[0], conF = n < 50 && f >= n;
+        return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🎡 ' + n : '💎 ' + precioRuleta(n)) + '</small></button>';
       }).join('') + '</div>';
     // v6.88: si ya está abierta solo se cambia el contenido (sin bajar y subir la ventana) y se mantiene donde estabas
     if (panelActual && panelActual.tipo === 'ruleta' && !$('panel').classList.contains('oculto')) {
@@ -10975,8 +10979,8 @@
     ultimoToqueRul = Date.now(); candadoRuleta(true);
     var liberar = true; try {
     var a = eventoActivo('ruleta'); if (!a) { cerrarPanel(); return; }
-    var conF = n < 50 && fichasAzar() >= RUL_FICHAS * n;
-    if (conF) { if (!estado.gemasInfinitas) estado.fichas -= RUL_FICHAS * n; }
+    var conF = n < 50 && fichasRuleta() >= n; // v8.19: 1 ficha de Ruleta por tirada
+    if (conF) { if (!estado.gemasInfinitas) estado.fichasRul = fichasRuleta() - n; }
     else if (!pagar(0, precioRuleta(n))) return;
     liberar = false;
     var r = estadoRuleta(a.id), ganados = [], idx = [];
@@ -11077,7 +11081,7 @@
   function reclamarPromo(id) {
     var x = PROMOS.filter(function (q) { return q.id === id; })[0]; if (!x || !promoLista(x)) return;
     if (x.dia) estado.promoRegalo = hoyTexto(); else promoEstado().hechas[x.id] = true;
-    darPremio(x.premio); if (x.premio.fichas) estado.fichas = fichasAzar() + x.premio.fichas;
+    darPremio(x.premio); if (x.premio.fichas) estado.fichas = (estado.fichas || 0) + x.premio.fichas;
     sonar('listo'); consejoTemporal('🎁 ' + textoPremioPromo(x.premio)); guardar(true); abrirPromos(); actualizarBadges();
   }
   function reciclarPiezaInv(i) {
@@ -11192,6 +11196,7 @@
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
     if (esCofre(k) && !confirmado) { abrirUsoMasa(k); return; }
+    if (o.fichasPack) { estado.mochila[k]--; darFichasPack(o.fichasPack); sonar('moneda'); consejoTemporal(o.icono + ' ' + textoFichasPack(o.fichasPack)); guardar(true); reabrirPanel(); return; } // v8.19: si te llegan por regalo, se usan desde el Inventario
     if (false) {
       confirmarJuego(o.icono + ' ' + L('¿Abrir ', 'Open ') + N(k) + '?', '<b>' + L('Qué trae:', 'What is inside:') + '</b>' + htmlContenido(k) + '<small>' + L('Tienes ', 'You have ') + estado.mochila[k] + '</small>', L('Abrir', 'Open'), function () { usarObjeto(k, true); });
       var cs = $('cj-si'); if (cs) { cs.classList.remove('rojo'); cs.classList.add('verde'); }
@@ -11470,9 +11475,13 @@
       confirmarJuego('💳 ' + L('Todavía no', 'Not yet'), L('Las compras con dinero real llegan con la versión de la App Store y Google Play. No se cobró nada.', 'Real-money purchases arrive with the App Store and Google Play version. Nothing was charged.'), L('Entendido', 'Got it'), function () {});
     });
   }
+  function darFichasPack(fp) { if (fp.azar) estado.fichas = (estado.fichas || 0) + fp.azar; if (fp.ruleta) estado.fichasRul = (estado.fichasRul || 0) + fp.ruleta; }
+  function textoFichasPack(fp) { return [fp.azar ? '🪙 +' + fp.azar + ' ' + L('fichas de Azar', 'Lucky tokens') : '', fp.ruleta ? '🎡 +' + fp.ruleta + ' ' + L('fichas de Ruleta', 'Wheel tokens') : ''].filter(Boolean).join(' · '); }
   function comprarTienda(i) {
     var it = TIENDA[i];
     if (!it || !pagar(0, it.gemas)) return;
+    var fp = (OBJETOS[it.id] || {}).fichasPack; // v8.19
+    if (fp) { darFichasPack(fp); sonar('moneda'); consejoTemporal('✅ ' + N(it.id) + ': ' + textoFichasPack(fp)); guardar(true); reabrirPanel(); return; }
     estado.mochila[it.id] = (estado.mochila[it.id] || 0) + 1;
     sonar('moneda');
     consejoTemporal(T('comprado', { n: N(it.id) }));

@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.18';
+var VERSION_JUEGO = '8.19';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -424,6 +424,12 @@ var NOMBRES = {
   oro_1m: { es: '1.000.000 de oro', en: '1,000,000 gold', des_es: 'Un cofre real de monedas.', des_en: 'A royal coin chest.' },
   mixto_1m: { es: 'Paquete de construcción', en: 'Building pack', des_es: '1.000.000 de oro, comida, madera y piedra.', des_en: '1,000,000 gold, food, wood and stone.' },
   ficha_x1: { es: 'Ficha de la suerte', en: 'Luck token', des_es: '1 ficha para la Ruleta del Azar.', des_en: '1 token for the Luck wheel.' },
+  // v8.19: fichas de la Ruleta y cofres de fichas (Tienda)
+  ficha_azar10: { es: '10 fichas de Azar', en: '10 Lucky tokens', des_es: '10 fichas para el Azar. Se guardan, no se pierden.', des_en: '10 tokens for Lucky. They never expire.' },
+  ficha_rul5: { es: '5 fichas de Ruleta', en: '5 Wheel tokens', des_es: '5 tiradas de la Ruleta (1 ficha por tirada). Se guardan para la próxima Ruleta.', des_en: '5 Wheel spins (1 token per spin). Kept for the next Wheel.' },
+  cofre_fichas1: { es: 'Cofre de fichas pequeño', en: 'Small token chest', des_es: '5 fichas de Azar y 2 fichas de Ruleta.', des_en: '5 Lucky tokens and 2 Wheel tokens.' },
+  cofre_fichas2: { es: 'Cofre de fichas mediano', en: 'Medium token chest', des_es: '15 fichas de Azar y 6 fichas de Ruleta.', des_en: '15 Lucky tokens and 6 Wheel tokens.' },
+  cofre_fichas3: { es: 'Cofre de fichas grande', en: 'Large token chest', des_es: '40 fichas de Azar y 15 fichas de Ruleta.', des_en: '40 Lucky tokens and 15 Wheel tokens.' },
   ficha_x5: { es: '5 fichas de la suerte', en: '5 luck tokens', des_es: '5 fichas para la Ruleta del Azar.', des_en: '5 tokens for the Luck wheel.' },
   carreta_sum: { es: 'Carreta Pesada', en: 'Heavy Wagon', des_es: '+1 Carreta de Suministro: lleva recursos entre tus villas y carga botín.', des_en: '+1 Supply Wagon: carries resources between your villages and hauls loot.' },
   carretas_x10: { es: '10 Carretas de Suministro', en: '10 Supply Wagons', des_es: '+10 Carretas de Suministro para caravanas grandes.', des_en: '+10 Supply Wagons for big caravans.' },
@@ -776,6 +782,11 @@ var OBJETOS = {
   amatista_100:    { icono: '🔮', inv: 'recursos', efecto: 'amatista', n: 100 }, // v7.97
   amatista_500:    { icono: '🔮', inv: 'recursos', efecto: 'amatista', n: 500 },
   ficha_x5:        { icono: '🪙', inv: 'reliquia', efecto: 'fichas', n: 5 },
+  ficha_azar10:    { icono: '🪙', inv: 'reliquia', fichasPack: { azar: 10 } }, // v8.19
+  ficha_rul5:      { icono: '🎡', inv: 'reliquia', fichasPack: { ruleta: 5 } },
+  cofre_fichas1:   { icono: '🧰', inv: 'reliquia', fichasPack: { azar: 5, ruleta: 2 } },
+  cofre_fichas2:   { icono: '🧰', inv: 'reliquia', fichasPack: { azar: 15, ruleta: 6 } },
+  cofre_fichas3:   { icono: '🧰', inv: 'reliquia', fichasPack: { azar: 40, ruleta: 15 } },
   energia_heroe:   { icono: '⚡', inv: 'reliquia', efecto: 'expHeroe', n: 50 },
   carreta_sum:     { icono: '🐴', inv: 'tropas', efecto: 'carreta', n: 1 }, // v7.86
   carretas_x10:    { icono: '🐴', inv: 'tropas', efecto: 'carreta', n: 10 },
@@ -818,6 +829,7 @@ var TIENDA = [
   { id: 'portal_azar', gemas: 10, cat: 'combate' }, { id: 'portal_elegir', gemas: 30, cat: 'combate' }, { id: 'reclutas', gemas: 25, cat: 'combate' },
   // Cofres (con ofertas)
   { id: 'cofre_tesoro', gemas: 29, antes: 89, cat: 'cofres' }, { id: 'pack_tesoro7', gemas: 190, antes: 599, cat: 'cofres' }, { id: 'pack_tesoro15', gemas: 385, antes: 1199, cat: 'cofres' },
+  { id: 'ficha_azar10', gemas: 20, cat: 'varios' }, { id: 'ficha_rul5', gemas: 70, cat: 'varios' }, { id: 'cofre_fichas1', gemas: 39, cat: 'cofres' }, { id: 'cofre_fichas2', gemas: 99, cat: 'cofres' }, { id: 'cofre_fichas3', gemas: 229, cat: 'cofres' }, // v8.19
   { id: 'cofre_mejora4', gemas: 399, cat: 'cofres' }, { id: 'cofre_mejora3', gemas: 99, cat: 'cofres' }, { id: 'cofre_mejora2', gemas: 49, cat: 'cofres' }, { id: 'cofre_mejora1', gemas: 19, cat: 'cofres' },
   { id: 'cofre_acel', gemas: 240, cat: 'cofres' },
   // Varios
