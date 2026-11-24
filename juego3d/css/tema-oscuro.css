@@ -1593,3 +1593,6 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 #dk-lista { gap: 2px; padding: 0 0 4px; }
 .kc-badge { position: absolute; top: -8px; right: 6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #d42a1e; border: 1px solid #ffb0a0; color: #fff; font: 800 11px/16px system-ui, sans-serif; font-style: normal; text-align: center; }
 [data-dk="marchar"] { position: relative; }
+
+/* v8.57: todas las marchas (hasta 10) una encima de otra, sin barra de desplazamiento */
+#dk-lista { max-height: none !important; overflow: visible !important; }
