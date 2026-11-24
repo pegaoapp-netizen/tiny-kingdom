@@ -1391,3 +1391,12 @@ html body #panel .comp-panel h4 { margin: 12px 0 6px; }
 html body #panel .comp-panel input, html body #panel .comp-panel textarea, html body #panel .comp-panel select { width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #b08a4a; background: #fff8e2; color: #2a1a08; padding: 7px; font-size: 15px; }
 html body #panel .comp-fila { display: flex; gap: 6px; } html body #panel .comp-fila input[type=number] { width: 80px; flex: none; }
 html body #panel .comp-rec { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } html body #panel .comp-rec label { display: flex; align-items: center; gap: 6px; font-size: 18px; }
+
+/* ===== v8.08: Castillo › Defensa: tarjetas de héroes en filas de 3 (sin cortes) y el texto sin taparse ===== */
+html body #panel .dv-heroes { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; overflow: visible !important; flex-wrap: wrap; }
+html body #panel .dv-h { min-width: 0 !important; width: auto !important; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px !important; }
+html body #panel .dv-h .dv-f { width: 54px; height: 54px; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+html body #panel .dv-h .dv-f img { width: 100%; height: 100%; object-fit: cover; }
+html body #panel .dv-h b { font-size: 12px; line-height: 1.15; white-space: normal; text-align: center; overflow-wrap: anywhere; }
+html body #panel .dv-caja .nota { position: static !important; clear: both; margin-top: 10px !important; line-height: 1.35; }
+html body .st-base { opacity: .6; font-weight: 400; } html body .st-mas { font-style: normal; color: #7fe07a; font-weight: 800; }

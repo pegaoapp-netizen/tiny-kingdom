@@ -7608,7 +7608,7 @@
     else {
       h += '<div class="dv-heroes"><button class="dv-h' + (!hd ? ' activo' : '') + '" data-accion="def-heroe" data-id="">🚫<small>' + L('Ninguno', 'None') + '</small></button>' + mios.map(function (k) {
         var ocup = !!fuera[k];
-        return '<button class="dv-h' + (hd === k ? ' activo' : '') + '" data-accion="def-heroe" data-id="' + k + '"' + (ocup ? ' disabled' : '') + '><span class="dv-f">' + fotoHTML(k, '🦸') + '</span><b>' + escaparHTML(NH(k)) + '</b><small>' + (ocup ? L('Marchando', 'Marching') : L('Nv ', 'Lv ') + nivelHeroe(k)) + '</small></button>';
+        return '<button class="dv-h' + (hd === k ? ' activo' : '') + '" data-accion="def-heroe" data-id="' + k + '"' + (ocup ? ' disabled' : '') + '><span class="dv-f">' + fotoHTML('h_' + k, '🦸') + '</span><b>' + escaparHTML(NH(k)) + '</b><small>' + (ocup ? L('Marchando', 'Marching') : L('Nv ', 'Lv ') + nivelHeroe(k)) + '</small></button>';
       }).join('') + '</div>';
       if (hd) { var mh = multiplicadoresHeroe(hd); h += '<p class="nota">✅ ' + L('Defiende con su equipo y su set: ', 'Defends with gear and set: ') + '⚔️ +' + Math.round(mh.atk) + '% · ❤ +' + Math.round(mh.vida) + '%' + (mh.foeAtk ? ' · ' + L('enemigo', 'enemy') + ' −' + Math.round(mh.foeAtk) + '%' : '') + '. ' + L('Si su nivel es mayor que el del héroe atacante, tus tropas disparan primero.', 'If his level is higher than the attacking hero, your troops shoot first.') + (on ? '' : ' <b>' + L('(Con la defensa en OFF no pelea.)', '(With defense OFF he does not fight.)') + '</b>') + '</p>'; }
       else h += '<p class="nota aviso-rojo">' + L('Sin héroe defensor: tus tropas defienden sin bonos de héroe.', 'No defender hero: your troops defend with no hero bonus.') + '</p>';
@@ -7777,7 +7777,7 @@
         return '<button data-accion="tropa-rango" data-r="' + i + '" class="r' + i + (i > na ? ' bloq' : '') + (i === r ? ' activo' : '') + '"><b>' + rn + (i > na ? ' 🔒' : '') + '</b><small>×' + formatoNumero(cuentaRango(t, i)) + '</small></button>';
       }).join('') + '</div></div>';
     html += '<p class="nota tropa-desc">' + D(t) + '</p><button class="comprar morado inv-tropa-btn" data-accion="inv-tropa" data-tipo="' + t + '">' + T('investigar_tropa') + ' · ' + N(t) + '</button>';
-    html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + Math.round(d.vida * (1 + ARMADURA.vida * r)) + '</span><span>⚔ ' + T('dano') + ' ' + d.dano + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + fmtTiempo(d.tiempo / rapidezEntreno()) + '</span>' +
+    html += '<div class="stats"><span>❤ ' + T('vida') + ' ' + statConBono(d.vida * (1 + ARMADURA.vida * r), vidaTropa(t, r)) + '</span><span>⚔ ' + T('dano') + ' ' + statConBono(d.dano, danoTropaReal(t)) + '</span><span>🎯 ' + T('alcance') + ' ' + d.alcance + '</span><span>⏱ ' + fmtTiempo(d.tiempo / rapidezEntreno()) + '</span>' +
       (r ? '<span class="nivel-arm">🛡️ ' + T('defensa') + ' ' + Math.round(ARMADURA.defensa * 100 * r) + '%</span>' : '') + '</div>';
     var subir = na < ARMADURA.max ? '<div class="carta compacta subir-rango"><h3>⬆️ ' + T('subir_rango', { r: ROMANO[na + 1] }) + '</h3><p class="nota">' + T('armadura_sube', { n: na + 1, v: Math.round(ARMADURA.vida * 100 * (na + 1)), d: Math.round(ARMADURA.defensa * 100 * (na + 1)) }) + '</p><div class="botones-tropa">' +
       botonCosto(costoArmadura(na), 'armadura', 'data-tipo="' + t + '"', '🛡️ ').replace('class="comprar"', 'class="comprar armadura"') +
@@ -7907,6 +7907,9 @@
   function barraStat(nom, v, max, txt) {
     return '<div class="cq-sf"><div class="cq-sf-cab"><span>' + nom + '</span><b>' + (txt || formatoNumero(v)) + '</b></div><div class="cq-sf-barra"><i style="width:' + Math.min(100, v / max * 100) + '%"></i></div></div>';
   }
+  // v8.08: lo investigado (Escudos fuertes, Espadas…) se ve en la ficha: número base → número con bonos y el % que sube
+  function statConBono(base, real) { base = Math.round(base); real = Math.round(real); return real > base ? '<s class="st-base">' + formatoNumero(base) + '</s> → ' + formatoNumero(real) + ' <em class="st-mas">+' + Math.round((real / base - 1) * 100) + '%</em>' : formatoNumero(real); }
+  function danoTropaReal(t) { return TROPAS[t].dano * (1 + bono('espadas') + bonoTropa(t, 'ataque')); }
   function htmlFichaTropa(t) {
     var d = TROPAS[t], na = nivelArmadura(t), contra = contraDe(t), falta = faltaTropa(t), r = TROPA_REQ[t] || {};
     var est = TROPA_RANGO_ESTRELLAS[t] || 1, tier = Math.min(5, est + na), poder = Math.round(d.vida * 2 + d.dano * 25);
@@ -7914,7 +7917,7 @@
       '<button class="cq-volver" data-accion="det-volver" aria-label="Volver">◀</button><div class="cq-ret-arriba"><span class="cq-tier-g">' + ROMANO5[tier] + '</span><span class="cq-rol">' + rolTropa(t) + '</span></div>' +
       '<div class="cq-ret-abajo"><div><small>' + L('PODER DE TROPA', 'UNIT POWER') + '</small><b>' + formatoNumero(poder) + '</b></div><div class="cq-ret-tropas"><small>' + L('TROPAS', 'TROOPS') + '</small><b>' + formatoNumero(cuentaTipo(t)) + '</b></div></div></div>' +
       '<div class="cq-det"><div class="cq-rango">✨ ' + T('rango') + ' ' + ROMANO[na] + ' <span>/ IV</span></div><h3>' + N(t) + '</h3><p>' + D(t) + '</p></div>' +
-      '<div class="cq-stats-caja">' + barraStat(L('Ataque', 'Attack'), d.dano, 90) + barraStat(L('Vida', 'Health'), d.vida, 900) + barraStat(L('Velocidad', 'Speed'), Math.round(d.vel * 100), 450) + barraStat(L('Carga', 'Load'), CARGA_TROPA[t] || 0, 60) +
+      '<div class="cq-stats-caja">' + barraStat(L('Ataque', 'Attack'), danoTropaReal(t), 90, statConBono(d.dano, danoTropaReal(t))) + barraStat(L('Vida', 'Health'), vidaTropa(t, na), 900, statConBono(d.vida, vidaTropa(t, na))) + barraStat(L('Velocidad', 'Speed'), Math.round(d.vel * 100), 450) + barraStat(L('Carga', 'Load'), CARGA_TROPA[t] || 0, 60) +
       '<div class="cq-chips"><span class="debil">' + L('Débil contra ', 'Weak vs ') + contra[0] + '</span><span class="fuerte">' + L('Fuerte contra ', 'Strong vs ') + contra[1] + '</span><span>🍞 ' + (COMIDA_HORA_TROPA[t] || 1) + '/h</span></div></div>' +
       '<div class="subtabs ft-pest"><button data-accion="det-pest" data-p="entrenar" class="' + (pestDetalle === 'entrenar' ? 'activo' : '') + '">' + L('Entrenar', 'Train') + '</button><button data-accion="det-pest" data-p="relevar" class="' + (pestDetalle === 'relevar' ? 'activo' : '') + '">' + L('Relevar', 'Dismiss') + '</button></div>';
     if (pestDetalle === 'relevar') {
