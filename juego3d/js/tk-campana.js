@@ -106,14 +106,18 @@
     var vida = h.vida * 3, atk = h.dano * 2.2;
     return { lado: 'az', h: h, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: h.distancia ? 0.30 : 0.07, ritmo: h.distancia ? 1.1 : 0.85, cd: 0.3 + i * 0.12, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: img(h.foto) };
   }
+  // v8.29: los enemigos suben con la etapa Y con el nivel de tus héroes (crecen igual que un héroe al subir de nivel);
+  // lo que te da ventaja es el equipo, las estrellas, la Maestría y los talentos
+  var nivelRival = 1;
   function escuadronEnemigo(n, i) {
-    var f = Math.pow(1.13, n - 1), e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4), jefe = i === 2 && n % 5 === 0;
+    var f = Math.pow(1.13, n - 1) * (1 + 0.06 * (nivelRival - 1)) * 1.4, e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4), jefe = i === 2 && n % 5 === 0;
     var vida = 1500 * f * (jefe ? 1.8 : 1), atk = 52 * f * (jefe ? 1.5 : 1);
     return { lado: 'ro', ico: jefe ? '🐲' : e.ico, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.07, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: jefe, d: e.d };
   }
   function armarLados() {
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
     lado.az = sel.filter(function (id) { return mapa[id]; }).map(function (id, i) { return escuadronHeroe(mapa[id], i); });
+    var nh = lado.az.map(function (u) { return u.h.nivel || 1; }); nivelRival = nh.length ? nh.reduce(function (a, b) { return a + b; }, 0) / nh.length : 1;
     lado.ro = [0, 1, 2, 3, 4].map(function (i) { return escuadronEnemigo(etapa, i); });
   }
   function poderLado(l) { return l.reduce(function (a, u) { return a + poderDe(u); }, 0); }
