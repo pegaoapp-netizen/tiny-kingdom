@@ -389,8 +389,11 @@ service cloud.firestore {
     match /soporte/{id} {
       allow read: if request.auth != null && (resource.data.de == request.auth.uid || esDueno());
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['de', 'nombre', 'tipo', 'texto', 'version', 'fecha', 'equipo'])
+        && request.resource.data.keys().hasOnly(['de', 'nombre', 'tipo', 'texto', 'version', 'fecha', 'equipo', 'iaResp', 'iaPremio'])
         && request.resource.data.de == request.auth.uid
+        // v8.24: la respuesta de Gemini se guarda junto al mensaje (el dueño la ve y decide los premios)
+        && (!('iaResp' in request.resource.data) || (request.resource.data.iaResp is string && request.resource.data.iaResp.size() <= 600))
+        && (!('iaPremio' in request.resource.data) || (request.resource.data.iaPremio is string && request.resource.data.iaPremio.size() <= 400))
         && request.resource.data.nombre is string && request.resource.data.nombre.size() <= 30
         && request.resource.data.tipo in ['error', 'pregunta', 'pago', 'jugador', 'otro']
         && request.resource.data.texto is string && request.resource.data.texto.size() >= 3 && request.resource.data.texto.size() <= 600

@@ -1,41 +1,24 @@
-SOPORTE CON IA EN TINY KINGDOM (v8.23)
-=======================================
-El código ya está listo. La IA empieza a contestar cuando termines estos 3 pasos.
-Mientras tanto, los jugadores siguen viendo la respuesta automática de la guía y tú contestas en la Bandeja.
+SOPORTE CON IA GRATIS EN TINY KINGDOM (v8.24)
+==============================================
+Es Gemini gratis, igual que en Pegao, pero usado por «Firebase AI Logic»:
+- no hace falta servidor de pago ni tarjeta (sirve con el plan gratis de Firebase),
+- la clave de Gemini no queda a la vista en la página (en la web cualquiera podría copiarla).
 
-Cómo funciona
--------------
-- Un jugador escribe en 🛟 Soporte.
-- En el servidor de Firebase, la función «responderSoporteIA» le pasa el mensaje a Claude (la IA de Anthropic),
-  junto con la guía del juego (archivo juego3d\nube\functions\soporte-ia.js).
-- La IA le contesta al jugador en su mismo idioma, en pocos segundos.
+El código ya está publicado. La IA empieza a contestar cuando hagas este ÚNICO paso.
+Mientras tanto, el jugador ve la respuesta automática de la guía y tú contestas en la Bandeja.
+
+PASO ÚNICO — Encender AI Logic (lo haces tú, una sola vez)
+  1. Abre: https://console.firebase.google.com/project/tiny-kingdom-pegao/ailogic/
+  2. Toca «Comenzar» (Get started).
+  3. Elige «Gemini Developer API» (la gratis; NO la de Vertex AI, que pide pago).
+  4. Acepta y espera 2-3 minutos.
+
+Cómo funciona después
+---------------------
+- El jugador escribe en 🛟 Soporte, el botón dice «🤖 Pensando…» y en unos segundos ve la respuesta de la IA.
 - La IA NUNCA da gemas ni premios. Si cree que hay que dar algo (pagó y no le llegó, perdió algo por un fallo),
-  marca el mensaje con 🎁 y a ti te salta un aviso en el juego. Tú decides en 🛟 Soporte › Bandeja:
-  «Compensar» abre el panel de compensación con ese jugador ya elegido, y «Ya di el premio» lo marca como hecho.
-- Si la IA falla, el mensaje queda sin responder y te avisa igual que antes.
+  a ti te sale el aviso «🎁 Soporte: hay que dar premio a …». En 🛟 Soporte › Bandeja ves el motivo,
+  «Compensar» abre el regalo con ese jugador ya elegido y «Ya di el premio» lo marca como hecho.
+- Si la IA no contesta (límite del plan gratis o se cae), el mensaje llega igual y lo contestas tú.
 
-Costo aproximado
-----------------
-- IA (Claude Opus 5.5): unos 2 centavos de dólar por mensaje de soporte.
-  100 mensajes al mes ≈ US$ 2.
-- Firebase (plan Blaze): las funciones tienen una parte gratis cada mes; con poco uso de soporte no se paga casi nada.
-
-PASO 1 — Plan Blaze en Firebase (lo haces tú: pide tarjeta)
-  console.firebase.google.com → proyecto «tiny-kingdom-pegao» → abajo a la izquierda «Actualizar» → plan Blaze.
-  Puedes poner un límite de presupuesto (por ejemplo US$ 10 al mes) para que te avise.
-  (Este mismo paso también hace falta para los pagos con dinero real.)
-
-PASO 2 — Cuenta y clave de Anthropic (lo haces tú)
-  a) Entra a console.anthropic.com y crea la cuenta (con la empresa PEGAO APP LLC si quieres).
-  b) Billing → agrega saldo (por ejemplo US$ 5) y, si quieres, un límite mensual.
-  c) API Keys → «Create Key» → nombre: tiny-kingdom-soporte → copia la clave (empieza con sk-ant-).
-     No me la mandes ni la pegues en el chat.
-
-PASO 3 — Guardar la clave en Firebase (lo haces tú, en PowerShell)
-  cd C:\Users\maike\pegao_clash\juego3d\nube
-  npx -y firebase-tools@13.35.1 functions:secrets:set ANTHROPIC_API_KEY --project tiny-kingdom-pegao
-  (Te pide la clave: pégala ahí y Enter. Queda guardada en Google Cloud, nunca en el código.)
-
-Cuando termines, avísame y yo publico la función con:
-  npx -y firebase-tools@13.35.1 deploy --only functions:responderSoporteIA --project tiny-kingdom-pegao
-y la pruebo con un mensaje de soporte.
+Límite gratis: el plan gratis de Gemini tiene un tope de mensajes por minuto y por día; para el soporte de un juego sobra.

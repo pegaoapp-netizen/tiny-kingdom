@@ -1,7 +1,7 @@
 {
   "name": "tiny-kingdom-pagos",
   "private": true,
-  "description": "Cloud Functions de Tiny Kingdom: pagos (Google Play, App Store vía RevenueCat y Stripe) y Soporte con IA",
+  "description": "Cloud Functions de pagos de Tiny Kingdom (Google Play, App Store vía RevenueCat y Stripe en la web)",
   "main": "index.js",
   "engines": {
     "node": "20"
@@ -9,7 +9,6 @@
   "dependencies": {
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.1.0",
-    "stripe": "^17.0.0",
-    "@anthropic-ai/sdk": "^1.13.0"
+    "stripe": "^17.0.0"
   }
 }
