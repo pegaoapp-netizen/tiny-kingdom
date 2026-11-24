@@ -11060,26 +11060,32 @@
     var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button>' + (evP ? '<button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + ' ⏳' + fmtTiempo(Math.ceil((evP.fin - Date.now()) / 1000)) + '</button>' : '') + '</div>' +
       '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
-        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
+        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
-      (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta" data-accion="azar-sacar" data-n="1">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
-        L('¡Usa ' + costo + ' ficha' + (costo > 1 ? 's' : '') + ' para jugar!', 'Use ' + costo + ' token' + (costo > 1 ? 's' : '') + ' to play!') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
+      (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta az-cinta-aviso">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
+        L('¡Toca el cofre que quieras abrir! Cada uno cuesta ' + costo + ' ficha' + (costo > 1 ? 's' : '') + '.', 'Tap the chest you want to open! Each costs ' + costo + ' token' + (costo > 1 ? 's' : '') + '.') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
       '<p class="az-tienes">' + ICONO_FICHA + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + (estado.gemasInfinitas ? '' : '🎁 ' + L('Gratis hoy: ', 'Free today: ') + fichasGratisHoy() + ' / ' + gratisPorNivel() + ' · ') + L('Nv 1-9: 1 gratis al día · Nv 10-19: 2 · Nv 20+: 3. Las gratis se pierden si no las usas hoy.', 'Lv 1-9: 1 free a day · Lv 10-19: 2 · Lv 20+: 3. Free ones expire at the end of the day.') + '</p>' +
-      '<div class="az-botones"><button class="az-b verde" data-accion="azar-sacar" data-n="1"' + (n >= costo ? '' : ' disabled') + '>' + L('Sacar 1', 'Draw 1') + '</button>' +
-      (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : '<button class="az-b azul" data-accion="azar-sacar" data-n="9"' + (n >= 9 ? '' : ' disabled') + '>' + L('Sacar 9', 'Draw 9') + '</button>') + '</div>';
+      '<p class="az-elige">👆 ' + L('Tú eliges: toca un cofre cerrado para abrirlo.', 'You choose: tap a closed chest to open it.') + '</p>' + /* v8.44 */
+      '<div class="az-botones">' + (azarGrid.every(function (x) { return x; }) ? '<button class="az-b verde" data-accion="azar-nuevo">🔄 ' + L('Tablero nuevo', 'New board') + '</button>' : '') +
+      (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : (function () { var qd = azarGrid.filter(function (x) { return !x; }).length; return qd ? '<button class="az-b azul" data-accion="azar-sacar" data-n="' + qd + '"' + (n >= qd ? '' : ' disabled') + '>' + L('Abrir los ' + qd, 'Open all ' + qd) + '</button>' : ''; })()) + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
     $('panel').classList.add('iv-panel', 'az-panel');
   }
-  function sacarAzar(cuantos) {
+  function sacarAzar(cuantos, celda) {
+    /* v8.44: el jugador escoge el cofre. Con celda abre ESE; sin celda (Abrir todos) abre todos los que quedan cerrados */
+    if (!azarGrid || azarGrid.every(function (x) { return x; })) azarGrid = [null, null, null, null, null, null, null, null, null];
+    var cerrados = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(function (c) { return !azarGrid[c]; });
+    if (celda !== undefined && celda !== null && !isNaN(celda)) { if (cerrados.indexOf(celda) < 0) return; cerrados = [celda]; }
+    cuantos = cerrados.length; if (!cuantos) return;
     var prem = modoAzar === 'premium', costo = (prem ? 6 : 1) * cuantos;
     if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
     gastarFichasAzar(costo); // v8.19: primero se gastan las gratis de hoy
-    azarGrid = [null, null, null, null, null, null, null, null, null];
-    var libres = [0, 1, 2, 3, 4, 5, 6, 7, 8].sort(function () { return Math.random() - 0.5; }).slice(0, cuantos), ganado = {};
+    var libres = cerrados, ganado = {};
     libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; estado.mochila[k] = (estado.mochila[k] || 0) + 1; ganado[k] = (ganado[k] || 0) + 1; });
     sonar('magia'); guardar(true); abrirAzar();
     // los cofres se abren uno por uno
-    var celdas = document.querySelectorAll('.az-celda.abierta'); celdas.forEach(function (c, i) { c.style.animationDelay = (i * 0.12) + 's'; });
+    document.querySelectorAll('.az-celda.abierta').forEach(function (c) { if (libres.indexOf(+c.getAttribute('data-c')) < 0) c.style.animation = 'none'; }); /* solo se anima lo que acabas de abrir */
+    libres.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
     consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k) + (ganado[k] > 1 ? ' ×' + ganado[k] : ''); }).join(', '));
   }
   function comprarFichas() {
@@ -12490,7 +12496,8 @@
     else if (a === 'al-perfil-volver') { sonar('click'); var desdeV = abrirPerfilAlianza.desde; setTimeout(function () { if (desdeV === 'ranking') abrirPanelRanking('alianzas'); else if (estado.alianza && alCache) { alTab = 'alianzas'; alSeccion = ''; pintarHubAlianza(); } else if (pintarListaAlianzas.ultima) pintarListaAlianzas(pintarListaAlianzas.ultima); else abrirPanelAlianza(); }, 0); }
     else if (a === 'al-perfil-miembros') { sonar('click'); abrirPerfilAlianza(b.getAttribute('data-tag'), true); }
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
-    else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'));
+    else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'), b.hasAttribute('data-c') ? +b.getAttribute('data-c') : null);
+    else if (a === 'azar-nuevo') { sonar('click'); azarGrid = null; abrirAzar(); } /* v8.44 */
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
     else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth, behavior: 'smooth' }); }
     else if (a === 'inv-reciclar') reciclarPiezaInv(b.getAttribute('data-i'));

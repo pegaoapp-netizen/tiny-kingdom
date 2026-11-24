@@ -1546,3 +1546,8 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .mt-dat b { font: 800 12.5px system-ui, sans-serif; color: #ffe08a; line-height: 1.15; overflow-wrap: anywhere; }
 .mt-dat span { font: 700 13px system-ui, sans-serif; color: #fff; }
 .pest-tropa { flex-wrap: wrap; }
+
+/* v8.44: Azar: tú eliges el cofre */
+.az-cinta-aviso { pointer-events: none; }
+.az-celda[data-accion] { cursor: pointer; }
+.az-elige { text-align: center; margin: 6px 0 2px; font: 800 13px system-ui, sans-serif; color: #ffe08a; }
