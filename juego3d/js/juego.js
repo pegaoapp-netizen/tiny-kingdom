@@ -1884,7 +1884,7 @@
     function grupos(comp, pos, m, foe, extraVida, escala) {
       return Object.keys(comp).filter(function (k) { return comp[k] > 0 && COMBATE_KOC[k]; }).map(function (k) {
         var c = COMBATE_KOC[k], asd = ASEDIO_KOC[k] ? (m.asedio || 0) : 0;
-        return { tipo: k, n: comp[k], ini: comp[k], pos: pos, rango: c.rango + (extraVida > 1 && c.distancia ? 20 * (op.muralla || 0) * ignMuro : 0), // v7.51: la muralla da +20 de alcance por nivel a las tropas a distancia del defensor vel: c.velocidad, dist: !!c.distancia,
+        return { tipo: k, n: comp[k], ini: comp[k], pos: pos, rango: c.rango + (extraVida > 1 && c.distancia ? 20 * (op.muralla || 0) * ignMuro : 0), /* v7.51: la muralla da +20 de alcance por nivel a las tropas a distancia del defensor; v8.13: este comentario tapaba vel y dist */ vel: c.velocidad, dist: !!c.distancia,
           atk: c.ataque * FACTOR_DANO_KOC * (op.factor || 1) * mult(m.atk + asd - foe.foeAtk) * (escala || 1) * (0.9 + Math.random() * 0.2), vida: c.vida * mult(m.vida - foe.foeVida) * extraVida };
       });
     }
@@ -2465,10 +2465,12 @@
     if (mia) { var gd = guardadoCasilla(c), rr = TIPOS_CASILLA[c.tipo].r; html += '<p class="nota">' + ICONO_RECURSO[rr] + ' ' + T('cas_guardado', { a: formatoNumero(gd.n), m: formatoNumero(gd.max), r: T('r_' + rr), h: formatoNumero(gd.hora) }) + '</p><button class="comprar naranja" id="cas-recoger"' + (gd.n >= 1 ? '' : ' disabled') + '>' + T('cas_recolectar') + ' · ' + T('car_estado', { l: carretasLibres(), n: carretas().n }) + '</button>'; }
     if (c.tipo === 'llanura' && !mia && !deOtro && libreTel && villaActiva() === 0) html += '<button class="comprar morado boton-oleada-grande" id="cas-portal">🌀 ' + L('Teletransportar aquí', 'Teleport here') + ' <small>(' + ((estado.mochila && estado.mochila.portal_elegir) || 0) + ' ' + L('portales', 'portals') + ')</small></button>'; // v7.86
     if (c.tipo === 'llanura' && !mia && !deOtro && libreTel) html += '<button class="comprar verde boton-oleada-grande" id="cas-fundar">🏘️ ' + L('Fundar villa', 'Found village') + ' <small>(' + misVillas().lista.length + '/' + maxVillas() + ')</small></button>'; // v7.82
+    if (mia && estado.casillas[c.id].g) html += '<p class="nota">⛺ ' + L('Tus tropas están acampadas aquí. Se quedan hasta que las llames.', 'Your troops are camped here. They stay until you recall them.') + '</p><button class="comprar rojo" id="cas-llamar">↩ ' + L('Llamar tropas', 'Recall troops') + '</button>'; // v8.13
     $('mundo-info').innerHTML = html + '</div>';
     var bfv = $('cas-fundar'); if (bfv) bfv.addEventListener('click', function () { fundarVilla(c.x, c.y); });
     var bc = $('cas-conquistar'); if (bc) bc.addEventListener('click', function () { sonar('click'); var dO = deOtro ? nube : null; abrirMarcha({ pve: function (fz) { conquistarCasilla(c, dO, false, fz); }, uid: 'cas_' + c.x + '_' + c.y, nombre: T('cas_' + c.tipo), x: c.x, y: c.y, nivel: c.nivel, defensa: Math.round(defensaCasilla(c) * (dO ? 1.4 : 1)) }); }); // v8.05
     var bs = $('cas-soltar'); if (bs) bs.addEventListener('click', function () { soltarCasilla(c); });
+    var bll = $('cas-llamar'); if (bll) bll.addEventListener('click', function () { sonar('click'); llamarGuarnicion(c.id); mostrarCasilla(c); }); // v8.13
     var be = $('cas-espiar'); if (be) be.addEventListener('click', function () { espiarLugar(T('cas_' + c.tipo) + ' (' + L('Nv ', 'Lv ') + c.nivel + ')', c.x, c.y, [[L('Guardianes', 'Guardians'), '⚔️ ' + formatoNumero(defensaCasilla(c))], [L('Produce', 'Produces'), '+' + formatoNumero(guardadoCasilla(c).hora) + ' ' + T('r_' + t.r) + L(' por hora', ' per hour')], [L('Ocupada por', 'Held by'), ocupante]]); });
     var brc = $('cas-recoger'); if (brc) brc.addEventListener('click', function () { recogerCasilla(c); });
     var bp = $('cas-portal'); if (bp) bp.addEventListener('click', function () {
@@ -2598,15 +2600,17 @@
   }
   // ---------- MARCHAS a aldeas bárbaras, bestias y casillas: las tropas se ven caminando hasta el objetivo ----------
   var marchasPVE = [], idPVE = 0, llegadasPVE = [];
+  function segPVE(dist) { return Math.max(20, Math.min(120, 15 + dist * 1.5)); } // v8.13
   function marcharA(dest, txt, alLlegar) {
     // v7.33: varias marchas a la vez también contra aldeas, bestias y casillas (una por nivel del Punto de reunión, máximo 12)
     if (totalMarchando() >= maxMarchas()) { consejoTemporal(L('Ya tienes ' + maxMarchas() + ' marcha' + (maxMarchas() > 1 ? 's' : '') + ' en camino. Sube el Punto de reunión para mandar más a la vez (una por nivel).', 'You already have ' + maxMarchas() + ' march(es) out. Upgrade the Rally point to send more (one per level).')); sonar('error'); return; }
     var yo = celdaDe(miLugar().x, miLugar().y), dist = Math.hypot(dest.x - yo.x, dest.y - yo.y);
-    var seg = Math.max(4, Math.min(15, 2.5 + dist * 0.45)), ahora = Date.now();
+    var seg = segPVE(dist), ahora = Date.now(); // v8.13: antes 4-15 s; con 10 marchas las primeras ya habían vuelto
     var m = { id: 'p' + (++idPVE), de: { x: aCoord(yo.x), y: aCoord(yo.y) }, a: { x: aCoord(dest.x), y: aCoord(dest.y) }, sale: ahora, llega: ahora + seg * 1000, txt: txt, alLlegar: alLlegar, seg: seg };
+    var um0 = estado.ultimaMarcha; if (um0) { m.heroe = um0.heroe || null; m.sel = JSON.parse(JSON.stringify(um0.tropas || {})); } // v8.13
     marchasPVE.push(m); sonar('cuerno');
     if (M3) { M3.obj.copy(posCelda(yo.x, yo.y)); M3.seguir = m.id; M3.zoom = { de: M3.dist, a: Math.max(22, Math.min(36, 14 + dist)), t0: performance.now() }; }
-    $('mundo-info').innerHTML = ''; consejoTemporal('🏇 ' + escaparHTML(txt) + ' · ' + L('llegan en ', 'arriving in ') + Math.ceil(seg) + ' s'); if (false) $('mundo-info').innerHTML = '<div class="carta pergamino"><h3 class="perg-tit">🏇 ' + L('¡Tus tropas salieron!', 'Your troops set out!') + '</h3><p class="perg-sub">' + escaparHTML(txt) + ' · X ' + dest.x + ' · Y ' + dest.y + '</p><p>' + L('Llegan en ', 'They arrive in ') + '<b id="pve-falta">' + Math.ceil(seg) + ' s</b>. ' + L('Mira cómo marchan por el mapa.', 'Watch them march across the map.') + '</p></div>';
+    $('mundo-info').innerHTML = ''; consejoTemporal('🏇 ' + escaparHTML(txt) + ' · ' + L('llegan en ', 'arriving in ') + fmtTiempo(seg)); setTimeout(actualizarDock, 50); if (false) $('mundo-info').innerHTML = '<div class="carta pergamino"><h3 class="perg-tit">🏇 ' + L('¡Tus tropas salieron!', 'Your troops set out!') + '</h3><p class="perg-sub">' + escaparHTML(txt) + ' · X ' + dest.x + ' · Y ' + dest.y + '</p><p>' + L('Llegan en ', 'They arrive in ') + '<b id="pve-falta">' + Math.ceil(seg) + ' s</b>. ' + L('Mira cómo marchan por el mapa.', 'Watch them march across the map.') + '</p></div>';
   }
   setInterval(function () {
     var ahora = Date.now();
@@ -2616,16 +2620,17 @@
       if (m.vuelta) return;
       if (m.sinVuelta) { if (M3 && M3.seguir === m.id) M3.seguir = null; try { m.alLlegar(); } catch (er) { console.error(er); } return; }
       // al llegar pelean; después de la batalla vuelven a casa caminando
-      marchasPVE.push({ id: 'p' + (++idPVE), de: m.a, a: m.de, sale: ahora + 4500, llega: ahora + 4500 + m.seg * 1000, txt: '🏇 ' + L('Vuelven', 'Returning'), vuelta: true, seg: m.seg });
       if (M3 && M3.seguir === m.id) M3.seguir = null;
-      try { m.alLlegar(); } catch (er) { console.error(er); }
+      try { m.alLlegar(m); } catch (er) { console.error(er); }
+      if (!m.queda) marchasPVE.push({ id: 'p' + (++idPVE), de: m.a, a: m.de, sale: ahora + 4500, llega: ahora + 4500 + m.seg * 1000, txt: '🏇 ' + L('Vuelven', 'Returning'), vuelta: true, seg: m.seg, heroe: m.heroe, sel: m.sel }); // v8.13
     });
   }, 250);
-  function atacarBestia(i, llego, fz) {
+  function opPVE(mm) { return mm && mm.sel && Object.keys(mm.sel).length ? { tropas: JSON.parse(JSON.stringify(mm.sel)), heroe: mm.heroe || null } : undefined; } // v8.13: pelean solo las tropas que mandaste
+  function atacarBestia(i, llego, fz, mm) {
     var b = listaBestias()[i];
     if (!tropas.some(function (u) { return !u.heroeId; }) && tropasNormales() <= 0) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarBestia(i); return; }
-    if (!llego) { marcharA({ x: b.x, y: b.y }, '⚔️ ' + nombreBestia(b) + ' ' + L('Nv ', 'Lv ') + b.nivel, function () { atacarBestia(i, true, fz); }); return; }
-    var f = Math.round(fz || fuerzaEjercito()), d = defensaBestia(b.nivel), res = resolverBatalla(f, d);
+    if (!llego) { marcharA({ x: b.x, y: b.y }, '⚔️ ' + nombreBestia(b) + ' ' + L('Nv ', 'Lv ') + b.nivel, function (mq) { atacarBestia(i, true, fz, mq); }); return; }
+    var f = Math.round(fz || fuerzaEjercito()), d = defensaBestia(b.nivel), res = resolverBatalla(f, d, opPVE(mm));
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ silencio: true, nombre: estado.idioma === 'en' ? TIPOS_BESTIA[b.tipo].en : TIPOS_BESTIA[b.tipo].es, nivel: b.nivel, emoji: TIPOS_BESTIA[b.tipo].icono }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
@@ -2833,11 +2838,11 @@
     M3.obj.copy(posCelda(e.x, e.y)); M3.zoom = { de: M3.dist, a: 22, t0: performance.now() };
     elegirCelda(e.x, e.y);
   }
-  function conquistarCasilla(c, deOtro, llego, fz) {
+  function conquistarCasilla(c, deOtro, llego, fz, mm) {
     if (!tropas.some(function (u) { return !u.heroeId; }) && tropasNormales() <= 0) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCasilla(c); return; }
     if (!deOtro && misCasillas().length >= maxCasillas()) { consejoTemporal(T('cas_maximo', { n: maxCasillas() })); sonar('error'); mostrarCasilla(c); return; }
-    if (!llego) { marcharA({ x: c.x, y: c.y }, '🚩 ' + T('cas_' + c.tipo) + ' ' + L('Nv ', 'Lv ') + c.nivel, function () { conquistarCasilla(c, deOtro, true, fz); }); return; }
-    var f = Math.round(fz || fuerzaEjercito()), d = defensaCasilla(c) * (deOtro ? 1.4 : 1), res = resolverBatalla(f, d);
+    if (!llego) { marcharA({ x: c.x, y: c.y }, '🚩 ' + T('cas_' + c.tipo) + ' ' + L('Nv ', 'Lv ') + c.nivel, function (mq) { conquistarCasilla(c, deOtro, true, fz, mq); }); return; }
+    var f = Math.round(fz || fuerzaEjercito()), d = defensaCasilla(c) * (deOtro ? 1.4 : 1), res = resolverBatalla(f, d, opPVE(mm));
     sonar('cuerno');
     var listo = null, mostrar = null;
     escenaBatalla({ silencio: true, nombre: T('cas_' + c.tipo) + ' ' + c.x + ',' + c.y, nivel: c.nivel, retrato: null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
@@ -2850,14 +2855,27 @@
     if (!res.gano) { sonar('derrota'); fin(); return; }
     estado.casillas = estado.casillas || {};
     estado.casillas[c.id] = { tipo: c.tipo, nivel: c.nivel };
+    if (mm) { mm.queda = true; estado.casillas[c.id].g = { tropas: mm.sel || {}, heroe: mm.heroe || null, a: mm.a, seg: mm.seg, desde: Date.now() }; } // v8.13: se quedan acampadas
     sonar('victoria');
     if (hayCuenta()) Cuentas.tomarCasilla(c.id, { dueno: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), alianza: estado.alianza || '', fecha: Date.now() })
       .then(function () { casillasNube[c.id] = { dueno: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), alianza: estado.alianza || '' }; fin(); })
       .catch(function () { fin(); });
     else fin();
   }
+  // v8.13: tropas acampadas en tus terrenos (se quedan hasta que las llames)
+  function guarniciones() { var l = [], cs = estado.casillas || {}; for (var id in cs) if (cs[id] && cs[id].g) l.push({ id: id, c: cs[id], g: cs[id].g }); return l; }
+  function nombreGuarnicion(q) { var p = String(q.id).split('_'); return T('cas_' + q.c.tipo) + ' ' + L('Nv ', 'Lv ') + q.c.nivel + (p.length >= 2 ? ' · ' + p[p.length - 2] + ',' + p[p.length - 1] : ''); }
+  function llamarGuarnicion(id, callado) {
+    var cs = (estado.casillas || {})[id]; if (!cs || !cs.g) return;
+    var g = cs.g, ahora = Date.now(), nom = T('cas_' + cs.tipo); delete cs.g;
+    estado.regresos = estado.regresos || [];
+    if (g.a) estado.regresos.push({ id: 'g' + ahora + Math.floor(Math.random() * 999), de: g.a, a: miLugar(), sale: ahora, llega: ahora + Math.max(20, g.seg || 30) * 1000, botin: null, nombre: nom, tropas: g.tropas, heroe: g.heroe });
+    if (!callado) { sonar('cuerno'); consejoTemporal('🏇 ' + L('Tus tropas vuelven de ', 'Your troops are coming back from ') + escaparHTML(nom) + '.'); }
+    guardar(true); actualizarDock(); if (enMundo) pintarAldeas(aldeasCache);
+  }
   function soltarCasilla(c) {
     confirmarJuego('🏳️ ' + T('cas_abandonar'), T('cas_abandonar_txt'), T('cas_abandonar'), function () {
+      llamarGuarnicion(c.id, true); // v8.13: si había tropas acampadas, vuelven a casa
       delete estado.casillas[c.id];
       if (hayCuenta()) Cuentas.soltarCasilla(c.id).catch(function () {});
       delete casillasNube[c.id];
@@ -2892,11 +2910,11 @@
     var b = $('camp-atacar'); if (b) b.addEventListener('click', function () { sonar('click'); var cq = CAMPAMENTOS[i], cc = celdaDe(cq.x, cq.y); abrirMarcha({ pve: function (fz) { atacarCampamento(i, false, fz); }, uid: 'camp_' + i, nombre: T('campamento'), x: cc.x, y: cc.y, nivel: cq.nivel, defensa: defensaCampamento(cq.nivel) }); }); // v8.05
     var bes = $('camp-espiar'); if (bes) bes.addEventListener('click', function () { espiarLugar(T('campamento') + ' (' + L('Nv ', 'Lv ') + cm.nivel + ')', c.x, c.y, [[L('Guerreros bárbaros', 'Barbarian warriors'), '⚔️ ' + formatoNumero(defensaCampamento(cm.nivel))], [L('Tu poder', 'Your power'), formatoNumero(Math.round(fuerzaEjercito()))], [T('at_botin'), textoBotin(botinMaximo(cm.nivel)) + ' · +' + gemasCampamento(cm.nivel) + ' 💎'], [L('¿Vale la pena?', 'Worth it?'), fuerzaEjercito() >= defensaCampamento(cm.nivel) ? L('Sí, eres más fuerte', 'Yes, you are stronger') : L('Todavía no: entrena más tropas', 'Not yet: train more troops')]]); });
   }
-  function atacarCampamento(i, llego, fz) {
+  function atacarCampamento(i, llego, fz, mm) {
     var cm = CAMPAMENTOS[i];
     if (!tropas.some(function (u) { return !u.heroeId; }) && tropasNormales() <= 0) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCampamento(i); return; }
-    if (!llego) { marcharA(celdaDe(cm.x, cm.y), '🛖 ' + T('campamento') + ' ' + L('Nv ', 'Lv ') + cm.nivel, function () { atacarCampamento(i, true, fz); }); return; }
-    var f = Math.round(fz || fuerzaEjercito()), d = defensaCampamento(cm.nivel), res = resolverBatalla(f, d);
+    if (!llego) { marcharA(celdaDe(cm.x, cm.y), '🛖 ' + T('campamento') + ' ' + L('Nv ', 'Lv ') + cm.nivel, function (mq) { atacarCampamento(i, true, fz, mq); }); return; }
+    var f = Math.round(fz || fuerzaEjercito()), d = defensaCampamento(cm.nivel), res = resolverBatalla(f, d, opPVE(mm));
     var bm = botinMaximo(cm.nivel), botin = {};
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { botin[r] = Math.floor(bm[r] * res.margen); });
     var premioCamp = { oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra, gemas: gemasCampamento(cm.nivel), objetos: { libro_gra: 1, acel_15m: 1 } };
@@ -5284,6 +5302,7 @@
     carretas().viajes.forEach(function (v) { if (!v.de || !v.a) return; if (ahora < v.llega) lista.push({ id: 'c' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, carro: true, txt: '×' + v.n + (v.nombre ? ' → ' + String(v.nombre).slice(0, 8) : '') });
       else if (ahora < v.vuelve) lista.push({ id: 'c' + v.id + 'r', de: v.a, a: v.de, sale: v.llega, llega: v.vuelve, color: 0x3fe05a, carro: true, txt: '×' + v.n + ' ' + L('vuelven', 'back') }); });
     enviosEnCamino.forEach(function (e) { var de = lugarDe(e.de); if (de && e.llega > ahora) lista.push({ id: 'ce' + e.id, de: de, a: yo, sale: e.fecha, llega: e.llega, color: 0x3fe05a, carro: true, txt: String(e.deNombre || '').slice(0, 8) + ' ×' + (e.carretas || 1) }); });
+    guarniciones().forEach(function (q) { if (q.g.a) lista.push({ id: 'g' + q.id, de: q.g.a, a: q.g.a, sale: ahora - 1000, llega: ahora, color: 0x2a6ad0, txt: '', quieto: true }); }); // v8.13: acampadas
     (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, txt: '🏇 ' + L('Regresando a la villa', 'Returning home'), botin: false }); });
     var t = performance.now() / 1000;
     lista.forEach(function (v) {
@@ -5294,7 +5313,7 @@
         g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col; if (v.carro) { col = new THREE.Group(); var mc = modeloCarreta(); mc.rotation.y = -Math.PI / 2; col.add(mc); col.userData.us = []; } else col = modeloColumna(v.color, tipoC); g.add(col); g.userData.col = col; col.traverse(function (o) { o.frustumCulled = false; });
         if (v.botin) { var saco = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8c45a })); saco.position.set(0, 0.25, -0.75); col.add(saco); }
         var lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p0.x, 0.14, p0.z), new THREE.Vector3(p1.x, 0.14, p1.z)]);
-        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color === 0x3fe05a ? 0x3fe05a : 0xff3a2a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); // v7.18: verde las tuyas, roja la que te ataca linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
+        var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color === 0x3fe05a ? 0x3fe05a : 0xff3a2a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); /* v7.18: verde las tuyas, roja la que te ataca */ linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
         // v6.41: el destino se marca en el suelo con un aro
         var aro = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.78, 28), new THREE.MeshBasicMaterial({ color: v.enemigo ? 0xff4a3a : 0xffd36a, transparent: true, opacity: 0.45, side: THREE.DoubleSide, depthTest: !M3.camelot })); aro.rotation.x = -Math.PI / 2; aro.position.set(p1.x, 0.16, p1.z); aro.renderOrder = 7; M3.e.add(aro); linea.userData.aro = aro;
         // sombra redonda debajo para que destaquen sobre el pasto
@@ -7590,6 +7609,7 @@
     var f = {};
     marchasActivas().forEach(function (m) { var h = ((estado.marchaTropas || {})[m.id] || {}).heroe; if (h) f[h] = 1; });
     marchasPVE.forEach(function (m) { if (m.heroe) f[m.heroe] = 1; });
+    guarniciones().forEach(function (q) { if (q.g.heroe) f[q.g.heroe] = 1; }); (estado.regresos || []).forEach(function (v) { if (v.heroe && v.llega > Date.now()) f[v.heroe] = 1; }); // v8.13
     return f;
   }
   function heroeDefensor() { var h = estado.heroeDefensor; return h && estado.heroes && estado.heroes[h] && HEROE[h] && !heroesFuera()[h] ? h : null; }
@@ -8070,7 +8090,8 @@
       marchasPVE.forEach(function (m) { l.push({ ico: m.vuelta ? '↩️' : '🏇', dest: m.txt || '', x: m.a.x, y: m.a.y, est: m.vuelta ? L('Regresando a la villa · informe en el Correo', 'Returning home · report in Mail') : L('Marchando', 'Marching'), t: Math.max(0, (m.llega - ahora) / 1000) }); });
       marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).forEach(function (m) { l.push({ ico: '⚔️', dest: m.defensorNombre || '', x: m.x, y: m.y, est: L('Atacando', 'Attacking'), t: (m.llega - ahora) / 1000 }); });
       (estado.regresos || []).filter(function (v) { return v.llega > ahora; }).forEach(function (v) { l.push({ ico: '↩️', dest: v.nombre || '', est: L('Regresando a la villa · informe en el Correo', 'Returning home · report in Mail'), t: (v.llega - ahora) / 1000 }); }); // v7.76: sin decir si ganaste
-      h += '<p class="ru-nota">' + L('Marchas a la vez: ', 'Marches at once: ') + '<b>1</b> · ' + L('Mejora el Punto de reunión para enviar ejércitos más grandes.', 'Upgrade the Rally point to send bigger armies.') + '</p>';
+      guarniciones().forEach(function (q) { l.push({ ico: '⛺', dest: nombreGuarnicion(q), est: L('Acampadas: se quedan hasta que las llames', 'Camped: they stay until recalled'), t: 0 }); }); // v8.13
+      h += '<p class="ru-nota">' + L('Marchas a la vez: ', 'Marches at once: ') + '<b>' + totalMarchando() + ' / ' + maxMarchas() + '</b> · ' + L('Mejora el Punto de reunión para enviar ejércitos más grandes.', 'Upgrade the Rally point to send bigger armies.') + '</p>';
       h += l.length ? l.map(function (q) { return '<div class="ru-marcha"><span class="ru-ic">' + q.ico + '</span><div class="ru-dat"><b>' + escaparHTML(q.dest) + '</b><small>' + q.est + (q.x !== undefined ? ' · X ' + q.x + ' · Y ' + q.y : '') + '</small></div><span class="ru-t">⏱ ' + fmtTiempo(Math.ceil(q.t)) + '</span>' + (q.x !== undefined ? '<button class="iv-boton" data-accion="reunion-ver" data-x="' + q.x + '" data-y="' + q.y + '">' + L('Ver', 'View') + '</button>' : '') + '</div>'; }).join('')
         : '<p class="iv-vacio">' + L('No tienes marchas ahora. Ve al Mundo, toca un lugar y elige Marchar.', 'No marches right now. Go to the World, tap a place and choose March.') + '</p>';
     }
@@ -9354,11 +9375,11 @@
     var mh = h && estado.heroes && estado.heroes[h] ? multiplicadoresHeroe(h).marcha : 0;
     return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')) * (1 + mh / 100) * (1 + 0.03 * bonifAl('marcha'))); // v7.84: set del dragón
   }
-  function maxMarchas() { return Math.min(12, Math.max(1, nivelRelevo())); }
-  function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length; }
+  function maxMarchas() { return estado.dueno ? 12 : Math.min(12, Math.max(1, nivelRelevo())); } // v8.13: los dueños, todo a full
+  function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length + guarniciones().length; } // v8.13: las acampadas ocupan una marcha
   function marchasActivas() { return marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }); }
   // tropas que ya van en otra marcha (no se pueden mandar dos veces)
-  function enMarcha(k) { var n = 0; marchasActivas().forEach(function (m) { var t = ((estado.marchaTropas || {})[m.id] || {}).tropas || {}; n += t[k] || 0; }); return n; }
+  function enMarcha(k) { var n = 0, ah = Date.now(); marchasActivas().forEach(function (m) { var t = ((estado.marchaTropas || {})[m.id] || {}).tropas || {}; n += t[k] || 0; }); guarniciones().forEach(function (q) { n += (q.g.tropas || {})[k] || 0; }); (estado.regresos || []).forEach(function (v) { if (v.tropas && v.llega > ah) n += v.tropas[k] || 0; }); marchasPVE.forEach(function (m) { if (m.sel) n += m.sel[k] || 0; }); return n; } // v8.13
   function libresParaMarcha(k) { return Math.max(0, cuentaTipo(k) - enMarcha(k)); }
   function valorUnidadTipo(k) {
     var u = tropas.filter(function (x) { return x.tipo === k && !x.heroeId && !x.invocada && !x.refuerzo; })[0];
@@ -9625,6 +9646,7 @@
   function vigiaBono() { var n = nivelMayor('vigia'); return n ? EDIFICIOS.vigia.defensa[n - 1] : 0; }
   function tiempoMarcha(a, heroe) {
     var yo = celdaDe(miLugar().x, miLugar().y), el = celdaDe(a.x || 50, a.y || 50);
+    if (a && a.pve) return Math.round(segPVE(Math.hypot(a.x - yo.x, a.y - yo.y))) * 1000; // v8.13: bárbaros, bestias y terrenos
     var h = heroe !== undefined ? heroe : ((estado.ultimaMarcha && estado.ultimaMarcha.heroe !== undefined) ? estado.ultimaMarcha.heroe : liderActual()), vh = h && estado.heroes && estado.heroes[h] ? multiplicadoresHeroe(h).velMarcha : 0;
     return Math.round((60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) / (buffActivo('velMarcha') ? 1.5 : 1) / (1 + vh / 100)) * 1000; // v7.84: Grebas del Vuelo Imperial
   }
@@ -13109,20 +13131,21 @@
     carretas().viajes.forEach(function (v) { if (!v.de || !v.a) return; if (ahora < v.llega) l.push({ ico: '🛒', txt: '×' + v.n + (v.nombre ? ' → ' + escaparHTML(v.nombre) : ''), llega: v.llega }); else if (v.vuelve && ahora < v.vuelve) l.push({ ico: '🛒', txt: '×' + v.n + ' ' + L('vuelven', 'returning'), llega: v.vuelve }); });
     enviosEnCamino.forEach(function (e) { if (e.llega > ahora) l.push({ ico: '📦', txt: escaparHTML(e.deNombre || '?') + ' → ' + L('a ti', 'to you'), llega: e.llega }); });
     (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) l.push({ ico: '🏇', txt: L('Regresan', 'Returning') + (v.nombre ? ' ' + L('de ', 'from ') + escaparHTML(v.nombre) : ''), llega: v.llega }); });
+    guarniciones().forEach(function (q) { l.push({ ico: '⛺', txt: escaparHTML(nombreGuarnicion(q)), llega: 9e15, gid: q.id }); }); // v8.13
     return l.sort(function (a, b) { return a.llega - b.llega; });
   }
   function pintarListaMarchas(movs, ahora) {
     var d = $('dock-procesos'); if (!d) return;
-    var c = $('dk-lista'); if (!c) { c = document.createElement('div'); c.id = 'dk-lista'; d.appendChild(c); c.addEventListener('click', function (ev) { var b = ev.target.closest('[data-macel],[data-mret]'); if (!b || enMenu) return; sonar('click'); if (b.hasAttribute('data-macel')) { acelerarMarcha(b.getAttribute('data-macel')); return; } var id = b.getAttribute('data-mret'), m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m) return; confirmarJuego('↩ ' + L('Retirar marcha', 'Recall march'), L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'), L('Retirar', 'Recall'), function () { cancelarMarcha(m); actualizarDock(); }); }); }
+    var c = $('dk-lista'); if (!c) { c = document.createElement('div'); c.id = 'dk-lista'; d.appendChild(c); c.addEventListener('click', function (ev) { var b = ev.target.closest('[data-macel],[data-mret],[data-gret]'); if (!b || enMenu) return; sonar('click'); if (b.hasAttribute('data-gret')) { var gi = b.getAttribute('data-gret'); confirmarJuego('↩ ' + L('Llamar tropas', 'Recall troops'), L('¿Llamar a las tropas acampadas? Vuelven a casa y el terreno sigue siendo tuyo.', 'Recall the camped troops? They come home and the tile stays yours.'), L('Llamar', 'Recall'), function () { llamarGuarnicion(gi); }); return; } if (b.hasAttribute('data-macel')) { acelerarMarcha(b.getAttribute('data-macel')); return; } var id = b.getAttribute('data-mret'), m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m) return; confirmarJuego('↩ ' + L('Retirar marcha', 'Recall march'), L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'), L('Retirar', 'Recall'), function () { cancelarMarcha(m); actualizarDock(); }); }); }
     var ver = dockPest === 'marchar' && movs.length > 0;
     c.style.display = ver ? '' : 'none'; d.classList.toggle('con-lista', ver);
     if (!ver) { c.innerHTML = ''; c.dataset.h = ''; return; }
-    var h = movs.map(function (x) { return '<div class="dkl-fila"><span class="dkl-ico">' + x.ico + '</span><span class="dkl-txt">' + x.txt + '</span><b class="dkl-t">⏱ ' + fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000))) + '</b>' + (x.ataque ? '<button class="dkl-b acel" data-macel="' + x.id + '">⚡</button><button class="dkl-b ret" data-mret="' + x.id + '">↩</button>' : '') + '</div>'; }).join('');
+    var h = movs.map(function (x) { return '<div class="dkl-fila"><span class="dkl-ico">' + x.ico + '</span><span class="dkl-txt">' + x.txt + '</span><b class="dkl-t">' + (x.gid ? L('Acampadas', 'Camped') : '⏱ ' + fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000)))) + '</b>' + (x.gid ? '<button class="dkl-b ret" data-gret="' + escaparHTML(x.gid) + '">↩</button>' : '') + (x.ataque ? '<button class="dkl-b acel" data-macel="' + x.id + '">⚡</button><button class="dkl-b ret" data-mret="' + x.id + '">↩</button>' : '') + '</div>'; }).join('');
     if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
   }
   function actualizarDock() {
     var d = crearDock();
-    var hayMarchaYa = marchas.some(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }) || marchasPVE.length > 0;
+    var hayMarchaYa = marchas.some(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }) || marchasPVE.length > 0 || guarniciones().length > 0 || (estado.regresos || []).some(function (v) { return v.llega > Date.now(); });
     var ocultar = enMenu || (enMundo && !hayMarchaYa) || !!panelActual || document.body.classList.contains('panel-abierto');
     d.classList.toggle('en-mundo', !!enMundo);
     d.classList.toggle('oculto', ocultar);
@@ -13132,7 +13155,7 @@
     if (ref) { var y = Math.max(0, window.innerHeight - ref.getBoundingClientRect().top) + 4; if (d.dataset.y !== String(y)) { d.dataset.y = y; d.style.bottom = y + 'px'; } }
     d.classList.toggle('cerrado', !dockAbierto);
     var ahora = Date.now();
-    var nMarchas = marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).length;
+    var nMarchas = marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > ahora; }).length + guarniciones().length + (estado.regresos || []).filter(function (v) { return v.llega > ahora; }).length;
     var tMarcha = 0;
     marchasPVE.forEach(function (m) { tMarcha = Math.max(tMarcha, (m.llega - ahora) / 1000); });
     marchas.forEach(function (m) { if (!m.resuelto && m.llega > ahora) tMarcha = Math.max(tMarcha, (m.llega - ahora) / 1000); });
@@ -13151,7 +13174,7 @@
     } else if (dockPest === 'marchar') {
       lleno = activo.marchar;
       var movs = listaMovimientos(ahora);
-      if (movs.length) { lleno = true; txt = '🏇 ' + L('En camino: ', 'On the way: ') + movs.length; btn = ''; acc = ''; pintarListaMarchas(movs, ahora); }
+      if (movs.length) { lleno = true; txt = '🏇 ' + L('Marchas: ', 'Marches: ') + movs.length; btn = ''; acc = ''; pintarListaMarchas(movs, ahora); }
       else pintarListaMarchas([], ahora);
     } else if (false) {
       // v7.19: la marcha que llega primero, con ⚡ Acelerar y ↩ Retirar (como KoC: nada flota encima del menú)
