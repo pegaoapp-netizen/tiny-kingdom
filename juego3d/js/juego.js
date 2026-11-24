@@ -13300,7 +13300,8 @@
   setInterval(function () {
     var m = $('mision'), dk = $('dock-procesos'); if (!m || m.classList.contains('oculto')) return;
     var r = dk && getComputedStyle(dk).display !== 'none' ? dk.getBoundingClientRect() : null;
-    if (r && r.height > 0) m.style.setProperty('bottom', Math.round(window.innerHeight - r.top + 6) + 'px', 'important'); else m.style.removeProperty('bottom');
+    var arriba = r ? r.top : 0; if (r) dk.querySelectorAll('.dk-tabs, #dk-lista, .dk-cab, #dk-txt').forEach(function (e) { var q = e.getBoundingClientRect(); if (q.height > 0 && q.top < arriba) arriba = q.top; }); // v8.36: lo más alto del dock (pestañas y lista), para que la misión nunca se encime
+    if (r && r.height > 0) m.style.setProperty('bottom', Math.round(window.innerHeight - arriba + 6) + 'px', 'important'); else m.style.removeProperty('bottom');
   }, 400);
   function crearDock() {
     if ($('dock-procesos')) return $('dock-procesos');

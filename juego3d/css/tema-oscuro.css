@@ -1453,7 +1453,7 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 
 /* v8.33: niebla roja cuando te atacan (fina, se ve todo) */
 #niebla-ataque { position: fixed; inset: 0; z-index: 8500; pointer-events: none; box-shadow: inset 0 0 45px rgba(220, 38, 38, .55), inset 0 0 90px 10px rgba(220, 38, 38, .25); background: none; /* v8.34: solo en los bordes; el centro queda limpio */ animation: nieblaRoja 1.8s ease-in-out infinite alternate; }
-#niebla-ataque span { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 112px); transform: translateX(-50%); padding: 3px 12px; border-radius: 12px; background: rgba(120, 0, 0, .75); border: 1px solid #ff6a5a; color: #fff; font: 700 12px system-ui, sans-serif; white-space: nowrap; }
+#niebla-ataque span { position: absolute; left: 53%; top: calc(env(safe-area-inset-top) + 84px); transform: translateX(-50%); max-width: 46vw; overflow: hidden; text-overflow: ellipsis; padding: 2px 9px; border-radius: 10px; background: rgba(120, 0, 0, .8); border: 1px solid #ff6a5a; color: #fff; font: 700 11px system-ui, sans-serif; white-space: nowrap; } /* v8.36: más pequeño, debajo de los recursos */
 @keyframes nieblaRoja { from { opacity: .7; } to { opacity: 1; } }
 .ib-contra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
 .ib-contra .comprar { margin: 0; }
