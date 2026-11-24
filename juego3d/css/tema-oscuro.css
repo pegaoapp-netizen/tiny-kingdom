@@ -1568,3 +1568,7 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 
 /* v8.50: volumen de la música */
 .mus-vol { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+/* v8.51: aviso de ataque a un aliado */
+#alerta-aliado { position: fixed; right: calc(10px + env(safe-area-inset-right)); top: calc(96px + env(safe-area-inset-top)); z-index: 64; max-width: min(260px, 70vw); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 8px; border-radius: 10px; background: linear-gradient(#1d4f8a, #0d2a50); border: 2px solid #7fb2ff; color: #fff; font: 700 12px system-ui, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,.45); }
+#alerta-aliado span { flex: 1 1 140px; } #alerta-aliado .aa-x { background: none; border: 0; color: #fff; font-size: 14px; cursor: pointer; padding: 0 2px; }

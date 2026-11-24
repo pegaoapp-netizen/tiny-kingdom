@@ -3802,6 +3802,22 @@
   var refPedido = null, refSel = null, refHeroe = null;
   // v6.97: paso 1 «Escoger tropas»: cada tropa en su fila con foto, número, barra con − / + y botón de máximo; abajo cuántas llevas
   function topeRefuerzoDe(k) { return Math.min(refPedido ? Math.max(0, refPedido.cantidad - (refPedido.recibido || 0)) : 300, propiasDe(k).length); }
+  /* v8.51: AVISO CUANDO ATACAN A UN ALIADO: sale arriba con el tiempo que falta y un botón para Reforzar */
+  var ataquesAliados = [];
+  function revisarAtaquesAliados() {
+    if (!hayCuenta() || !estado.alianza || !Cuentas.ataquesAAliados || document.hidden || enMenu) { ataquesAliados = []; pintarAlertaAliado(); return; }
+    Cuentas.ataquesAAliados(estado.alianza).then(function (l) { ataquesAliados = (l || []).sort(function (a, b) { return a.llega - b.llega; }); pintarAlertaAliado(); }).catch(function () {});
+  }
+  function pintarAlertaAliado() {
+    var l = ataquesAliados.filter(function (x) { return x.llega > Date.now(); }), d = $('alerta-aliado');
+    if (!l.length || enMenu) { if (d) d.remove(); return; }
+    var x = l[0];
+    if (!d) { d = document.createElement('div'); d.id = 'alerta-aliado'; document.body.appendChild(d); d.addEventListener('click', function (ev) { var b = ev.target.closest('[data-aa]'); if (!b) return; ev.stopPropagation(); sonar('click'); if (b.getAttribute('data-aa') === 'x') { pintarAlertaAliado.cerrado = d.getAttribute('data-id'); d.remove(); return; } if (panelActual) cerrarPanel(); if (typeof cerrarMundo === 'function' && enMundo) cerrarMundo(); abrirEnviarRefuerzo(b.getAttribute('data-uid'), b.getAttribute('data-n')); }); }
+    if (pintarAlertaAliado.cerrado === x.id) { d.remove(); return; }
+    d.setAttribute('data-id', x.id);
+    d.innerHTML = '<span>🛡️ ' + L('Atacan a tu aliado ', 'Your ally ') + '<b>' + escaparHTML(x.defensorNombre || '?') + '</b>' + L('', ' is under attack') + ' · ⏱ ' + fmtTiempo(Math.max(0, (x.llega - Date.now()) / 1000)) + (l.length > 1 ? ' · +' + (l.length - 1) : '') + '</span><button class="comprar mini verde" data-aa="ref" data-uid="' + escaparHTML(x.defensor) + '" data-n="' + escaparHTML(x.defensorNombre || '') + '">' + L('Reforzar', 'Reinforce') + '</button><button class="aa-x" data-aa="x">✕</button>';
+  }
+  setTimeout(revisarAtaquesAliados, 8000); setInterval(revisarAtaquesAliados, 60000); setInterval(pintarAlertaAliado, 1000);
   function abrirEnviarRefuerzo(uid, nombre, pedido) {
     refPedido = pedido || null;
     if (!hayCuenta() || !estado.alianza) return;

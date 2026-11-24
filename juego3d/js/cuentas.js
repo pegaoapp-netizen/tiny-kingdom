@@ -316,6 +316,12 @@ var Cuentas = (function () {
         .then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
     },
     // v7.39: GUERRA DE LA ALIANZA (solo el Canciller): ataques de los últimos 7 días contra los miembros y hechos por ellos
+    /* v8.51: ataques en camino contra compañeros de mi alianza (hoy y ayer) */
+    ataquesAAliados: function (tag) {
+      if (!usuario || !tag) return Promise.resolve([]);
+      var ahora = Date.now(), dias = [new Date(ahora).toISOString().slice(0, 10), new Date(ahora - 86400000).toISOString().slice(0, 10)];
+      return db.collection('ataques').where('alD', '==', tag).where('dia', 'in', dias).limit(60).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }).filter(function (x) { return !x.resuelto && !x.cancelado && (x.llega || 0) > Date.now() && x.defensor !== usuario.uid; }); });
+    },
     guerraAlianza: function (tag) {
       if (!usuario || !tag) return Promise.resolve({ recibidos: [], hechos: [] });
       var dias = [], ahora = Date.now();
