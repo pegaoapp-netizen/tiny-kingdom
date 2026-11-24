@@ -5293,6 +5293,21 @@
   }
   // carretas viajando en el mapa del mundo (las tuyas y las que te mandan)
   var enviosEnCamino = [];
+  // v8.33: en el informe del que te atacó salen sus coordenadas y un botón para ir a su villa y contraatacar
+  function htmlCoordAtacante(r) {
+    var l = lugarDe(r.atacante);
+    return '<div class="carta ib-contra"><b>📍 ' + escaparHTML(r.atacanteNombre || '?') + '</b> ' + (l ? '<span>X ' + Math.round(l.x) + ' · Y ' + Math.round(l.y) + '</span>' : '') +
+      '<button class="comprar rojo" data-accion="ir-atacante" data-uid="' + escaparHTML(r.atacante || '') + '">⚔️ ' + L('Ir a su villa', 'Go to their village') + '</button></div>';
+  }
+  function irAlAtacante(uid) {
+    if (!uid) return;
+    lugarDeNube(uid).then(function (l) {
+      if (!l) { consejoTemporal(L('No se encontró su villa.', 'Their village was not found.')); sonar('error'); return; }
+      if (panelActual) cerrarPanel(); var c = celdaDe(l.x, l.y);
+      if (!enMundo) abrirMundo();
+      setTimeout(function () { if (M3) { M3.vel = null; M3.seguir = null; M3.obj.copy(posCelda(c.x, c.y)); elegirCelda(c.x, c.y); } }, enMundo ? 50 : 900);
+    }).catch(function () { consejoTemporal(L('No se pudo buscar su villa.', 'Could not find their village.')); sonar('error'); });
+  }
   function lugarDe(uid) { var a = aldeasCache.filter(function (x) { return x.uid === uid; })[0]; return a ? { x: a.x, y: a.y } : null; }
   // dónde está el reino de otro jugador (si no está en el mapa cargado, se pregunta a la nube)
   function lugarDeNube(uid) { var l = lugarDe(uid); if (l) return Promise.resolve(l); return Cuentas.leerAldea(uid).then(function (a) { return a && typeof a.x === 'number' ? { x: a.x, y: a.y } : miLugar(); }).catch(function () { return miLugar(); }); }
@@ -9774,6 +9789,15 @@
     return Math.round((60 + Math.hypot(yo.x - el.x, yo.y - el.y) * 2.2) / (buffActivo('velMarcha') ? 1.5 : 1) / (1 + vh / 100)) * 1000; // v7.84: Grebas del Vuelo Imperial
   }
   var marchas = [], entrantes = [], dejarDeEscuchar = null, resolviendo = {};
+  // v8.33: mientras un ataque viene hacia ti y estás conectado, los bordes de la pantalla se tiñen de rojo (suave, se ve todo)
+  setInterval(function () {
+    var ahora = Date.now(), viene = entrantes.filter(function (r) { return !r.resuelto && !r.cancelado && r.llega > ahora; });
+    var n = $('niebla-ataque');
+    if (!viene.length) { if (n) n.remove(); return; }
+    if (!n) { n = document.createElement('div'); n.id = 'niebla-ataque'; n.innerHTML = '<span></span>'; document.body.appendChild(n); }
+    var pr = viene.sort(function (a, b) { return a.llega - b.llega; })[0], t = L('⚠️ Te atacan: ', '⚠️ Under attack: ') + escaparHTML(pr.atacanteNombre || '?') + ' · ' + fmtTiempo(Math.max(0, (pr.llega - ahora) / 1000)) + (viene.length > 1 ? ' (+' + (viene.length - 1) + ')' : '');
+    var sp = n.firstChild; if (sp.innerHTML !== t) sp.innerHTML = t;
+  }, 1000);
   function realizarAtaque(a, fuerzaElegida, nCarretas) {
     if (a && a.pve) { a.pve(fuerzaElegida); return; } // v8.05
     if (a && a.bot) { atacarVilla(a, false, fuerzaElegida); return; } // v7.02: a una villa: marcha por el mapa y batalla con las tropas elegidas
@@ -9967,7 +9991,7 @@
           ultimaBatalla.aplicada = true; ultimaBatalla.perdidas = aplicarPerdidasRondas(ultimaBatalla.sim.defReal || {}, true);
           if (ultimaBatalla.perdidas.muertos + ultimaBatalla.perdidas.heridos > 0) html += '<p class="nota">💀 ' + formatoNumero(ultimaBatalla.perdidas.muertos) + ' · 🏥 ' + formatoNumero(ultimaBatalla.perdidas.heridos) + '</p>'; } } catch (e) {}
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
-        nuevoCorreo('guerras', L(r.atacanteNombre + ' te atacó: ', r.atacanteNombre + ' attacked you: ') + (r.gano ? L('perdiste', 'you lost') : L('resististe', 'you held')), r.atacanteNombre, htmlInformeBatalla({ gano: !r.gano, fecha: r.llega,
+        nuevoCorreo('guerras', L(r.atacanteNombre + ' te atacó: ', r.atacanteNombre + ' attacked you: ') + (r.gano ? L('perdiste', 'you lost') : L('resististe', 'you held')), r.atacanteNombre, htmlCoordAtacante(r) + htmlInformeBatalla({ gano: !r.gano, fecha: r.llega,
           atacante: (function () { var t = {}, n = 0; Object.keys(r.tropasA || {}).forEach(function (k) { var q = +r.tropasA[k] || 0; n += q; t[k] = { ini: q, perdidos: Math.round(q * (r.bajas || 0)) }; }); return { nombre: r.atacanteNombre, poder: r.fuerza || 0, lucharon: n || null, sobreviven: null, muertos: null, heridos: null, revivir: null, tropas: n ? t : undefined }; })(), // v8.31: ves con qué tropas te atacaron
           defensor: { nombre: hayCuenta() ? Cuentas.nombrePublico() : T('tu_reino'), heroe: heroeDefensor(), poder: r.defensa || 0, lucharon: tropasNormales(), sobreviven: null, muertos: null, heridos: null, revivir: null }, mejoras: { de: misMejoras() } }));
         var _infViejo2 = (htmlInforme([[L('Resultado', 'Result'), r.gano ? '💔 ' + L('Te saquearon', 'You were raided') : '🛡️ ' + L('Resististe', 'You held')], [L('Su fuerza', 'Their strength'), formatoNumero(r.fuerza || 0)], [L('Tu defensa', 'Your defense'), formatoNumero(r.defensa || 0)]]));
@@ -12278,6 +12302,7 @@
       if (rr === 'miembro') delete rg[ru]; else rg[ru] = rr;
       Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
     }
+    else if (a === 'ir-atacante') { sonar('click'); irAlAtacante(b.getAttribute('data-uid')); } // v8.33
     else if (a === 'al-reintentar') { sonar('click'); abrirPanelAlianza(); }
     else if (a === 'al-expulsar') { var ue = b.getAttribute('data-uid'), ne = b.getAttribute('data-n'); confirmarJuego('🚪 ' + L('Expulsar a ', 'Remove ') + escaparHTML(ne), L('Saldrá de la alianza y ya no podrá usar sus ayudas ni su chat.', 'They will leave the alliance and lose its help and chat.'), L('Sí, expulsar', 'Yes, remove'), function () { Cuentas.expulsarDeAlianza(estado.alianza, ue).then(function () { if (alCache && alCache.al) { alCache.al.expulsados = alCache.al.expulsados || {}; alCache.al.expulsados[ue] = Date.now(); } alRangoAbierto = null; sonar('click'); consejoTemporal('🚪 ' + escaparHTML(ne) + L(' ya no está en la alianza.', ' is no longer in the alliance.')); pintarHubAlianza(); }).catch(function (er) { consejoTemporal(L('No se pudo expulsar', 'Could not remove') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }); } // v8.04
     else if (a === 'al-ceder') {
