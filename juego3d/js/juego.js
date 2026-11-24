@@ -8495,8 +8495,8 @@
   function statsHeroe(id) {
     var h = HEROE[id], e = estado.heroes[id] || { nivel: 1, estrellas: 1 };
     var f = (1 + 0.06 * (e.nivel - 1)) * (1 + 0.2 * (e.estrellas - 1));
-    var tal = TALENTOS[h.clase], tl = e.tal || 0, bq = bonosEquipo(id);
-    return { vida: Math.round(h.vida * f * (1 + (tal.vida || 0) * tl) + bq.vida), dano: Math.round((h.dano * f * (1 + (tal.dano || 0) * tl) + bq.dano) * (1 + bq.danoP)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4 * (1 + bq.vel), ritmo: h.distancia ? 1.1 : 0.8, defensa: bq.def,
+    var tal = TALENTOS[h.clase], tl = e.tal || 0, bq = bonosEquipo(id), gs = multSalidaHeroe(id); /* v8.45 */
+    return { vida: Math.round(h.vida * gs * f * (1 + (tal.vida || 0) * tl) + bq.vida), dano: Math.round((h.dano * gs * f * (1 + (tal.dano || 0) * tl) + bq.dano) * (1 + bq.danoP)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4 * (1 + bq.vel), ritmo: h.distancia ? 1.1 : 0.8, defensa: bq.def,
       cura: Math.round(6 * f), distancia: !!h.distancia, icono: CLASES_HEROE[h.clase] };
   }
   // v7.14: con 5★ el héroe puede ASCENDER (5 veces, +10 niveles cada una, hasta el nivel 100) gastando una reliquia y cristales
@@ -8743,7 +8743,7 @@
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 200; // v8.03: antes 60 (al llenarse se borraban piezas subidas)
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
   function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
-  function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
+  function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)) * multSalidaArmadura(p.s); } /* v8.45 */
   function textoPieza(p) {
     if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) { var dp = {}, d0 = SET_DRAGON.piezas[p.t]; Object.keys(TXT_DRAGON).forEach(function (k) { if (d0[k]) dp[k] = d0[k]; }); return textoBonosDragon(dp); }
     var r = [];
@@ -8755,7 +8755,7 @@
     if (EQ[p.t].recarga) r.push('⏱ -' + Math.round(valorPieza(p, 'recarga') * 100) + '%');
     return r.join(' ');
   }
-  function puntosPieza(p) { return MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)); }
+  function puntosPieza(p) { return MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)) * multSalidaArmadura(p.s); } /* v8.45 */
   function piezasDe(id) { return piezas().filter(function (p) { return p.h === id; }); }
   function bonosEquipo(id) {
     var b = { dano: 0, danoP: 0, vida: 0, def: 0, vel: 0, recarga: 0 };
@@ -9224,6 +9224,17 @@
   var MEDALLAS_PARA = { comun: 20, raro: 30, legendario: 50, mitico: 100 };
   /* v8.41: también las ARMADURAS (juegos) se lanzan poco a poco; por defecto salen las que ya salían */
   var ARMADURAS_TODAS = Object.keys(ARMADURA_HEROE).concat(['dragon']), armadurasLanzadas = ARMADURAS_TODAS.slice();
+  /* v8.45 (decisión del dueño): CADA HÉROE Y CADA ARMADURA QUE SALE ES MÁS FUERTE QUE LOS DE ANTES.
+     El orden de las listas lanzadas es el orden en que salieron. El primero queda igual; cada nuevo tiene
+     al menos un 15 % más de fuerza que el más fuerte de los anteriores. Lo que no ha salido queda igual (×1). */
+  var SUBE_POR_SALIDA = 1.15;
+  function fuerzaBaseHeroe(id) { var h = HEROE[id]; return h ? h.vida * h.dano : 1; }
+  function multSalidaHeroe(id) {
+    if (!heroesLanzados) return 1; var k = heroesLanzados.indexOf(id); if (k < 0) return 1;
+    var clave = heroesLanzados.join(','); if (multSalidaHeroe.c !== clave) { var m = {}, tope = 0; heroesLanzados.forEach(function (x, i) { var fz = fuerzaBaseHeroe(x), obj = i === 0 ? fz : Math.max(fz, tope * SUBE_POR_SALIDA); m[x] = Math.sqrt(obj / fz); tope = Math.max(tope, obj); }); multSalidaHeroe.m = m; multSalidaHeroe.c = clave; }
+    return multSalidaHeroe.m[id] || 1;
+  }
+  function multSalidaArmadura(set) { var k = set && armadurasLanzadas ? armadurasLanzadas.indexOf(set) : -1; return k > 0 ? Math.pow(SUBE_POR_SALIDA, k) : 1; }
   function armaduraLanzada(set) { return !set || armadurasLanzadas.indexOf(set) >= 0; }
   function nombreArmadura(set) { return set === 'dragon' ? L(SET_DRAGON.es, SET_DRAGON.en) : L('Juego ', 'Set ') + (ARMADURA_HEROE[set] ? ARMADURA_HEROE[set][estado.idioma === 'en' ? 'en' : 'es'] : set); }
   function cargarLanzados() { if (!hayCuenta() || !Cuentas.leerConfigJuego) return; Cuentas.leerConfigJuego().then(function (c) { if (!c) return; if (Array.isArray(c.lanzados) && c.lanzados.length) heroesLanzados = c.lanzados.filter(function (id) { return HEROE[id]; }); if (Array.isArray(c.armaduras)) armadurasLanzadas = c.armaduras.filter(function (id) { return ARMADURAS_TODAS.indexOf(id) >= 0; }); }).catch(function () {}); }
@@ -9252,11 +9263,12 @@
   // dueño: qué héroes están lanzados
   function abrirLanzarHeroes() {
     var sel = heroesLanzados.slice(), selA = armadurasLanzadas.slice(); abrirLanzarHeroes.selA = selA;
+    function multPrev(l, id) { var g = heroesLanzados; heroesLanzados = l; multSalidaHeroe.c = null; var v = multSalidaHeroe(id); heroesLanzados = g; multSalidaHeroe.c = null; return v; }
     function pintar() {
-      abrirPanel('🦸 ' + L('Héroes y armaduras lanzados', 'Released heroes and armor'), '<p class="nota">' + L('Solo los héroes marcados salen en el Reclutamiento y los premios (por medallas). Lánzalos poco a poco, por temporadas.', 'Only checked heroes appear in Recruiting and prizes (as medals). Release them little by little, by seasons.') + '</p>' +
-        '<div class="hl-grid">' + HEROES.map(function (h) { var on = sel.indexOf(h.id) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog" data-id="' + h.id + '">' + fotoHTML('h_' + h.id, '🦸') + '<b>' + NH(h.id) + '</b><small>' + T('rareza_' + h.rareza) + ' · ' + (on ? '✅' : '🔒') + '</small></button>'; }).join('') + '</div>' +
+      abrirPanel('🦸 ' + L('Héroes y armaduras lanzados', 'Released heroes and armor'), '<p class="nota">' + L('Solo los héroes marcados salen en el Reclutamiento y los premios (por medallas). Lánzalos poco a poco, por temporadas.', 'Only checked heroes appear in Recruiting and prizes (as medals). Release them little by little, by seasons.') + '</p><p class="tq-aviso">📈 ' + L('Cada héroe y cada armadura que lances sale al menos un 15 % más fuerte que los que ya salieron. El número #1, #2… es el orden en que salen.', 'Each hero and armor you release is at least 15% stronger than those already out. #1, #2… is the release order.') + '</p>' +
+        '<div class="hl-grid">' + HEROES.map(function (h) { var on = sel.indexOf(h.id) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog" data-id="' + h.id + '">' + fotoHTML('h_' + h.id, '🦸') + '<b>' + NH(h.id) + '</b><small>' + T('rareza_' + h.rareza) + ' · ' + (on ? '✅ #' + (sel.indexOf(h.id) + 1) + ' · ×' + multPrev(sel, h.id).toFixed(2) : '🔒') + '</small></button>'; }).join('') + '</div>' +
         '<h3 style="margin-top:12px">🛡️ ' + L('Armaduras', 'Armor') + '</h3><p class="nota">' + L('Solo los juegos marcados salen en cofres, la Ruleta, el Galeón y los premios. Lo que ya tiene cada jugador no se le quita.', 'Only checked sets appear in chests, the Roulette, the Galleon and prizes. What players already own is kept.') + '</p>' +
-        '<div class="hl-grid">' + ARMADURAS_TODAS.map(function (a) { var on = selA.indexOf(a) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog-a" data-id="' + a + '">' + icoPieza({ t: 'pechera', s: a, r: 'mitico', n: 1 }) + '<b>' + nombreArmadura(a) + '</b><small>' + (on ? '✅' : '🔒') + '</small></button>'; }).join('') + '</div>' +
+        '<div class="hl-grid">' + ARMADURAS_TODAS.map(function (a) { var on = selA.indexOf(a) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog-a" data-id="' + a + '">' + icoPieza({ t: 'pechera', s: a, r: 'mitico', n: 1 }) + '<b>' + nombreArmadura(a) + '</b><small>' + (on ? '✅ #' + (selA.indexOf(a) + 1) + ' · ×' + Math.pow(SUBE_POR_SALIDA, selA.indexOf(a)).toFixed(2) : '🔒') + '</small></button>'; }).join('') + '</div>' +
         '<button class="comprar verde" data-accion="lz-guardar" style="margin-top:10px">💾 ' + L('Guardar en la nube', 'Save to the cloud') + '</button>', { tipo: 'lanzar' });
     }
     abrirLanzarHeroes.sel = sel; abrirLanzarHeroes.pintar = pintar; pintar();
