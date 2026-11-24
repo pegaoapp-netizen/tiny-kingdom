@@ -1480,3 +1480,14 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .tq-pr.tq-gem { background: linear-gradient(135deg, rgba(60,200,120,.35), rgba(10,80,40,.45)); border: 1px solid #5fe08a; }
 .tq-pr.tq-gem b { color: #9dffbe; }
 .tq-aviso { margin: 8px 0 4px; padding: 7px 9px; border-radius: 9px; background: rgba(20,110,60,.35); border: 1px solid #5fe08a; color: #dfffe9; font: 700 12px system-ui, sans-serif; }
+
+/* v8.39: Temporada con sub-pestañas y premios ilustrados; Cómo ganar puntos desplegable */
+.tm-subs { display: flex; gap: 6px; margin: 8px 0 0; }
+.tm-subs button { flex: 1; }
+.tq-pod.tq-normal { border-color: #6b4a1a; background: rgba(0,0,0,.25); }
+.tq-dg img, .tq-dg svg { width: 30px; height: 30px; object-fit: contain; }
+.tq-det summary { cursor: pointer; font: 800 15px system-ui, sans-serif; color: #ffe08a; list-style: none; }
+.tq-det summary::-webkit-details-marker { display: none; }
+.tq-det summary::before { content: '▶ '; font-size: 12px; }
+.tq-det[open] summary::before { content: '▼ '; }
+.tq-det[open] summary { margin-bottom: 6px; }

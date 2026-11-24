@@ -7223,18 +7223,31 @@
       C.hitos.map(function (h, k) { var ya = !!t.hitos[k], puede = !ya && misP >= h.puntos;
         return '<div class="fila-miembro"><b>' + (ya ? '✅' : puede ? '🎁' : '🔒') + ' ' + formatoNumero(h.puntos) + '</b><span class="chip" style="white-space:normal;text-align:right">' + h.premio.map(function (o) { return ((OBJETOS[o[0]] || {}).icono || '🎁') + ' ' + N(o[0]) + ' ×' + o[1]; }).join(' · ') + '</span>' +
           (puede ? '<button class="comprar verde" data-accion="tm-hito" data-i="' + k + '">' + L('Cobrar', 'Claim') + '</button>' : '') + '</div>'; }).join('');
+    // v8.39: premios con tarjetas ilustradas (como los del Torneo semanal)
+    function IMGt(n) { return '<img class="tq-ico" src="iconos/ui/' + n + '.webp" alt="">'; }
+    function pr(ico, b, sm) { return '<span class="tq-pr">' + ico + '<b>' + b + '</b><small>' + sm + '</small></span>'; }
+    var cofreD = '<span class="tq-dg">' + icoPieza({ t: 'pechera', s: 'dragon', r: 'mitico', n: 1 }) + '</span>', nomD = L('Cofre del Dragón', 'Dragon chest');
+    var podioT = [['🥇 #1', 'oro', [pr(cofreD, '×6', nomD + ' · ' + L('Set completo', 'full Set')), pr(IMGt('r_oro'), '1M', L('oro', 'gold')), pr(IMGt('m_ranking'), '👑', L('Título de la temporada', 'Season title'))]],
+      ['🥈🥉 #2 – 3', 'plata', [pr(cofreD, '×4', nomD), pr(IMGt('r_oro'), '500k', L('oro', 'gold')), pr(IMGt('m_azar'), '×10', L('fichas', 'tokens'))]],
+      ['#4 – 10', 'bronce', [pr(cofreD, '×2', nomD), pr(IMGt('r_oro'), '250k', L('oro', 'gold'))]],
+      ['#11 – 25', '', [pr(cofreD, '×1', nomD), pr(IMGt('o_cofre_equipo'), '×2', L('Cofre de equipo', 'Gear chest'))]]];
+    var premiosHTML = podioT.map(function (q) { return '<div class="tq-pod' + (q[1] ? ' tq-' + q[1] : ' tq-normal') + '"><div class="tq-pos">' + q[0] + '</div><div class="tq-prs">' + q[2].join('') + '</div></div>'; }).join('');
     var premios = [['🥇 1', L('🐉 6 cofres del Dragón (Set completo) + 1M 🪙 + título', '🐉 6 Dragon chests (full Set) + 1M 🪙 + title')], ['🥈🥉 2–3', L('🐉 4 cofres del Dragón + 500k 🪙 + 10 fichas', '🐉 4 Dragon chests + 500k 🪙 + 10 tokens')], ['4 – 10', L('🐉 2 cofres del Dragón + 250k 🪙', '🐉 2 Dragon chests + 250k 🪙')], ['11 – 25', L('🐉 1 cofre del Dragón + 2 cofres de equipo', '🐉 1 Dragon chest + 2 gear chests')]];
     return '<div class="carta rk-tuyo"><b>👑 ' + (es ? C.nombre.es : C.nombre.en) + '</b><span class="chip">' + L('Día ', 'Day ') + TT.dia() + '/14</span>' +
       '<div class="dg-temp">' + ['arma', 'casco', 'pechera', 'guantes', 'botas', 'amuleto'].map(function (t) { return '<span>' + icoPieza({ t: t, s: 'dragon', r: 'mitico', n: 1 }) + '</span>'; }).join('') + '<p>🐉 <b>' + L(SET_DRAGON.es, SET_DRAGON.en) + '</b> · ' + L('cada cofre deja elegir la pieza que te falta', 'each chest lets you pick the piece you need') + '</p></div>' +
       '<p class="reloj-panel">⏳ ' + L('La temporada termina en ', 'Season ends in ') + fmtTiempo(Math.max(0, TT.fin(TT.idTemporada()) - Date.now()) / 1000) + '</p>' +
       '<p><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b> · ' + L('Liquidación: ', 'Kills: ') + formatoNumero(misL) + ' · ' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</p>' +
       '<p class="nota">' + (TT.cumpleMinimo(misP, misL) ? '✅ ' + L('Ya cumples el mínimo para el Set.', 'You reach the Set minimum.') : '🎯 ' + L('Para el Set necesitas ', 'For the Set you need ') + formatoNumero(C.umbralMinimoPuntos) + L(' puntos y ', ' points and ') + formatoNumero(C.umbralMinimoLiquidacion) + L(' de liquidación.', ' from kills.')) + '</p></div>' +
+      (function () { var sb = htmlTemporada.sub || 'progreso'; return '<div class="subtabs tm-subs">' + [['progreso', L('Progreso', 'Progress')], ['clasif', L('Clasificación', 'Standings')], ['premios', L('Premios', 'Prizes')]].map(function (q) { return '<button data-accion="tm-sub" data-s="' + q[0] + '" class="' + (sb === q[0] ? 'activo' : '') + '">' + q[1] + '</button>'; }).join('') + '</div>'; })() + // v8.39
+      '<div class="tm-sec" data-s="progreso"' + ((htmlTemporada.sub || 'progreso') === 'progreso' ? '' : ' hidden') + '>' +
       '<div class="carta" style="margin-top:8px"><h3>' + L('Fases', 'Phases') + '</h3><p class="nota">' + L('Solo suma la acción de la fase de hoy.', 'Only today\'s phase action scores.') + '</p>' + fases + '</div>' +
-      '<div class="carta" style="margin-top:8px"><h3>' + L('Cofres de progreso', 'Progress chests') + '</h3>' + hitos + '</div>' +
-      '<div class="carta" style="margin-top:8px"><h3>' + L('Premios al terminar', 'End prizes') + '</h3>' + premios.map(function (q) { return '<div class="fila-miembro"><b>' + q[0] + '</b><span class="chip">' + q[1] + '</span></div>'; }).join('') +
-      '<p class="nota">' + L('Si no llegas al mínimo, aunque quedes #1 solo recibes oro y aceleradores, no el Set.', 'If you don\'t reach the minimum, even at #1 you only get gold and speed-ups, not the Set.') + '</p></div>' +
+      '<div class="carta" style="margin-top:8px"><h3>' + L('Cofres de progreso', 'Progress chests') + '</h3>' + hitos + '</div></div>' +
+      '<div class="tm-sec" data-s="premios"' + (htmlTemporada.sub === 'premios' ? '' : ' hidden') + '>' +
+      '<div class="carta tq-premios" style="margin-top:8px"><h3>🎁 ' + L('Premios al terminar', 'End prizes') + '</h3>' + premiosHTML +
+      '<p class="nota">' + L('Si no llegas al mínimo, aunque quedes #1 solo recibes oro y aceleradores, no el Set.', 'If you don\'t reach the minimum, even at #1 you only get gold and speed-ups, not the Set.') + '</p></div></div>' +
+      '<div class="tm-sec" data-s="clasif"' + (htmlTemporada.sub === 'clasif' ? '' : ' hidden') + '>' +
       '<div class="carta" style="margin-top:8px"><h3>' + L('Clasificación', 'Standings') + '</h3>' +
-      (lista.length ? lista.map(function (a, k) { var ok = TT.cumpleMinimo(a.puntos, a.liq); return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span><span class="chip">' + (ok ? '✅ Set' : '❌') + '</span>', a.uid === yo); }).join('') : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>';
+      (lista.length ? lista.map(function (a, k) { var ok = TT.cumpleMinimo(a.puntos, a.liq); return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span><span class="chip">' + (ok ? '✅ Set' : '❌') + '</span>', a.uid === yo); }).join('') : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div></div>';
   }
   function filaRanking(pos, nombre, al, extra, yo) {
     return '<div class="fila-miembro rk-fila' + (yo ? ' yo' : '') + '"><b class="rk-pos">' + (['🥇', '🥈', '🥉'][pos - 1] || '#' + pos) + '</b>' +
@@ -7326,7 +7339,7 @@
           '<div class="carta tq-premios" style="margin-top:8px"><h3>🎁 ' + L('Premios del lunes', 'Monday prizes') + '</h3>' + podio + resto +
           '<p class="tq-aviso">💎 ' + L('Torneo de gemas: el podio gana 2.000, 1.200 y 800 gemas, pero solo si llegas a ' + formatoNumero(MIN_GEMAS_TORNEO) + ' puntos. Entrena mucho, acelera y compra para lograrlo.', 'Gem tournament: the podium wins 2,000, 1,200 and 800 gems, but only with at least ' + formatoNumero(MIN_GEMAS_TORNEO) + ' points. Train hard, speed up and buy to make it.') + '</p>' +
           '<p class="nota">' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila. Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle. You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>' +
-          '<div class="carta" style="margin-top:8px"><h3>' + L('Cómo ganar puntos', 'How to earn points') + '</h3>' + como.map(function (c, k) { return '<div class="fila-miembro tq-como">' + IMG(ICO_COMO[k] || 'b_campana') + '<b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</div>' +
+          '<details class="carta tq-det" style="margin-top:8px"><summary>' + L('Cómo ganar puntos', 'How to earn points') + '</summary>' + como.map(function (c, k) { return '<div class="fila-miembro tq-como">' + IMG(ICO_COMO[k] || 'b_campana') + '<b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</details>' + // v8.39: cerrado al abrir
           (mas.length ? '<div class="carta" style="margin-top:8px"><h3>' + L('Resto del ranking', 'Rest of the ranking') + '</h3>' + filas(mas, 10) + '</div>' : ''));
       }).catch(error);
     }
@@ -12352,6 +12365,7 @@
       if (rr === 'miembro') delete rg[ru]; else rg[ru] = rr;
       Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
     }
+    else if (a === 'tm-sub') { sonar('click'); htmlTemporada.sub = b.getAttribute('data-s'); document.querySelectorAll('.tm-subs button').forEach(function (x) { x.classList.toggle('activo', x === b); }); document.querySelectorAll('.tm-sec').forEach(function (x) { x.hidden = x.getAttribute('data-s') !== htmlTemporada.sub; }); } // v8.39
     else if (a === 'reparar-defensas') { sonar('click'); repararDefensas(); } // v8.35
     else if (a === 'ir-atacante') { sonar('click'); irAlAtacante(b.getAttribute('data-uid')); } // v8.33
     else if (a === 'al-reintentar') { sonar('click'); abrirPanelAlianza(); }
