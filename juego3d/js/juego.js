@@ -5292,25 +5292,37 @@
   }
   var marchasVistas = {};
   // v8.14: al pelear, encima del objetivo solo se ven dos espadas cruzadas que chocan
-  var texEspadas = null;
+  // v8.15: dos espadas que se dan golpes de verdad (se abren, chocan y saltan chispas)
+  var texEspada = null, texChispa = null;
   function spriteEspadas() {
-    if (!texEspadas) {
-      var c = document.createElement('canvas'); c.width = c.height = 128; var x = c.getContext('2d');
-      x.translate(64, 64); x.lineCap = 'round';
-      [-1, 1].forEach(function (lado) {
-        x.save(); x.rotate(lado * Math.PI / 4);
-        x.strokeStyle = 'rgba(0,0,0,.55)'; x.lineWidth = 15; x.beginPath(); x.moveTo(0, -50); x.lineTo(0, 38); x.stroke();
-        x.strokeStyle = '#f4f6fa'; x.lineWidth = 9; x.beginPath(); x.moveTo(0, -50); x.lineTo(0, 22); x.stroke();
-        x.strokeStyle = '#9aa4b4'; x.lineWidth = 3; x.beginPath(); x.moveTo(2, -44); x.lineTo(2, 20); x.stroke();
-        x.strokeStyle = '#e8b53a'; x.lineWidth = 8; x.beginPath(); x.moveTo(-15, 24); x.lineTo(15, 24); x.stroke();
-        x.strokeStyle = '#7a3e14'; x.lineWidth = 7; x.beginPath(); x.moveTo(0, 26); x.lineTo(0, 40); x.stroke();
-        x.fillStyle = '#e8b53a'; x.beginPath(); x.arc(0, 44, 5, 0, 7); x.fill();
-        x.restore();
-      });
-      texEspadas = new THREE.CanvasTexture(c);
+    if (!texEspada) {
+      var c = document.createElement('canvas'); c.width = 64; c.height = 128; var x = c.getContext('2d'); x.translate(32, 64); x.lineCap = 'round';
+      x.strokeStyle = 'rgba(0,0,0,.55)'; x.lineWidth = 14; x.beginPath(); x.moveTo(0, -56); x.lineTo(0, 44); x.stroke();
+      x.strokeStyle = '#f4f6fa'; x.lineWidth = 9; x.beginPath(); x.moveTo(0, -56); x.lineTo(0, 24); x.stroke();
+      x.strokeStyle = '#9aa4b4'; x.lineWidth = 3; x.beginPath(); x.moveTo(2, -50); x.lineTo(2, 22); x.stroke();
+      x.strokeStyle = '#e8b53a'; x.lineWidth = 8; x.beginPath(); x.moveTo(-16, 26); x.lineTo(16, 26); x.stroke();
+      x.strokeStyle = '#7a3e14'; x.lineWidth = 7; x.beginPath(); x.moveTo(0, 28); x.lineTo(0, 44); x.stroke();
+      x.fillStyle = '#e8b53a'; x.beginPath(); x.arc(0, 50, 5, 0, 7); x.fill();
+      texEspada = new THREE.CanvasTexture(c);
+      var c2 = document.createElement('canvas'); c2.width = c2.height = 64; var y = c2.getContext('2d'); var gr = y.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, 'rgba(255,255,230,1)'); gr.addColorStop(0.35, 'rgba(255,210,80,.9)'); gr.addColorStop(1, 'rgba(255,150,0,0)'); y.fillStyle = gr; y.beginPath();
+      for (var k = 0; k < 16; k++) { var a = k * Math.PI / 8, rr = k % 2 ? 11 : 30; y.lineTo(32 + Math.cos(a) * rr, 32 + Math.sin(a) * rr); } y.fill();
+      texChispa = new THREE.CanvasTexture(c2);
     }
-    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texEspadas, transparent: true, depthTest: false }));
-    sp.renderOrder = 9; sp.userData.encima = true; return sp;
+    var g = new THREE.Group();
+    function sp(t) { var m = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false })); m.renderOrder = 9; m.userData.encima = true; return m; }
+    var a = sp(texEspada), b = sp(texEspada), ch = sp(texChispa);
+    a.scale.set(0.5, 1, 1); b.scale.set(0.5, 1, 1); ch.scale.set(0.5, 0.5, 1); ch.renderOrder = 10; ch.position.y = 0.22;
+    g.add(a); g.add(b); g.add(ch); g.userData.a = a; g.userData.b = b; g.userData.ch = ch; g.userData.encima = true;
+    return g;
+  }
+  function moverEspadas(e, t) {
+    var f = (t * 2.2) % 1, gol = f < 0.35 ? f / 0.35 : f < 0.45 ? 1 : 1 - (f - 0.45) / 0.55; /* golpe rápido, se abren despacio */
+    gol = gol * gol;
+    var ang = 0.5 - 1.15 * gol, dx = 0.3 - 0.18 * gol; /* abiertas: echadas hacia atrás; al golpe: cruzadas */
+    e.userData.a.material.rotation = ang; e.userData.a.position.set(-dx, 0, 0);
+    e.userData.b.material.rotation = -ang; e.userData.b.position.set(dx, 0, 0);
+    var choque = f >= 0.33 && f < 0.6, k = choque ? 1 - (f - 0.33) / 0.27 : 0;
+    e.userData.ch.visible = choque; e.userData.ch.material.opacity = k; var cs = 0.3 + 0.5 * (1 - k); e.userData.ch.scale.set(cs, cs, 1); e.userData.ch.material.rotation = t * 5;
   }
   function modeloTienda() {
     var g = new THREE.Group(), blanco = new THREE.MeshLambertMaterial({ color: 0xa9b3c2 }), azul = new THREE.MeshLambertMaterial({ color: 0x2f5a9a });
@@ -5365,7 +5377,7 @@
       g.userData.col.visible = !v.pelea; // v8.14: mientras pelean solo se ven las espadas
       if (v.pelea && !g.userData.esp) { var spE = spriteEspadas(); spE.position.set(0, M3.camelot ? (M3.ov ? 1.6 : 2.2) : 1.2, 0); g.add(spE); g.userData.esp = spE; }
       if (!v.pelea && g.userData.esp) { g.remove(g.userData.esp); g.userData.esp = null; }
-      if (g.userData.esp) { var sE = (M3.camelot ? (M3.ov ? 1.8 : 2.6) : 1.2) * (1 + 0.14 * Math.abs(Math.sin(t * 7))); g.userData.esp.scale.set(sE, sE, 1); g.userData.esp.material.rotation = 0.16 * Math.sin(t * 7); }
+      if (g.userData.esp) { var sE = M3.camelot ? (M3.ov ? 1.8 : 2.6) : 1.2; g.userData.esp.scale.set(sE, sE, sE); moverEspadas(g.userData.esp, t); } /* v8.15 */
       if (false && v.pelea && g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) { // v8.12: solo la etiqueta pequeña «Peleando»; sin «Regresando» ni las de carretas
         if (g.userData.et) g.remove(g.userData.et); g.children.filter(function (c) { return c.userData && c.userData.esEt; }).forEach(function (c) { g.remove(c); }); // v7.26: nunca dos carteles
         var et = M.etiquetaEdificio(txt, v.carro ? '🛒' : v.enemigo ? '🔥' : '⚔'); et.position.set(0, g.userData.col.userData.sprites ? 2.6 : 1.9, 0); et.scale.multiplyScalar(0.5); g.add(et);
