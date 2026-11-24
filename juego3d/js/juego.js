@@ -2641,7 +2641,8 @@
       // al llegar pelean; después de la batalla vuelven a casa caminando
       if (M3 && M3.seguir === m.id) M3.seguir = null;
       try { m.alLlegar(m); } catch (er) { console.error(er); }
-      if (!m.queda) marchasPVE.push({ id: 'p' + (++idPVE), de: m.a, a: m.de, sale: ahora + 4500, llega: ahora + 4500 + m.seg * 1000, txt: '🏇 ' + L('Vuelven', 'Returning'), vuelta: true, seg: m.seg, heroe: m.heroe, sel: m.sel }); // v8.13
+      var llegoPVE = Math.min(ahora, m.llega || ahora); // v8.28: con el juego cerrado, la vuelta cuenta desde que llegaron
+      if (!m.queda) marchasPVE.push({ id: 'p' + (++idPVE), de: m.a, a: m.de, sale: llegoPVE + 4500, llega: llegoPVE + 4500 + m.seg * 1000, txt: '🏇 ' + L('Vuelven', 'Returning'), vuelta: true, seg: m.seg, heroe: m.heroe, sel: m.sel }); // v8.13
       m.cambio = true;
     });
     if (marchasPVE.length !== antes || marchasPVE.some(function (m) { return m.cambio; })) { guardarPVE(); guardar(); }
@@ -8364,9 +8365,9 @@
   // v7.14: con 5★ el héroe puede ASCENDER (5 veces, +10 niveles cada una, hasta el nivel 100) gastando una reliquia y cristales
   var ASC_HEROE = [{ r: 'caracola_real', c: 'cristal_mistico', n: 4 }, { r: 'perla_rey', c: 'cristal_mistico', n: 6 }, { r: 'corona_coral', c: 'cristal_encantado', n: 4 }, { r: 'elevacion_sol', c: 'cristal_encantado', n: 6 }, { r: 'estrella_rey', c: 'cristal_arcano', n: 6 }];
   // v7.31: después de las 5 ascensiones (nivel 100) viene la MAESTRÍA: 10 pasos de +10 niveles cada uno, hasta el nivel 200
-  var MAESTRIA_MAX = 1000; // v7.87: después del nivel 100 la Maestría sigue sin techo (+10 niveles cada paso)
+  var MAESTRIA_MAX = 30; // v8.28: tope normal = Nv 200 + 10 por cada nivel de Maestría (máximo 30 niveles: Nv 500). Antes no tenía techo y Sir Sol llegó a Nv 4440 // v7.87: después del nivel 100 la Maestría sigue sin techo (+10 niveles cada paso)
   function costoMaestria(k) { return { estrella_mar: k + 1, caracola: 2 * (k + 1) }; }
-  function topeNivel(id) { var e = estado.heroes[id]; var t = Math.min(HEROE_NIVEL_MAX, (e.estrellas || 1) * 10); if ((e.estrellas || 1) >= 5) t += 10 * Math.min(ASC_HEROE.length, e.asc || 0); if ((e.asc || 0) >= ASC_HEROE.length) t += 10 * Math.min(MAESTRIA_MAX, e.maes || 0); return t; }
+  function topeNivel(id) { var e = estado.heroes[id]; var t = Math.min(HEROE_NIVEL_MAX, (e.estrellas || 1) * 10); if ((e.estrellas || 1) >= 5) t += 10 * Math.min(ASC_HEROE.length, e.asc || 0); if ((e.asc || 0) >= ASC_HEROE.length) t += 100 + 10 * Math.min(MAESTRIA_MAX, e.maes || 0); return t; } // v8.28: con la Ascensión completa el tope base es 200
   function htmlAscensionHeroe(id) {
     var e = estado.heroes[id]; if (!e || (e.estrellas || 1) < 5) return '';
     var k = e.asc || 0, tope = topeNivel(id);
@@ -9808,7 +9809,8 @@
       var caidas = bajasEjercito(r.bajas || 0);
       var destM = (estado.destinos || {})[r.id] || lugarDe(r.defensor), viajeV = Math.max(30000, ((estado.marchaTropas || {})[r.id] || {}).dur || ((r.llega || Date.now()) - (r.fecha || Date.now())));
       estado.regresos = estado.regresos || [];
-      if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: Date.now(), llega: Date.now() + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
+      var salioV = Math.min(Date.now(), r.llega || Date.now()); // v8.28: el regreso cuenta desde que llegaron (aunque el juego estuviera cerrado), no desde que lo abriste
+      if (destM) estado.regresos.push({ id: r.id, de: destM, a: miLugar(), sale: salioV, llega: salioV + viajeV, botin: r.gano ? r.botin : null, nombre: r.defensorNombre });
       else if (r.gano) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { if (r.botin[k]) sumarRecurso(k, r.botin[k]); });
       if (r.gano) sumarTorneo(PUNTOS_TORNEO.ataque);
       var liqM = liqDeDefensa(r.defensa || 0, r.gano ? 1 : 0.25); sumarLiquidacion(liqM); sumarTemporada('liquidacion', liqM); // v7.08
@@ -10974,11 +10976,12 @@
   var RULETA = [
     // v6.89: el timón de la Capitana (iconos/ui/rul_timon.webp): 7 cofres en el orden del dibujo, empezando arriba y en el sentido del reloj
     // v6.92: el timón nuevo de Maikel: 8 casillas desde arriba en el sentido del reloj, con 3 llaves
-    { k: 'llave', p: 0.3 }, { k: 'inv_8h', p: 15 }, { k: 'cofre_tesoro', p: 6 }, { k: 'llave', p: 0.3 }, // v8.25: llaves raras: ~1 % por tirada (antes 3,4 %)
-    { k: 'cofre_plata', p: 28 }, { k: 'llave', p: 0.3 }, { k: 'acel_8h', p: 18 }, { k: 'cofre_oro', p: 18.5 }
+    // v8.28: 30 % cosas buenas (Cofre del Tesoro, Cofre de oro, Acelerador 8 h) y 70 % normales (Cofre de plata, Arcano 8 h)
+    { k: 'llave', p: 0.3 }, { k: 'inv_8h', p: 30 }, { k: 'cofre_tesoro', p: 4 }, { k: 'llave', p: 0.3 }, // v8.25: llaves raras: ~1 % por tirada (antes 3,4 %)
+    { k: 'cofre_plata', p: 40 }, { k: 'llave', p: 0.3 }, { k: 'acel_8h', p: 12 }, { k: 'cofre_oro', p: 14 }
   ];
   var RUL_SIN_LLAVE_MAX = 100; // v8.25: una llave segura solo cada 100 tiradas (antes 40) // una llave más o menos cada 13 tiradas, y seguro una cada 20
-  var SETS_RULETA = ['sol', 'luna', 'ancla'], RUL_PIEZA = 0.02; // de vez en cuando, una pieza del Alba, Estelar o del Mar Hondo
+  var SETS_RULETA = ['sol', 'luna', 'ancla'], RUL_PIEZA = 0; // v8.28: la Ruleta ya no da piezas de armadura // de vez en cuando, una pieza del Alba, Estelar o del Mar Hondo
   function piezaDeSet(set) { var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
   var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1, cofre_tesoro: 1 }; // v7.09: sin gemas (las gemas no se regalan)
@@ -11303,7 +11306,7 @@
     else if (o.mejora) { estado.mochila[k]--; var pzs = o.mejora.map(function (r) { return darPieza(null, r); }); Object.keys(o.extra || {}).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.extra[q]; }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: pzs, objetos: o.extra })); return; }
     else if (o.tropas) { var nt = 0; Object.keys(o.tropas).forEach(function (t) { for (var q = 0; q < o.tropas[t]; q++) { if (tropasOcupadas() >= capacidad()) break; crearTropa(t, puertaCuartel()); nt++; } }); if (!nt) { consejoTemporal(T('sin_espacio')); sonar('error'); return; } estado.mochila[k]--; sonar('cuerno'); consejoTemporal(L('¡Llegaron ' + nt + ' reclutas!', nt + ' recruits arrived!')); actualizarHUD(); guardar(true); reabrirPanel(); return; }
     else if (o.galeon) { estado.mochila[k]--; var gObj = {}; Object.keys(GALEON).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + GALEON[q]; gObj[q] = GALEON[q]; }); var gpz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ objetos: gObj, piezas: gpz ? [gpz] : [] })); return; } // v8.02
-    else if (o.equipo) { estado.mochila[k]--; var pz1 = darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: [pz1] })); return; }
+    else if (o.equipo) { estado.mochila[k]--; if (Math.random() >= 0.3) { darPremio({ oro: 20000 }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ oro: 20000 })); return; } /* v8.28: 30 % pieza, 70 % oro */ var pz1 = darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: [pz1] })); return; }
     else if (o.cofre) {
       premio = {};
       Object.keys(o.cofre).forEach(function (r) { var a = o.cofre[r]; premio[r] = a[0] + Math.floor(Math.random() * (a[1] - a[0] + 1)); });
@@ -11352,7 +11355,7 @@
       if (o.mejora) o.mejora.forEach(function (r) { pzs.push(darPieza(null, r)); });
       if (o.extra) Object.keys(o.extra).forEach(function (q) { objs[q] = (objs[q] || 0) + o.extra[q]; }); // v7.97
       if (o.galeon) { Object.keys(GALEON).forEach(function (q) { objs[q] = (objs[q] || 0) + GALEON[q]; }); var gpm = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (gpm) pzs.push(gpm); } // v8.02
-      if (o.equipo) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'));
+      if (o.equipo) { if (Math.random() < 0.3) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro')); else tot.oro = (tot.oro || 0) + 20000; } // v8.28: 30 % pieza (el oro se suma abajo con lo demás)
       if (TROPAS_COFRE[k]) { var tq = TROPAS_COFRE[k][Math.floor(Math.random() * TROPAS_COFRE[k].length)]; tot.tropas = tot.tropas || {}; tot.tropas[tq[0]] = (tot.tropas[tq[0]] || 0) + tq[1]; }
       (EXTRA_COFRE[k] || []).forEach(function (e) { if (Math.random() >= e[2]) return; if (e[0] === 'pieza') pzs.push(darPieza(null, e[1])); else objs[e[0]] = (objs[e[0]] || 0) + e[1]; });
     }
@@ -11379,7 +11382,7 @@
     if (o.paquete) Object.keys(o.paquete).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.paquete[q]]); });
     if (o.mejora) o.mejora.forEach(function (r) { l.push(['🧰', L('Pieza de equipo ', 'Equipment piece ') + T('eq_r_' + r), '×1']); });
     if (o.extra) Object.keys(o.extra).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.extra[q]]); });
-    if (o.equipo) l.push(['🧰', L('Pieza de equipo rara (20% legendaria)', 'Rare equipment piece (20% legendary)'), '×1']);
+    if (o.equipo) l.push(['🧰', L('30 %: pieza de equipo rara (a veces legendaria) · 70 %: 20.000 de oro', '30%: rare gear piece (sometimes legendary) · 70%: 20,000 gold'), '×1']);
     if (TROPAS_COFRE[k]) l.push(['⚔️', L('Tropas: ', 'Troops: ') + TROPAS_COFRE[k].map(function (x) { return x[1] + ' ' + N(x[0]); }).join(L(' o ', ' or ')), L('siempre una', 'always one')]);
     (EXTRA_COFRE[k] || []).forEach(function (e) { var pr = Math.round(e[2] * 100) + '%'; if (e[0] === 'pieza') l.push([EQ.pechera.icono, L('Armadura o arma ', 'Armor or weapon ') + nomRarezaEq(e[1]), L('a veces ', 'sometimes ') + pr]); else if (OBJETOS[e[0]]) l.push([OBJETOS[e[0]].icono, N(e[0]) + (e[1] > 1 ? ' ×' + e[1] : ''), L('a veces ', 'sometimes ') + pr]); });
     if (o.da) Object.keys(o.da).forEach(function (r) { l.push([ICONO_RECURSO[r], T('r_' + r), formatoNumero(o.da[r])]); });
@@ -11966,8 +11969,9 @@
     if (window.Cuentas && Cuentas.usuario()) {
       html += '<p>' + (esCuentaDueno() ? '<b>👑 ' + T('cuenta_dueno') + '</b>' : T('cuenta_de')) + '<br><b>' + escaparHTML(Cuentas.nombre()) + '</b> ☁️</p>' +
         '<div class="stats"><button class="comprar rojo" data-accion="cerrar-sesion">' + T('cerrar_sesion') + '</button>' +
-        '<button class="comprar morado" data-accion="ver-borrar-cuenta">' + T('borrar_cuenta') + '</button></div>' +
+        '</div><button class="sp-borrar-cuenta" data-accion="ver-borrar-cuenta">' + T('borrar_cuenta') + '</button>' + /* v8.28: pequeño y discreto */
         '<div id="caja-borrar" style="display:none;margin-top:8px"><p class="aviso-rojo">' + T('borrar_cuenta_txt') + '</p>' +
+        '<p class="aviso-rojo"><b>' + L('Para confirmar, escribe BORRAR:', 'To confirm, type BORRAR:') + '</b></p><input class="campo" id="palabra-borrar" type="text" autocomplete="off" autocapitalize="characters" placeholder="BORRAR">' + /* v8.28 */
         '<input class="campo" id="clave-borrar" type="password" autocomplete="current-password" placeholder="' + T('contrasena') + '">' +
         '<p class="nota aviso-rojo" id="error-borrar"></p><button class="comprar rojo" data-accion="borrar-cuenta">' + T('borrar_cuenta_ok') + '</button></div>';
     } else {
@@ -11987,7 +11991,7 @@
         (esCuentaDueno() ? '<button class="comprar oro" data-accion="dueno-regalar">🎁 ' + L('Regalar a un jugador', 'Gift a player') + '</button>' : '') +
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
-    html += '<div style="margin-top:10px"><button class="comprar rojo" data-accion="borrar">' + T('borrar') + '</button></div>' +
+    html += '' + /* v8.28: sin el botón «Borrar partida y empezar de cero» (se tocaba sin querer) */
       '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v' + VERSION_JUEGO + '</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
   }
@@ -12285,8 +12289,9 @@
     else if (a === 'velocidad') { cambiarVelocidad(); reabrirPanel(); }
     else if (a === 'calidad') { calidad = b.getAttribute('data-valor'); aplicarCalidad(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'cerrar-sesion') { guardar(true); cerrarPanel(); Cuentas.salir(); }
-    else if (a === 'ver-borrar-cuenta') { $('caja-borrar').style.display = 'block'; $('clave-borrar').focus(); }
+    else if (a === 'ver-borrar-cuenta') { $('caja-borrar').style.display = 'block'; $('palabra-borrar').focus(); }
     else if (a === 'borrar-cuenta') {
+      if ((($('palabra-borrar') || {}).value || '').trim() !== 'BORRAR') { $('error-borrar').textContent = L('Escribe BORRAR (en mayúsculas) para confirmar.', 'Type BORRAR (in capitals) to confirm.'); sonar('error'); return; } // v8.28
       var clave = $('clave-borrar').value;
       if (!clave) return;
       b.disabled = true;
@@ -12654,6 +12659,7 @@
     $('pantalla-texto').textContent = texto;
     $('pantalla-version').textContent = 'v' + VERSION_JUEGO;
     $('pantalla-form').innerHTML = formulario || '';
+    $('pantalla').classList.toggle('como-portada', texto === T('cargando') && !botones.length && !formulario); // v8.28: la carga después de entrar se ve igual que la portada (una sola pantalla de carga)
     var cont = $('pantalla-botones');
     cont.innerHTML = '';
     botones.forEach(function (b) {
@@ -12986,7 +12992,7 @@
       var topeProt = Date.now() + BURBUJA.dias * 86400000;
       if (estado.escudoHasta > topeProt) estado.escudoHasta = topeProt;
       estado.heroes = g.heroes || { sol: { nivel: 1, estrellas: 1, frag: 0 } };
-      Object.keys(estado.heroes).forEach(function (hid) { var he = estado.heroes[hid]; if (he && HEROE[hid] && he.nivel > topeNivel(hid)) { he.nivel = topeNivel(hid); he.exp = 0; } }); // v8.03: ningún héroe por encima de su tope (Sir Sol salía en Nv 3960)
+      Object.keys(estado.heroes).forEach(function (hid) { var he = estado.heroes[hid]; if (he && he.maes > MAESTRIA_MAX) he.maes = MAESTRIA_MAX; /* v8.28 */ if (he && HEROE[hid] && he.nivel > topeNivel(hid)) { he.nivel = topeNivel(hid); he.exp = 0; } }); // v8.03: ningún héroe por encima de su tope (Sir Sol salía en Nv 3960)
       estado.equipo = (g.equipo || ['sol']).filter(function (id) { return estado.heroes[id]; }).slice(0, 3);
       estado.reclutaGratis = g.reclutaGratis || '';
       estado.ofertaFrag = g.ofertaFrag || '';
@@ -13256,7 +13262,14 @@
   // v7.19: acelerar una marcha: con Marcha rápida (de la mochila) o con gemas, le quita la mitad de lo que falta
   // v7.22: como KoC: una ventana oscura con tus relojes de la mochila (15 min resta 15 min, etc.) y la Marcha rápida (−50 %); con gemas solo si no tienes
   function acelerarMarcha(id, resultado) {
-    var m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m || m.resuelto) return;
+    var m = marchas.filter(function (x) { return x.id === id; })[0], aplicar;
+    if (m && !m.resuelto) aplicar = function (nueva) { return Cuentas.acelerarMarcha(id, nueva); };
+    else { // v8.28: también las marchas a bárbaros, bestias y terrenos, y las tropas que regresan
+      var mp = marchasPVE.filter(function (x) { return x.id === id; })[0] || (estado.regresos || []).filter(function (x) { return 'r' + x.id === id; })[0];
+      if (!mp || mp.llega <= Date.now()) return;
+      m = { id: id, llega: mp.llega, defensorNombre: mp.txt ? String(mp.txt).replace(/^\S+\s/, '') : (mp.nombre ? L('Regreso de ', 'Return from ') + mp.nombre : '') };
+      aplicar = function (nueva) { mp.llega = nueva; if (mp.sale > nueva - 1000) mp.sale = nueva - 1000; guardarPVE(); guardar(); return Promise.resolve(); };
+    }
     var v = $('acelerar-elegir'); if (v) v.remove();
     var falta = (m.llega - Date.now()) / 1000, gem = estado.gemas || 0, moch = estado.mochila || {};
     if (falta < 2) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; } // v8.09
@@ -13283,7 +13296,7 @@
       var ahoraF = m.llega - Date.now(), quita = k === 'marcha_rapida' ? ahoraF / 2 : OBJETOS[k].segundos * 1000;
       var nueva = Math.round(Math.max(Date.now() + 1000, m.llega - quita)); // v8.09: quita el tiempo exacto (15 min con 15 min faltando = llega ya)
       b.disabled = true;
-      Cuentas.acelerarMarcha(id, nueva).then(function () {
+      aplicar(nueva).then(function () {
         if (compra) { estado.gemas -= it.gemas; vipGemasGastadas(it.gemas); } else { moch[k]--; if (moch[k] <= 0) delete moch[k]; }
         var antes = ahoraF / 1000; m.llega = nueva; sonar('magia'); sumarLogro('acel'); guardar(true); actualizarHUD(); actualizarDock(); clearInterval(reloj);
         acelerarMarcha(id, '⚡ ' + N(k) + ': ' + fmtTiempo(antes) + ' → ' + fmtTiempo((nueva - Date.now()) / 1000));
@@ -13307,10 +13320,10 @@
   function listaMovimientos(ahora) {
     var l = [];
     marchas.forEach(function (m) { if (!m.resuelto && !m.cancelado && m.llega > ahora) l.push({ ico: '⚔️', txt: escaparHTML(m.defensorNombre || ''), llega: m.llega, id: m.id, ataque: true }); });
-    marchasPVE.forEach(function (m) { if (m.llega > ahora) l.push({ ico: m.vuelta ? '🏇' : '⚔️', txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven a casa', 'Returning home')) : escaparHTML(String(m.txt || '').replace(/^\S+\s/, '')), llega: m.llega }); });
+    marchasPVE.forEach(function (m) { if (m.llega > ahora) l.push({ ico: m.vuelta ? '🏇' : '⚔️', txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven a casa', 'Returning home')) : escaparHTML(String(m.txt || '').replace(/^\S+\s/, '')), llega: m.llega, id: m.id, acel: !(m.vuelta && ahora < m.sale) }); }); // v8.28: ⚡ también aquí
     carretas().viajes.forEach(function (v) { if (!v.de || !v.a) return; if (ahora < v.llega) l.push({ ico: '🛒', txt: '×' + v.n + (v.nombre ? ' → ' + escaparHTML(v.nombre) : ''), llega: v.llega }); else if (v.vuelve && ahora < v.vuelve) l.push({ ico: '🛒', txt: '×' + v.n + ' ' + L('vuelven', 'returning'), llega: v.vuelve }); });
     enviosEnCamino.forEach(function (e) { if (e.llega > ahora) l.push({ ico: '📦', txt: escaparHTML(e.deNombre || '?') + ' → ' + L('a ti', 'to you'), llega: e.llega }); });
-    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) l.push({ ico: '🏇', txt: L('Regresan', 'Returning') + (v.nombre ? ' ' + L('de ', 'from ') + escaparHTML(v.nombre) : ''), llega: v.llega }); });
+    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) l.push({ ico: '🏇', txt: L('Regresan', 'Returning') + (v.nombre ? ' ' + L('de ', 'from ') + escaparHTML(v.nombre) : ''), llega: v.llega, id: 'r' + v.id, acel: true }); });
     guarniciones().forEach(function (q) { l.push({ ico: '⛺', txt: escaparHTML(nombreGuarnicion(q)), llega: 9e15, gid: q.id }); }); // v8.13
     return l.sort(function (a, b) { return a.llega - b.llega; });
   }
@@ -13320,7 +13333,7 @@
     var ver = dockPest === 'marchar' && movs.length > 0;
     c.style.display = ver ? '' : 'none'; d.classList.toggle('con-lista', ver);
     if (!ver) { c.innerHTML = ''; c.dataset.h = ''; return; }
-    var h = movs.map(function (x) { return '<div class="dkl-fila"><span class="dkl-ico">' + x.ico + '</span><span class="dkl-txt">' + x.txt + '</span><b class="dkl-t">' + (x.gid ? L('Acampadas', 'Camped') : '⏱ ' + fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000)))) + '</b>' + (x.gid ? '<button class="dkl-b ret" data-gret="' + escaparHTML(x.gid) + '">↩</button>' : '') + (x.ataque ? '<button class="dkl-b acel" data-macel="' + x.id + '">⚡</button><button class="dkl-b ret" data-mret="' + x.id + '">↩</button>' : '') + '</div>'; }).join('');
+    var h = movs.map(function (x) { return '<div class="dkl-fila"><span class="dkl-ico">' + x.ico + '</span><span class="dkl-txt">' + x.txt + '</span><b class="dkl-t">' + (x.gid ? L('Acampadas', 'Camped') : '⏱ ' + fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000)))) + '</b>' + (x.gid ? '<button class="dkl-b ret" data-gret="' + escaparHTML(x.gid) + '">↩</button>' : '') + (x.ataque ? '<button class="dkl-b acel" data-macel="' + x.id + '">⚡</button><button class="dkl-b ret" data-mret="' + x.id + '">↩</button>' : x.acel ? '<button class="dkl-b acel" data-macel="' + escaparHTML(x.id) + '">⚡</button>' : '') + '</div>'; }).join('');
     if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
   }
   function actualizarDock() {
@@ -13779,7 +13792,7 @@
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
     requestAnimationFrame(bucle);
-    if (window.__tkCampanaAbierta) { reloj.getDelta(); return; } // v8.27: con la Campaña abierta la ciudad 3D no se dibuja (el teléfono no se calienta)
+    if (window.__tkCampanaAbierta || (panelActual && panelActual.tipo === 'ruleta' && !$('panel').classList.contains('oculto'))) { reloj.getDelta(); return; } // v8.28: tampoco con la Ruleta abierta (Safari se quedaba sin memoria) // v8.27: con la Campaña abierta la ciudad 3D no se dibuja (el teléfono no se calienta)
     var dtReal = Math.min(reloj.getDelta(), 0.05);
     AGUA_T.value = (AGUA_T.value + dtReal) % 1000; // v7.66: el agua se mueve
     if (!enMenu && !pausado) {
