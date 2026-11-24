@@ -1887,7 +1887,27 @@
     torresPuerta.forEach(function () { dps += (TORRES_PUERTA.dano + mu * TORRES_PUERTA.danoNivel) * 6; nT++; });
     slots.forEach(function (s) { if (s.edificio && s.edificio.tipo === 'torre') { var dl = EDIFICIOS.torre.dano, v = dl[Math.min(dl.length - 1, s.edificio.nivel - 1)] || 0; dps += v * (1 + 0.15 * Math.max(0, s.edificio.nivel - dl.length)) * (1 + bono('flechas')) * 6; nT++; } });
     if (!mu && !nT) return null;
-    return { a: Math.round(dps * 120 * (1 + 0.05 * mu)), v: Math.round(vidaMaxCastillo() * 40), t: nT, m: mu };
+    var p = pctDefensas();
+    return { a: Math.round(dps * 120 * (1 + 0.05 * mu) * p / 100), v: Math.round(vidaMaxCastillo() * 40 * p / 100), t: nT, m: mu, p: Math.round(p) };
+  }
+  // v8.35: las torres y defensas quedan dañadas después de un ataque hasta que se reparan en la Muralla
+  function pctDefensas() { if (estado.fdRep && Date.now() >= estado.fdRep.hasta) { estado.fdPct = 100; estado.fdRep = null; guardar(); } return estado.fdPct == null ? 100 : Math.max(0, Math.min(100, estado.fdPct)); }
+  function costoReparar() { var falta = 100 - pctDefensas(), mu = Math.max(1, estado.muralla || 0); return { piedra: Math.ceil(falta * 300 * mu), madera: Math.ceil(falta * 200 * mu), seg: Math.ceil(falta * 20 * (1 + 0.05 * mu)) }; }
+  function htmlRepararDefensas() {
+    var d = defensasFijas(); if (!d) return '';
+    var p = pctDefensas(), pie = Math.round(d.t * p / 100);
+    var h = '<div class="carta"><h3>🏹 ' + L('Torres y defensas de la muralla', 'Wall towers and defenses') + '</h3><p>' + L('En pie: ', 'Standing: ') + '<b>' + pie + ' / ' + d.t + '</b> ' + L('torres', 'towers') + ' · ' + L('estado ', 'condition ') + '<b>' + Math.round(p) + ' %</b></p>';
+    if (estado.fdRep) return h + '<p class="nota">🔧 ' + L('Reparando… ', 'Repairing… ') + fmtTiempo(Math.max(0, (estado.fdRep.hasta - Date.now()) / 1000)) + '</p></div>';
+    if (p >= 100) return h + '<p class="nota">✅ ' + L('Intactas. Si te atacan, las que caigan hay que repararlas aquí.', 'Intact. If you are attacked, damaged ones must be repaired here.') + '</p></div>';
+    var c = costoReparar();
+    return h + '<button class="comprar naranja" data-accion="reparar-defensas">🔧 ' + L('Reparar', 'Repair') + ' · 🪨 ' + formatoNumero(c.piedra) + ' · 🪵 ' + formatoNumero(c.madera) + ' · ⏱ ' + fmtTiempo(c.seg) + '</button></div>';
+  }
+  function repararDefensas() {
+    if (estado.fdRep || pctDefensas() >= 100) return;
+    var c = costoReparar();
+    if (estado.dueno) { estado.fdPct = 100; sonar('magia'); consejoTemporal('🔧 ' + L('Defensas reparadas.', 'Defenses repaired.')); guardar(true); reabrirPanel(); return; }
+    if (!pagar({ piedra: c.piedra, madera: c.madera })) return;
+    estado.fdRep = { hasta: Date.now() + c.seg * 1000 }; sonar('moneda'); consejoTemporal('🔧 ' + L('Reparando las torres: ', 'Repairing the towers: ') + fmtTiempo(c.seg)); guardar(true); reabrirPanel();
   }
   function simularRondas(atk, def, op) {
     op = op || {};
@@ -1915,7 +1935,7 @@
         var obj = null;
         if (g.dist) { var dist = a.filter(function (e) { return e.dist; }); if (dist.length) obj = dist.sort(function (x, y) { return Math.abs(g.pos - x.pos) - Math.abs(g.pos - y.pos); })[0]; }
         if (!obj) obj = a.sort(function (x, y) { return Math.abs(g.pos - x.pos) - Math.abs(g.pos - y.pos); })[0];
-        golpes.push({ obj: obj, muertos: g.n * g.atk / obj.vida, dano: g.n * g.atk, enemigos: enemigos }); // v8.31: el daño va por capas (ver aplicar)
+        golpes.push({ obj: obj, muertos: g.n * g.atk / obj.vida, dano: g.n * g.atk, enemigos: enemigos, tipoAt: g.tipo }); // v8.31: el daño va por capas (ver aplicar)
       });
     }
     var r = 0;
@@ -1927,7 +1947,7 @@
       var gA = [], gD = [];
       function aplicar(g) { g.forEach(function (x) { // v8.31: como en KoC, mueren primero exploradores y milicianos, luego infantería, caballería, tiradores y al final el asedio
         var dmg = x.dano, l = x.enemigos.filter(function (e) { return e.n > 0.5; }).sort(function (p, q) { return (CAPA_KOC[p.tipo] || 3) - (CAPA_KOC[q.tipo] || 3); });
-        for (var i = 0; i < l.length && dmg > 0; i++) { var o = l[i], mata = Math.min(o.n, dmg / o.vida); o.n -= mata; dmg -= mata * o.vida; }
+        for (var i = 0; i < l.length && dmg > 0; i++) { var o = l[i], xm = o.tipo === 'defensas' && ASEDIO_KOC[x.tipoAt] ? 2.5 : 1, mata = Math.min(o.n, dmg * xm / o.vida); o.n -= mata; dmg -= mata * o.vida / xm; } // v8.35: arietes, catapultas, balistas y torres de asedio rompen torres 2,5 veces más rápido
       }); }
       if (iniA) { disparar(va, vd, gA); aplicar(gA); disparar(vivos(D), va, gD); aplicar(gD); }
       else if (iniD) { disparar(vd, va, gD); aplicar(gD); disparar(vivos(A), vd, gA); aplicar(gA); }
@@ -1968,6 +1988,7 @@
       multD = op.multDef || null;
     }
     var sim = simularRondas(atk, def, { multA: multA, multD: multD, muralla: op.muralla || 0, escalaA: escA, escalaD: escD, fijas: op.fijas || null }); // v8.32: con las defensas fijas
+    if (op.fijas && sim.def.defensas) { var tPie = Math.round((op.fijas.t || 0) * (op.fijas.p == null ? 100 : op.fijas.p) / 100); sim.def.defensas.torres = tPie; sim.def.defensas.caen = Math.min(tPie, Math.round(tPie * sim.def.defensas.perdidos / 100)); } // v8.35
     if (op.defensa) { // de los defensores, solo cuentan como pérdidas mías las tropas de verdad (el resto es el castillo y las torres)
       sim.defReal = {}; Object.keys(realDef).forEach(function (k) { var x = sim.def[k]; if (!x || !x.ini) return; var fr = realDef[k] / x.ini; sim.defReal[k] = { ini: Math.round(realDef[k]), perdidos: Math.min(Math.round(realDef[k]), Math.round(x.perdidos * fr)), quedan: Math.max(0, Math.round(realDef[k] - x.perdidos * fr)) }; });
     }
@@ -7743,7 +7764,7 @@
     }
     return h + '<p class="nota">🛡️ ' + L('Tu defensa: ', 'Your defense: ') + '<b>' + formatoNumero(Math.round(defensaReino())) + '</b></p></div>';
   }
-  function htmlMuralla() { return htmlMurallaObra() + htmlDefensaVilla(); }
+  function htmlMuralla() { return htmlMurallaObra() + htmlRepararDefensas() + htmlDefensaVilla(); } // v8.35
   function htmlMurallaObra() {
     var n = estado.muralla, sig = n + 1;
     var h = '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML('muralla', MURALLA.icono) + '</div><div><h3>' + N('muralla') + (n ? ' — ' + T('nivel_corto') + ' ' + n + '/' + NIVEL_MAX : '') + '</h3><p>' + D('muralla') + '</p></div></div>';
@@ -9844,11 +9865,13 @@
       // v7.26: si el defensor no ha entrado desde mi último ataque, sus tropas muertas siguen muertas (como en KoC): se descuentan de lo publicado
       var dDef = Math.max(1, (al && al.defensa) || m.defensa || 1), tDef = JSON.parse(JSON.stringify(esp.tropas || {}));
       var bv = (estado.bajasDe || {})[m.defensor];
-      if (bv && al && (al.actualizado || 0) < bv.t) { for (var kb in bv.perd) if (tDef[kb]) tDef[kb] = Math.max(0, tDef[kb] - bv.perd[kb]); dDef = Math.max(1, dDef - bv.valor); }
+      var fdA = esp.fd ? JSON.parse(JSON.stringify(esp.fd)) : null;
+      if (bv && al && (al.actualizado || 0) < bv.t) { for (var kb in bv.perd) if (tDef[kb]) tDef[kb] = Math.max(0, tDef[kb] - bv.perd[kb]); dDef = Math.max(1, dDef - bv.valor); if (fdA && bv.fdP != null) { fdA.a *= bv.fdP; fdA.v *= bv.fdP; fdA.p = (fdA.p == null ? 100 : fdA.p) * bv.fdP; } } // v8.35: sus torres siguen rotas
       else if (bv) delete estado.bajasDe[m.defensor];
-      var datos = esp.san ? decidirAtaque(m, 1, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: {}, muralla: 0 }) : decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, soloTropas: !!esp.tropas, fijas: esp.fd || null, muralla: esp.muralla || 0, multDef: multDeDatos(esp.hd) }); // v7.81: santuario y héroe defensor
+      var datos = esp.san ? decidirAtaque(m, 1, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: {}, muralla: 0 }) : decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, soloTropas: !!esp.tropas, fijas: fdA, muralla: esp.muralla || 0, multDef: multDeDatos(esp.hd) }); // v7.81: santuario y héroe defensor
       try { var sdf = ultimaBatalla && !ultimaBatalla.defensa ? ultimaBatalla.sim.def : null; if (sdf) { estado.bajasDe = estado.bajasDe || {}; var reg = estado.bajasDe[m.defensor] && al && (al.actualizado || 0) < estado.bajasDe[m.defensor].t ? estado.bajasDe[m.defensor] : { perd: {}, valor: 0 }; reg.t = Date.now();
-        for (var kd in sdf) { var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
+        if (sdf.defensas) reg.fdP = (reg.fdP == null ? 1 : reg.fdP) * Math.max(0, sdf.defensas.quedan / 100); // v8.35
+        for (var kd in sdf) { if (kd === 'defensas') continue; var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
       return Cuentas.resolverAtaque(m.id, datos).then(function () { for (var k in datos) m[k] = datos[k]; return m; })
         .catch(function () { return Cuentas.leerAtaque(m.id); });
     });
@@ -9989,6 +10012,7 @@
           if (enOtra || estado.tropasDefienden === false) throw 0; // v7.81: santuario, las tropas no pelean
           resolverBatalla(Math.max(1, r.fuerza || 1), Math.max(1, r.defensa || defensaReino()), { defensa: true, muralla: estado.muralla || 0, defHeroe: heroeDefensor() });
           ultimaBatalla.aplicada = true; ultimaBatalla.perdidas = aplicarPerdidasRondas(ultimaBatalla.sim.defReal || {}, true);
+          var sdD = ultimaBatalla.sim.def && ultimaBatalla.sim.def.defensas; if (sdD && sdD.perdidos > 0) { estado.fdPct = Math.max(0, pctDefensas() * (1 - sdD.perdidos / 100)); html += '<p class="nota aviso-rojo">🏹 ' + L('Te tumbaron ', 'They destroyed ') + (sdD.caen || 0) + L(' torres. Repáralas en la Muralla.', ' towers. Repair them at the Wall.') + '</p>'; } // v8.35
           if (ultimaBatalla.perdidas.muertos + ultimaBatalla.perdidas.heridos > 0) html += '<p class="nota">💀 ' + formatoNumero(ultimaBatalla.perdidas.muertos) + ' · 🏥 ' + formatoNumero(ultimaBatalla.perdidas.heridos) + '</p>'; } } catch (e) {}
         html += '<p class="nota">' + new Date(r.fecha).toLocaleString() + '</p></div>';
         nuevoCorreo('guerras', L(r.atacanteNombre + ' te atacó: ', r.atacanteNombre + ' attacked you: ') + (r.gano ? L('perdiste', 'you lost') : L('resististe', 'you held')), r.atacanteNombre, htmlCoordAtacante(r) + htmlInformeBatalla({ gano: !r.gano, fecha: r.llega,
@@ -11909,7 +11933,7 @@
         '<div class="ib-filas"><span>💪 ' + L('Poder', 'Power') + '</span><b>' + f(x.poder) + '</b><span>⚔️ ' + L('Lucharon', 'Fought') + '</span><b>' + f(x.lucharon) + '</b><span>✅ ' + L('Sobrevivieron', 'Survived') + '</span><b>' + f(x.sobreviven) + '</b>' +
         '<span>☠️ ' + L('Murieron', 'Died') + '</span><b>' + f(x.muertos) + '</b><span>🩹 ' + L('Heridos', 'Wounded') + '</span><b>' + f(x.heridos) + '</b><span>✨ ' + L('Se pueden revivir', 'Can be revived') + '</span><b>' + f(x.revivir) + '</b></div>' +
         // v7.18: tropa por tropa, como el pergamino de Kingdoms of Camelot
-        (x.tropas && Object.keys(x.tropas).length ? '<div class="ib-tropas">' + Object.keys(x.tropas).sort(function (p, q2) { return (p === 'defensas') - (q2 === 'defensas'); }).map(function (k) { var q = x.tropas[k]; if (k === 'defensas') return '<div class="ib-tr ib-fijas"><span>🏹 ' + L('Defensas de la muralla y torres', 'Wall and tower defenses') + '</span><b>100 %</b><b class="ib-rojo">−' + formatoNumero(q.perdidos) + ' %</b></div>'; /* v8.32 */ return '<div class="ib-tr"><span>' + (TROPAS[k] ? TROPAS[k].icono + ' ' + N(k) : k) + '</span><b>' + formatoNumero(q.ini) + '</b><b class="ib-rojo">−' + formatoNumero(q.perdidos) + '</b></div>'; }).join('') + '</div>' : '') + '</div>';
+        (x.tropas && Object.keys(x.tropas).length ? '<div class="ib-tropas">' + Object.keys(x.tropas).sort(function (p, q2) { return (p === 'defensas') - (q2 === 'defensas'); }).map(function (k) { var q = x.tropas[k]; if (k === 'defensas') return '<div class="ib-tr ib-fijas"><span>🏹 ' + L('Torres de la muralla', 'Wall towers') + (q.torres != null ? ' · ' + L('quedan ', 'left ') + formatoNumero(q.torres - (q.caen || 0)) : '') + '</span><b>' + (q.torres != null ? formatoNumero(q.torres) : '100 %') + '</b><b class="ib-rojo">−' + (q.torres != null ? formatoNumero(q.caen || 0) : formatoNumero(q.perdidos) + ' %') + '</b></div>'; /* v8.32 */ return '<div class="ib-tr"><span>' + (TROPAS[k] ? TROPAS[k].icono + ' ' + N(k) : k) + '</span><b>' + formatoNumero(q.ini) + '</b><b class="ib-rojo">−' + formatoNumero(q.perdidos) + '</b></div>'; }).join('') + '</div>' : '') + '</div>';
     }
     var mej = o.mejoras || {}, filasMej = [['⚔️', L('Ataque', 'Attack'), 'ataque'], ['❤️', L('Vida', 'Health'), 'vida'], ['👟', L('Velocidad', 'Speed'), 'vel'], ['📦', L('Carga', 'Load'), 'carga'], ['👥', L('Límite', 'Limit'), 'limite']];
     return '<div class="ib"><div class="ib-res ' + (o.gano ? 'si' : 'no') + '">' + (o.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')) + '</div>' +
@@ -12302,6 +12326,7 @@
       if (rr === 'miembro') delete rg[ru]; else rg[ru] = rr;
       Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
     }
+    else if (a === 'reparar-defensas') { sonar('click'); repararDefensas(); } // v8.35
     else if (a === 'ir-atacante') { sonar('click'); irAlAtacante(b.getAttribute('data-uid')); } // v8.33
     else if (a === 'al-reintentar') { sonar('click'); abrirPanelAlianza(); }
     else if (a === 'al-expulsar') { var ue = b.getAttribute('data-uid'), ne = b.getAttribute('data-n'); confirmarJuego('🚪 ' + L('Expulsar a ', 'Remove ') + escaparHTML(ne), L('Saldrá de la alianza y ya no podrá usar sus ayudas ni su chat.', 'They will leave the alliance and lose its help and chat.'), L('Sí, expulsar', 'Yes, remove'), function () { Cuentas.expulsarDeAlianza(estado.alianza, ue).then(function () { if (alCache && alCache.al) { alCache.al.expulsados = alCache.al.expulsados || {}; alCache.al.expulsados[ue] = Date.now(); } alRangoAbierto = null; sonar('click'); consejoTemporal('🚪 ' + escaparHTML(ne) + L(' ya no está en la alianza.', ' is no longer in the alliance.')); pintarHubAlianza(); }).catch(function (er) { consejoTemporal(L('No se pudo expulsar', 'Could not remove') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }); } // v8.04
@@ -13083,6 +13108,7 @@
       estado.misHechas = g.misHechas || {};
       estado.misDia = g.misDia || null;
       estado.regresos = g.regresos || [];
+      estado.fdPct = g.fdPct; estado.fdRep = g.fdRep || null; // v8.35
       estado.pve = g.pve || []; window.__tkPveCarga = true; // v8.17
       estado.destinos = g.destinos || {};
       estado.enemigos = g.enemigos || {};

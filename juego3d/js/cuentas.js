@@ -205,7 +205,7 @@ var Cuentas = (function () {
         ['nivelJ', 'castillo', 'muralla', 'heroes'].forEach(function (k) { if (e[k] !== undefined) es[k] = ent(e[k], 0, 1e9); });
         if (e.tropas && typeof e.tropas === 'object') { es.tropas = {}; Object.keys(e.tropas).slice(0, 40).forEach(function (k) { es.tropas[k] = ent(e.tropas[k], 0, 1e9); }); }
         // v8.32: las defensas fijas de la villa (muralla y torres) para la batalla del que ataca
-        if (e.fd && typeof e.fd === 'object') es.fd = { a: ent(e.fd.a, 0, 1e15), v: ent(e.fd.v, 0, 1e15), t: ent(e.fd.t, 0, 1000), m: ent(e.fd.m, 0, 1000) };
+        if (e.fd && typeof e.fd === 'object') es.fd = { a: ent(e.fd.a, 0, 1e15), v: ent(e.fd.v, 0, 1e15), t: ent(e.fd.t, 0, 1000), m: ent(e.fd.m, 0, 1000), p: ent(e.fd.p == null ? 100 : e.fd.p, 0, 100) };
         // v8.31: los recursos (los ve el espía)
         if (e.rec && typeof e.rec === 'object') { es.rec = {}; ['comida', 'oro', 'madera', 'piedra', 'hierro'].forEach(function (k) { if (e.rec[k] !== undefined) es.rec[k] = ent(e.rec[k], 0, 1e15); }); }
         // v8.16: el héroe defensor también viaja (antes se perdía y el que defendía peleaba sin su héroe)
