@@ -1429,3 +1429,7 @@ html body .st-base { opacity: .6; font-weight: 400; } html body .st-mas { font-s
 .sp-premio { margin-top: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(242,196,90,.6); background: rgba(120,80,10,.35); }
 .sp-premio p { margin: 4px 0 6px; }
 .sp-premio.listo { opacity: .6; border-color: rgba(79,208,106,.5); background: rgba(40,120,50,.25); }
+
+/* v8.25: las llaves de la Ruleta van aparte, no entre los cofres */
+.rp-llaves { margin: 8px 6px 0; text-align: center; color: #ffe08a; font: 700 14px system-ui, sans-serif; }
+.rp-llaves .ico-obj { width: 22px; height: 22px; vertical-align: middle; }

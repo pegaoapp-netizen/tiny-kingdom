@@ -10948,10 +10948,10 @@
   var RULETA = [
     // v6.89: el timón de la Capitana (iconos/ui/rul_timon.webp): 7 cofres en el orden del dibujo, empezando arriba y en el sentido del reloj
     // v6.92: el timón nuevo de Maikel: 8 casillas desde arriba en el sentido del reloj, con 3 llaves
-    { k: 'llave', p: 1 }, { k: 'inv_8h', p: 15 }, { k: 'cofre_tesoro', p: 6 }, { k: 'llave', p: 1 }, // v8.02: llaves más raras (antes 2,5 cada una)
-    { k: 'cofre_plata', p: 28 }, { k: 'llave', p: 1 }, { k: 'acel_8h', p: 18 }, { k: 'cofre_oro', p: 18.5 }
+    { k: 'llave', p: 0.3 }, { k: 'inv_8h', p: 15 }, { k: 'cofre_tesoro', p: 6 }, { k: 'llave', p: 0.3 }, // v8.25: llaves raras: ~1 % por tirada (antes 3,4 %)
+    { k: 'cofre_plata', p: 28 }, { k: 'llave', p: 0.3 }, { k: 'acel_8h', p: 18 }, { k: 'cofre_oro', p: 18.5 }
   ];
-  var RUL_SIN_LLAVE_MAX = 40; // v8.02 (antes 20) // una llave más o menos cada 13 tiradas, y seguro una cada 20
+  var RUL_SIN_LLAVE_MAX = 100; // v8.25: una llave segura solo cada 100 tiradas (antes 40) // una llave más o menos cada 13 tiradas, y seguro una cada 20
   var SETS_RULETA = ['sol', 'luna', 'ancla'], RUL_PIEZA = 0.02; // de vez en cuando, una pieza del Alba, Estelar o del Mar Hondo
   function piezaDeSet(set) { var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
   var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
@@ -11041,7 +11041,7 @@
       if (kAm) { estado.mochila[kAm] = (estado.mochila[kAm] || 0) + 1; ganados.push({ ico: OBJETOS[kAm].icono, nom: N(kAm), cat: 'recursos', gordo: kAm === 'amatista_500', extra: true }); }
       if (Math.random() < RUL_PIEZA) { var pz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (pz) ganados.push({ ico: icoPieza(pz), nom: nombrePieza(pz), cat: 'equipo', gordo: true, extra: true }); }
       }
-      if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.push({ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }); }
+      if (s.k === 'llave') { r.sinLlave = 0; r.llaves++; ganados.llaves = (ganados.llaves || 0) + 1; } // v8.25: la llave no sale entre los premios: va en su línea, abajo
       else r.sinLlave++;
     }
     guardar(true); actualizarHUD();
@@ -11067,15 +11067,18 @@
   }
   function mostrarPremiosRuleta(l, galeon) {
     var v = $('rul-premios'); if (v) v.remove();
+    var nLlaves = l.llaves || 0;
+    if (!l.length && nLlaves) l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">', nom: L('Llave del Galeón', 'Galleon Key'), dest: L('Abajo, en la Ruleta', 'Below, in the Wheel') }], nLlaves = 0; // tirada de 1 que cayó en la llave
     var d = document.createElement('div'); d.id = 'rul-premios';
     var hayGordo = !!galeon;
     // v6.88: los premios iguales se juntan en uno con su cantidad (×12)
     var grupos = [], idxG = {}; l.forEach(function (x) { var k = x.nom; if (idxG[k] === undefined) { idxG[k] = grupos.length; grupos.push({ ico: x.ico, nom: x.nom, cat: x.cat, dest: x.dest, gordo: x.gordo, n: 0 }); } grupos[idxG[k]].n++; });
-    var total = l.length, extras = l.filter(function (x) { return x.extra; }).length, tiradas = total - extras; l = grupos;
+    var total = l.length, extras = l.filter(function (x) { return x.extra; }).length, tiradas = total - extras + nLlaves; l = grupos; /* v8.25: la tirada de la llave también cuenta */
     d.innerHTML = '<div class="rp-caja">' + (l.length === 1 ? '<h3>' + L('¡Enhorabuena! Ganaste ', 'Congratulations! You won ') + l[0].nom + '</h3><p>' + L('Ya está en tu Inventario.', 'It is in your Inventory.') + '</p>' : '<h3>' + (hayGordo ? L('¡Abriste el Cofre del Galeón!', 'You opened the Galleon Chest!') : L('¡Tus premios!', 'Your prizes!') + ' <small>(' + tiradas + ' ' + L('tiradas', 'spins') + (extras ? ' + ' + extras + ' ' + L('de regalo', 'bonus') : '') + ')</small>') + '</h3>') +
       '<div class="rp-rejilla' + (l.length === 1 ? ' uno' : '') + '">' + l.map(function (x) {
         var dest = x.dest || (x.cat ? '🎒 ' + L('Inventario', 'Inventory') + ' › ' + (NOM_SUBCAT[x.cat] ? L(NOM_SUBCAT[x.cat][0], NOM_SUBCAT[x.cat][1]) : x.cat) : x.gordo ? '' : '🗝️ ' + L('Abajo, en la Ruleta', 'In the Wheel'));
         return '<div class="rp-item' + (x.gordo ? ' gordo' : '') + '"><span class="rp-ic">' + x.ico + (x.n > 1 ? '<b class="rp-n">×' + x.n + '</b>' : '') + '</span><small>' + x.nom + '</small>' + (dest ? '<em class="rp-dest">' + dest + '</em>' : '') + '</div>'; }).join('') + '</div>' +
+      (nLlaves ? '<p class="rp-llaves"><img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️"> ' + L('Además: +', 'Also: +') + nLlaves + ' ' + L(nLlaves > 1 ? 'llaves del Galeón' : 'llave del Galeón', nLlaves > 1 ? 'Galleon keys' : 'Galleon key') + ' · ' + L('van abajo, en la Ruleta', 'they go below, in the Wheel') + '</p>' : '') +
       '<div class="rp-bots">' + (l.some(function (x) { return x.cat; }) ? '<button class="az-b azul" id="rp-inv">🎒 ' + L('Ver en el Inventario', 'See in Inventory') + '</button>' : '') + '<button class="az-b verde" id="rp-vale">' + L('Vale', 'OK') + '</button></div></div>';
     var catVer = (l.filter(function (x) { return x.cat; })[0] || {}).cat;
     document.body.appendChild(d); sonar(hayGordo ? 'victoria' : 'moneda');
