@@ -10094,7 +10094,7 @@
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 60 * 1000; // v7.14: 1 min entre ataques al mismo reino (antes 10)
       guardar(true); publicarAldea(true); actualizarEscudo();
       // v7.18: como en KoC 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
-      $('mundo-info').innerHTML = ''; dockPest = 'marchar'; dockAbierto = true; try { guardarDock(); actualizarDock(); } catch (e) {} sonar('cuerno'); // v7.19: la marcha se ve en la barra de abajo con Acelerar y Retirar, sin cartel encima
+      $('mundo-info').innerHTML = ''; abrirDockAuto(); try { guardarDock(); actualizarDock(); } catch (e) {} sonar('cuerno'); // v7.19: la marcha se ve en la barra de abajo con Acelerar y Retirar, sin cartel encima
       actualizarAlertas();
     }).catch(function () { $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); });
   }
@@ -10204,7 +10204,7 @@
       if (!mi) { mi = document.createElement('div'); mi.id = 'marcha-info'; document.body.appendChild(mi); }
       mi.innerHTML = T('mar_hacia', { n: escaparHTML(mv[0].defensorNombre) }) + ' · <b>' + T('mar_llega', { t: fmtTiempo((mv[0].llega - ahora) / 1000) }) + '</b>' + (mv.length > 1 ? ' · ' + T('al_mas', { n: mv.length - 1 }) : '');
     } else if (mi) mi.remove();
-    if (mv.length && typeof actualizarDock === 'function') { if (!actualizarAlertas.vioMarcha) { actualizarAlertas.vioMarcha = true; dockPest = 'marchar'; dockAbierto = true; } } else actualizarAlertas.vioMarcha = false;
+    if (mv.length && typeof actualizarDock === 'function') { if (!actualizarAlertas.vioMarcha) { actualizarAlertas.vioMarcha = true; abrirDockAuto(); } } else actualizarAlertas.vioMarcha = false;
     if (panelActual && panelActual.tipo === 'vigia') pintarVigia();
   }
   // El jugador decide: defender en su ciudad o usar un portal (nunca automático)
@@ -13572,6 +13572,11 @@
   // ---------- v6.86: PANEL DE PROCESOS abajo a la derecha (pestañas Territorios / Marchar / Tropas / Procesos, se pliega con la flecha) ----------
   var dockPest = 'tropas', dockAbierto = true;
   try { var dp = JSON.parse(localStorage.getItem('tinykingdom_dock') || '{}'); if (dp.p) dockPest = dp.p; if (dp.a === false) dockAbierto = false; } catch (e) {}
+  /* v8.53: la barra de marchas no tapa el mapa: se recoge sola 5 s después de abrirse por una marcha y al arrastrar el mapa */
+  function recogerDock() { if (!dockAbierto) return; dockAbierto = false; dockAuto = 0; try { guardarDock(); actualizarDock(); } catch (e) {} }
+  var dockAuto = 0;
+  function abrirDockAuto() { dockPest = 'marchar'; dockAbierto = true; var t = dockAuto = Date.now(); setTimeout(function () { if (dockAuto === t) recogerDock(); }, 5000); }
+  (function () { var p0 = null; document.addEventListener('pointerdown', function (ev) { p0 = ev.target && ev.target.tagName === 'CANVAS' ? { x: ev.clientX, y: ev.clientY } : null; }, true); document.addEventListener('pointermove', function (ev) { if (p0 && Math.hypot(ev.clientX - p0.x, ev.clientY - p0.y) > 14) { p0 = null; recogerDock(); } }, true); document.addEventListener('pointerup', function () { p0 = null; }, true); })();
   function guardarDock() { try { localStorage.setItem('tinykingdom_dock', JSON.stringify({ p: dockPest, a: dockAbierto })); } catch (e) {} }
   function slotRelevo() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'relevo'; })[0]; }
   // v7.02: la misión se pone justo encima de la barra de procesos (antes quedaba escondida detrás)
@@ -13601,6 +13606,7 @@
       var b = ev.target.closest('[data-dk]'); if (!b || enMenu) return;
       sonar('click');
       var k = b.getAttribute('data-dk');
+      dockAuto = 0; /* si lo tocas tú, ya no se recoge solo */
       if (k === 'flecha') dockAbierto = !dockAbierto;
       else if (k === dockPest && dockAbierto) dockAbierto = false;
       else { dockPest = k; dockAbierto = true; }
