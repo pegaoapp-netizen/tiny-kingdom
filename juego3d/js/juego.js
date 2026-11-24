@@ -1886,6 +1886,8 @@
   }
   function valorDe(comp) { var v = 0; for (var k in comp) v += (comp[k] || 0) * valorUnidadTipo(k); return v; }
   var ASEDIO_KOC = { ariete: 1, catapulta: 1, balista: 1, torre_asedio: 1 };
+  /* v8.60 (dueño): con la Defensa en OFF las tropas NO se salvan: no pelean y el atacante mata la mitad de cada tipo */
+  var PERD_OFF = 0.5;
   /* v8.59 (especificación KoC del dueño): TRIÁNGULO DE CONTRAATAQUES. Infantería fuerte contra caballería, caballería fuerte contra
      tiradores, tiradores fuertes contra infantería. El asedio rompe murallas (ver aplicar) y es débil sin escolta. */
   var CLASE_KOC = { miliciano: 'inf', espadachin: 'inf', guardian: 'inf', explorador: 'cab', jinete: 'cab', caballeria: 'cab', caballeria_pesada: 'cab', arquero: 'dist', ballestero: 'dist', arquero_largo: 'dist', tirador_elite: 'dist', balista: 'asedio', ariete: 'asedio', catapulta: 'asedio', torre_asedio: 'asedio' };
@@ -7929,7 +7931,7 @@
   function htmlDefensaVilla() {
     var on = estado.tropasDefienden !== false, hd = heroeDefensor(), fuera = heroesFuera();
     var mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; }).sort(function (x, y) { return nivelHeroe(y) - nivelHeroe(x); });
-    var h = '<div class="carta dv-caja"><div class="dv-fila"><div><h4>🛡️ ' + L('Defensa de Tropas', 'Troop Defense') + '</h4><small>' + (on ? L('ON: el 100% de tus tropas libres pelean si te atacan.', 'ON: 100% of your free troops fight if you are attacked.') : L('OFF (Santuario): tus tropas se esconden y no pelean. El atacante gana, pero solo se lleva lo que pase de la protección del Almacén.', 'OFF (Sanctuary): your troops hide and do not fight. The attacker wins, but only takes what is above your Storehouse protection.')) + '</small></div>' +
+    var h = '<div class="carta dv-caja"><div class="dv-fila"><div><h4>🛡️ ' + L('Defensa de Tropas', 'Troop Defense') + '</h4><small>' + (on ? L('ON: el 100% de tus tropas libres pelean si te atacan.', 'ON: 100% of your free troops fight if you are attacked.') : L('OFF: tus tropas NO pelean. Si te atacan, el atacante gana y te mata la MITAD de tus tropas. Pon ON y un héroe Defensor.', 'OFF: your troops do NOT fight. If attacked, the attacker wins and kills HALF of your troops. Turn ON and set a Defender hero.')) + '</small></div>' +
       '<button class="cs-switch' + (on ? ' on' : '') + '" data-accion="cast-defensa"><span>' + (on ? 'ON' : 'OFF') + '</span><i></i></button></div>';
     h += '<h4 class="dv-sub">🦸 ' + L('Héroe Defensor de la Villa', 'Village Defender Hero') + '</h4>';
     if (!mios.length) h += '<p class="nota">' + L('Todavía no tienes héroes.', 'You have no heroes yet.') + '</p>';
@@ -9639,7 +9641,7 @@
   // ---------- FICHA DE CIUDAD: nunca atacar a ciegas ----------
   function datosEspia() {
     // v7.22: el defensor pelea con TODAS sus tropas de la ciudad (las de reserva también); antes solo contaban las que se veían y el resto se inventaba
-    var t = {}; if (estado.tropasDefienden !== false) Object.keys(TROPAS).forEach(function (k) { var n = cuentaTipo(k); if (n > 0) t[k] = n; });
+    var t = {}; Object.keys(TROPAS).forEach(function (k) { var n = cuentaTipo(k); if (n > 0 && k !== 'heroe') t[k] = n; }); /* v8.60: nada se esconde, ni en OFF */
     var o = { nivelJ: nivelJugador(), castillo: estado.castillo || 1, muralla: estado.muralla || 0, tropas: t, heroes: (estado.equipo || []).length, fd: defensasFijas() || undefined, rec: { comida: Math.floor(estado.comida || 0), oro: Math.floor(estado.monedas || 0), madera: Math.floor(estado.madera || 0), piedra: Math.floor(estado.piedra || 0), hierro: Math.floor(estado.hierro || 0) } }; // v8.31: el espía ve los recursos
     if (estado.tropasDefienden === false) o.san = 1; else { var hd = datosHeroeDef(); if (hd) o.hd = hd; } // v7.81
     o.emb = [nivelMayor('embajada'), tropas.filter(function (u) { return u.refuerzo; }).length]; // v7.88: Embajada (nivel, refuerzos alojados)
@@ -10128,6 +10130,7 @@
       if (bv && al && (al.actualizado || 0) < bv.t) { for (var kb in bv.perd) if (tDef[kb]) tDef[kb] = Math.max(0, tDef[kb] - bv.perd[kb]); dDef = Math.max(1, dDef - bv.valor); if (fdA && bv.fdP != null) { fdA.a *= bv.fdP; fdA.v *= bv.fdP; fdA.p = (fdA.p == null ? 100 : fdA.p) * bv.fdP; } } // v8.35: sus torres siguen rotas
       else if (bv) delete estado.bajasDe[m.defensor];
       var datos = esp.san ? decidirAtaque(m, 1, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: {}, muralla: 0 }) : decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, soloTropas: !!esp.tropas, fijas: fdA, muralla: esp.muralla || 0, multDef: multDeDatos(esp.hd) }); // v7.81: santuario y héroe defensor
+      if (esp.san && ultimaBatalla && !ultimaBatalla.defensa) { var sdO = {}; Object.keys(tDef).forEach(function (k) { var q = Math.floor(tDef[k] || 0); if (q > 0 && COMBATE_KOC[k]) { var pO = Math.round(q * PERD_OFF); sdO[k] = { ini: q, perdidos: pO, quedan: q - pO }; } }); ultimaBatalla.sim.def = sdO; } /* v8.60 */
       try { var sdf = ultimaBatalla && !ultimaBatalla.defensa ? ultimaBatalla.sim.def : null; if (sdf) { estado.bajasDe = estado.bajasDe || {}; var reg = estado.bajasDe[m.defensor] && al && (al.actualizado || 0) < estado.bajasDe[m.defensor].t ? estado.bajasDe[m.defensor] : { perd: {}, valor: 0 }; reg.t = Date.now();
         if (sdf.defensas) reg.fdP = (reg.fdP == null ? 1 : reg.fdP) * Math.max(0, sdf.defensas.quedan / 100); // v8.35
         for (var kd in sdf) { if (kd === 'defensas') continue; var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
@@ -10268,7 +10271,8 @@
         } else html += '<p><b>' + T('rep_resististe') + '</b></p>';
         // v7.14: mis defensores también pelean por rondas: pierdo tropas (70 % heridos, 90 % con Enfermería nivel 10+)
         try { if (!(estado.defensasVistas || {})[r.id]) { estado.defensasVistas = estado.defensasVistas || {}; estado.defensasVistas[r.id] = Date.now(); var kv = Object.keys(estado.defensasVistas); if (kv.length > 80) kv.sort(function (a, b) { return estado.defensasVistas[a] - estado.defensasVistas[b]; }).slice(0, kv.length - 80).forEach(function (k) { delete estado.defensasVistas[k]; });
-          if (enOtra || estado.tropasDefienden === false) throw 0; // v7.81: santuario, las tropas no pelean
+          if (enOtra) throw 0;
+          if (estado.tropasDefienden === false) { /* v8.60: en OFF no pelean y el atacante mata la mitad */ var ladoO = {}; tiposCombate().forEach(function (k) { var q = Math.max(0, cuentaTipo(k) - enMarcha(k)); if (q > 0) ladoO[k] = { ini: q, perdidos: Math.round(q * PERD_OFF), quedan: q - Math.round(q * PERD_OFF) }; }); var pO2 = aplicarPerdidasRondas(ladoO, true); html += '<p class="nota aviso-rojo">🔓 ' + L('Tu defensa estaba en OFF: tus tropas no pelearon y te mataron ', 'Your defense was OFF: your troops did not fight and they killed ') + formatoNumero(pO2.muertos + pO2.heridos) + L(' tropas.', ' troops.') + '</p>'; if (pO2.muertos + pO2.heridos > 0) html += '<p class="nota">💀 ' + formatoNumero(pO2.muertos) + ' · 🏥 ' + formatoNumero(pO2.heridos) + '</p>'; throw 0; }
           resolverBatalla(Math.max(1, r.fuerza || 1), Math.max(1, r.defensa || defensaReino()), { defensa: true, muralla: estado.muralla || 0, defHeroe: heroeDefensor() });
           ultimaBatalla.aplicada = true; ultimaBatalla.perdidas = aplicarPerdidasRondas(ultimaBatalla.sim.defReal || {}, true);
           var sdD = ultimaBatalla.sim.def && ultimaBatalla.sim.def.defensas; if (sdD && sdD.perdidos > 0) { estado.fdPct = Math.max(0, pctDefensas() * (1 - sdD.perdidos / 100)); html += '<p class="nota aviso-rojo">🏹 ' + L('Te tumbaron ', 'They destroyed ') + (sdD.caen || 0) + L(' torres. Repáralas en la Muralla.', ' towers. Repair them at the Wall.') + '</p>'; } // v8.35
