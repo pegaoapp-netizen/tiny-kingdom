@@ -1854,7 +1854,13 @@
   function miComposicion() { var c = {}; tiposCombate().forEach(function (k) { var n = cuentaTipo(k); if (n > 0) c[k] = n; }); return c; }
   function liderActual() { return (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || null; }
   // multiplicadores del héroe y su equipo (fórmula de KoC): combate = nivel × 3 → +0,5 % ataque y +0,25 % vida por punto
-  function multiplicadoresHeroe(id) {
+  /* v8.49: SETS DE ATAQUE Y DE DEFENSA. Cada pieza de un set de Ataque da +3 % de ataque al atacar;
+     cada pieza de un set de Defensa da +3,45 % (15 % más) de salud y defensa al defender tu ciudad. 6/6 da un extra. */
+  var SET_ROL = { sol: 'ataque', ancla: 'ataque', chispa: 'ataque', trueno: 'ataque', brisa: 'ataque', fenix: 'ataque', aguila: 'ataque', dragon: 'ataque', roble: 'defensa', luna: 'defensa', pluma: 'defensa', titan: 'defensa', leon: 'defensa' };
+  var BONO_ROL = { ataque: 3, defensa: 3 * 1.15 };
+  function rolSet(set) { return SET_ROL[set] || (set ? 'ataque' : ''); }
+  function etiquetaRol(set) { var ro = rolSet(set); return ro === 'defensa' ? '🛡️ ' + L('Set de Defensa', 'Defense Set') : ro === 'ataque' ? '⚔️ ' + L('Set de Ataque', 'Attack Set') : ''; }
+  function multiplicadoresHeroe(id, modo) {
     var r = { atk: 0, vida: 0, foeAtk: 0, foeVida: 0, heridos: 0, combate: 0, piezas: 0, set: 0, asedio: 0, muro: 0, marcha: 0, velMarcha: 0, saqueo: 0, liq: 0, dragon: 0 };
     if (!id || !estado.heroes || !estado.heroes[id]) return r;
     r.combate = nivelHeroe(id) * 3; r.atk += r.combate * 0.5; r.vida += r.combate * 0.25;
@@ -1867,6 +1873,8 @@
     if (deSet >= 4) r.atk += 25;
     if (deSet >= 6) { r.foeAtk += 15; r.foeVida += 15; r.heridos += 0.1; }
     SET_DRAGON.bonos.forEach(function (b) { if (r.dragon >= b[0]) for (var k in b[1]) r[k] += b[1][k]; }); // v7.84: bonos de conjunto 2/4/6
+    var cuentaRol = { ataque: 0, defensa: 0 }; pz.forEach(function (p) { if (!p.s) return; var ro = rolSet(p.s), sb = 1 + 0.1 * ((p.n || 1) - 1); cuentaRol[ro]++; if (ro === 'ataque' && modo !== 'def') r.atk += BONO_ROL.ataque * sb; else if (ro === 'defensa' && modo === 'def') { r.vida += BONO_ROL.defensa * sb; r.foeAtk += BONO_ROL.defensa * sb * 0.5; } }); /* v8.49 */
+    if (cuentaRol.ataque >= 6 && modo !== 'def') r.atk += 10; if (cuentaRol.defensa >= 6 && modo === 'def') { r.vida += 11.5; r.foeAtk += 5.75; } r.rolA = cuentaRol.ataque; r.rolD = cuentaRol.defensa;
     return r;
   }
   // un ejército «de mentira» con ese poder, para los enemigos que no tienen tropas de verdad (bestias, campamentos, villas)
@@ -1972,7 +1980,7 @@
       def = estado.tropasDefienden === false ? {} : miComposicion(); var realDef = JSON.parse(JSON.stringify(def)); // v8.30: sin tropas de relleno; con la Defensa en OFF no pelea nadie
       if (op.fijas === undefined) op.fijas = defensasFijas(); // v8.32
       if (!Object.keys(def).length && !(op.fijas && op.fijas.v > 0)) { ultimaBatalla = { sim: { atk: {}, def: {}, defReal: {}, rondas: 0, gano: true, perdA: 0, perdD: 0 }, defensa: true, fecha: Date.now(), aplicada: false }; return { gano: true, bajas: 0, bajasDef: 0, margen: 1, rondas: 0, sim: ultimaBatalla.sim, perdidas: { muertos: 0, heridos: 0, detalle: {} }, sinDefensa: true }; }
-      multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : liderActual()); if (buffActivo('def')) multD.vida += 20;
+      multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : liderActual(), 'def'); /* v8.49 */ if (buffActivo('def')) multD.vida += 20;
     } else {
       atk = op.tropas || miComposicion(); var heroe = op.heroe !== undefined ? op.heroe : liderActual();
       multA = multiplicadoresHeroe(heroe); if (buffActivo('atk')) multA.atk += 20; if (buffActivo('vida')) multA.vida += 20; /* v8.18 */
@@ -7875,7 +7883,7 @@
   function heroeDefensor() { var h = estado.heroeDefensor; return h && estado.heroes && estado.heroes[h] && HEROE[h] && !heroesFuera()[h] ? h : null; }
   function datosHeroeDef() {
     var h = heroeDefensor(); if (!h) return null;
-    var m = multiplicadoresHeroe(h);
+    var m = multiplicadoresHeroe(h, 'def'); /* v8.49: defiende con su set de Defensa */
     return { n: nivelHeroe(h), c: Math.round(m.combate), a: Math.round(m.atk * 10) / 10, v: Math.round(m.vida * 10) / 10, fa: Math.round(m.foeAtk * 10) / 10, fv: Math.round(m.foeVida * 10) / 10, s: m.set, h: String(NH(h)).slice(0, 30) };
   }
   function multDeDatos(hd) { return hd ? { atk: +hd.a || 0, vida: +hd.v || 0, foeAtk: +hd.fa || 0, foeVida: +hd.fv || 0, combate: +hd.c || 0, set: +hd.s || 0 } : null; }
@@ -8806,7 +8814,7 @@
   }
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 200; // v8.03: antes 60 (al llenarse se borraban piezas subidas)
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
-  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ✦'; return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
+  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ' + (rolSet(p.s) === 'defensa' ? '🛡️' : '⚔️'); return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
   function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)) * multSalidaArmadura(p.s); } /* v8.45 */
   function textoPieza(p) {
     if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) { var dp = {}, d0 = SET_DRAGON.piezas[p.t]; Object.keys(TXT_DRAGON).forEach(function (k) { if (d0[k]) dp[k] = d0[k]; }); return textoBonosDragon(dp); }
@@ -8872,7 +8880,7 @@
       (id ? '<p class="ei-req ' + (tiene >= pide ? 'ok' : 'no') + '">' + L('Nivel del héroe', 'Hero level') + ' Lv' + tiene + '/Lv' + pide + '</p>' : '');
     if (set) {
       var mias = piezas().filter(function (x) { return x.s === set; }), puestas = mias.filter(function (x) { return x.h === set; }).length;
-      h += '<div class="ei-set"><b>' + L('Juego ', 'Set ') + (ARMADURA_HEROE[set] ? ARMADURA_HEROE[set][estado.idioma === 'en' ? 'en' : 'es'] : '') + ' (' + puestas + '/6)</b><div class="ei-piezas">' + TIPOS_EQ.map(function (t) {
+      h += '<div class="ei-set"><b>' + L('Juego ', 'Set ') + (ARMADURA_HEROE[set] ? ARMADURA_HEROE[set][estado.idioma === 'en' ? 'en' : 'es'] : '') + ' (' + puestas + '/6) · ' + etiquetaRol(set) + '</b><small class="ei-rol">' + (rolSet(set) === 'defensa' ? L('Cada pieza: +3,45 % de salud y defensa al defender tu ciudad (15 % más que el de Ataque). 6/6: +11,5 % extra.', 'Each piece: +3.45% health and defense when defending your city (15% more than Attack). 6/6: +11.5% extra.') : L('Cada pieza: +3 % de ataque al atacar. 6/6: +10 % extra.', 'Each piece: +3% attack when attacking. 6/6: +10% extra.')) + '</small><div class="ei-piezas">' + TIPOS_EQ.map(function (t) {
         var x = mias.filter(function (q) { return q.t === t; })[0];
         return '<span class="' + (x ? (x.h === set ? 'puesta' : 'tiene') : 'falta') + '">' + (EQ_SET_IMG[set] && EQ_SET_IMG[set][t] ? '<img src="iconos/ui/q_' + t + '_' + set + '.webp" alt="">' : EQ[t].icono) + '<small>' + T('eq_' + t) + '</small></span>';
       }).join('') + '</div>' +
@@ -9332,7 +9340,7 @@
       abrirPanel('🦸 ' + L('Héroes y armaduras lanzados', 'Released heroes and armor'), '<p class="nota">' + L('Solo los héroes marcados salen en el Reclutamiento y los premios (por medallas). Lánzalos poco a poco, por temporadas.', 'Only checked heroes appear in Recruiting and prizes (as medals). Release them little by little, by seasons.') + '</p><p class="tq-aviso">📈 ' + L('Cada héroe y cada armadura que lances sale al menos un 15 % más fuerte que los que ya salieron. El número #1, #2… es el orden en que salen.', 'Each hero and armor you release is at least 15% stronger than those already out. #1, #2… is the release order.') + '</p>' +
         '<div class="hl-grid">' + HEROES.map(function (h) { var on = sel.indexOf(h.id) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog" data-id="' + h.id + '">' + fotoHTML('h_' + h.id, '🦸') + '<b>' + NH(h.id) + '</b><small>' + T('rareza_' + h.rareza) + ' · ' + (on ? '✅ #' + (sel.indexOf(h.id) + 1) + ' · ×' + multPrev(sel, h.id).toFixed(2) : '🔒') + '</small></button>'; }).join('') + '</div>' +
         '<h3 style="margin-top:12px">🛡️ ' + L('Armaduras', 'Armor') + '</h3><p class="nota">' + L('Solo los juegos marcados salen en cofres, la Ruleta, el Galeón y los premios. Lo que ya tiene cada jugador no se le quita.', 'Only checked sets appear in chests, the Roulette, the Galleon and prizes. What players already own is kept.') + '</p>' +
-        '<div class="hl-grid">' + ARMADURAS_TODAS.map(function (a) { var on = selA.indexOf(a) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog-a" data-id="' + a + '">' + icoPieza({ t: 'pechera', s: a, r: 'mitico', n: 1 }) + '<b>' + nombreArmadura(a) + '</b><small>' + (on ? '✅ #' + (selA.indexOf(a) + 1) + ' · ×' + Math.pow(SUBE_POR_SALIDA, selA.indexOf(a)).toFixed(2) : '🔒') + '</small></button>'; }).join('') + '</div>' +
+        '<div class="hl-grid">' + ARMADURAS_TODAS.map(function (a) { var on = selA.indexOf(a) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog-a" data-id="' + a + '">' + icoPieza({ t: 'pechera', s: a, r: 'mitico', n: 1 }) + '<b>' + nombreArmadura(a) + '</b><small>' + etiquetaRol(a) + '<br>' + (on ? '✅ #' + (selA.indexOf(a) + 1) + ' · ×' + Math.pow(SUBE_POR_SALIDA, selA.indexOf(a)).toFixed(2) : '🔒') + '</small></button>'; }).join('') + '</div>' +
         '<button class="comprar verde" data-accion="lz-guardar" style="margin-top:10px">💾 ' + L('Guardar en la nube', 'Save to the cloud') + '</button>', { tipo: 'lanzar' });
     }
     abrirLanzarHeroes.sel = sel; abrirLanzarHeroes.pintar = pintar; pintar();

@@ -1562,3 +1562,6 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 /* v8.46: botón X,Y en la búsqueda del Mundo y la cajita de coordenadas visible en el tema oscuro */
 #bus-xy { margin-left: 4px; }
 #lupa-flota { z-index: 60; }
+
+/* v8.49: rol del set */
+.ei-rol { display: block; font-size: 11px; opacity: .85; margin: 2px 0 4px; }
