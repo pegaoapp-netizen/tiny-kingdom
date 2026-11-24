@@ -1085,7 +1085,7 @@
   }
   // ---------- TRABAJOS: además de pagar, para subir de nivel hay que haber jugado ----------
   function logro(k) { return (estado.logros && estado.logros[k]) || 0; }
-  function sumarLogro(k, n) { estado.logros = estado.logros || {}; estado.logros[k] = (estado.logros[k] || 0) + (n || 1); var pt = PUNTOS_TORNEO[k]; if (pt) { sumarTorneo(pt * (n || 1)); sumarFinde(k, pt * (n || 1)); } }
+  function sumarLogro(k, n) { estado.logros = estado.logros || {}; estado.logros[k] = (estado.logros[k] || 0) + (n || 1); var pt = PUNTOS_TORNEO[k]; if (pt) { sumarTorneo(pt * (n || 1)); sumarFinde(k, pt * (n || 1)); } if (k === 'tropas') sumarTX('e', n || 1); /* v8.48 */ }
   function trabajosPara(que, L) {
     var tabla = que === 'castillo' ? TRABAJOS_CASTILLO : TRABAJOS_EDIFICIO, lista = [];
     for (var k in tabla) {
@@ -7151,6 +7151,62 @@
       });
     }).catch(function () { revisarTorneo.andando = false; });
   }
+
+  // ================= v8.48: TORNEOS SEMANALES DE ENTRENAMIENTO (tropas entrenadas) Y DE PODER (cuánto subes tu poder) =================
+  // Premios sin gemas (las gemas solo en el Torneo de gemas). Se guardan en la nube como torneos/e<semana> y torneos/p<semana>.
+  var TORNEOS_X = {
+    e: { ico: '🛡️', es: 'Torneo de Entrenamiento', en: 'Training Tournament', des: ['¡Gana quien más tropas entrene esta semana!', 'Whoever trains the most troops this week wins!'], unidad: ['tropas', 'troops'] },
+    p: { ico: '💪', es: 'Torneo de Poder', en: 'Power Tournament', des: ['¡Gana quien más suba su poder esta semana!', 'Whoever raises their power the most this week wins!'], unidad: ['de poder', 'power'] }
+  };
+  var PREMIOS_TX = [{ hasta: 1, oro: 150000, objeto: 'acel_15m', piezas: 2 }, { hasta: 3, oro: 80000, piezas: 1 }, { hasta: 10, oro: 40000 }, { hasta: 50, oro: 12000 }, { hasta: 1e9, oro: 3000 }];
+  function premioTX(pos) { for (var i = 0; i < PREMIOS_TX.length; i++) if (pos <= PREMIOS_TX[i].hasta) return PREMIOS_TX[i]; return PREMIOS_TX[PREMIOS_TX.length - 1]; }
+  function torneoX(k) { estado.tx = estado.tx || {}; var t = estado.tx[k]; if (!t) t = estado.tx[k] = { semana: semanaActual(), puntos: 0, cobrada: 0 }; return t; }
+  function puntosTX(k) {
+    var t = torneoX(k), sem = semanaActual();
+    if (t.semana !== sem) { if (t.puntos > 0 && t.cobrada !== t.semana) { revisarTX(k); return 0; } t.semana = sem; t.puntos = 0; t.base = null; }
+    if (k === 'p') { var pw = Math.round(calcularPoder()); if (t.base === null || t.base === undefined) t.base = pw; t.puntos = Math.max(t.puntos || 0, pw - t.base); }
+    return Math.round(t.puntos || 0);
+  }
+  function sumarTX(k, n) { if (!(n > 0)) return; puntosTX(k); var t = torneoX(k); if (t.semana !== semanaActual()) return; t.puntos = (t.puntos || 0) + n; programarTX(); }
+  function programarTX() { if (!programarTX.t) programarTX.t = setTimeout(function () { programarTX.t = null; publicarTX('e'); publicarTX('p'); }, 20000); }
+  function publicarTX(k) { if (!hayCuenta() || !Cuentas.puntosTorneo) return; var p = puntosTX(k); if (!(p > 0)) return; Cuentas.puntosTorneo(k + semanaActual(), { nombre: Cuentas.nombrePublico(), puntos: Math.min(100000000, p), alianza: estado.alianza || null, actualizado: Date.now() }).catch(function () {}); }
+  function revisarTX(k) {
+    var t = torneoX(k), sem = t.semana;
+    if (sem === semanaActual() || !(t.puntos > 0) || t.cobrada === sem || !hayCuenta() || revisarTX['a' + k]) { if (sem !== semanaActual() && (!(t.puntos > 0) || t.cobrada === sem)) { t.semana = semanaActual(); t.puntos = 0; t.base = null; } return; }
+    revisarTX['a' + k] = true;
+    Cuentas.topTorneo(k + sem, 100).then(function (lista) {
+      revisarTX['a' + k] = false; if (t.cobrada === sem) return;
+      var yo = Cuentas.usuario().uid, i = lista.map(function (x) { return x.uid; }).indexOf(yo), pos = i >= 0 ? i + 1 : 101, p = premioTX(pos), hechos = t.puntos, cfg = TORNEOS_X[k];
+      t.cobrada = sem; t.semana = semanaActual(); t.puntos = 0; t.base = null; guardar(true);
+      var items = [{ ico: '🪙', n: p.oro, nom: T('r_oro') }]; if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) });
+      for (var ip = 0; ip < (p.piezas || 0); ip++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza de armadura de héroe', 'Hero armor piece') });
+      nuevoCorreo('sistema', cfg.ico + ' ' + L(cfg.es, cfg.en) + ': ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), L('Torneo', 'Tournament'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos > 100 ? '100+' : '#' + pos]]));
+      mostrarRecompensas(cfg.ico + ' ' + L(cfg.es, cfg.en) + ' · ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), items, function () { darPremio(p); for (var q = 0; q < (p.piezas || 0); q++) darPiezaHeroe(); guardar(true); });
+    }).catch(function () { revisarTX['a' + k] = false; });
+  }
+  setTimeout(function () { revisarTX('e'); revisarTX('p'); }, 7000);
+  setInterval(function () { if (hayCuenta()) { puntosTX('p'); programarTX(); } }, 120000);
+  // la ventana: igual que el Torneo semanal (cabecera, Ver premios, tabla de 8 por página y tu fila fija)
+  function htmlTX(k, lista, yo) {
+    var cfg = TORNEOS_X[k], misP = puntosTX(k), i = lista.map(function (x) { return x.uid; }).indexOf(yo), faltan = Math.max(0, finDeSemana(semanaActual()) - Date.now()) / 1000;
+    var POR = 8, pags = Math.max(1, Math.ceil(lista.length / POR)); htmlTX.k = k; htmlTX.lista = lista; htmlTX.yo = yo; htmlTX.i = i; htmlTX.misP = misP;
+    if (htmlTX.pag === undefined || htmlTX.pag >= pags || htmlTX.kAnt !== k) htmlTX.pag = i >= 0 ? Math.floor(i / POR) : 0; htmlTX.kAnt = k;
+    var miPr = misP > 0 ? premioTX(i >= 0 ? i + 1 : 101) : null;
+    function txtPr(p) { return '🪙 ' + formatoNumero(p.oro) + (p.objeto && OBJETOS[p.objeto] ? ' · ' + OBJETOS[p.objeto].icono + ' ' + N(p.objeto) : '') + (p.piezas ? ' · 🛡️ ×' + p.piezas + ' ' + L('pieza mítica', 'mythic piece') : ''); }
+    htmlTX.premios = PREMIOS_TX.map(function (p, j) { var desde = j ? PREMIOS_TX[j - 1].hasta + 1 : 1; return '<div class="fila-miembro"><b>' + (p.hasta >= 1e9 ? L('Los demás', 'Everyone else') : desde === p.hasta ? '#' + desde : '#' + desde + ' – ' + p.hasta) + '</b><span class="chip">' + txtPr(p) + '</span></div>'; }).join('') + '<p class="nota">' + L('Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'You need at least 1 point. The prize arrives when you log in next week.') + '</p>';
+    return '<div class="ev-cab"><div class="ev-ico">' + cfg.ico + '</div><div class="ev-dat"><b>' + L(cfg.es, cfg.en) + '</b><small>' + L(cfg.des[0], cfg.des[1]) + '</small><div class="ev-reloj"><span>' + L('Termina en', 'Ends in') + '</span><b>⏳ ' + fmtLargo(faltan) + '</b></div></div></div>' +
+      '<button class="ev-ver" data-accion="tx-premios">🎁 ' + L('Ver premios', 'See prizes') + '</button>' +
+      '<div class="ev-tuyo"><small>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + ' ' + L(cfg.unidad[0], cfg.unidad[1]) + '</small>' + (miPr ? '<span class="chip">' + txtPr(miPr) + '</span>' : '<p class="nota">' + (k === 'e' ? L('Entrena tropas para sumar puntos.', 'Train troops to score points.') : L('Sube tu poder (obras, tropas, héroes, equipo) para sumar puntos.', 'Raise your power (buildings, troops, heroes, gear) to score points.')) + '</p>') + '</div>' +
+      '<div id="tx-tabla">' + tablaTX() + '</div>';
+  }
+  function tablaTX() {
+    var l = htmlTX.lista || [], pg = htmlTX.pag || 0, POR = 8, pags = Math.max(1, Math.ceil(l.length / POR)), yo = htmlTX.yo, i = htmlTX.i;
+    return '<div class="ev-tabla"><div class="ev-th"><span>' + L('Puesto', 'Place') + '</span><span>' + L('Nombre', 'Name') + '</span><span>' + L('Puntos', 'Points') + '</span></div>' +
+      (l.length ? l.slice(pg * POR, pg * POR + POR).map(function (a, j) { var n = pg * POR + j + 1; return '<div class="ev-tr' + (a.uid === yo ? ' yo' : '') + (n % 2 ? '' : ' par') + '"><span>' + (['🥇', '🥈', '🥉'][n - 1] || n) + '</span><span><b>' + escaparHTML(a.nombre || '?') + '</b>' + (a.alianza ? '<small>[' + escaparHTML(a.alianza) + ']</small>' : '') + '</span><span>' + formatoNumero(a.puntos || 0) + '</span></div>'; }).join('') : '<p class="iv-vacio">' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') +
+      '<div class="ev-yo"><span>' + (i >= 0 ? i + 1 : (htmlTX.misP > 0 ? '100+' : '—')) + '</span><span><b>' + escaparHTML(Cuentas.nombrePublico ? Cuentas.nombrePublico() : L('Tú', 'You')) + '</b></span><span>' + formatoNumero(htmlTX.misP || 0) + '</span></div></div>' +
+      '<div class="ev-pie"><small>' + L('Última actualización: ', 'Last update: ') + new Date().toTimeString().slice(0, 5) + '</small></div>' +
+      '<div class="ev-pag"><button data-accion="tx-pag" data-p="0">⏮</button><button data-accion="tx-pag" data-p="' + Math.max(0, pg - 1) + '">◀</button><span>' + (pg + 1) + ' / ' + pags + '</span><button data-accion="tx-pag" data-p="' + Math.min(pags - 1, pg + 1) + '">▶</button><button data-accion="tx-pag" data-p="' + (pags - 1) + '">⏭</button></div>';
+  }
   // ---------- v7.76: TORNEO DE TEMPORADA (14 días, 4 fases; reglas en js/sistemas/torneoTemporada.js) ----------
   var TT = window.TorneoTemporada;
   function temporada() {
@@ -7280,6 +7336,8 @@
     var tabs = '<div class="subtabs rk-tabs"><button class="' + (tab === 'poder' ? 'activo' : '') + '" data-accion="rk-tab" data-t="poder">💪 ' + L('Poder', 'Power') + '</button>' +
       '<button class="' + (tab === 'temporada' ? 'activo' : '') + '" data-accion="rk-tab" data-t="temporada">👑 ' + L('Temporada', 'Season') + '</button>' +
       '<button class="' + (tab === 'torneo' ? 'activo' : '') + '" data-accion="rk-tab" data-t="torneo">🏆 ' + L('Torneo semanal', 'Weekly tournament') + '</button>' +
+      '<button class="' + (tab === 'tx-e' ? 'activo' : '') + '" data-accion="rk-tab" data-t="tx-e">🛡️ ' + L('Entrenamiento', 'Training') + '</button>' +
+      '<button class="' + (tab === 'tx-p' ? 'activo' : '') + '" data-accion="rk-tab" data-t="tx-p">📈 ' + L('Subir poder', 'Power up') + '</button>' +
       '<button class="' + (tab === 'liquidacion' ? 'activo' : '') + '" data-accion="rk-tab" data-t="liquidacion">⚔️ ' + L('Liquidación', 'Kills') + '</button>' +
       '<button class="' + (tab === 'alianzas' ? 'activo' : '') + '" data-accion="rk-tab" data-t="alianzas">🛡️ ' + L('Alianzas', 'Alliances') + '</button></div>';
     abrirPanel('🏆 ' + L('Ranking', 'Ranking'), tabs + '<div id="rk-cuerpo"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>', { tipo: 'ranking' });
@@ -7304,6 +7362,7 @@
       Cuentas.topTemporada(TT.idTemporada(), 50).then(function (lista) { listo(htmlTemporada(lista, yo)); }).catch(function () { listo(htmlTemporada([], yo)); });
       return;
     }
+    if (tab === 'tx-e' || tab === 'tx-p') { var kx = tab.slice(3); publicarTX(kx); Cuentas.topTorneo(kx + semanaActual(), 100).then(function (l) { listo(htmlTX(kx, l, yo)); }).catch(function () { listo(htmlTX(kx, [], yo)); }); return; } /* v8.48 */
     if (tab === 'liquidacion') {
       publicarAldea(true);
       var sem0 = semanaActual(), mT = estado.kpSem === sem0 ? (estado.kpTemp || 0) : 0;
@@ -12507,6 +12566,8 @@
     else if (a === 'lz-tog') { var lz = abrirLanzarHeroes.sel || [], lzi = b.getAttribute('data-id'), lzk = lz.indexOf(lzi); if (lzk >= 0) lz.splice(lzk, 1); else lz.push(lzi); sonar('click'); abrirLanzarHeroes.pintar(); } // v8.40
     else if (a === 'lz-tog-a') { var lza = abrirLanzarHeroes.selA || [], lzai = b.getAttribute('data-id'), lzak = lza.indexOf(lzai); if (lzak >= 0) lza.splice(lzak, 1); else lza.push(lzai); sonar('click'); abrirLanzarHeroes.pintar(); } /* v8.41 */
     else if (a === 'lz-guardar') { b.disabled = true; Cuentas.guardarConfigHeroes(abrirLanzarHeroes.sel, abrirLanzarHeroes.selA).then(function () { heroesLanzados = abrirLanzarHeroes.sel.slice(); armadurasLanzadas = (abrirLanzarHeroes.selA || armadurasLanzadas).slice(); sonar('moneda'); consejoTemporal('✅ ' + L('Héroes lanzados guardados: ', 'Released heroes saved: ') + heroesLanzados.length); }).catch(function (er) { b.disabled = false; consejoTemporal(L('No se pudo guardar', 'Could not save') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
+    else if (a === 'tx-pag') { sonar('click'); htmlTX.pag = +b.getAttribute('data-p'); var txt = $('tx-tabla'); if (txt) txt.innerHTML = tablaTX(); } /* v8.48 */
+    else if (a === 'tx-premios') { sonar('click'); var txm = $('tq-modal'); if (txm) txm.remove(); txm = document.createElement('div'); txm.id = 'tq-modal'; txm.innerHTML = '<div class="tqm-caja"><div class="tqm-cab"><b>🎁 ' + L('Premios por puesto', 'Prizes by place') + '</b><button class="tqm-x">✕</button></div><div class="tqm-cuerpo">' + (htmlTX.premios || '') + '</div></div>'; document.body.appendChild(txm); txm.addEventListener('click', function (ev) { if (ev.target === txm || ev.target.closest('.tqm-x')) txm.remove(); }); }
     else if (a === 'tq-pag') { sonar('click'); abrirPanelRanking.tqPag = +b.getAttribute('data-p'); var tqt = $('tq-tabla'); if (tqt && abrirPanelRanking.tqTabla) tqt.innerHTML = abrirPanelRanking.tqTabla(); } /* v8.42 */
     else if (a === 'tq-ver-premios' || a === 'tq-como') { sonar('click'); var tqm = $('tq-modal'); if (tqm) tqm.remove(); tqm = document.createElement('div'); tqm.id = 'tq-modal'; tqm.innerHTML = '<div class="tqm-caja"><div class="tqm-cab"><b>' + (a === 'tq-como' ? L('Cómo ganar puntos', 'How to earn points') : '🎁 ' + L('Premios por puesto', 'Prizes by place')) + '</b><button class="tqm-x">✕</button></div><div class="tqm-cuerpo">' + (a === 'tq-como' ? abrirPanelRanking.tqComo : abrirPanelRanking.tqPremios) + '</div></div>'; document.body.appendChild(tqm); tqm.addEventListener('click', function (ev) { if (ev.target === tqm || ev.target.closest('.tqm-x')) tqm.remove(); }); } /* v8.42 */
     else if (a === 'tm-sub') { sonar('click'); htmlTemporada.sub = b.getAttribute('data-s'); document.querySelectorAll('.tm-subs button').forEach(function (x) { x.classList.toggle('activo', x === b); }); document.querySelectorAll('.tm-sec').forEach(function (x) { x.hidden = x.getAttribute('data-s') !== htmlTemporada.sub; }); } // v8.39

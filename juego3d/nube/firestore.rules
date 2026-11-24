@@ -73,7 +73,7 @@ service cloud.firestore {
     match /torneos/{semana}/puntos/{uid} {
       allow read: if request.auth != null;
       allow create, update: if request.auth != null && request.auth.uid == uid
-        && semana.matches('^[0-9]{4,6}$')
+        && semana.matches('^[ep]?[0-9]{4,6}$') // v8.48: e = Entrenamiento, p = Poder
         && request.resource.data.keys().hasOnly(['nombre', 'puntos', 'alianza', 'actualizado'])
         && request.resource.data.nombre is string && request.resource.data.nombre.size() >= 1 && request.resource.data.nombre.size() <= 30
         && request.resource.data.puntos is int && request.resource.data.puntos >= 0 && request.resource.data.puntos <= 100000000
