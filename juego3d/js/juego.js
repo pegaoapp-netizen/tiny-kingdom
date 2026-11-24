@@ -2197,13 +2197,14 @@
       if (pell && ids.length === 2) { var a = dedos[ids[0]], b = dedos[ids[1]]; M3.dist = Math.max(20, Math.min(48, pell.dist * pell.d / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)))); return; }
       if (!inicio) return;
       var dx = ev.clientX - inicio.x, dy = ev.clientY - inicio.y; inicio.x = ev.clientX; inicio.y = ev.clientY;
-      if (Math.hypot(ev.clientX - inicio.sx, ev.clientY - inicio.sy) > 6) { if (!inicio.movio) cerrarTarjetasMundo(); inicio.movio = true; M3.seguir = null; }
-      var kk = M3.dist / el.clientHeight * 1.3, lim = TAM_MUNDO * CELDA_M / 2;
+      if (Math.hypot(ev.clientX - inicio.sx, ev.clientY - inicio.sy) > 10) { if (!inicio.movio) cerrarTarjetasMundo(); inicio.movio = true; M3.seguir = null; }
+      if (!inicio.movio) return; /* v8.46: un toque con el dedo algo movido ya no arrastra el mapa */
+      var kk = M3.dist / el.clientHeight * 1.05, lim = TAM_MUNDO * CELDA_M / 2;
       var Ar = 0.7071, mvx = -dx * kk, mvz = -dy * kk * 1.25;
       var ddx = Ar * (mvx + mvz), ddz = Ar * (mvz - mvx), ahoraI = performance.now(), dtI = Math.max(8, ahoraI - (inicio.tm || ahoraI - 16)); inicio.tm = ahoraI;
       M3.obj.x = Math.max(-lim, Math.min(lim, M3.obj.x + ddx)); M3.obj.z = Math.max(-lim, Math.min(lim, M3.obj.z + ddz));
       // v6.45: velocidad del dedo (para que el mapa siga deslizando suave al soltar)
-      M3.vel = { x: (M3.vel ? M3.vel.x * 0.5 : 0) + ddx / dtI * 8, z: (M3.vel ? M3.vel.z * 0.5 : 0) + ddz / dtI * 8, t: ahoraI };
+      M3.vel = { x: (M3.vel ? M3.vel.x * 0.5 : 0) + ddx / dtI * 5, z: (M3.vel ? M3.vel.z * 0.5 : 0) + ddz / dtI * 5, t: ahoraI }; /* v8.46: menos brusco al soltar */
     });
     function soltar(ev) {
       var era = inicio; delete dedos[ev.pointerId];
@@ -2886,8 +2887,9 @@
     var niveles = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     $('mundo-buscar').innerHTML = '<select id="bus-tipo">' + tipos.map(function (q) { return '<option value="' + q[0] + '"' + (q[0] === busqueda.tipo ? ' selected' : '') + '>' + q[1] + '</option>'; }).join('') + '</select>' +
       '<select id="bus-nivel">' + niveles.map(function (n) { return '<option value="' + n + '"' + (n === busqueda.nivel ? ' selected' : '') + '>' + (n ? L('Nivel ', 'Level ') + n : L('Cualquier nivel', 'Any level')) + '</option>'; }).join('') + '</select>' +
-      '<button class="comprar mini naranja" id="bus-ir">🔍 ' + L('Buscar', 'Search') + '</button><span id="bus-info"></span>';
+      '<button class="comprar mini naranja" id="bus-ir">🔍 ' + L('Buscar', 'Search') + '</button><button class="comprar mini azul" id="bus-xy" title="' + L('Ir a coordenadas', 'Go to coordinates') + '">📍 X,Y</button><span id="bus-info"></span>';
     $('bus-ir').addEventListener('click', function () { busqueda.tipo = $('bus-tipo').value; busqueda.nivel = +$('bus-nivel').value; sonar('click'); buscarObjetivo(); });
+    $('bus-xy').addEventListener('click', function () { sonar('click'); abrirLupa(); }); /* v8.46: escribir X y Y y la cámara va ahí */
   }
   function buscarObjetivo() {
     var yo = celdaDe(miLugar().x, miLugar().y), cands = [], t = busqueda.tipo, n = busqueda.nivel;
@@ -12057,7 +12059,22 @@
   var pestanaCorreo = 'sistema', correoAbierto = null;
   function nombreCat(c) { return ({ guerras: L('Guerras', 'Wars'), alianza: L('Alianza', 'Alliance'), sistema: L('Sistema', 'System'), informes: L('Informes', 'Reports'), marcados: L('Marcados', 'Starred') })[c]; }
   function correoLista() { return Array.isArray(estado.buzon) ? estado.buzon : (estado.buzon = []); }
+  /* v8.46: RESULTADO AL INSTANTE: cada batalla avisa arriba quién ganó, sin abrir el informe (tocar abre el Correo) */
+  function avisoResultado(cat, titulo) {
+    if (cat !== 'informes' && cat !== 'guerras') return;
+    var t = String(titulo || '').toLowerCase(), gano = null;
+    if (/perdiste|you lost|derrota|defeat|perdida|lost\b/.test(t)) gano = false;
+    else if (/victoria|victory|conquist|capturada|captured|resististe|you held|superada|\bwon\b/.test(t)) gano = true;
+    if (gano === null) return;
+    var v = $('aviso-resultado'); if (v) v.remove();
+    var d = document.createElement('button'); d.id = 'aviso-resultado'; d.className = gano ? 'gano' : 'perdio';
+    d.innerHTML = '<b>' + (gano ? '🏆 ' + L('¡GANASTE!', 'YOU WON!') : '💔 ' + L('PERDISTE', 'YOU LOST')) + '</b><small>' + escaparHTML(String(titulo).replace(/<[^>]*>/g, '').slice(0, 70)) + '</small><i>' + L('Toca para ver el informe', 'Tap to see the report') + '</i>';
+    document.body.appendChild(d);
+    d.addEventListener('click', function () { d.remove(); sonar('click'); try { abrirCorreo(cat); } catch (e) {} });
+    clearTimeout(avisoResultado.t); avisoResultado.t = setTimeout(function () { if (document.body.contains(d)) d.remove(); }, 5500);
+  }
   function nuevoCorreo(cat, titulo, de, cuerpo, premio, extra) {
+    try { avisoResultado(cat, titulo); } catch (e) {}
     // v7.14: los informes de batalla llevan el detalle de las rondas (tropa por tropa, héroe y equipo, muertos y heridos)
     if ((cat === 'informes' || cat === 'guerras') && ultimaBatalla && ultimaBatalla.aplicada && !ultimaBatalla.enCorreo && Date.now() - ultimaBatalla.fecha < 8000) { ultimaBatalla.enCorreo = true; cuerpo = (cuerpo || '') + htmlDetalleRondas(ultimaBatalla); }
     var m = { id: 'm' + Date.now() + Math.floor(Math.random() * 1000), cat: cat, titulo: titulo, de: de || L('Sistema', 'System'), fecha: Date.now(), cuerpo: cuerpo || '', premio: premio || null, leido: false, reclamado: false, marcado: false };

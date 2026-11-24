@@ -1551,3 +1551,14 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .az-cinta-aviso { pointer-events: none; }
 .az-celda[data-accion] { cursor: pointer; }
 .az-elige { text-align: center; margin: 6px 0 2px; font: 800 13px system-ui, sans-serif; color: #ffe08a; }
+
+/* v8.46: resultado de la batalla al instante */
+#aviso-resultado { position: fixed; left: 50%; top: calc(64px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 380; min-width: 230px; max-width: calc(100vw - 32px); padding: 8px 16px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer; color: #fff; box-shadow: 0 6px 18px rgba(0,0,0,.5); animation: avRes .35s ease-out; font-family: system-ui, sans-serif; }
+#aviso-resultado.gano { background: linear-gradient(#2f8a3a, #145a1e); border: 2px solid #9dff9a; }
+#aviso-resultado.perdio { background: linear-gradient(#b0281e, #6a120c); border: 2px solid #ff9a8a; }
+#aviso-resultado b { font-size: 20px; letter-spacing: .5px; } #aviso-resultado small { font-size: 12px; opacity: .95; text-align: center; } #aviso-resultado i { font-size: 10.5px; opacity: .8; }
+@keyframes avRes { from { transform: translate(-50%, -20px) scale(.9); opacity: 0; } to { transform: translate(-50%, 0) scale(1); opacity: 1; } }
+
+/* v8.46: botón X,Y en la búsqueda del Mundo y la cajita de coordenadas visible en el tema oscuro */
+#bus-xy { margin-left: 4px; }
+#lupa-flota { z-index: 60; }
