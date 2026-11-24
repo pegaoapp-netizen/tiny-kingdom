@@ -8,6 +8,8 @@
 (function () {
   'use strict';
   var VER = '13.4.0', MODELO = 'gemini-3.8-flash';
+  // v8.27: «pase» de App Check (reCAPTCHA v3, gratis; clave PÚBLICA de sitio; la secreta nunca va en el código)
+  var RECAPTCHA_SITIO = '6LeojC8uAAAAAFdKO4aUxQ1EVUF4s-IEBWPerU9v';
   var GUIA = [
     'Eres el equipo de soporte de Tiny Kingdom, un juego de estrategia medieval (ciudad, tropas, héroes, alianzas y ataques en el mapa del Mundo).',
     'Contesta en el mismo idioma que el jugador (español o inglés), con frases cortas y sencillas, como una persona amable. Máximo 450 caracteres.',
@@ -40,9 +42,11 @@
   var modelo = null;
   function cargar() {
     if (modelo) return modelo;
-    modelo = Promise.all([import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-app.js'), import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-ai.js')]).then(function (m) {
-      var A = m[0], I = m[1], cfg = window.FIREBASE_CONFIG || (window.firebase && firebase.app().options);
-      var app = A.getApps().filter(function (x) { return x.name === 'tk-ia'; })[0] || A.initializeApp(cfg, 'tk-ia');
+    modelo = Promise.all([import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-app.js'), import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-ai.js'), import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-app-check.js')]).then(function (m) {
+      var A = m[0], I = m[1], C = m[2], cfg = window.FIREBASE_CONFIG || (window.firebase && firebase.app().options);
+      var nueva = !A.getApps().some(function (x) { return x.name === 'tk-ia'; });
+      var app = nueva ? A.initializeApp(cfg, 'tk-ia') : A.getApp('tk-ia');
+      if (nueva) window.__tkAppCheck = { ac: C.initializeAppCheck(app, { provider: new C.ReCaptchaV3Provider(RECAPTCHA_SITIO), isTokenAutoRefreshEnabled: true }), C: C };
       var ai = I.getAI(app, { backend: new I.GoogleAIBackend() });
       return I.getGenerativeModel(ai, { model: MODELO, systemInstruction: GUIA, generationConfig: { responseMimeType: 'application/json', temperature: 0.3, maxOutputTokens: 800 } });
     });

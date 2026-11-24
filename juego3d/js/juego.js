@@ -10540,7 +10540,33 @@
       return '<div class="cp-h"><span class="cp-ok">✓</span><b>' + T('oleada') + ' ' + k + '</b><small>' + (x ? new Date(x.f).toLocaleDateString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short' }) + ' · ❤ ' + x.v + '%' : '') + '</small></div>';
     }).join('') + '</div></div>';
   }
+  // v8.27: puente con la Campaña en batalla (js/tk-campana.js)
+  window.__tkCamp = {
+    L: L, sonar: sonar, consejo: consejoTemporal,
+    etapa: function () { return estado.oleada || 1; },
+    heroes: function () { return Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; }).map(function (id) { var st = statsHeroe(id), mh = multiplicadoresHeroe(id), h = HEROE[id]; return { id: id, nombre: NH(id), foto: RETRATOS_IMG['h_' + id] ? 'iconos/ui/' + RETRATOS_IMG['h_' + id] + '.webp' : '', nivel: nivelHeroe(id), vida: st.vida * (1 + (mh.vida || 0) / 100), dano: st.dano * (1 + (mh.atk || 0) / 100), distancia: !!st.distancia, clase: h.clase, hab: h.hab }; }); },
+    equipo: function (l) { if (l) { estado.campEquipo = l.slice(0, 5); guardar(); } return (estado.campEquipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; }); },
+    auto: function (v) { if (v !== undefined) { estado.campAuto = !!v; guardar(); } return !!estado.campAuto; },
+    heroesPanel: function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); },
+    abierta: function (v) { window.__tkCampanaAbierta = !!v; if (!v) { actualizarHUD(); } },
+    // premios de la etapa (sin gemas: las gemas no se regalan)
+    ganar: function (n, ids) {
+      var items = [], expH = 30 + 12 * n, expR = 15 + 5 * n;
+      ids.forEach(function (id) { if (estado.heroes[id]) darExp(id, expH); });
+      items.push({ ico: '🦸', nom: L('EXP de cada héroe', 'EXP per hero'), n: '+' + formatoNumero(expH) });
+      sumarXP(expR); items.push({ ico: '⭐', nom: L('EXP del reino', 'Kingdom EXP'), n: '+' + formatoNumero(expR) });
+      var hf = ids[Math.floor(Math.random() * ids.length)], fr = 2 + Math.floor(n / 5);
+      if (hf && estado.heroes[hf]) { estado.heroes[hf].frag = (estado.heroes[hf].frag || 0) + fr; items.push({ img: RETRATOS_IMG['h_' + hf] ? 'iconos/ui/' + RETRATOS_IMG['h_' + hf] + '.webp' : '', ico: '🧩', nom: L('Fragmentos de ', 'Shards of ') + NH(hf), n: '×' + fr }); }
+      var lib = n % 5 === 0 ? 'libro_gra' : 'libro_peq', nl = 1 + Math.floor(n / 10), ac = n % 10 === 0 ? 'acel_1h' : 'acel_15m';
+      [[lib, nl], [ac, 1]].forEach(function (q) { if (!OBJETOS[q[0]]) return; estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + q[1]; items.push({ ico: OBJETOS[q[0]].icono, nom: N(q[0]), n: '×' + q[1] }); });
+      estado.histOleadas = (estado.histOleadas || []).concat([{ n: n, f: Date.now(), v: 100 }]).slice(-20);
+      estado.oleada = n + 1; sumarTorneo(PUNTOS_TORNEO.oleada); sumarTemporada('campana', n);
+      guardar(true); actualizarHUD();
+      return items;
+    }
+  };
   function abrirPanelConquista() {
+    if (window.TKCampana && !oleadaActiva && !window.__campanaVieja) { if (panelActual) cerrarPanel(); if (TKCampana.abrir()) return; } // v8.27: la Campaña es una batalla de 5 héroes
     vistos().campana = estado.oleada;
     var n = oleadaActiva ? oleadaActual : estado.oleada, total = OLEADAS.length;
     var puntos = '<div class="oleada-puntos">';
@@ -13753,6 +13779,7 @@
   window.addEventListener('keydown', function (ev) { if ((ev.key === 'p' || ev.key === 'P') && !enMenu && !/INPUT/.test((document.activeElement || {}).tagName)) cambiarPausa(); });
   function bucle() {
     requestAnimationFrame(bucle);
+    if (window.__tkCampanaAbierta) { reloj.getDelta(); return; } // v8.27: con la Campaña abierta la ciudad 3D no se dibuja (el teléfono no se calienta)
     var dtReal = Math.min(reloj.getDelta(), 0.05);
     AGUA_T.value = (AGUA_T.value + dtReal) % 1000; // v7.66: el agua se mueve
     if (!enMenu && !pausado) {
