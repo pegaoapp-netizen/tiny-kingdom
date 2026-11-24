@@ -1096,11 +1096,11 @@
     return lista;
   }
   // el dueño del juego no tiene límites
-  function trabajosPendientes(que, L) { return trabajosPara(que, L).filter(function (x) { return !x.ok; }); }
+  function trabajosPendientes(que, L) { return estado.dueno ? [] : trabajosPara(que, L).filter(function (x) { return !x.ok; }); }
   function htmlTrabajos(que, L) {
     var l = trabajosPara(que, L); if (!l.length) return '';
     return '<div class="trabajos"><b>📋 ' + T('tr_titulo') + '</b>' + l.map(function (x) {
-      var ok = x.ok;
+      var ok = x.ok || estado.dueno;
       return '<div class="tr-fila ' + (ok ? 'si' : 'no') + '"><span>' + (ok ? '✅' : '⬜') + ' ' + T('tr_' + x.k, { n: x.need }) + '</span><b>' + x.have + '/' + x.need + '</b></div>';
     }).join('') + '</div>';
   }
@@ -3606,7 +3606,7 @@
   // ---------- CADENA DE DESBLOQUEO: lo que pide cada obra ----------
   var REQ_CONSTRUIR = { academia: [['cuartel', 1], ['jugador', 2]], establo: [['cuartel', 2], ['jugador', 3]], galeria: [['cuartel', 1]], herreria: [['academia', 1]], vigia: [['muralla', 1]], enfermeria: [['cuartel', 1]], almacen: [['castillo', 2]], mercado: [['castillo', 2]] };
   // v8.00: fila de requisito de una investigación de la Academia
-  function filaInvReq(id, pide) { var t = buscarTec(id), lv = (estado.invest || {})[id] || 0; return { nombre: (t ? t.icono : '📜') + ' ' + N('inv_' + id), pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + lv, ok: lv >= pide, k: 'academia', inv: id, n: pide }; }
+  function filaInvReq(id, pide) { var t = buscarTec(id), lv = (estado.invest || {})[id] || 0; return { nombre: (t ? t.icono : '📜') + ' ' + N('inv_' + id), pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + lv, ok: lv >= pide || !!estado.dueno, k: 'academia', inv: id, n: pide }; }
   // v8.00: ÁRBOL DE CONSTRUCCIÓN: qué edificios pide cada uno (para construirlo y para subirlo: al menos ese nivel o el suyo)
   var REQ_ARBOL = { academia: [['castillo', 2], ['almacen', 2]], establo: [['cuartel', 3], ['granja', 3]], galeria: [['cuartel', 2], ['aserradero', 2]], herreria: [['academia', 3], ['mina', 3]],
     embajada: [['castillo', 3], ['mercado', 2]], enfermeria: [['academia', 2], ['cabana', 3]], relevo: [['cuartel', 1]] };
@@ -3614,12 +3614,12 @@
     if (que === 'jugador') pide = nivelReq(pide); // v7.79
     var tiene = que === 'jugador' ? nivelJugador() : que === 'castillo' ? (estado.castillo || 1) : que === 'muralla' ? (estado.muralla || 0) : nivelMayor(que);
     var nom = que === 'jugador' ? '⭐ ' + L('Tu nivel', 'Your level') : que === 'castillo' ? '🏰 ' + T('castillo') : que === 'muralla' ? '🧱 ' + L('Muralla', 'Wall') : (EDIFICIOS[que] ? EDIFICIOS[que].icono + ' ' : '') + N(que);
-    return { nombre: nom, pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + tiene, ok: tiene >= pide, k: que, n: pide };
+    return { nombre: nom, pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + tiene, ok: tiene >= pide || !!estado.dueno, k: que, n: pide };
   }
   // v6.87: objeto especial que pide la obra (se gasta al empezarla)
-  function filaObjeto(k, n) { n = n || 1; var t = (estado.mochila && estado.mochila[k]) || 0; return { nombre: OBJETOS[k].icono + ' ' + N(k), pide: '×' + n, tiene: '×' + t, ok: t >= n, k: k, n: n, objeto: true }; }
+  function filaObjeto(k, n) { n = n || 1; var t = (estado.mochila && estado.mochila[k]) || 0; return { nombre: OBJETOS[k].icono + ' ' + N(k), pide: '×' + n, tiene: '×' + t, ok: t >= n || !!estado.dueno, k: k, n: n, objeto: true }; }
   function gastarEspecial(que, L2) { var k = que === 'castillo' ? ESPECIAL_CASTILLO[L2] : ESPECIAL_EDIFICIO[L2]; if (k && estado.mochila && estado.mochila[k] > 0) estado.mochila[k]--;
-    var cr = cristalesAscension(L2, que === 'castillo'); if (cr && estado.mochila) estado.mochila[cr.k] = Math.max(0, (estado.mochila[cr.k] || 0) - cr.n); } // v7.14: cristales de ascensión
+    var cr = cristalesAscension(L2, que === 'castillo'); if (cr && estado.mochila && !estado.dueno) estado.mochila[cr.k] = Math.max(0, (estado.mochila[cr.k] || 0) - cr.n); } // v7.14: cristales de ascensión
   function requisitosObra(que, L2) {
     var l = [];
     if (que === 'castillo') {
@@ -7209,7 +7209,7 @@
   }
   // v7.27: los trabajos que faltan traen su botón «Ir» (al campamento más cercano, a los campos o a entrenar)
   var IR_TRABAJO = { campamentos: 'tr-ir-camp', recolectas: 'tr-ir-campos', tropas: 'tr-ir-tropas' };
-  function filasTrabajos(que, L2) { return trabajosPara(que, L2).map(function (x) { var ok = x.ok; return { nombre: '📋 ' + T('tr_' + x.k, { n: x.need }) + (!ok && IR_TRABAJO[x.k] ? ' <button class="comprar mini naranja tr-ir" data-accion="' + IR_TRABAJO[x.k] + '">' + L('Ir ›', 'Go ›') + '</button>' : ''), pide: x.need, tiene: x.have, ok: ok }; }); }
+  function filasTrabajos(que, L2) { return trabajosPara(que, L2).map(function (x) { var ok = x.ok || estado.dueno; return { nombre: '📋 ' + T('tr_' + x.k, { n: x.need }) + (!ok && IR_TRABAJO[x.k] ? ' <button class="comprar mini naranja tr-ir" data-accion="' + IR_TRABAJO[x.k] + '">' + L('Ir ›', 'Go ›') + '</button>' : ''), pide: x.need, tiene: x.have, ok: ok }; }); }
   // dos botones como en los juegos de reino: Construir (azul) y Construcción instantánea (verde, con gemas)
   function faltanRecursos(costo) { var f = {}, n = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var q = Math.max(0, (costo[r] || 0) - (estado.oroInfinito ? Infinity : cantidad(r))); if (q > 0) { f[r] = Math.ceil(q); n += q; } }); return n > 0 ? { f: f, n: n } : null; }
   function gemasRecursos(fr) { return fr ? Math.max(1, Math.ceil(fr.n / 400)) : 0; }
@@ -8282,7 +8282,7 @@
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>✨ ' + L('Ascensión de héroe', 'Hero ascension') + ' ' + k + '/' + ASC_HEROE.length + '</b></div>' +
       '<p>' + L('Sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + '.', 'Raises the max level from ' + tope + ' to ' + (tope + 10) + '.') + '</p><ul class="kb-req">' +
       fila(okN, L('Nivel ', 'Level ') + tope + ' (' + L('tiene ', 'has ') + e.nivel + ')') + fila(tR >= 1, OBJETOS[q.r].icono + ' ' + N(q.r) + ' ×1 (' + L('tienes ', 'you have ') + tR + ')') + fila(tC >= q.n, OBJETOS[q.c].icono + ' ' + N(q.c) + ' ×' + q.n + ' (' + L('tienes ', 'you have ') + tC + ')') + '</ul>' +
-      '<button class="comprar dorado" data-accion="heroe-ascender" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>✨ ' + L('Ascender', 'Ascend') + '</button></div>';
+      '<button class="comprar dorado" data-accion="heroe-ascender" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>✨ ' + L('Ascender', 'Ascend') + '</button></div>';
   }
   function htmlMaestriaHeroe(id) {
     var e = estado.heroes[id], m = e.maes || 0, tope = topeNivel(id);
@@ -8293,13 +8293,14 @@
     Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) ok = false; filas += fila(t >= c[k], OBJETOS[k].icono + ' ' + N(k) + ' ×' + c[k] + ' (' + L('tienes ', 'you have ') + t + ')'); });
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>👑 ' + L('Maestría', 'Mastery') + ' ' + m + '/' + MAESTRIA_MAX + '</b></div>' +
       '<p>' + L('Ascensión completa. La Maestría sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + ' (sin techo) y con cada nivel sigue ganando poder.', 'Ascension complete. Mastery raises the max level from ' + tope + ' to ' + (tope + 10) + ' (no limit 200); every level keeps adding power.') + '</p><ul class="kb-req">' + filas + '</ul>' +
-      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
+      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
   }
   function maestriaHeroe(id) {
     var e = estado.heroes[id]; if (!e || (e.asc || 0) < ASC_HEROE.length) return;
     var m = e.maes || 0; if (m >= MAESTRIA_MAX) return;
     var c = costoMaestria(m);
     // v8.03: se gasta lo que marca, en todas las cuentas (también la del dueño); si falta algo, no sube y dice qué falta
+    if (estado.dueno) { e.maes = m + 1; sonar('magia'); consejoTemporal('👑 ' + NH(id) + ': ' + L('nivel máximo ', 'max level ') + topeNivel(id)); guardar(true); abrirPanelHeroe(id); return; } // v8.06: el dueño, todo a full
     var faltaM = []; if (e.nivel < topeNivel(id)) faltaM.push(L('nivel ', 'level ') + topeNivel(id));
     Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) faltaM.push(N(k) + ' ×' + (c[k] - t)); });
     if (faltaM.length) { consejoTemporal('🔒 ' + L('Falta: ', 'Missing: ') + faltaM.join(', ')); sonar('error'); return; }
@@ -8313,6 +8314,7 @@
     var k = e.asc || 0; if (k >= ASC_HEROE.length) return;
     var q = ASC_HEROE[k];
     // v8.03: se gasta en todas las cuentas y dice qué falta
+    if (estado.dueno) { e.asc = k + 1; sonar('magia'); consejoTemporal('✨ ' + NH(id) + ': ' + L('nivel máximo ', 'max level ') + topeNivel(id)); guardar(true); abrirPanelHeroe(id); return; } // v8.06: el dueño, todo a full
     var faltaA = []; if (e.nivel < topeNivel(id)) faltaA.push(L('nivel ', 'level ') + topeNivel(id)); if ((estado.mochila[q.r] || 0) < 1) faltaA.push(N(q.r) + ' ×1'); if ((estado.mochila[q.c] || 0) < q.n) faltaA.push(N(q.c) + ' ×' + (q.n - (estado.mochila[q.c] || 0)));
     if (faltaA.length) { consejoTemporal('🔒 ' + L('Falta: ', 'Missing: ') + faltaA.join(', ')); sonar('error'); return; }
     estado.mochila[q.r]--; estado.mochila[q.c] -= q.n;
@@ -10729,8 +10731,8 @@
   function piezaDeSet(set) { var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
   var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1, cofre_tesoro: 1 }; // v7.09: sin gemas (las gemas no se regalan)
-  var RUL_FICHAS = 3, RUL_GEMAS = 3; // v8.02: 3 gemas por tirada (antes 15) y 50 tiradas con descuento
-  var RUL_PAQUETE = { 50: 125 };
+  var RUL_FICHAS = 3, RUL_GEMAS = 15; // v8.06: el precio vuelve a como estaba (15 gemas por tirada)
+  var RUL_PAQUETE = {};
   function precioRuleta(n) { return RUL_PAQUETE[n] || RUL_GEMAS * n; }
   function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; r.llaves = Math.max(0, Math.floor(+r.llaves || 0)); r.sinLlave = Math.max(0, Math.floor(+r.sinLlave || 0)); return r; }
   function htmlRueda() {
