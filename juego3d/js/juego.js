@@ -2859,6 +2859,8 @@
     M3.obj.copy(posCelda(e.x, e.y)); M3.zoom = { de: M3.dist, a: 22, t0: performance.now() };
     elegirCelda(e.x, e.y);
   }
+  // v8.20: las que se quedan acampadas son las que mandaste menos las que cayeron en la batalla
+  function quedanTrasBatalla(sel) { var q = {}, det = (ultimaBatalla && ultimaBatalla.perdidas && ultimaBatalla.perdidas.detalle) || {}; for (var k in (sel || {})) { var n = Math.max(0, (sel[k] || 0) - ((det[k] && det[k].perdidos) || 0)); if (n > 0) q[k] = n; } return q; }
   function conquistarCasilla(c, deOtro, llego, fz, mm) {
     if (!tropas.some(function (u) { return !u.heroeId; }) && tropasNormales() <= 0) { consejoTemporal(T('at_sin_tropas')); sonar('error'); mostrarCasilla(c); return; }
     if (!deOtro && misCasillas().length >= maxCasillas()) { consejoTemporal(T('cas_maximo', { n: maxCasillas() })); sonar('error'); if (llego) nuevoCorreo('informes', '🚩 ' + T('cas_' + c.tipo) + ' ' + c.x + ',' + c.y + ': ' + L('no se pudo conquistar', 'could not conquer'), L('Ataque', 'Attack'), htmlInforme([[L('Motivo', 'Reason'), T('cas_maximo', { n: maxCasillas() })], [L('Tropas', 'Troops'), L('vuelven a casa', 'coming home')]])); else mostrarCasilla(c); return; } // v8.17
@@ -2878,7 +2880,7 @@
     if (!res.gano) { sonar('derrota'); fin(); return; }
     estado.casillas = estado.casillas || {};
     estado.casillas[c.id] = { tipo: c.tipo, nivel: c.nivel };
-    if (mm) { mm.queda = true; estado.casillas[c.id].g = { tropas: mm.sel || {}, heroe: mm.heroe || null, a: mm.a, seg: mm.seg, desde: Date.now() }; } // v8.13: se quedan acampadas
+    if (mm) { mm.queda = true; estado.casillas[c.id].g = { tropas: quedanTrasBatalla(mm.sel), heroe: mm.heroe || null, a: mm.a, seg: mm.seg, desde: Date.now() }; } // v8.13: se quedan acampadas
     sonar('victoria');
     if (hayCuenta()) Cuentas.tomarCasilla(c.id, { dueno: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), alianza: estado.alianza || '', fecha: Date.now() })
       .then(function () { casillasNube[c.id] = { dueno: Cuentas.usuario().uid, nombre: Cuentas.nombrePublico(), alianza: estado.alianza || '' }; fin(); })
