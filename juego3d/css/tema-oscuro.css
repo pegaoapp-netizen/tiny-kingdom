@@ -1572,3 +1572,10 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 /* v8.51: aviso de ataque a un aliado */
 #alerta-aliado { position: fixed; right: calc(10px + env(safe-area-inset-right)); top: calc(96px + env(safe-area-inset-top)); z-index: 64; max-width: min(260px, 70vw); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 8px; border-radius: 10px; background: linear-gradient(#1d4f8a, #0d2a50); border: 2px solid #7fb2ff; color: #fff; font: 700 12px system-ui, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,.45); }
 #alerta-aliado span { flex: 1 1 140px; } #alerta-aliado .aa-x { background: none; border: 0; color: #fff; font-size: 14px; cursor: pointer; padding: 0 2px; }
+
+/* v8.55: ventana de Marchas (dentro del botón Marchar) */
+#mv-pop { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(150px + env(safe-area-inset-bottom)); width: min(420px, calc(100vw - 20px)); max-height: 52vh; z-index: 70; display: flex; flex-direction: column; border-radius: 12px; background: linear-gradient(#3a2610, #1e1205); border: 2px solid #c99a3e; box-shadow: 0 8px 22px rgba(0,0,0,.55); }
+#mv-pop .mvp-cab { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-bottom: 1px solid #6b4a1a; }
+#mv-pop .mvp-cab b { color: #ffe08a; font: 800 15px system-ui, sans-serif; }
+#mv-pop .mvp-x { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #c99a3e; background: #5a3a12; color: #fff; cursor: pointer; }
+#mv-pop #dk-lista { overflow-y: auto; padding: 4px 6px 8px; max-height: none; }

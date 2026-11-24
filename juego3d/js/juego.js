@@ -9762,9 +9762,9 @@
     var mh = h && estado.heroes && estado.heroes[h] ? multiplicadoresHeroe(h).marcha : 0;
     return Math.floor(base * (buffActivo('capMarcha') ? 1.25 : 1) * (1 + bonoTalento('marcha')) * (1 + mh / 100) * (1 + 0.03 * bonifAl('marcha'))); // v7.84: set del dragón
   }
-  function maxMarchas() { return estado.dueno ? 12 : Math.min(12, Math.max(1, nivelRelevo())); } // v8.13: los dueños, todo a full
+  function maxMarchas() { return estado.dueno ? 12 : 10; } /* v8.55 (dueño del juego): 10 marchas seguidas para todos */ // v8.13: los dueños, todo a full
   /* v8.53: por qué no te deja marchar, con el detalle de qué ocupa cada marcha */
-  function avisoMarchasLlenas() { var at = marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length, ac = guarniciones().length; return '🚩 ' + L('Tienes ' + maxMarchas() + ' de ' + maxMarchas() + ' marchas ocupadas', 'All ' + maxMarchas() + ' marches are busy') + ' (' + (at ? at + ' ' + L('en camino', 'on the way') : '') + (at && ac ? ' · ' : '') + (ac ? ac + ' ' + L('acampadas ⛺', 'camped ⛺') : '') + '). ' + (ac ? L('Llama a las acampadas (⛺ ↩ en Marchar) para liberar una. ', 'Recall camped ones (⛺ ↩ in March) to free one. ') : '') + L('Con cada nivel del Punto de reunión tienes una marcha más (ahora Nv ' + nivelRelevo() + ').', 'Each Rally point level gives one more march (now Lv ' + nivelRelevo() + ').'); }
+  function avisoMarchasLlenas() { var at = marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length, ac = guarniciones().length; return '🚩 ' + L('Tienes ' + maxMarchas() + ' de ' + maxMarchas() + ' marchas ocupadas', 'All ' + maxMarchas() + ' marches are busy') + ' (' + (at ? at + ' ' + L('en camino', 'on the way') : '') + (at && ac ? ' · ' : '') + (ac ? ac + ' ' + L('acampadas ⛺', 'camped ⛺') : '') + '). ' + (ac ? L('Llama a las acampadas (⛺ ↩ en Marchar) para liberar una. ', 'Recall camped ones (⛺ ↩ in March) to free one. ') : '') + L('Espera a que vuelva una marcha.', 'Wait for a march to come back.'); }
   function totalMarchando() { return marchasActivas().length + marchasPVE.filter(function (m) { return !m.vuelta; }).length + guarniciones().length; } // v8.13: las acampadas ocupan una marcha
   function marchasActivas() { return marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }); }
   // tropas que ya van en otra marcha (no se pueden mandar dos veces)
@@ -10093,7 +10093,7 @@
       estado.destinos = estado.destinos || {}; estado.destinos[ref.id] = { x: a.x, y: a.y };
       if (nCarretas) { var cv = carretas(), ahoraC = Date.now(); cv.viajes.push({ id: 'va' + ref.id, tipo: 'ataque', de: miLugar(), a: { x: a.x, y: a.y }, sale: ahoraC, llega: ahoraC + viaje, vuelve: ahoraC + 2 * viaje, recursos: null, n: nCarretas, nombre: String(a.nombre || '') }); }
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
-      estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now() + 60 * 1000; // v7.14: 1 min entre ataques al mismo reino (antes 10)
+      estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now(); /* v8.55: sin espera: se puede atacar seguido */ // v7.14: 1 min entre ataques al mismo reino (antes 10)
       guardar(true); publicarAldea(true); actualizarEscudo();
       // v7.18: como en KoC 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
       $('mundo-info').innerHTML = ''; abrirDockAuto(); try { guardarDock(); actualizarDock(); } catch (e) {} sonar('cuerno'); // v7.19: la marcha se ve en la barra de abajo con Acelerar y Retirar, sin cartel encima
@@ -13609,6 +13609,7 @@
       sonar('click');
       var k = b.getAttribute('data-dk');
       dockAuto = 0; /* si lo tocas tú, ya no se recoge solo */
+      if (k === 'marchar' && listaMovimientos(Date.now()).length) { dockPest = 'marchar'; dockAbierto = true; guardarDock(); abrirPopMarchas(); return; } /* v8.55 */
       if (k === 'flecha') dockAbierto = !dockAbierto;
       else if (k === dockPest && dockAbierto) dockAbierto = false;
       else { dockPest = k; dockAbierto = true; }
@@ -13617,6 +13618,7 @@
     $('dk-accion').addEventListener('click', function () {
       if (enMenu) return; sonar('click');
       var a = this.getAttribute('data-a');
+      if (a === 'ver-marchas') { abrirPopMarchas(); return; } /* v8.55 */
       if (a.indexOf('acel:') === 0) { abrirAcelerar(a.slice(5)); return; } // v6.93: usar relojes ahí mismo
       if (a.indexOf('macel:') === 0) { acelerarMarcha(a.slice(6)); return; }
       if (a === 'mundo') irAlMundo();
@@ -13699,11 +13701,23 @@
     guarniciones().forEach(function (q) { l.push({ ico: '⛺', txt: escaparHTML(nombreGuarnicion(q)), llega: 9e15, gid: q.id }); }); // v8.13
     return l.sort(function (a, b) { return a.llega - b.llega; });
   }
+  /* v8.55: ventana de Marchas (se abre con el botón Marchar de la barra de abajo) */
+  function popMarchas() {
+    var p = $('mv-pop'); if (p) return p;
+    p = document.createElement('div'); p.id = 'mv-pop'; p.style.display = 'none';
+    p.innerHTML = '<div class="mvp-cab"><b id="mvp-tit">🏇 ' + L('Marchas', 'Marches') + '</b><button class="mvp-x" type="button">✕</button></div>';
+    document.body.appendChild(p);
+    p.querySelector('.mvp-x').addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); popMarchas.abierto = false; p.style.display = 'none'; });
+    return p;
+  }
+  function abrirPopMarchas() { popMarchas.abierto = true; try { actualizarDock(); } catch (e) {} }
   function pintarListaMarchas(movs, ahora) {
-    var d = $('dock-procesos'); if (!d) return;
+    var d = popMarchas();
     var c = $('dk-lista'); if (!c) { c = document.createElement('div'); c.id = 'dk-lista'; d.appendChild(c); c.addEventListener('click', function (ev) { var b = ev.target.closest('[data-macel],[data-mret],[data-gret]'); if (!b || enMenu) return; sonar('click'); if (b.hasAttribute('data-gret')) { var gi = b.getAttribute('data-gret'); confirmarJuego('↩ ' + L('Llamar tropas', 'Recall troops'), L('¿Llamar a las tropas acampadas? Vuelven a casa y el terreno sigue siendo tuyo.', 'Recall the camped troops? They come home and the tile stays yours.'), L('Llamar', 'Recall'), function () { llamarGuarnicion(gi); }); return; } if (b.hasAttribute('data-macel')) { acelerarMarcha(b.getAttribute('data-macel')); return; } var id = b.getAttribute('data-mret'), m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m) return; confirmarJuego('↩ ' + L('Retirar marcha', 'Recall march'), L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'), L('Retirar', 'Recall'), function () { cancelarMarcha(m); actualizarDock(); }); }); }
-    var ver = dockPest === 'marchar' && movs.length > 0;
-    c.style.display = ver ? '' : 'none'; d.classList.toggle('con-lista', ver);
+    var ver = !!popMarchas.abierto && movs.length > 0 && !enMenu && !panelActual;
+    if (popMarchas.abierto && !movs.length) popMarchas.abierto = false;
+    d.style.display = ver ? '' : 'none'; c.style.display = ver ? '' : 'none';
+    var tit = $('mvp-tit'); if (tit) tit.textContent = '🏇 ' + L('Marchas', 'Marches') + ' (' + totalMarchando() + ' / ' + maxMarchas() + ')';
     if (!ver) { c.innerHTML = ''; c.dataset.h = ''; return; }
     var h = movs.map(function (x) { return '<div class="dkl-fila"><span class="dkl-ico">' + x.ico + '</span><span class="dkl-txt">' + x.txt + '</span><b class="dkl-t">' + (x.gid ? L('Acampadas', 'Camped') : '⏱ ' + fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000)))) + '</b>' + (x.gid ? '<button class="dkl-b ret" data-gret="' + escaparHTML(x.gid) + '">↩</button>' : '') + (x.ataque ? '<button class="dkl-b acel" data-macel="' + x.id + '">⚡</button><button class="dkl-b ret" data-mret="' + x.id + '">↩</button>' : x.acel ? '<button class="dkl-b acel" data-macel="' + escaparHTML(x.id) + '">⚡</button>' : '') + '</div>'; }).join('');
     if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
@@ -13714,7 +13728,7 @@
     var ocultar = enMenu || (enMundo && !hayMarchaYa) || !!panelActual || document.body.classList.contains('panel-abierto');
     d.classList.toggle('en-mundo', !!enMundo);
     d.classList.toggle('oculto', ocultar);
-    if (ocultar) return;
+    if (ocultar) { var mpO = $('mv-pop'); if (mpO) mpO.style.display = 'none'; return; } /* v8.55 */
     // va justo encima de la barra del chat (o de la barra de abajo)
     var ref = $('chat-barra') || $('abajo');
     if (ref) { var y = Math.max(0, window.innerHeight - ref.getBoundingClientRect().top) + 4; if (d.dataset.y !== String(y)) { d.dataset.y = y; d.style.bottom = y + 'px'; } }
@@ -13739,8 +13753,8 @@
     } else if (dockPest === 'marchar') {
       lleno = activo.marchar;
       var movs = listaMovimientos(ahora);
-      if (movs.length) { lleno = true; txt = '🏇 ' + L('Marchas: ', 'Marches: ') + movs.length; btn = ''; acc = ''; pintarListaMarchas(movs, ahora); }
-      else pintarListaMarchas([], ahora);
+      if (movs.length) { lleno = true; txt = '🏇 ' + L('Marchas: ', 'Marches: ') + totalMarchando() + ' / ' + maxMarchas(); btn = '📋 ' + L('Ver marchas', 'See marches'); acc = 'ver-marchas'; }
+      else { txt = L('No hay ninguna marcha activa.', 'No active marches.'); btn = L('Marchar', 'March'); acc = 'mundo'; }
     } else if (false) {
       // v7.19: la marcha que llega primero, con ⚡ Acelerar y ↩ Retirar (como KoC: nada flota encima del menú)
       var prox = marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > ahora; }).sort(function (x, y) { return x.llega - y.llega; })[0];
@@ -13761,7 +13775,7 @@
       txt = lleno ? '📚 ' + (ti ? ti.icono + ' ' : '') + N('inv_' + inv.id) + ' → ' + L('Nv ', 'Lv ') + inv.nivel + ' · <b>⏱ ' + fmtTiempo(faltaInvestigacion()) + '</b>' : L('No hay ninguna investigación activa.', 'No research in progress.');
       btn = lleno ? '⏩ ' + L('Acelerar', 'Speed up') : L('Comenzar', 'Start'); acc = lleno ? 'acel:invest' : 'invest';
     }
-    if (dockPest !== 'marchar') pintarListaMarchas([], ahora);
+    pintarListaMarchas(listaMovimientos(ahora), ahora); /* v8.55: la ventana de Marchas se mantiene al día */
     var t = $('dk-txt'), b = $('dk-accion'), b2 = $('dk-retirar');
     b.style.display = btn ? '' : 'none';
     var idRet = dockPest === 'marchar' && acc.indexOf('macel:') === 0 ? acc.slice(6) : '';
