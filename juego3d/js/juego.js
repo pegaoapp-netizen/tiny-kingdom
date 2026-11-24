@@ -1886,6 +1886,11 @@
   }
   function valorDe(comp) { var v = 0; for (var k in comp) v += (comp[k] || 0) * valorUnidadTipo(k); return v; }
   var ASEDIO_KOC = { ariete: 1, catapulta: 1, balista: 1, torre_asedio: 1 };
+  /* v8.59 (especificación KoC del dueño): TRIÁNGULO DE CONTRAATAQUES. Infantería fuerte contra caballería, caballería fuerte contra
+     tiradores, tiradores fuertes contra infantería. El asedio rompe murallas (ver aplicar) y es débil sin escolta. */
+  var CLASE_KOC = { miliciano: 'inf', espadachin: 'inf', guardian: 'inf', explorador: 'cab', jinete: 'cab', caballeria: 'cab', caballeria_pesada: 'cab', arquero: 'dist', ballestero: 'dist', arquero_largo: 'dist', tirador_elite: 'dist', balista: 'asedio', ariete: 'asedio', catapulta: 'asedio', torre_asedio: 'asedio' };
+  var GANA_A = { inf: 'cab', cab: 'dist', dist: 'inf' }, BONO_CONTRA = { inf: 3, cab: 1.5, dist: 1.5 }; /* la infantería necesita más: cada jinete vale mucho más que un soldado */
+  function multContra(de, a) { var c1 = CLASE_KOC[de], c2 = CLASE_KOC[a]; if (!c1 || !c2) return 1; if (GANA_A[c1] === c2) return BONO_CONTRA[c1]; if (c2 === 'asedio' && c1 !== 'asedio') return 1.25; return 1; }
   // v8.31: orden en que reciben el daño (1 = primera línea … 6 = retaguardia)
   var CAPA_KOC = { explorador: 1, miliciano: 1, espadachin: 2, guardian: 2, jinete: 3, caballeria: 3, caballeria_pesada: 3, arquero: 4, ballestero: 4, arquero_largo: 4, tirador_elite: 4, ariete: 5, balista: 5, catapulta: 5, torre_asedio: 5, carreta: 6, defensas: 7 };
   // v8.32: DEFENSAS FIJAS de la villa (Muralla, Torres de la puerta y Torres de vigilancia): disparan desde atrás, no se mueven y
@@ -1930,6 +1935,11 @@
       });
     }
     var A = grupos(atk, 0, mA, mD, 1, op.escalaA), D = grupos(def, 1500, mD, mA, muro, op.escalaD);
+    /* v8.59: ASIMETRÍA. Bajas = daño × (Poder atacante / Poder defensor)^1,3: cada lado multiplica su daño por (su poder / el del otro)^0,3.
+       Así un atacante con el doble o triple de poder barre al defensor casi sin bajas, y al revés. */
+    function poderLado(g) { return g.reduce(function (t, x) { return t + x.n * Math.sqrt(Math.max(0, x.atk) * Math.max(1, x.vida)); }, 0); }
+    var pA = poderLado(A), pD = poderLado(D) + (op.fijas && op.fijas.v > 0 ? Math.sqrt(Math.max(0, op.fijas.a) * op.fijas.v) : 0);
+    if (pA > 0 && pD > 0) { var rz = pA / pD, fA = Math.max(0.35, Math.min(3, Math.pow(rz, 0.3))), fD = Math.max(0.35, Math.min(3, Math.pow(1 / rz, 0.3))); A.forEach(function (x) { x.atk *= fA; }); D.forEach(function (x) { x.atk *= fD; }); }
     if (op.fijas && op.fijas.v > 0) D.push({ tipo: 'defensas', n: 100, ini: 100, pos: 1500, rango: 2000, vel: 0, dist: true, atk: Math.max(0, op.fijas.a) / 100 * (op.escalaD || 1), vida: op.fijas.v / 100 * muro }); // v8.32
     function vivos(g) { return g.filter(function (x) { return x.n > 0.5; }); }
     function cerca(g, lista) { var m = null, dm = 1e9; lista.forEach(function (e) { var dd = Math.abs(e.pos - g.pos); if (dd < dm) { dm = dd; m = e; } }); return m; }
@@ -1955,7 +1965,7 @@
       var gA = [], gD = [];
       function aplicar(g) { g.forEach(function (x) { // v8.31: como en KoC, mueren primero exploradores y milicianos, luego infantería, caballería, tiradores y al final el asedio
         var dmg = x.dano, l = x.enemigos.filter(function (e) { return e.n > 0.5; }).sort(function (p, q) { return (CAPA_KOC[p.tipo] || 3) - (CAPA_KOC[q.tipo] || 3); });
-        for (var i = 0; i < l.length && dmg > 0; i++) { var o = l[i], xm = o.tipo === 'defensas' && ASEDIO_KOC[x.tipoAt] ? 2.5 : 1, mata = Math.min(o.n, dmg * xm / o.vida); o.n -= mata; dmg -= mata * o.vida / xm; } // v8.35: arietes, catapultas, balistas y torres de asedio rompen torres 2,5 veces más rápido
+        for (var i = 0; i < l.length && dmg > 0; i++) { var o = l[i], xm = (o.tipo === 'defensas' && ASEDIO_KOC[x.tipoAt] ? 2.5 : 1) * multContra(x.tipoAt, o.tipo), mata = Math.min(o.n, dmg * xm / o.vida); o.n -= mata; dmg -= mata * o.vida / xm; } // v8.35: arietes, catapultas, balistas y torres de asedio rompen torres 2,5 veces más rápido
       }); }
       if (iniA) { disparar(va, vd, gA); aplicar(gA); disparar(vivos(D), va, gD); aplicar(gD); }
       else if (iniD) { disparar(vd, va, gD); aplicar(gD); disparar(vivos(A), vd, gA); aplicar(gA); }
@@ -1980,7 +1990,7 @@
       def = estado.tropasDefienden === false ? {} : miComposicion(); var realDef = JSON.parse(JSON.stringify(def)); // v8.30: sin tropas de relleno; con la Defensa en OFF no pelea nadie
       if (op.fijas === undefined) op.fijas = defensasFijas(); // v8.32
       if (!Object.keys(def).length && !(op.fijas && op.fijas.v > 0)) { ultimaBatalla = { sim: { atk: {}, def: {}, defReal: {}, rondas: 0, gano: true, perdA: 0, perdD: 0 }, defensa: true, fecha: Date.now(), aplicada: false }; return { gano: true, bajas: 0, bajasDef: 0, margen: 1, rondas: 0, sim: ultimaBatalla.sim, perdidas: { muertos: 0, heridos: 0, detalle: {} }, sinDefensa: true }; }
-      multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : liderActual(), 'def'); /* v8.49 */ if (buffActivo('def')) multD.vida += 20;
+      multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : heroeDefensor(), 'def'); /* v8.49 · v8.59: sin héroe Defensor (Mariscal) asignado, 0 % de bono */ if (buffActivo('def')) multD.vida += 20;
     } else {
       atk = op.tropas || miComposicion(); var heroe = op.heroe !== undefined ? op.heroe : liderActual();
       multA = multiplicadoresHeroe(heroe); if (buffActivo('atk')) multA.atk += 20; if (buffActivo('vida')) multA.vida += 20; /* v8.18 */
@@ -2007,9 +2017,9 @@
     if (!op.defensa && sim.gano && heroe && estado.heroes[heroe]) { var caen = 0; for (var kk in sim.def) caen += sim.def[kk].perdidos; ultimaBatalla.expHeroe = Math.min(1500, Math.round(20 + 4 * sim.rondas + caen / 20)); darExp(heroe, ultimaBatalla.expHeroe); }
     return { gano: sim.gano, bajas: Math.min(1, Math.max(0, sim.perdA)), bajasDef: Math.min(1, Math.max(0, sim.perdD)), margen: sim.gano ? Math.min(1, 0.6 + 0.4 * (1 - sim.perdA)) : 0, rondas: sim.rondas, sim: sim, perdidas: perd };
   }
-  // heridos o muertos: atacando en el mapa 40 % heridos (+10 % con el juego completo de 6 piezas); defendiendo 70 % (90 % con Enfermería nivel 10+)
+  // heridos o muertos: atacando en el mapa 40 % heridos (+10 % con el juego completo de 6 piezas); defendiendo 10 % + 2 % por nivel de Enfermería (máx. 30 %)
   function fraccionHeridos(defensa) {
-    if (defensa) return nivelMayor('enfermeria') >= 10 ? 0.9 : 0.7;
+    if (defensa) return Math.min(0.3, 0.1 + 0.02 * (nivelMayor('enfermeria') || 0)); /* v8.59: 10 % sin Enfermería, +2 % por nivel, máximo 30 % */
     var m = ultimaBatalla && ultimaBatalla.multA; return Math.min(0.6, 0.4 + ((m && m.heridos) || 0));
   }
   // quita las tropas perdidas TIPO POR TIPO (como salió en las rondas) y manda los heridos a la Enfermería si hay camas
