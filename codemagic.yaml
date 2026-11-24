@@ -32,7 +32,7 @@ workflows:
         XCODE_PROJECT: app/ios/App/App.xcodeproj
         XCODE_SCHEME: App
       node: 20
-      xcode: latest
+      xcode: 27.2 # Apple exige el SDK de iOS 27 desde abril de 2027 («latest» daba la 26.6)
 
     scripts:
       - name: Instalar Capacitor
