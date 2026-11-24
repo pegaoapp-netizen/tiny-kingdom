@@ -1599,12 +1599,14 @@
   function hayCuenta() { return !!(window.Cuentas && Cuentas.disponible() && Cuentas.usuario()); }
   setInterval(function () { if (hayCuenta()) publicarAldea(); }, 120000); // v6.94: el reino se publica cada 2 min aunque no abras el Mundo
   function publicarAldea(forzar) {
-    if (!hayCuenta() || villaActiva()) return; // v7.82: se publica la villa principal
+    if (!hayCuenta()) return;
+    // v8.16: aunque estés en otra villa se publica la PRINCIPAL con todas sus tropas (antes se dejaba de publicar y el que te atacaba peleaba contra datos viejos)
+    var vp = villaActiva() ? (misVillas().lista[0] || {}).datos : null;
     var ahora = Date.now();
     if (!forzar && ahora - ultimaPublicacion < 60000) return;
     ultimaPublicacion = ahora;
-    var l = miLugar();
-    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, kp: estado.kpTotal || 0, kpt: estado.kpSem === semanaActual() ? (estado.kpTemp || 0) : 0, kps: semanaActual(), defensa: defensaReino(), espia: datosEspia() })
+    var l = vp ? lugarVilla(0) : miLugar(), espP = vp ? espiaDeVilla(vp) : datosEspia(), defP = vp ? (estado.defPrincipal || defensaDeEspia(espP)) : (estado.defPrincipal = Math.round(defensaReino()));
+    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, kp: estado.kpTotal || 0, kpt: estado.kpSem === semanaActual() ? (estado.kpTemp || 0) : 0, kps: semanaActual(), defensa: defP, espia: espP })
       .catch(function () {
         // v6.94: si la nube no acepta los datos completos, se publica lo mínimo para que el reino SIEMPRE salga en el mapa
         Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, minimo: true }).catch(function () {});
@@ -9313,6 +9315,14 @@
     o.emb = [nivelMayor('embajada'), tropas.filter(function (u) { return u.refuerzo; }).length]; // v7.88: Embajada (nivel, refuerzos alojados)
     return o;
   }
+  // v8.16: lo que se publica de la villa principal cuando estás en otra villa (todas sus tropas: las que se ven y las de reserva)
+  function espiaDeVilla(d) {
+    var t = {}; if (d.tropasDefienden !== false) [d.tropas || {}, d.reserva || {}].forEach(function (o) { for (var k in o) if (TROPAS[k] && k !== 'heroe' && o[k] > 0) t[k] = (t[k] || 0) + o[k]; });
+    var o = { nivelJ: nivelJugador(), castillo: d.castillo || 1, muralla: d.muralla || 0, tropas: t, heroes: (estado.equipo || []).length };
+    if (d.tropasDefienden === false) o.san = 1; else { var hd = datosHeroeDef(); if (hd) o.hd = hd; }
+    return o;
+  }
+  function defensaDeEspia(e) { var v = 0, t = e.tropas || {}; for (var k in t) v += t[k] * valorUnidadTipo(k); return Math.round(v * 0.8 + 900 * Math.pow(e.castillo || 1, 1.5)); }
   function diplomacia(a) {
     if (estado.alianza && a.alianza === estado.alianza) return { k: 'aliada', t: L('Aliada', 'Allied'), c: '#2f7a22' };
     var dpl = (estado.alianza && a.alianza && (estado.diplo || {})[a.alianza]) || '';
@@ -9780,7 +9790,9 @@
   }
   // el defensor: al llegar el ataque, lo resuelve con la defensa que tiene en ese momento
   function llegarAtaque(r) {
-    if (resolviendo[r.id]) return; resolviendo[r.id] = true;
+    if (resolviendo[r.id]) return;
+    if (villaActiva()) return; // v8.16: si estás en otra villa, la pelea se hace con las tropas publicadas de tu villa principal (no con las de la villa que ves)
+    resolviendo[r.id] = true;
     var datos = decidirAtaque(r, Math.max(1, defensaReino()), { defensa: true, muralla: estado.muralla || 0 });
     if (ultimaBatalla) ultimaBatalla.aplicada = true; // mis pérdidas se cuentan al leer el informe (revisarAtaques)
     Cuentas.resolverAtaque(r.id, datos).then(function () { setTimeout(function () { revisarAtaques(true); }, 800); })
