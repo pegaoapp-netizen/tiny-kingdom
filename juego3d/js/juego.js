@@ -2628,7 +2628,7 @@
     var f = Math.round(fz || fuerzaEjercito()), d = defensaBestia(b.nivel), res = resolverBatalla(f, d);
     sonar('cuerno');
     var listo = null, mostrar = null;
-    escenaBatalla({ nombre: estado.idioma === 'en' ? TIPOS_BESTIA[b.tipo].en : TIPOS_BESTIA[b.tipo].es, nivel: b.nivel, emoji: TIPOS_BESTIA[b.tipo].icono }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    escenaBatalla({ silencio: true, nombre: estado.idioma === 'en' ? TIPOS_BESTIA[b.tipo].en : TIPOS_BESTIA[b.tipo].es, nivel: b.nivel, emoji: TIPOS_BESTIA[b.tipo].icono }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas), premio = null;
     if (res.gano) {
       premio = premioBestia(b.nivel); sumarXP(Math.max(8 * b.nivel, defensaBestia(b.nivel) * 0.05)); // v7.87: cazar da más EXP sumarTemporada('campana', b.nivel);
@@ -2840,12 +2840,12 @@
     var f = Math.round(fz || fuerzaEjercito()), d = defensaCasilla(c) * (deOtro ? 1.4 : 1), res = resolverBatalla(f, d);
     sonar('cuerno');
     var listo = null, mostrar = null;
-    escenaBatalla({ nombre: T('cas_' + c.tipo) + ' ' + c.x + ',' + c.y, nivel: c.nivel, retrato: null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    escenaBatalla({ silencio: true, nombre: T('cas_' + c.tipo) + ' ' + c.x + ',' + c.y, nivel: c.nivel, retrato: null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas);
     function fin(extra) {
       listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('cas_ganada') : T('cas_perdida')) + '</p>' + (extra || '') + '<p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
       if (mostrar) mostrar(listo);
-      guardar(true); actualizarHUD(); if (enMundo) { pintarAldeas(aldeasCache); mostrarCasilla(c); }
+      guardar(true); actualizarHUD(); if (enMundo) { pintarAldeas(aldeasCache); } // v8.10
     }
     if (!res.gano) { sonar('derrota'); fin(); return; }
     estado.casillas = estado.casillas || {};
@@ -2862,7 +2862,7 @@
       if (hayCuenta()) Cuentas.soltarCasilla(c.id).catch(function () {});
       delete casillasNube[c.id];
       sonar('click'); guardar(true);
-      pintarAldeas(aldeasCache); mostrarCasilla(c);
+      pintarAldeas(aldeasCache); // v8.10
     });
   }
   function irACampamentoCercano() {
@@ -2904,7 +2904,7 @@
     if (res.gano && cm.nivel >= 5 && Math.random() < Math.min(0.6, 0.05 * cm.nivel)) { var amC = cm.nivel >= 10 && Math.random() < 0.25 ? 'amatista_500' : 'amatista_100'; estado.mochila[amC] = (estado.mochila[amC] || 0) + 1; premioCamp.objetos[amC] = 1; } // v7.97: botín raro de campaña
     sonar('cuerno');
     var listo = null, mostrar = null;
-    escenaBatalla({ nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    escenaBatalla({ silencio: true, nombre: T('leyenda_trasgos'), nivel: cm.nivel, retrato: 'mapa_campamento', alVolver: res.gano ? function () { mostrarRecompensas(L('Aldea bárbara nv ', 'Barbarian village lv ') + cm.nivel, premioAItems(premioCamp)); } : null }, f, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', cm.nivel);
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano && Math.random() < 0.15) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; setTimeout(function () { consejoTemporal('👑 ' + L('El cofre del campamento traía ', 'The camp chest had ') + N('vip_100')); }, 3500); } // v7.79
@@ -2913,7 +2913,7 @@
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
     if (mostrar) mostrar(listo);
-    guardar(true); actualizarHUD(); mostrarCampamento(i);
+    guardar(true); actualizarHUD(); // v8.10: sin volver a abrir la tarjeta de la aldea
   }
   // v7.01: atacar una villa del mapa (sin dueño): marcha, batalla y botín, y 20 minutos de espera para volver a atacarla
   function atacarVilla(a, llego, fzElegida) {
@@ -2927,7 +2927,7 @@
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (rr) { botin[rr] = Math.floor(bm[rr] * res.margen * 1.2); });
     sonar('cuerno');
     var listo = null, mostrar = null;
-    escenaBatalla({ nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
+    escenaBatalla({ silencio: true, nombre: a.nombre, nivel: lv, retrato: 'mapa_castillo' + nivelVisual(lv), alVolver: res.gano ? function () { mostrarRecompensas(a.nombre, premioAItems({ oro: botin.oro, comida: botin.comida, madera: botin.madera, piedra: botin.piedra })); } : null }, fz, d, res.gano, function (cb) { mostrar = cb; if (listo) cb(listo); });
     var caidas = bajasEjercito(res.bajas); sumarLiquidacion(liqDeDefensa(d, res.gano ? 1 : 0.25)); sumarTemporada('liquidacion', liqDeDefensa(d, res.gano ? 1 : 0.25)); if (res.gano) sumarTemporada('campana', lv);
     nuevoCorreo('informes', a.nombre + ': ' + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Ataque', 'Attack'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(fz)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano && Math.random() < 0.15) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; setTimeout(function () { consejoTemporal('👑 ' + L('El cofre de la villa traía ', 'The village chest had ') + N('vip_100')); }, 3500); } // v7.79
@@ -9566,6 +9566,8 @@
   // ---------- ESCENA DE BATALLA CONTRA OTRO REINO ----------
   // El resultado ya está decidido; la escena muestra a los dos ejércitos chocando.
   function escenaBatalla(a, f, d, gano, alTerminar) {
+    // v8.10: contra bestias, aldeas, villas y terrenos no sale ninguna ventana: solo un aviso corto y el informe va al Correo
+    if (a && a.silencio) { consejoTemporal((gano ? '🏆 ' + L('Victoria contra ', 'Victory against ') : '💔 ' + L('Derrota contra ', 'Defeat against ')) + escaparHTML(a.nombre || '') + ' · 📜 ' + L('informe en el Correo', 'report in your Mail')); return; }
     // v7.19: como Kingdoms of Camelot (2012): al llegar la marcha NO sale ninguna ventana. Suena la batalla, sale un aviso corto arriba
     // y el informe completo (botín, bajas, regreso) queda en el Correo con su globo rojo.
     if (!window.__escenaVieja) {
