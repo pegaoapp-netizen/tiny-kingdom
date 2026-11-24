@@ -2973,7 +2973,9 @@
   }
   function puedeTeleportar() {
     if (oleadaActiva) return T('tel_oleada');
-    if (marchas.some(function (m) { return !m.resuelto && m.llega > Date.now(); })) return T('tel_marcha');
+    // v8.04: dice cuántas marchas hay en camino y en cuánto podrás mudarte (estar en una alianza no impide mudarse)
+    var enCamino = marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); });
+    if (enCamino.length) { var finM = Math.max.apply(null, enCamino.map(function (m) { return m.llega; })); return '🏇 ' + L('Tienes ' + enCamino.length + (enCamino.length > 1 ? ' marchas en camino' : ' marcha en camino') + '. Podrás mudarte cuando lleguen, en ' + fmtTiempo((finM - Date.now()) / 1000) + ' (o retíralas en Marchas).', 'You have ' + enCamino.length + ' march(es) on the way. You can move when they arrive, in ' + fmtTiempo((finM - Date.now()) / 1000) + ' (or recall them in Marches).'); }
     // antes de que llegue el ataque sí puedes huir; cuando ya empezó la batalla, no
     if (entrantes.some(function (r) { return r.llega <= Date.now() && !r.resuelto; })) return T('tel_batalla');
     var espera = (estado.ultimoPortal || 0) + 24 * 3600 * 1000 - Date.now();
@@ -3140,9 +3142,12 @@
     if (conCache) pintarHubAlianza();
     var pedido = Date.now(); abrirPanelAlianza.pedido = pedido;
     var tag = estado.alianza;
+    // v8.04: si la nube no contesta en 10 s, se ofrece Reintentar en vez de quedarse en «Cargando…» para siempre
+    setTimeout(function () { var pc = $('panel-cuerpo'); if (abrirPanelAlianza.pedido === pedido && panelActual && panelActual.tipo === 'alianza' && pc && !conCache && /^\s*<p class="nota">/.test(pc.innerHTML) && pc.textContent.trim() === T('cargando')) pc.innerHTML = '<div class="carta"><p class="nota aviso-rojo">' + L('La alianza está tardando en cargar. Revisa tu internet.', 'The alliance is taking long to load. Check your internet.') + '</p><button class="comprar naranja" data-accion="al-reintentar">🔄 ' + L('Reintentar', 'Retry') + '</button></div>'; }, 10000);
     (tag ? Cuentas.alianza(tag) : Promise.resolve(null)).then(function (al) {
       if (abrirPanelAlianza.pedido !== pedido || !panelActual || panelActual.tipo !== 'alianza') return;
       if (tag && !al) { estado.alianza = null; guardar(); publicarAldea(true); consejoTemporal(T('al_borrada')); }
+      if (tag && al && meExpulsaron(al)) { estado.alianza = null; alCache = null; guardar(true); publicarAldea(true); consejoTemporal('🚪 ' + L('Te expulsaron de la alianza ', 'You were removed from the alliance ') + escaparHTML(al.nombre || tag) + '.'); al = null; } // v8.04
       guardarAlNube(al); // v7.99
       if (al) return Promise.all([Cuentas.miembros(tag), Cuentas.pedidos(tag).catch(function () { return []; }), Cuentas.refuerzosRecibidos().catch(function () { return []; }), Cuentas.refuerzosEnviados().catch(function () { return []; })])
         .then(function (r) { if (panelActual && panelActual.tipo === 'alianza') pintarMiAlianza(al, r[0], r[1], r[2], r[3]); });
@@ -3322,7 +3327,7 @@
       '<rect x="16" y="70" width="42" height="18" rx="4" fill="rgba(255,255,255,.92)" stroke="#c9a24a"/><text x="37" y="83.5" text-anchor="middle" font-family="Georgia, serif" font-weight="700" font-size="13" fill="#10264a">' + escaparHTML(tag) + '</text></svg>';
   }
   function htmlAlianzaPestanas() {
-    var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
+    var al = alCache.al, mi = alCache.miembros.filter(function (m) { return !(alCache.al.expulsados || {})[m.uid]; }).sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
     var total = mi.reduce(function (t, m) { return t + (m.poder || 0); }, 0);
     var h = htmlTabsAlianza();
     if (alTab === 'info') {
@@ -3355,7 +3360,8 @@
           mi.slice(alPag * porPag, alPag * porPag + porPag).map(function (m) {
             var rm = rangoAl(al, m.uid), yoCanc = al.lider === yoU && m.uid !== yoU;
             return '<div class="al-tr"><span class="al-chk">' + RANGOS_AL[rm][0] + '</span><span><button class="al-nom" data-accion="al-perfil" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">' + escaparHTML(m.nombre) + '</button><small>' + L(RANGOS_AL[rm][1], RANGOS_AL[rm][2]) + (yoCanc ? ' <button class="al-dp" data-accion="al-rango-abrir" data-uid="' + m.uid + '">' + L('Cambiar', 'Change') + ' ›</button>' : '') + '</small></span><span>' + corto(m.poder || 0) + '</span><span>' + hace(m.actualizado) + '</span></div>' +
-              (yoCanc && alRangoAbierto === m.uid ? '<div class="al-diplo">' + ['vice', 'mariscal', 'oficial', 'miembro'].map(function (r) { return '<button class="al-dp' + (rm === r ? ' activo amiga' : '') + '" data-accion="al-rango" data-uid="' + m.uid + '" data-r="' + r + '">' + nomRangoAl(r) + '</button>'; }).join('') + '<button class="al-dp activo hostil" data-accion="al-ceder" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">👑 ' + L('Ceder cancillería', 'Hand over chancellery') + '</button></div>' : '');
+              (yoCanc && alRangoAbierto === m.uid ? '<div class="al-diplo">' + ['vice', 'mariscal', 'oficial', 'miembro'].map(function (r) { return '<button class="al-dp' + (rm === r ? ' activo amiga' : '') + '" data-accion="al-rango" data-uid="' + m.uid + '" data-r="' + r + '">' + nomRangoAl(r) + '</button>'; }).join('') + '<button class="al-dp activo hostil" data-accion="al-ceder" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">👑 ' + L('Ceder cancillería', 'Hand over chancellery') + '</button><button class="al-dp hostil" data-accion="al-expulsar" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">🚪 ' + L('Expulsar', 'Remove') + '</button></div>' : '') +
+              (!yoCanc && rangoAl(al, yoU) === 'vice' && m.uid !== yoU && m.uid !== al.lider ? '<div class="al-diplo"><button class="al-dp hostil" data-accion="al-expulsar" data-uid="' + m.uid + '" data-n="' + escaparHTML(m.nombre) + '">🚪 ' + L('Expulsar', 'Remove') + '</button></div>' : '');
           }).join('') + '</div>' +
           '<div class="al-pag"><button data-accion="al-pag" data-p="0">⏮</button><button data-accion="al-pag" data-p="' + Math.max(0, alPag - 1) + '">‹</button><span>' + (alPag + 1) + ' ' + L('de', 'of') + ' ' + pags + '</span><button data-accion="al-pag" data-p="' + Math.min(pags - 1, alPag + 1) + '">›</button><button data-accion="al-pag" data-p="' + (pags - 1) + '">⏭</button></div>';
       } else if (alSubMi === 'lider') {
@@ -3444,7 +3450,7 @@
     return h + '</div>';
   }
   function htmlSeccionAl(k) {
-    var al = alCache.al, mi = alCache.miembros.slice().sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
+    var al = alCache.al, mi = alCache.miembros.filter(function (m) { return !(alCache.al.expulsados || {})[m.uid]; }).sort(function (x, y) { return (y.poder || 0) - (x.poder || 0); }), a = alLoc(), yoU = Cuentas.usuario().uid;
     if (k === 'cajas') {
       var pct = Math.min(100, a.caja);
       var h = '<div class="carta"><h3>🎁 ' + L('Caja de botín', 'Loot box') + '</h3><div class="ped-barra"><div style="width:' + pct + '%"></div><span>' + a.caja + ' / 100</span></div>' +
@@ -4019,7 +4025,7 @@
     if (!/^[A-Z0-9]{2,4}$/.test(tag)) return err('al_tag_mal');
     b.disabled = true;
     Cuentas.crearAlianza(nombre, tag).then(function () {
-      estado.alianza = tag; guardar(true);
+      estado.alianza = tag; estado.alUnion = Date.now(); guardar(true);
       publicarAldea(true);
       consejoTemporal(T('al_creada', { t: tag })); sonar('listo');
       setTimeout(abrirPanelAlianza, 600);
@@ -4029,15 +4035,25 @@
     b.disabled = true;
     Cuentas.alianza(tag).then(function (al) {
       if (!al) { consejoTemporal(T('al_borrada')); abrirPanelAlianza(); return; }
-      estado.alianza = tag; guardar(true);
+      if ((al.expulsados || {})[Cuentas.usuario().uid]) { b.disabled = false; consejoTemporal('🚪 ' + L('Te expulsaron de esta alianza. Pídele al Canciller que te vuelva a aceptar.', 'You were removed from this alliance. Ask the Chancellor to accept you again.')); sonar('error'); return; } // v8.04
+      estado.alianza = tag; estado.alUnion = Date.now(); guardar(true);
       publicarAldea(true);
       consejoTemporal(T('al_unido', { t: tag })); sonar('listo');
       setTimeout(abrirPanelAlianza, 600);
     }).catch(function () { b.disabled = false; sonar('error'); });
   }
+  // v8.04: se sale con la ventana del juego (la del navegador a veces no aparece en el iPhone)
+  function meExpulsaron(al) { var u = hayCuenta() ? Cuentas.usuario().uid : ''; var t = (al && al.expulsados || {})[u]; return !!t && t > (estado.alUnion || 0); }
   function salirAlianza(b) {
     var lider = b.getAttribute('data-lider') === '1';
-    if (!window.confirm(T(lider ? 'al_lider_sale' : 'al_salir_ok'))) return;
+    var otros = alCache && alCache.miembros ? alCache.miembros.filter(function (m) { return m.uid !== Cuentas.usuario().uid && !((alCache.al || {}).expulsados || {})[m.uid]; }).length : 0;
+    if (lider && otros > 0) {
+      confirmarJuego('👑 ' + L('Eres el Canciller', 'You are the Chancellor'), L('Antes de salir, cede la cancillería a otro miembro: en Miembros toca su puesto y luego «Ceder cancillería».', 'Before leaving, hand over the chancellery: in Members tap their rank and then «Hand over chancellery».'), L('Ir a Miembros', 'Go to Members'), function () { alTab = 'miembros'; alSubMi = 'miembros'; pintarHubAlianza(); });
+      return;
+    }
+    confirmarJuego('🚪 ' + L('Salir de la alianza', 'Leave the alliance'), T(lider ? 'al_lider_sale' : 'al_salir_ok'), L('Sí, salir', 'Yes, leave'), function () { salirAlianzaYa(lider); });
+  }
+  function salirAlianzaYa(lider) {
     var tag = estado.alianza;
     estado.alianza = null; guardar(true);
     publicarAldea(true);
@@ -11945,6 +11961,8 @@
       if (rr === 'miembro') delete rg[ru]; else rg[ru] = rr;
       Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
     }
+    else if (a === 'al-reintentar') { sonar('click'); abrirPanelAlianza(); }
+    else if (a === 'al-expulsar') { var ue = b.getAttribute('data-uid'), ne = b.getAttribute('data-n'); confirmarJuego('🚪 ' + L('Expulsar a ', 'Remove ') + escaparHTML(ne), L('Saldrá de la alianza y ya no podrá usar sus ayudas ni su chat.', 'They will leave the alliance and lose its help and chat.'), L('Sí, expulsar', 'Yes, remove'), function () { Cuentas.expulsarDeAlianza(estado.alianza, ue).then(function () { if (alCache && alCache.al) { alCache.al.expulsados = alCache.al.expulsados || {}; alCache.al.expulsados[ue] = Date.now(); } alRangoAbierto = null; sonar('click'); consejoTemporal('🚪 ' + escaparHTML(ne) + L(' ya no está en la alianza.', ' is no longer in the alliance.')); pintarHubAlianza(); }).catch(function (er) { consejoTemporal(L('No se pudo expulsar', 'Could not remove') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }); } // v8.04
     else if (a === 'al-ceder') {
       sonar('click'); if (!alCache || !alCache.al || alCache.al.lider !== Cuentas.usuario().uid) return;
       var cu = b.getAttribute('data-uid'), cn = b.getAttribute('data-n'), yoC2 = Cuentas.usuario().uid;

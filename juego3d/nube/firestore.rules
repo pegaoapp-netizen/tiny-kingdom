@@ -107,7 +107,8 @@ service cloud.firestore {
       // solo el canciller (líder) cambia el idioma, el anuncio, los puestos (vicecanciller, mariscal, oficial) y puede ceder la cancillería
       // v7.17: antes solo dejaba idioma y anuncio, por eso no se podía nombrar un vicecanciller ni ceder la cancillería
       allow update: if request.auth != null && resource.data.lider == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion', 'rangos', 'lider', 'liderNombre', 'bonif', 'ma'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['idioma', 'descripcion', 'rangos', 'lider', 'liderNombre', 'bonif', 'ma', 'expulsados'])
+        && (!('expulsados' in request.resource.data) || (request.resource.data.expulsados is map && request.resource.data.expulsados.size() <= 300))
         && (!('ma' in request.resource.data) || (request.resource.data.ma is int && request.resource.data.ma >= 0))
         && (!('bonif' in request.resource.data) || (request.resource.data.bonif is map && request.resource.data.bonif.size() <= 10))
         && (!('idioma' in request.resource.data) || (request.resource.data.idioma is string && request.resource.data.idioma.size() <= 12))
@@ -115,6 +116,12 @@ service cloud.firestore {
         && (!('rangos' in request.resource.data) || (request.resource.data.rangos is map && request.resource.data.rangos.size() <= 200))
         && request.resource.data.lider is string && request.resource.data.lider.size() > 0
         && request.resource.data.liderNombre is string && request.resource.data.liderNombre.size() <= 30;
+      // v8.04: el Vicecanciller también puede expulsar (solo toca «expulsados» y nunca al Canciller)
+      allow update: if request.auth != null
+        && resource.data.get('rangos', {}).get(request.auth.uid, '') == 'vice'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expulsados'])
+        && request.resource.data.expulsados is map && request.resource.data.expulsados.size() <= 300
+        && request.resource.data.expulsados.get(resource.data.lider, 0) == resource.data.get('expulsados', {}).get(resource.data.lider, 0);
       // v7.99: cualquier miembro dona: solo suben la experiencia (xp) y el Mérito de Alianza (ma), poco a poco
       allow update: if request.auth != null
         && exists(/databases/$(database)/documents/aldeas/$(request.auth.uid))

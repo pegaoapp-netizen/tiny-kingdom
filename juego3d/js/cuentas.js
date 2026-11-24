@@ -288,6 +288,8 @@ var Cuentas = (function () {
       });
     },
     borrarAlianza: function (tag) { return db.collection('alianzas').doc(tag).delete(); },
+    // v8.04: expulsar de la alianza (Canciller o Vicecanciller)
+    expulsarDeAlianza: function (tag, uid) { var d = {}; d['expulsados.' + uid] = Date.now(); return db.collection('alianzas').doc(tag).update(d); },
     ajustesAlianza: function (tag, datos) { return db.collection('alianzas').doc(tag).update(datos); },
     atacar: function (r) { return db.collection('ataques').add(r); },
     ataquesNuevos: function () {
