@@ -1433,3 +1433,6 @@ html body .st-base { opacity: .6; font-weight: 400; } html body .st-mas { font-s
 /* v8.25: las llaves de la Ruleta van aparte, no entre los cofres */
 .rp-llaves { margin: 8px 6px 0; text-align: center; color: #ffe08a; font: 700 14px system-ui, sans-serif; }
 .rp-llaves .ico-obj { width: 22px; height: 22px; vertical-align: middle; }
+
+/* v8.26: tocar PAUSA sigue el juego */
+#aviso-pausa { pointer-events: auto; cursor: pointer; }

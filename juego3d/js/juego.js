@@ -7655,7 +7655,7 @@
   setInterval(procesarEnvios, 2000);
   // ---------- selector rápido en el HUD de arriba ----------
   function pintarSelectorVillas() {
-    var v = estado.villas, n = v && v.lista ? v.lista.length : 1, ver = true; window.__tkAbrirVillas = abrirMisVillas;
+    var v = estado.villas, n = v && v.lista ? v.lista.length : 1, ver = false; window.__tkAbrirVillas = abrirMisVillas; // v8.26: sin la etiqueta amarilla: el cuadro del centro (nombre y coordenadas) abre Mis villas
     var b = $('tk-villas');
     if (!b) {
       if (!ver) return;
@@ -13156,11 +13156,14 @@
   var reloj = new THREE.Clock(), cuentaHUD = 0, pausado = false;
   function cambiarPausa(v) {
     pausado = v === undefined ? !pausado : v;
+    if (pausado && !oleadaActiva) pausado = false; // v8.26: la pausa solo sirve en una oleada; en la ciudad o el mapa no se pausa nunca
     $('aviso-pausa').classList.toggle('oculto', !pausado);
     $('btn-pausa').textContent = pausado ? '▶' : '⏸';
     $('btn-pausa').classList.toggle('pausado', pausado);
   }
   $('btn-pausa').addEventListener('click', function () { if (enMenu) return; sonar('click'); cambiarPausa(); });
+  $('aviso-pausa').addEventListener('click', function () { sonar('click'); cambiarPausa(false); }); // v8.26: tocar PAUSA sigue el juego
+  setInterval(function () { var bp = $('btn-pausa'); if (bp) bp.style.display = oleadaActiva || pausado ? '' : 'none'; if (pausado && !oleadaActiva) cambiarPausa(false); }, 1000); // v8.26: el botón ⏸ solo se ve en una oleada
   // cola de entrenamiento siempre a la vista
   function actualizarPillEntreno() {
     try { actualizarDock(); } catch (e) {}
