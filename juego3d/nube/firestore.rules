@@ -378,8 +378,9 @@ service cloud.firestore {
     // v8.40: configuración del juego (héroes lanzados): todos la leen, solo el dueño la cambia
     match /config/{id} {
       allow read: if request.auth != null;
-      allow write: if esDueno() && request.resource.data.keys().hasOnly(['lanzados', 'fecha'])
-        && request.resource.data.lanzados is list && request.resource.data.lanzados.size() <= 30 && request.resource.data.fecha is int;
+      allow write: if esDueno() && request.resource.data.keys().hasOnly(['lanzados', 'armaduras', 'fecha'])
+        && request.resource.data.lanzados is list && request.resource.data.lanzados.size() <= 30 && request.resource.data.fecha is int
+        && (!('armaduras' in request.resource.data) || (request.resource.data.armaduras is list && request.resource.data.armaduras.size() <= 40)); // v8.41: armaduras lanzadas
     }
     match /compensaciones/{id} {
       allow read: if request.auth != null && (resource.data.para == 'todos' || resource.data.para == request.auth.uid || esDueno());

@@ -1501,3 +1501,8 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .lz-h img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 7px; }
 .lz-h.on { opacity: 1; border-color: #4fd06a; box-shadow: 0 0 8px rgba(79,208,106,.5); }
 .lz-h b { font-size: 11px; } .lz-h small { font-size: 10px; }
+
+/* v8.41: volver a la ventana anterior */
+#panel-volver { position: absolute; left: 10px; top: 10px; z-index: 5; padding: 5px 10px; border-radius: 9px; border: 1px solid #c99a3e; background: linear-gradient(#6a4416, #3d2508); color: #ffe08a; font: 800 13px system-ui, sans-serif; cursor: pointer; }
+#panel-volver[hidden] { display: none; }
+.pj-volver { display: block; width: 100%; margin: 8px 0 0; padding: 8px; border-radius: 10px; border: 1px solid #c99a3e; background: linear-gradient(#6a4416, #3d2508); color: #ffe08a; font: 800 14px system-ui, sans-serif; cursor: pointer; }

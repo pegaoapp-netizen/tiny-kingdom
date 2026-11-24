@@ -407,7 +407,8 @@ var Cuentas = (function () {
     responderSoporte: function (id, txt) { return db.collection('soporte').doc(id).update({ respuesta: String(txt).slice(0, 600), respondido: Date.now(), ia: false }); },
     // v8.40: héroes lanzados (los decide el dueño)
     leerConfigHeroes: function () { return db.collection('config').doc('heroes').get().then(function (d) { return d.exists ? (d.data().lanzados || null) : null; }); },
-    guardarConfigHeroes: function (l) { return db.collection('config').doc('heroes').set({ lanzados: (l || []).slice(0, 30).map(String), fecha: Date.now() }); },
+    leerConfigJuego: function () { return db.collection('config').doc('heroes').get().then(function (d) { return d.exists ? d.data() : null; }); }, /* v8.41 */
+    guardarConfigHeroes: function (l, arm) { var o = { lanzados: (l || []).slice(0, 30).map(String), fecha: Date.now() }; if (Array.isArray(arm)) o.armaduras = arm.slice(0, 40).map(String); return db.collection('config').doc('heroes').set(o); },
     premioSoporteListo: function (id) { return db.collection('soporte').doc(id).update({ premioListo: Date.now() }); }, // v8.23
     borrarSoporte: function (id) { return db.collection('soporte').doc(id).delete(); },
     regalosRecibidos: function () {

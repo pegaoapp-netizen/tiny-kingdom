@@ -2760,7 +2760,7 @@
     var items = [];
     [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
-      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Héroes lanzados', 'Released heroes')]] : [])
+      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Lanzar héroes y armaduras', 'Release heroes & armor')]] : [])
       .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span>' + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') + '</button>';
@@ -3224,6 +3224,7 @@
       return;
     }
     // v7.22: si ya tengo la alianza guardada la enseño al instante (con sus pestañas) y la actualizo por detrás, sin el «Cargando…» que lo borraba todo
+    if (!alCache && estado.alianza) alCache = alCacheLocal(); /* v8.41: lo último guardado en el teléfono sale al instante */
     var conCache = alCache && estado.alianza && alCache.al && alCache.al.tag === estado.alianza;
     abrirPanel(T('p_alianza'), conCache ? '' : '<p class="nota">' + T('cargando') + '</p>', { tipo: 'alianza' });
     if (conCache) pintarHubAlianza();
@@ -3231,19 +3232,25 @@
     var tag = estado.alianza;
     // v8.04: si la nube no contesta en 10 s, se ofrece Reintentar en vez de quedarse en «Cargando…» para siempre
     setTimeout(function () { var pc = $('panel-cuerpo'); if (abrirPanelAlianza.pedido === pedido && panelActual && panelActual.tipo === 'alianza' && pc && !conCache && /^\s*<p class="nota">/.test(pc.innerHTML) && pc.textContent.trim() === T('cargando')) pc.innerHTML = '<div class="carta"><p class="nota aviso-rojo">' + L('La alianza está tardando en cargar. Revisa tu internet.', 'The alliance is taking long to load. Check your internet.') + '</p><button class="comprar naranja" data-accion="al-reintentar">🔄 ' + L('Reintentar', 'Retry') + '</button></div>'; }, 10000);
+    var preM = tag ? [Cuentas.miembros(tag).catch(function () { return null; }), Cuentas.pedidos(tag).catch(function () { return []; }), Cuentas.refuerzosRecibidos().catch(function () { return []; }), Cuentas.refuerzosEnviados().catch(function () { return []; })] : null; /* v8.41: se piden a la vez */
     (tag ? Cuentas.alianza(tag) : Promise.resolve(null)).then(function (al) {
       if (abrirPanelAlianza.pedido !== pedido || !panelActual || panelActual.tipo !== 'alianza') return;
       if (tag && !al) { estado.alianza = null; guardar(); publicarAldea(true); consejoTemporal(T('al_borrada')); }
       if (tag && al && meExpulsaron(al)) { estado.alianza = null; alCache = null; guardar(true); publicarAldea(true); consejoTemporal('🚪 ' + L('Te expulsaron de la alianza ', 'You were removed from the alliance ') + escaparHTML(al.nombre || tag) + '.'); al = null; } // v8.04
       guardarAlNube(al); // v7.99
-      if (al) return Promise.all([Cuentas.miembros(tag), Cuentas.pedidos(tag).catch(function () { return []; }), Cuentas.refuerzosRecibidos().catch(function () { return []; }), Cuentas.refuerzosEnviados().catch(function () { return []; })])
-        .then(function (r) { if (panelActual && panelActual.tipo === 'alianza') pintarMiAlianza(al, r[0], r[1], r[2], r[3]); });
+      if (al) return Promise.all(preM)
+        .then(function (r) { return r[0] ? r : Cuentas.miembros(tag).then(function (m) { r[0] = m; return r; }); })
+        .then(function (r) { if (panelActual && panelActual.tipo === 'alianza') pintarMiAlianza(al, r[0], r[1], r[2], r[3]); else alCache = { al: al, miembros: r[0], pedidos: r[1] || [], recibidos: r[2] || [], enviados: r[3] || [] }; });
       return Cuentas.alianzas().then(function (lista) { pintarListaAlianzas(lista); });
     }).catch(function () { if (panelActual && panelActual.tipo === 'alianza') $('panel-cuerpo').innerHTML = '<p class="nota aviso-rojo">' + T('mundo_error') + '</p>'; });
   }
   var alCache = null, alSeccion = '';
+  /* v8.41: copia de la alianza en el teléfono (solo para enseñarla rápido; la nube manda) */
+  function alCacheClave() { try { return 'tk_alc_' + (Cuentas.usuario() || {}).uid; } catch (e) { return ''; } }
+  function alCacheLocal() { try { var c = JSON.parse(localStorage.getItem(alCacheClave()) || 'null'); return c && c.al && c.al.tag === estado.alianza && Array.isArray(c.miembros) ? c : null; } catch (e) { return null; } }
   function pintarMiAlianza(al, miembros, pedidos, recibidos, enviados) {
     alCache = { al: al, miembros: miembros, pedidos: pedidos || [], recibidos: recibidos || [], enviados: enviados || [] };
+    try { localStorage.setItem(alCacheClave(), JSON.stringify({ al: al, miembros: (miembros || []).slice(0, 120), pedidos: [], recibidos: [], enviados: [] })); } catch (e) {}
     pintarHubAlianza();
   }
   function htmlMiembrosAlianza(al, miembros) {
@@ -7034,7 +7041,13 @@
   //  PANELES
   // ------------------------------------------------------------------
   var panelActual = null;
+  var panelVolver = null; /* v8.41: la ventana de la que vienes, para volver a ella */
+  var VOLVIBLES = ['alianza', 'mochila', 'heroe', 'herreria', 'misiones', 'tienda', 'castillo', 'investigacion', 'mercado', 'vigia', 'conquista', 'tropas'];
   function abrirPanel(titulo, html, cual) {
+    var prevP = panelActual && !$('panel').classList.contains('oculto') ? panelActual : null;
+    if (abrirPanel.volviendo) { panelVolver = null; abrirPanel.volviendo = false; }
+    else if (prevP && cual && prevP.tipo !== cual.tipo && VOLVIBLES.indexOf(prevP.tipo) >= 0) panelVolver = { p: prevP, tab: alTab, sub: alSubMi, pag: alPag };
+    else if (!prevP || (cual && prevP.tipo !== cual.tipo)) panelVolver = null;
     $('panel').classList.remove('cafe', 'desde-abajo', 'co-panel'); var gmV = document.querySelector('#panel .cafe-mas'); if (gmV) gmV.remove(); var icV = document.querySelector('#panel .ve-icono'); if (icV) icV.remove();
     if (menuEdif.el) cerrarMenuEdif();
     $('panel-titulo').textContent = titulo;
@@ -7051,6 +7064,8 @@
     $('panel').classList.toggle('sin-x', !!cual && (cual.tipo === 'perfil' || cual.tipo === 'cargos')); // v6.82: sin la cruz de cerrar: se cierra tocando fuera
     $('panel').classList.toggle('perg', !!cual && cual.tipo === 'chat'); $('panel').classList.remove('iv-panel', 'az-panel', 'pr-panel', 'tg-panel', 'hl-panel', 'hi-panel', 'fo-panel'); if (cual && cual.tipo === 'alianza') $('panel').classList.add('iv-panel', 'al-panel'); else $('panel').classList.remove('al-panel'); // v6.57: el chat va en pergamino crema
     actualizarPanel();
+    var bv = $('panel-volver'); if (!bv) { bv = document.createElement('button'); bv.id = 'panel-volver'; bv.type = 'button'; $('panel-titulo').parentNode.insertBefore(bv, $('panel-titulo')); bv.addEventListener('click', function () { var pv = panelVolver; if (!pv) return; sonar('click'); panelVolver = null; if (pv.p.tipo === 'alianza') { alTab = pv.tab; alSubMi = pv.sub; alPag = pv.pag; } abrirPanel.volviendo = true; reabrirPanel(pv.p); abrirPanel.volviendo = false; }); }
+    bv.textContent = '‹ ' + (panelVolver ? (panelVolver.p.tipo === 'alianza' ? L('Alianza', 'Alliance') : L('Volver', 'Back')) : ''); bv.hidden = !panelVolver;
   }
   // v6.72: si tocas o deslizas el dedo sobre el mapa (fuera de la ventana), la ventana abierta se cierra sola
   (function () {
@@ -7065,6 +7080,7 @@
     document.addEventListener('pointerup', function () { if (fuera) { fuera = null; cerrarTodo(); } }, true);
   })();
   function cerrarPanel() {
+    panelVolver = null; var bvC = $('panel-volver'); if (bvC) bvC.hidden = true;
     $('panel').classList.add('oculto'); $('panel').classList.remove('oscuro'); $('panel').classList.remove('tropas-oscuro');
     document.body.classList.remove('panel-abierto');
     panelActual = null;
@@ -7345,9 +7361,9 @@
       }).catch(error);
     }
   }
-  function reabrirPanel() {
-    if (!panelActual) return;
-    var p = panelActual;
+  function reabrirPanel(pp) {
+    if (!panelActual && !pp) return;
+    var p = pp || panelActual; /* v8.41: o la ventana a la que se vuelve */
     if (p.tipo === 'ranking') return abrirPanelRanking();
     if (p.tipo === 'construir') abrirPanelConstruir(p.slot);
     else if (p.tipo === 'tropas') abrirPanelTropas();
@@ -8675,6 +8691,7 @@
   }, bonos: [[2, { vida: 50, marcha: 15 }], [4, { atk: 80, foeAtk: 15 }], [6, { atk: 150, vida: 150, foeVida: 25 }]] };
   var TXT_DRAGON = { atk: ['Ataque Tropas', 'Troop Attack', '+'], vida: ['Vida Tropas', 'Troop HP', '+'], asedio: ['Ataque Asedio', 'Siege Attack', '+'], muro: ['ignora defensa de muralla', 'ignores wall defense', ''], foeAtk: ['Ataque Enemigo', 'Enemy Attack', '−'], foeVida: ['Vida Enemiga', 'Enemy HP', '−'], marcha: ['Capacidad de Marcha', 'March Size', '+'], velMarcha: ['Velocidad de Marcha', 'March Speed', '+'], heridos: ['heridos en Enfermería', 'wounded to Infirmary', '+'], saqueo: ['Capacidad de Saqueo', 'Loot Capacity', '+'], liq: ['Puntos de Liquidación', 'Kill Points', '+'] };
   function abrirCofreDragon(k) {
+    if (!armaduraLanzada('dragon') && !esCuentaDueno()) { consejoTemporal('🔒 ' + L('El ' + SET_DRAGON.es + ' todavía no ha salido. Guarda el cofre: podrás abrirlo cuando salga.', 'The ' + SET_DRAGON.en + ' is not out yet. Keep the chest: you can open it when it comes out.')); sonar('error'); return; } /* v8.41 */
     var v = $('dg-elegir'); if (v) v.remove();
     var tiene = {}; piezas().forEach(function (p) { if (p.s === 'dragon') tiene[p.t] = (tiene[p.t] || 0) + 1; });
     var d = document.createElement('div'); d.id = 'dg-elegir';
@@ -8737,6 +8754,7 @@
     var mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
     if (!mios.length) return null;
     var id = idPreferido && estado.heroes[idPreferido] ? idPreferido : (estado.equipo || []).filter(function (k) { return estado.heroes[k]; })[Math.floor(Math.random() * 3)] || mios[Math.floor(Math.random() * mios.length)];
+    if (!armaduraLanzada(id)) { var okA = mios.filter(armaduraLanzada); id = okA.length ? okA[Math.floor(Math.random() * okA.length)] : null; if (!id) return darPieza(null, 'mitico'); } /* v8.41: solo armaduras lanzadas */
     var tiene = piezas().filter(function (p) { return p.s === id; }).map(function (p) { return p.t; });
     var faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; });
     var tipo = faltan.length ? faltan[Math.floor(Math.random() * faltan.length)] : TIPOS_EQ[Math.floor(Math.random() * 6)];
@@ -9180,7 +9198,12 @@
   // Los héroes no salen enteros: se juntan MEDALLAS y al llegar a las necesarias el héroe se recluta solo.
   var HEROES_LANZADOS_BASE = ['sol', 'roble', 'trueno', 'pluma'], heroesLanzados = HEROES_LANZADOS_BASE.slice();
   var MEDALLAS_PARA = { comun: 20, raro: 30, legendario: 50, mitico: 100 };
-  function cargarLanzados() { if (!hayCuenta() || !Cuentas.leerConfigHeroes) return; Cuentas.leerConfigHeroes().then(function (l) { if (Array.isArray(l) && l.length) heroesLanzados = l.filter(function (id) { return HEROE[id]; }); }).catch(function () {}); }
+  /* v8.41: también las ARMADURAS (juegos) se lanzan poco a poco; por defecto salen las que ya salían */
+  var ARMADURAS_TODAS = Object.keys(ARMADURA_HEROE).concat(['dragon']), armadurasLanzadas = ARMADURAS_TODAS.slice();
+  function armaduraLanzada(set) { return !set || armadurasLanzadas.indexOf(set) >= 0; }
+  function nombreArmadura(set) { return set === 'dragon' ? L(SET_DRAGON.es, SET_DRAGON.en) : L('Juego ', 'Set ') + (ARMADURA_HEROE[set] ? ARMADURA_HEROE[set][estado.idioma === 'en' ? 'en' : 'es'] : set); }
+  function cargarLanzados() { if (!hayCuenta() || !Cuentas.leerConfigJuego) return; Cuentas.leerConfigJuego().then(function (c) { if (!c) return; if (Array.isArray(c.lanzados) && c.lanzados.length) heroesLanzados = c.lanzados.filter(function (id) { return HEROE[id]; }); if (Array.isArray(c.armaduras)) armadurasLanzadas = c.armaduras.filter(function (id) { return ARMADURAS_TODAS.indexOf(id) >= 0; }); }).catch(function () {}); }
+  setTimeout(function () { if (hayCuenta() && estado.alianza && !alCache) { alCache = alCacheLocal(); var tg = estado.alianza; Promise.all([Cuentas.alianza(tg), Cuentas.miembros(tg)]).then(function (r) { if (r[0] && estado.alianza === tg && !(panelActual && panelActual.tipo === 'alianza')) { var v = alCache || {}; alCache = { al: r[0], miembros: r[1] || [], pedidos: v.pedidos || [], recibidos: v.recibidos || [], enviados: v.enviados || [] }; try { localStorage.setItem(alCacheClave(), JSON.stringify({ al: r[0], miembros: (r[1] || []).slice(0, 120), pedidos: [], recibidos: [], enviados: [] })); } catch (e) {} } }).catch(function () {}); } }, 9000); /* v8.41: la alianza se precarga */
   setTimeout(cargarLanzados, 6000); setInterval(cargarLanzados, 600000);
   function lanzado(id) { return heroesLanzados.indexOf(id) >= 0; }
   function medallasPara(id) { return MEDALLAS_PARA[(HEROE[id] || {}).rareza] || 50; }
@@ -9204,10 +9227,12 @@
   }
   // dueño: qué héroes están lanzados
   function abrirLanzarHeroes() {
-    var sel = heroesLanzados.slice();
+    var sel = heroesLanzados.slice(), selA = armadurasLanzadas.slice(); abrirLanzarHeroes.selA = selA;
     function pintar() {
-      abrirPanel('🦸 ' + L('Héroes lanzados', 'Released heroes'), '<p class="nota">' + L('Solo los héroes marcados salen en el Reclutamiento y los premios (por medallas). Lánzalos poco a poco, por temporadas.', 'Only checked heroes appear in Recruiting and prizes (as medals). Release them little by little, by seasons.') + '</p>' +
+      abrirPanel('🦸 ' + L('Héroes y armaduras lanzados', 'Released heroes and armor'), '<p class="nota">' + L('Solo los héroes marcados salen en el Reclutamiento y los premios (por medallas). Lánzalos poco a poco, por temporadas.', 'Only checked heroes appear in Recruiting and prizes (as medals). Release them little by little, by seasons.') + '</p>' +
         '<div class="hl-grid">' + HEROES.map(function (h) { var on = sel.indexOf(h.id) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog" data-id="' + h.id + '">' + fotoHTML('h_' + h.id, '🦸') + '<b>' + NH(h.id) + '</b><small>' + T('rareza_' + h.rareza) + ' · ' + (on ? '✅' : '🔒') + '</small></button>'; }).join('') + '</div>' +
+        '<h3 style="margin-top:12px">🛡️ ' + L('Armaduras', 'Armor') + '</h3><p class="nota">' + L('Solo los juegos marcados salen en cofres, la Ruleta, el Galeón y los premios. Lo que ya tiene cada jugador no se le quita.', 'Only checked sets appear in chests, the Roulette, the Galleon and prizes. What players already own is kept.') + '</p>' +
+        '<div class="hl-grid">' + ARMADURAS_TODAS.map(function (a) { var on = selA.indexOf(a) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog-a" data-id="' + a + '">' + icoPieza({ t: 'pechera', s: a, r: 'mitico', n: 1 }) + '<b>' + nombreArmadura(a) + '</b><small>' + (on ? '✅' : '🔒') + '</small></button>'; }).join('') + '</div>' +
         '<button class="comprar verde" data-accion="lz-guardar" style="margin-top:10px">💾 ' + L('Guardar en la nube', 'Save to the cloud') + '</button>', { tipo: 'lanzar' });
     }
     abrirLanzarHeroes.sel = sel; abrirLanzarHeroes.pintar = pintar; pintar();
@@ -9511,7 +9536,7 @@
       (prot ? '<p class="fc-aviso">🫧 ' + T('protegido_falta', { t: fmtLargo((a.escudo - Date.now()) / 1000) }) + '</p>' : '') +
       // v6.97: a un aliado: Transportar (recursos con tropas de suministro) y Reforzar (tropas + caballero)
       '<div class="fc-botones">' + (dp.k === 'aliada' ? '<button class="comprar azul" id="fc-transportar">' + L('Transportar', 'Transport') + '</button><button class="comprar azul" id="fc-reforzar">' + T('ref_reforzar') + '</button>' :
-      '<button class="comprar azul" id="fc-espiar">' + L('Espiar', 'Scout') + '</button><button class="comprar rojo" id="fc-atacar"' + (prot ? ' disabled' : '') + '>' + L('Atacar', 'Attack') + '</button>') + '</div></div>';
+      '<button class="comprar azul" id="fc-espiar"' + (prot ? ' disabled' : '') + '>' + L('Espiar', 'Scout') + '</button><button class="comprar rojo" id="fc-atacar"' + (prot ? ' disabled' : '') + '>' + L('Atacar', 'Attack') + '</button>') + '</div></div>';
     if (esMio) { var fb = d.querySelector('.fc-botones'); if (fb) fb.innerHTML = '<button class="comprar azul" id="fc-entrar">' + L('Entrar a mi ciudad', 'Enter my city') + '</button>'; d.querySelectorAll('.fc-aviso').forEach(function (x) { x.remove(); }); }
     $('mundo').appendChild(d);
     var fe = $('fc-entrar'); if (fe) fe.addEventListener('click', function () { sonar('click'); cerrarFicha(); entrarCiudad(); });
@@ -9530,11 +9555,18 @@
   function espiarCiudad(a, b) {
     if (!hayCuenta()) { consejoTemporal(T('at_cuenta')); sonar('error'); return; }
     if (estado.alianza && a.alianza === estado.alianza) { consejoTemporal(L('No hace falta espiar a tu alianza.', 'No need to scout your alliance.')); return; }
+    var MSG_PROT = '🛡️ ' + L('Está protegido: no se puede espiar ni atacar.', 'Protected: cannot be scouted or attacked.');
+    if ((a.escudo || 0) > Date.now()) { consejoTemporal(MSG_PROT); sonar('error'); return; } /* v8.41: con burbuja no se espía */
     var exp = cuentaTipo('explorador');
+    var frescoP = Cuentas.leerAldea ? Cuentas.leerAldea(a.uid).catch(function () { return null; }) : Promise.resolve(null);
+    if (b) b.disabled = true;
+    frescoP.then(function (al0) {
+    if (b && document.body.contains(b)) b.disabled = false;
+    if (al0 && (al0.escudo || 0) > Date.now()) { a.escudo = al0.escudo; consejoTemporal(MSG_PROT); sonar('error'); return; } /* v8.41 */
     if (!exp && !pagar({ oro: COSTO_ESPIAR })) return;
-    b.disabled = true; sonar('click');
+    if (b) b.disabled = true; sonar('click');
     consejoTemporal('🔍 ' + (exp ? L('Tu explorador salió hacia ', 'Your scout left for ') : L('Pagaste ' + COSTO_ESPIAR + ' de oro a un espía para ir a ', 'You paid ' + COSTO_ESPIAR + ' gold to a spy to go to ')) + escaparHTML(a.nombre));
-    var fresco = Cuentas.leerAldea ? Cuentas.leerAldea(a.uid).catch(function () { return null; }) : Promise.resolve(null); // v8.31: lo que tiene AHORA
+    var fresco = Promise.resolve(al0); /* v8.31: lo que tiene AHORA */
     setTimeout(function () { fresco.then(function (al) { if (al && al.espia) { a.espia = al.espia; a.defensa = al.defensa || a.defensa; }
       var e = a.espia || {}, t = e.tropas || {}, total = 0;
       var filasT = Object.keys(t).filter(function (k) { return TROPAS[k]; }).map(function (k) { total += t[k]; return [TROPAS[k].icono + ' ' + N(k), formatoNumero(t[k])]; });
@@ -9548,6 +9580,7 @@
       sonar('moneda'); guardar(true); actualizarBuzon && actualizarBuzon();
       if (b && document.body.contains(b)) b.disabled = false;
     }); }, 2500);
+    });
   }
   // atacar: primero eliges qué tropas van, ves tu poder contra el suyo y confirmas
   function abrirEleccionTropas(a) {
@@ -9760,7 +9793,7 @@
       else if (q === 'paso') vista = b.dataset.p;
       else if (q === 'sig') { var orden = PASOS.map(function (p) { return p[0]; }), ix = orden.indexOf(vista); vista = orden[Math.min(orden.length - 1, ix + 1)]; }
       else if (q === 'tipo') {
-        if (b.dataset.t === 'explorar') { cerrar(); espiarCiudad(a, b); return; }
+        if (b.dataset.t === 'explorar') { if ((a.escudo || 0) > Date.now()) { consejoTemporal('🛡️ ' + L('Está protegido: no se puede espiar ni atacar.', 'Protected: cannot be scouted or attacked.')); sonar('error'); return; } cerrar(); espiarCiudad(a, null); return; }
         if (b.dataset.t === 'reforzar') { cerrar(); if (typeof cerrarMundo === 'function' && enMundo) cerrarMundo(); abrirEnviarRefuerzo(a.uid, a.nombre); return; }
         vista = 'favoritos';
       }
@@ -11135,7 +11168,7 @@
   ];
   var RUL_SIN_LLAVE_MAX = 100; // v8.25: una llave segura solo cada 100 tiradas (antes 40) // una llave más o menos cada 13 tiradas, y seguro una cada 20
   var SETS_RULETA = ['sol', 'luna', 'ancla'], RUL_PIEZA = 0; // v8.28: la Ruleta ya no da piezas de armadura // de vez en cuando, una pieza del Alba, Estelar o del Mar Hondo
-  function piezaDeSet(set) { var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
+  function piezaDeSet(set) { if (!armaduraLanzada(set)) { var okS = SETS_RULETA.filter(armaduraLanzada); if (!okS.length) return null; set = okS[Math.floor(Math.random() * okS.length)]; } /* v8.41 */ var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
   var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1, cofre_tesoro: 1 }; // v7.09: sin gemas (las gemas no se regalan)
   var RUL_FICHAS = 3, RUL_GEMAS = 15; // v8.06: el precio vuelve a como estaba (15 gemas por tirada)
@@ -12406,7 +12439,8 @@
       Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
     }
     else if (a === 'lz-tog') { var lz = abrirLanzarHeroes.sel || [], lzi = b.getAttribute('data-id'), lzk = lz.indexOf(lzi); if (lzk >= 0) lz.splice(lzk, 1); else lz.push(lzi); sonar('click'); abrirLanzarHeroes.pintar(); } // v8.40
-    else if (a === 'lz-guardar') { b.disabled = true; Cuentas.guardarConfigHeroes(abrirLanzarHeroes.sel).then(function () { heroesLanzados = abrirLanzarHeroes.sel.slice(); sonar('moneda'); consejoTemporal('✅ ' + L('Héroes lanzados guardados: ', 'Released heroes saved: ') + heroesLanzados.length); }).catch(function (er) { b.disabled = false; consejoTemporal(L('No se pudo guardar', 'Could not save') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
+    else if (a === 'lz-tog-a') { var lza = abrirLanzarHeroes.selA || [], lzai = b.getAttribute('data-id'), lzak = lza.indexOf(lzai); if (lzak >= 0) lza.splice(lzak, 1); else lza.push(lzai); sonar('click'); abrirLanzarHeroes.pintar(); } /* v8.41 */
+    else if (a === 'lz-guardar') { b.disabled = true; Cuentas.guardarConfigHeroes(abrirLanzarHeroes.sel, abrirLanzarHeroes.selA).then(function () { heroesLanzados = abrirLanzarHeroes.sel.slice(); armadurasLanzadas = (abrirLanzarHeroes.selA || armadurasLanzadas).slice(); sonar('moneda'); consejoTemporal('✅ ' + L('Héroes lanzados guardados: ', 'Released heroes saved: ') + heroesLanzados.length); }).catch(function (er) { b.disabled = false; consejoTemporal(L('No se pudo guardar', 'Could not save') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
     else if (a === 'tm-sub') { sonar('click'); htmlTemporada.sub = b.getAttribute('data-s'); document.querySelectorAll('.tm-subs button').forEach(function (x) { x.classList.toggle('activo', x === b); }); document.querySelectorAll('.tm-sec').forEach(function (x) { x.hidden = x.getAttribute('data-s') !== htmlTemporada.sub; }); } // v8.39
     else if (a === 'reparar-defensas') { sonar('click'); repararDefensas(); } // v8.35
     else if (a === 'ir-atacante') { sonar('click'); irAlAtacante(b.getAttribute('data-uid')); } // v8.33
@@ -13877,6 +13911,7 @@
         // v6.94: dónde está su reino y botón para ir al mapa (y, para el dueño, regalarle)
         (esCuentaDueno() ? '<div class="pj-al pj-coord"><span>📍 ' + L('Reino', 'Kingdom') + ': <b>' + (al ? 'X ' + celdaDe(al.x, al.y).x + ' · Y ' + celdaDe(al.x, al.y).y : (buscado ? L('todavía no está en el mapa', 'not on the map yet') : '…')) + '</b></span></div>' : '') + // v6.96: coordenadas y «Ver su reino» solo para el dueño
         (uid !== yo && esCuentaDueno() ? '<div class="pj-botones pj-extra"><button data-pj="mapa"' + (al ? '' : ' disabled') + '>🗺️ ' + L('Ver su reino', 'See kingdom') + '</button><button data-pj="regalar" class="pj-oro">🎁 ' + L('Regalar', 'Gift') + '</button></div>' : '') +
+        (panelActual && panelActual.tipo === 'alianza' ? '<button class="pj-volver" data-pj="cerrar">‹ ' + L('Volver a la alianza', 'Back to the alliance') + '</button>' : '') + /* v8.41 */
         '<div class="pj-botones">' + (uid === yo ? '<button class="comprar rojo" data-pj="borrar">' + T('chat_borrar') + '</button>' :
           '<button data-pj="susurrar">' + L('Susurrar', 'Whisper') + '</button><button data-pj="mensaje">' + L('Enviar mensaje', 'Send message') + '</button>' +
           '<button data-pj="ignorar">' + (bloqueados().indexOf(uid) < 0 ? L('Ignorar', 'Ignore') : L('Dejar de ignorar', 'Unignore')) + '</button><button data-pj="denunciar">' + L('Denunciar', 'Report') + '</button>' +
