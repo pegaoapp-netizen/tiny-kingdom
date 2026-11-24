@@ -1934,14 +1934,18 @@
     var atk, def, multA, multD, escA = 1, escD = 1;
     if (op.defensa) { // me atacan: el atacante no se conoce tropa a tropa → ejército de su poder; defienden mis tropas, castillo y torres
       atk = ejercitoDePoder(f, op.atkMezcla); multA = null;
-      def = miComposicion(); var realDef = JSON.parse(JSON.stringify(def)); var vMis = valorDe(def), resto = Math.max(0, d - vMis);
-      var extra = ejercitoDePoder(resto, { arquero: 0.6, guardian: 0.4 }); for (var k in extra) def[k] = (def[k] || 0) + extra[k];
+      def = estado.tropasDefienden === false ? {} : miComposicion(); var realDef = JSON.parse(JSON.stringify(def)); // v8.30: sin tropas de relleno; con la Defensa en OFF no pelea nadie
+      if (!Object.keys(def).length) { ultimaBatalla = { sim: { atk: {}, def: {}, defReal: {}, rondas: 0, gano: true, perdA: 0, perdD: 0 }, defensa: true, fecha: Date.now(), aplicada: false }; return { gano: true, bajas: 0, bajasDef: 0, margen: 1, rondas: 0, sim: ultimaBatalla.sim, perdidas: { muertos: 0, heridos: 0, detalle: {} }, sinDefensa: true }; }
       multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : liderActual()); if (buffActivo('def')) multD.vida += 20;
     } else {
       atk = op.tropas || miComposicion(); var heroe = op.heroe !== undefined ? op.heroe : liderActual();
       multA = multiplicadoresHeroe(heroe); if (buffActivo('atk')) multA.atk += 20; if (buffActivo('vida')) multA.vida += 20; /* v8.18 */
       var base = valorDe(atk) + valorHeroe(heroe); if (base > 0) escA = Math.max(0.5, Math.min(4, f / base));
-      if (op.defTropas && Object.keys(op.defTropas).length) {
+      if (op.soloTropas) { // v8.30: la villa defiende solo con sus tropas reales (sin relleno con la fuerza del castillo); con 0 tropas, gana el atacante sin bajas
+        def = {}; for (var k4 in (op.defTropas || {})) if (COMBATE_KOC[k4] && op.defTropas[k4] > 0) def[k4] = op.defTropas[k4];
+        if (!Object.keys(def).length) { ultimaBatalla = { sim: { atk: {}, def: {}, rondas: 0, gano: true, perdA: 0, perdD: 0 }, defensa: false, fecha: Date.now(), aplicada: false }; return { gano: true, bajas: 0, bajasDef: 0, margen: 1, rondas: 0, sim: ultimaBatalla.sim, perdidas: 0, sinDefensa: true }; }
+        multD = op.multDef || null;
+      } else if (op.defTropas && Object.keys(op.defTropas).length) {
         def = {}; var vt = 0; for (var k2 in op.defTropas) if (COMBATE_KOC[k2] && op.defTropas[k2] > 0) { def[k2] = op.defTropas[k2]; vt += def[k2] * valorUnidadTipo(k2); }
         var resto2 = Math.max(0, d - vt); var ex2 = ejercitoDePoder(resto2, { arquero: 0.6, guardian: 0.4 }); for (var k3 in ex2) def[k3] = (def[k3] || 0) + ex2[k3];
       } else def = ejercitoDePoder(d, op.defMezcla);
@@ -9369,6 +9373,7 @@
     d.innerHTML = '<div class="fc-caja"><button class="fc-x" id="fc-x">✕</button>' + (!esMio && a.uid && !a.bot ? '<button class="fc-chat" id="fc-chat" title="' + L('Enviar mensaje', 'Send message') + '">💬</button>' : '') + '<div class="fc-cab">' + escaparHTML(a.nombre) + ' <small>' + c.x + ', ' + c.y + '</small></div>' +
       '<div class="fc-cuerpo"><div class="fc-retrato">' + escaparHTML(String(a.nombre || '?').charAt(0).toUpperCase()) + '</div><div class="fc-datos">' +
       '<div class="fc-nombre">' + escaparHTML(a.nombre) + ' (' + L('Nv.', 'Lv.') + nv + ')</div>' +
+      (a.bot ? '<div class="fc-fila">🏚️ ' + L('Villa sin dueño', 'Ownerless village') + '</div>' : '<div class="fc-fila">🏰 ' + (esMio ? escaparHTML(nombreVilla(villaActiva())) : L('Villa Principal', 'Main Village')) + ' · ' + L('Castillo Nv ', 'Castle Lv ') + ((esMio ? estado.castillo : (a.espia && a.espia.castillo)) || 1) + ' · ' + L('Muralla Nv ', 'Wall Lv ') + ((esMio ? estado.muralla : (a.espia && a.espia.muralla)) || 0) + '</div>') + // v8.30: qué villa es y cómo está fortificada
       '<div class="fc-fila">' + L('Poder', 'Power') + ': ' + formatoNumero(a.poder || 0) + '</div>' + (a.bot ? '' : '<div class="fc-fila">⚔️ ' + L('Liquidación', 'Kills') + ': ' + formatoNumero(esMio ? (estado.kpTotal || 0) : (a.kp || 0)) + '</div>') +
       '<div class="fc-fila">' + L('Alianza', 'Alliance') + ': <span id="fc-alianza">' + (a.alianza ? escaparHTML(a.alianza) : L('Ninguna', 'None')) + '</span></div>' +
       '<div class="fc-fila">' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</div>' +
@@ -9796,7 +9801,7 @@
       var bv = (estado.bajasDe || {})[m.defensor];
       if (bv && al && (al.actualizado || 0) < bv.t) { for (var kb in bv.perd) if (tDef[kb]) tDef[kb] = Math.max(0, tDef[kb] - bv.perd[kb]); dDef = Math.max(1, dDef - bv.valor); }
       else if (bv) delete estado.bajasDe[m.defensor];
-      var datos = esp.san ? decidirAtaque(m, 1, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: {}, muralla: 0 }) : decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, muralla: esp.muralla || 0, multDef: multDeDatos(esp.hd) }); // v7.81: santuario y héroe defensor
+      var datos = esp.san ? decidirAtaque(m, 1, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: {}, muralla: 0 }) : decidirAtaque(m, dDef, { tropas: umT.tropas, heroe: umT.heroe || null, defTropas: tDef, soloTropas: !!esp.tropas, muralla: esp.muralla || 0, multDef: multDeDatos(esp.hd) }); // v7.81: santuario y héroe defensor
       try { var sdf = ultimaBatalla && !ultimaBatalla.defensa ? ultimaBatalla.sim.def : null; if (sdf) { estado.bajasDe = estado.bajasDe || {}; var reg = estado.bajasDe[m.defensor] && al && (al.actualizado || 0) < estado.bajasDe[m.defensor].t ? estado.bajasDe[m.defensor] : { perd: {}, valor: 0 }; reg.t = Date.now();
         for (var kd in sdf) { var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
       return Cuentas.resolverAtaque(m.id, datos).then(function () { for (var k in datos) m[k] = datos[k]; return m; })
@@ -11852,7 +11857,7 @@
       if (x.lucharon == null) x.lucharon = Object.keys(tr).length ? sumIni : 0;
       if (x.muertos == null) x.muertos = Object.keys(tr).length ? sumPer : (x.sobreviven != null ? Math.max(0, x.lucharon - x.sobreviven) : 0);
       if (x.sobreviven == null) x.sobreviven = Math.max(0, (x.lucharon || 0) - (x.muertos || 0));
-      if (x.heridos == null) x.heridos = Math.round((x.muertos || 0) * 0.3);
+      if (x.heridos == null) { var bajasT = x.muertos || 0; x.heridos = Math.round(bajasT * 0.3); x.muertos = bajasT - x.heridos; } // v8.30: los heridos salen de las bajas (antes se sumaban encima: 47 + 14 de 47)
       if (x.revivir == null) x.revivir = x.heridos;
       function f(n) { return n === null || n === undefined ? '0' : formatoNumero(n); }
       return '<div class="ib-lado ' + cls + '"><h4>' + titulo + '</h4><b class="ib-nom">' + escaparHTML(x.nombre || '?') + '</b>' + hz +
