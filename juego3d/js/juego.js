@@ -4530,7 +4530,7 @@
     if (r) { avisarFalta(r); return false; }
     if (c.gemas && !pedirGemas(c.gemas)) return false;
     if (!estado.oroInfinito) RECURSOS.forEach(function (k) { if (c[k]) estado[claveRecurso(k)] -= c[k]; });
-    if (!estado.gemasInfinitas && c.gemas) estado.gemas -= c.gemas;
+    if (!estado.gemasInfinitas && c.gemas) { estado.gemas -= c.gemas; vipGemasGastadas(c.gemas); }
     actualizarHUD();
     return true;
   }
@@ -4549,7 +4549,7 @@
     if (gemas && !estado.gemasInfinitas && estado.gemas < gemas) { consejoTemporal(T('sin_gemas')); sonar('error'); return false; }
     if (gemas && !pedirGemas(gemas)) return false;
     if (!estado.oroInfinito) estado.monedas -= monedas || 0;
-    if (!estado.gemasInfinitas) estado.gemas -= gemas || 0;
+    if (!estado.gemasInfinitas) { estado.gemas -= gemas || 0; vipGemasGastadas(gemas || 0); }
     actualizarHUD();
     return true;
   }
@@ -10107,7 +10107,10 @@
 
   // ---------- VIP: sube entrando cada día; cada nivel da +1% de obras y de recursos (máximo VIP 10) ----------
   // v7.79: VIP del 1 al 15 con beneficios reales (obras gratis al final, +3% por nivel, combate desde VIP 6, 2.º constructor en VIP 8)
-  var VIP_PUNTOS = [0, 100, 300, 600, 1000, 1500, 2200, 3000, 4000, 5500, 7500, 10000, 13000, 17000, 22000];
+  // v8.19 (VIP opción 3): puntos para llegar a cada VIP (VIP_PUNTOS[i] = puntos para VIP i+1). Con menos de 200 eres VIP 0.
+  var VIP_PUNTOS = [200, 600, 1500, 3000, 5000, 8000, 12000, 17000, 24000, 33000, 45000, 60000, 80000, 105000, 135000];
+  var VIP_DIARIO = 15, VIP_POR_DOLAR = 100, VIP_GEMAS = 10; // +15 al día · +100 por cada US$ 1 · +1 por cada 10 gemas gastadas
+  function vipGemasGastadas(g) { if (!g || g <= 0 || estado.gemasInfinitas) return; var v = vip(); v.gr = (v.gr || 0) + g; var n = Math.floor(v.gr / VIP_GEMAS); if (n > 0) { v.gr -= n * VIP_GEMAS; vipSumar(n); } }
   function vipMinGratis(n) { return 5 + 2 * ((n || vipNivel()) - 1); }
   function vipProd(n) { return 0.03 * (n || vipNivel()); }
   function vipCombate(n) { return Math.max(0, (n || vipNivel()) - 5) * 0.01; }
@@ -10122,13 +10125,13 @@
     return l;
   }
   function vip() { if (!estado.vip) estado.vip = { pts: 0, ultimo: '', racha: 0 }; return estado.vip; }
-  function vipNivel() { var p = vip().pts, n = 1; for (var i = 0; i < VIP_PUNTOS.length; i++) if (p >= VIP_PUNTOS[i]) n = i + 1; return n; }
+  function vipNivel() { var p = vip().pts, n = 0; for (var i = 0; i < VIP_PUNTOS.length; i++) if (p >= VIP_PUNTOS[i]) n = i + 1; return n; }
   function vipDia() {
     var v = vip(), hoy = hoyTexto(); if (v.ultimo === hoy) return;
     var ayer = new Date(); ayer.setDate(ayer.getDate() - 1); var ayerT = ayer.getFullYear() + '-' + (ayer.getMonth() + 1) + '-' + ayer.getDate();
     v.racha = v.ultimo === ayerT ? Math.min(9999, (v.racha || 0) + 1) : 1; v.ultimo = hoy;
-    var antes = vipNivel(), gana = Math.min(300, 50 * v.racha); v.pts += gana; guardar(); // v7.79: día 1 = 50 … día 6+ = 300
-    consejoTemporal('👑 VIP +' + gana + ' ' + L('puntos (racha de ', 'points (streak of ') + v.racha + L(' días)', ' days)'));
+    var antes = vipNivel(), gana = VIP_DIARIO; v.pts += gana; guardar(); // v8.19: cuota fija de 15 puntos al día (opción 3)
+    consejoTemporal('👑 VIP +' + gana + ' ' + L('puntos de hoy', 'points today') + ' · VIP ' + vipNivel());
     if (vipNivel() > antes) setTimeout(function () { consejoTemporal('👑 ' + L('¡Subiste a VIP ', 'You reached VIP ') + vipNivel() + '!'); sonar('victoria'); }, 2800);
   }
 
@@ -10203,7 +10206,7 @@
           '<p class="nota">' + L('Gana EXP con misiones, obras, investigaciones (10% del poder) y matando enemigos (5% de los puntos de liquidación). Cada nivel: +2 puntos de talento y un cofre.', 'Earn XP from missions, builds, research (10% of power) and kills (5% of kill points). Each level: +2 talent points and a chest.') + '</p></div>' +
         '<div class="carta"><div class="pf-fila"><span>👑 VIP <b>' + vn + '</b></span><small>' + (vn < VIP_PUNTOS.length ? formatoNumero(vp - vAnt) + ' / ' + formatoNumero(vSig - vAnt) : L('Máximo', 'Max')) + '</small></div>' +
           '<div class="pf-barra"><div style="width:' + (vn < VIP_PUNTOS.length ? Math.round((vp - vAnt) / Math.max(1, vSig - vAnt) * 100) : 100) + '%"></div></div>' +
-          '<p class="nota">🔥 ' + L('Racha: ', 'Streak: ') + (vip().racha || 0) + ((vip().racha || 0) === 1 ? L(' día', ' day') : L(' días', ' days')) + ' · ' + L('mañana +', 'tomorrow +') + Math.min(300, 50 * ((vip().racha || 0) + 1)) + L(' pts (si faltas un día vuelve a +50)', ' pts (miss a day and it goes back to +50)') + '</p>' +
+          '<p class="nota">👑 ' + L('Cómo subir: +15 puntos cada día que entras · +1 por cada 10 💎 que gastas · +100 por cada US$ 1 de compra.', 'How to level up: +15 points each day you play · +1 per 10 💎 spent · +100 per US$ 1 purchased.') + '</p>' + // v8.19
           '<div class="pf-vip-l"><b>' + L('Activo en VIP ', 'Active at VIP ') + vn + '</b>' + vipLista(vn).map(function (x) { return '<span>✅ ' + x + '</span>'; }).join('') + '</div>' +
           (vMax ? '' : '<div class="pf-vip-l sig"><b>' + L('En VIP ', 'At VIP ') + (vn + 1) + L(' desbloqueas', ' you unlock') + '</b>' + vipLista(vn + 1).filter(function (x) { return vipLista(vn).indexOf(x) < 0; }).map(function (x) { return '<span>🔒 ' + x + '</span>'; }).join('') + '</div>') +
           '<p class="nota">' + L('Más puntos VIP: fichas «+100 Puntos VIP» en la Tienda, la Ruleta y los cofres de campamentos y villas.', 'More VIP points: "+100 VIP points" tokens in the Shop, the Wheel and camp/village chests.') + '</p></div>' +
@@ -10629,7 +10632,8 @@
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) sumarRecurso(r, p[r]); });
     if (p.gemas) sumarGemas(p.gemas);
     if (p.objeto) estado.mochila[p.objeto] = (estado.mochila[p.objeto] || 0) + 1;
-    if (p.tropas) Object.keys(p.tropas).forEach(function (t) { for (var k = 0; k < p.tropas[t]; k++) sumarTropa(t, reunion.clone().add(new V3((Math.random() - 0.5) * 3, 0, (Math.random() - 0.5) * 3)), true); });
+    // v8.19: las tropas de premio (torneos, cofres, misiones) van a tu reserva: nunca se pierden aunque estés en el Mundo o el cuartel esté lleno
+    if (p.tropas) { var rv = reserva(), tx = []; Object.keys(p.tropas).forEach(function (t) { var q = Math.max(0, Math.floor(+p.tropas[t] || 0)); if (!q || !TROPAS[t]) return; rv[t] = (rv[t] || 0) + q; tx.push(formatoNumero(q) + ' ' + N(t)); }); if (tx.length) consejoTemporal('⚔️ ' + L('Tropas de premio en tu ejército: ', 'Prize troops added to your army: ') + tx.join(', ')); }
     actualizarHUD();
   }
   function reclamarDiario() {
@@ -11460,7 +11464,8 @@
           var items = [];
           if (c.gemas > 0) { estado.gemas = (estado.gemas || 0) + c.gemas; items.push({ ico: '💎', n: c.gemas, nom: L('gemas', 'gems') }); }
           Object.keys(c.objetos || {}).forEach(function (k) { if (!OBJETOS[k]) return; estado.mochila[k] = (estado.mochila[k] || 0) + c.objetos[k]; items.push({ ico: OBJETOS[k].icono, n: c.objetos[k], nom: N(k) }); });
-          vipSumar(Math.round((c.gemas || 0) / 10)); // las compras también suben el VIP (1 punto por cada 10 gemas)
+          var usdC = +c.usd || (window.Pagos && Pagos.CATALOGO && c.sku && Pagos.CATALOGO[c.sku] ? +Pagos.CATALOGO[c.sku].usd : 0) || 0; // v8.19: +100 VIP por cada US$ 1
+          if (usdC > 0) vipSumar(Math.round(usdC * VIP_POR_DOLAR));
           guardar(true); actualizarHUD(); sonar('gemas');
           mostrarRecompensas('💳 ' + L('¡Gracias por tu compra!', 'Thanks for your purchase!'), items);
         }).catch(function () {});
@@ -13211,7 +13216,7 @@
       var nueva = Math.round(Math.max(Date.now() + 1000, m.llega - quita)); // v8.09: quita el tiempo exacto (15 min con 15 min faltando = llega ya)
       b.disabled = true;
       Cuentas.acelerarMarcha(id, nueva).then(function () {
-        if (compra) estado.gemas -= it.gemas; else { moch[k]--; if (moch[k] <= 0) delete moch[k]; }
+        if (compra) { estado.gemas -= it.gemas; vipGemasGastadas(it.gemas); } else { moch[k]--; if (moch[k] <= 0) delete moch[k]; }
         var antes = ahoraF / 1000; m.llega = nueva; sonar('magia'); sumarLogro('acel'); guardar(true); actualizarHUD(); actualizarDock(); clearInterval(reloj);
         acelerarMarcha(id, '⚡ ' + N(k) + ': ' + fmtTiempo(antes) + ' → ' + fmtTiempo((nueva - Date.now()) / 1000));
       }).catch(function () { b.disabled = false; consejoTemporal(L('No se pudo acelerar. Prueba otra vez.', 'Could not speed up. Try again.')); sonar('error'); });
@@ -13226,7 +13231,7 @@
     if (!tiene && (estado.gemas || 0) < costo) { consejoTemporal(L('No tienes gemas suficientes.', 'Not enough gems.')); sonar('error'); return; }
     var nueva = Math.round(Date.now() + Math.max(20000, falta / 2));
     Cuentas.acelerarMarcha(id, nueva).then(function () {
-      if (tiene) { estado.mochila.marcha_rapida--; if (estado.mochila.marcha_rapida <= 0) delete estado.mochila.marcha_rapida; } else estado.gemas -= costo;
+      if (tiene) { estado.mochila.marcha_rapida--; if (estado.mochila.marcha_rapida <= 0) delete estado.mochila.marcha_rapida; } else { estado.gemas -= costo; vipGemasGastadas(costo); }
       m.llega = nueva; sonar('magia'); consejoTemporal('⚡ ' + L('¡Marcha acelerada!', 'March sped up!')); guardar(true); actualizarHUD(); actualizarDock();
     }).catch(function () { consejoTemporal(L('No se pudo acelerar. Prueba otra vez.', 'Could not speed up. Try again.')); sonar('error'); });
   }
