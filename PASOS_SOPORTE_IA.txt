@@ -1,0 +1,41 @@
+SOPORTE CON IA EN TINY KINGDOM (v8.23)
+=======================================
+El código ya está listo. La IA empieza a contestar cuando termines estos 3 pasos.
+Mientras tanto, los jugadores siguen viendo la respuesta automática de la guía y tú contestas en la Bandeja.
+
+Cómo funciona
+-------------
+- Un jugador escribe en 🛟 Soporte.
+- En el servidor de Firebase, la función «responderSoporteIA» le pasa el mensaje a Claude (la IA de Anthropic),
+  junto con la guía del juego (archivo juego3d\nube\functions\soporte-ia.js).
+- La IA le contesta al jugador en su mismo idioma, en pocos segundos.
+- La IA NUNCA da gemas ni premios. Si cree que hay que dar algo (pagó y no le llegó, perdió algo por un fallo),
+  marca el mensaje con 🎁 y a ti te salta un aviso en el juego. Tú decides en 🛟 Soporte › Bandeja:
+  «Compensar» abre el panel de compensación con ese jugador ya elegido, y «Ya di el premio» lo marca como hecho.
+- Si la IA falla, el mensaje queda sin responder y te avisa igual que antes.
+
+Costo aproximado
+----------------
+- IA (Claude Opus 5.5): unos 2 centavos de dólar por mensaje de soporte.
+  100 mensajes al mes ≈ US$ 2.
+- Firebase (plan Blaze): las funciones tienen una parte gratis cada mes; con poco uso de soporte no se paga casi nada.
+
+PASO 1 — Plan Blaze en Firebase (lo haces tú: pide tarjeta)
+  console.firebase.google.com → proyecto «tiny-kingdom-pegao» → abajo a la izquierda «Actualizar» → plan Blaze.
+  Puedes poner un límite de presupuesto (por ejemplo US$ 10 al mes) para que te avise.
+  (Este mismo paso también hace falta para los pagos con dinero real.)
+
+PASO 2 — Cuenta y clave de Anthropic (lo haces tú)
+  a) Entra a console.anthropic.com y crea la cuenta (con la empresa PEGAO APP LLC si quieres).
+  b) Billing → agrega saldo (por ejemplo US$ 5) y, si quieres, un límite mensual.
+  c) API Keys → «Create Key» → nombre: tiny-kingdom-soporte → copia la clave (empieza con sk-ant-).
+     No me la mandes ni la pegues en el chat.
+
+PASO 3 — Guardar la clave en Firebase (lo haces tú, en PowerShell)
+  cd C:\Users\maike\pegao_clash\juego3d\nube
+  npx -y firebase-tools@13.35.1 functions:secrets:set ANTHROPIC_API_KEY --project tiny-kingdom-pegao
+  (Te pide la clave: pégala ahí y Enter. Queda guardada en Google Cloud, nunca en el código.)
+
+Cuando termines, avísame y yo publico la función con:
+  npx -y firebase-tools@13.35.1 deploy --only functions:responderSoporteIA --project tiny-kingdom-pegao
+y la pruebo con un mensaje de soporte.
