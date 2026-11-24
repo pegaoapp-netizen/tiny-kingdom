@@ -1369,3 +1369,6 @@ html body #panel .rul-tab-p.extra i { background: #c8901e; }
 .rm-ventana .mc-x { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #c9902a; background: #2a180b; color: #f3e2bb; font-size: 16px; }
 /* v7.64: sin el botón de chat a la derecha (se encimaba con Misiones); el chat sigue en la barra de abajo */
 #btn-chat, #lateral #btn-chat, body #btn-chat { display: none !important; }
+
+/* v8.02: mientras la Ruleta procesa una tirada, sus botones no responden (no se doblan premios) */
+html body #panel.rul-ocupada [data-accion="rul-tirar"], html body #panel.rul-ocupada [data-accion="rul-galeon"] { pointer-events: none !important; filter: grayscale(.6) brightness(.8); }

@@ -1096,11 +1096,11 @@
     return lista;
   }
   // el dueño del juego no tiene límites
-  function trabajosPendientes(que, L) { return estado.dueno ? [] : trabajosPara(que, L).filter(function (x) { return !x.ok; }); }
+  function trabajosPendientes(que, L) { return trabajosPara(que, L).filter(function (x) { return !x.ok; }); }
   function htmlTrabajos(que, L) {
     var l = trabajosPara(que, L); if (!l.length) return '';
     return '<div class="trabajos"><b>📋 ' + T('tr_titulo') + '</b>' + l.map(function (x) {
-      var ok = x.ok || estado.dueno;
+      var ok = x.ok;
       return '<div class="tr-fila ' + (ok ? 'si' : 'no') + '"><span>' + (ok ? '✅' : '⬜') + ' ' + T('tr_' + x.k, { n: x.need }) + '</span><b>' + x.have + '/' + x.need + '</b></div>';
     }).join('') + '</div>';
   }
@@ -3600,7 +3600,7 @@
   // ---------- CADENA DE DESBLOQUEO: lo que pide cada obra ----------
   var REQ_CONSTRUIR = { academia: [['cuartel', 1], ['jugador', 2]], establo: [['cuartel', 2], ['jugador', 3]], galeria: [['cuartel', 1]], herreria: [['academia', 1]], vigia: [['muralla', 1]], enfermeria: [['cuartel', 1]], almacen: [['castillo', 2]], mercado: [['castillo', 2]] };
   // v8.00: fila de requisito de una investigación de la Academia
-  function filaInvReq(id, pide) { var t = buscarTec(id), lv = (estado.invest || {})[id] || 0; return { nombre: (t ? t.icono : '📜') + ' ' + N('inv_' + id), pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + lv, ok: lv >= pide || !!estado.dueno, k: 'academia', inv: id, n: pide }; }
+  function filaInvReq(id, pide) { var t = buscarTec(id), lv = (estado.invest || {})[id] || 0; return { nombre: (t ? t.icono : '📜') + ' ' + N('inv_' + id), pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + lv, ok: lv >= pide, k: 'academia', inv: id, n: pide }; }
   // v8.00: ÁRBOL DE CONSTRUCCIÓN: qué edificios pide cada uno (para construirlo y para subirlo: al menos ese nivel o el suyo)
   var REQ_ARBOL = { academia: [['castillo', 2], ['almacen', 2]], establo: [['cuartel', 3], ['granja', 3]], galeria: [['cuartel', 2], ['aserradero', 2]], herreria: [['academia', 3], ['mina', 3]],
     embajada: [['castillo', 3], ['mercado', 2]], enfermeria: [['academia', 2], ['cabana', 3]], relevo: [['cuartel', 1]] };
@@ -3608,12 +3608,12 @@
     if (que === 'jugador') pide = nivelReq(pide); // v7.79
     var tiene = que === 'jugador' ? nivelJugador() : que === 'castillo' ? (estado.castillo || 1) : que === 'muralla' ? (estado.muralla || 0) : nivelMayor(que);
     var nom = que === 'jugador' ? '⭐ ' + L('Tu nivel', 'Your level') : que === 'castillo' ? '🏰 ' + T('castillo') : que === 'muralla' ? '🧱 ' + L('Muralla', 'Wall') : (EDIFICIOS[que] ? EDIFICIOS[que].icono + ' ' : '') + N(que);
-    return { nombre: nom, pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + tiene, ok: tiene >= pide || !!estado.dueno, k: que, n: pide };
+    return { nombre: nom, pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + tiene, ok: tiene >= pide, k: que, n: pide };
   }
   // v6.87: objeto especial que pide la obra (se gasta al empezarla)
-  function filaObjeto(k, n) { n = n || 1; var t = (estado.mochila && estado.mochila[k]) || 0; return { nombre: OBJETOS[k].icono + ' ' + N(k), pide: '×' + n, tiene: '×' + t, ok: t >= n || !!estado.dueno, k: k, n: n, objeto: true }; }
+  function filaObjeto(k, n) { n = n || 1; var t = (estado.mochila && estado.mochila[k]) || 0; return { nombre: OBJETOS[k].icono + ' ' + N(k), pide: '×' + n, tiene: '×' + t, ok: t >= n, k: k, n: n, objeto: true }; }
   function gastarEspecial(que, L2) { var k = que === 'castillo' ? ESPECIAL_CASTILLO[L2] : ESPECIAL_EDIFICIO[L2]; if (k && estado.mochila && estado.mochila[k] > 0) estado.mochila[k]--;
-    var cr = cristalesAscension(L2, que === 'castillo'); if (cr && estado.mochila && !estado.dueno) estado.mochila[cr.k] = Math.max(0, (estado.mochila[cr.k] || 0) - cr.n); } // v7.14: cristales de ascensión
+    var cr = cristalesAscension(L2, que === 'castillo'); if (cr && estado.mochila) estado.mochila[cr.k] = Math.max(0, (estado.mochila[cr.k] || 0) - cr.n); } // v7.14: cristales de ascensión
   function requisitosObra(que, L2) {
     var l = [];
     if (que === 'castillo') {
@@ -7190,7 +7190,7 @@
   }
   // v7.27: los trabajos que faltan traen su botón «Ir» (al campamento más cercano, a los campos o a entrenar)
   var IR_TRABAJO = { campamentos: 'tr-ir-camp', recolectas: 'tr-ir-campos', tropas: 'tr-ir-tropas' };
-  function filasTrabajos(que, L2) { return trabajosPara(que, L2).map(function (x) { var ok = x.ok || estado.dueno; return { nombre: '📋 ' + T('tr_' + x.k, { n: x.need }) + (!ok && IR_TRABAJO[x.k] ? ' <button class="comprar mini naranja tr-ir" data-accion="' + IR_TRABAJO[x.k] + '">' + L('Ir ›', 'Go ›') + '</button>' : ''), pide: x.need, tiene: x.have, ok: ok }; }); }
+  function filasTrabajos(que, L2) { return trabajosPara(que, L2).map(function (x) { var ok = x.ok; return { nombre: '📋 ' + T('tr_' + x.k, { n: x.need }) + (!ok && IR_TRABAJO[x.k] ? ' <button class="comprar mini naranja tr-ir" data-accion="' + IR_TRABAJO[x.k] + '">' + L('Ir ›', 'Go ›') + '</button>' : ''), pide: x.need, tiene: x.have, ok: ok }; }); }
   // dos botones como en los juegos de reino: Construir (azul) y Construcción instantánea (verde, con gemas)
   function faltanRecursos(costo) { var f = {}, n = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { var q = Math.max(0, (costo[r] || 0) - (estado.oroInfinito ? Infinity : cantidad(r))); if (q > 0) { f[r] = Math.ceil(q); n += q; } }); return n > 0 ? { f: f, n: n } : null; }
   function gemasRecursos(fr) { return fr ? Math.max(1, Math.ceil(fr.n / 400)) : 0; }
@@ -7219,11 +7219,11 @@
     if (fr) Object.keys(fr.f).forEach(function (r) { sumarRecurso(r, fr.f[r]); });
     hacer();
   }
-  function murallaYa() { var nm = (estado.muralla || 0) + 1, g = gemasParaTerminar(MURALLA.tiempo[nm - 1] * (1 - bono('obras')) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; construirMuralla(); if (obraMuralla) terminarConGemas('muralla'); }
+  function murallaYa() { var fqm = faltaObra('muralla', (estado.muralla || 0) + 1); if (fqm) { consejoTemporal('🔒 ' + fqm); sonar('error'); return; } /* v8.02 */  var nm = (estado.muralla || 0) + 1, g = gemasParaTerminar(MURALLA.tiempo[nm - 1] * (1 - bono('obras')) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; construirMuralla(); if (obraMuralla) terminarConGemas('muralla'); }
   function hayGemas(g) { return estado.gemasInfinitas || estado.dueno || (estado.gemas || 0) >= g; }
-  function construirYa(i, tipo) { var g = gemasParaTerminar(EDIFICIOS[tipo].tiempo[0] * (1 - bono('obras')) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; construir(i, tipo); if (slots[i].obra) terminarConGemas('obra:' + i); }
-  function mejorarYa(i) { var s = slots[i]; if (!s || !s.edificio) return; var g = gemasParaTerminar(EDIFICIOS[s.edificio.tipo].tiempo[s.edificio.nivel] * (1 - bono('obras')) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; mejorar(i); if (slots[i].obra) terminarConGemas('obra:' + i); }
-  function castilloYa() { var n = estado.castillo || 1, g = gemasParaTerminar(tiempoCastillo(n + 1) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; mejorarCastillo(); if (estado.obraCastillo) terminarConGemas('castillo'); }
+  function construirYa(i, tipo) { var fqc = faltaObra(tipo, 1); if (fqc) { consejoTemporal('🔒 ' + fqc); sonar('error'); return; } /* v8.02 */  var g = gemasParaTerminar(EDIFICIOS[tipo].tiempo[0] * (1 - bono('obras')) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; construir(i, tipo); if (slots[i].obra) terminarConGemas('obra:' + i); }
+  function mejorarYa(i) { var sq = slots[i], fqe = sq && sq.edificio ? faltaObra(sq.edificio.tipo, sq.edificio.nivel + 1) || (trabajosPendientes(sq.edificio.tipo, sq.edificio.nivel + 1).length ? L('Faltan trabajos', 'Tasks missing') : '') : ''; if (fqe) { consejoTemporal('🔒 ' + fqe); sonar('error'); return; } /* v8.02 */  var s = slots[i]; if (!s || !s.edificio) return; var g = gemasParaTerminar(EDIFICIOS[s.edificio.tipo].tiempo[s.edificio.nivel] * (1 - bono('obras')) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; mejorar(i); if (slots[i].obra) terminarConGemas('obra:' + i); }
+  function castilloYa() { var nq = (estado.castillo || 1) + 1, fq = faltaObra('castillo', nq) || (trabajosPendientes('castillo', nq).length ? L('Faltan trabajos', 'Tasks missing') : ''); if (fq) { consejoTemporal('🔒 ' + fq); sonar('error'); return; } /* v8.02 */  var n = estado.castillo || 1, g = gemasParaTerminar(tiempoCastillo(n + 1) / velObras()); if (!hayGemas(g)) { consejoTemporal(T('sin_gemas')); sonar('error'); return; } if (!pedirGemas(g)) return; mejorarCastillo(); if (estado.obraCastillo) terminarConGemas('castillo'); }
   // detalle de un edificio antes de construirlo (desde la lista de Construir)
   var tipoAConstruir = null;
   function abrirDetalleConstruir(tipo) {
@@ -9108,7 +9108,7 @@
   function velReal() { return Math.max(velocidad, 0.0001); }
   // Las obras van a tiempo real: el x2 del jugador no las acelera (solo el dueño con su x10)
   function velObras() { return (estado.dueno ? velReal() : 1) * factorImpuestoObras() * (buffActivo('obras') ? 1.25 : 1); } // v6.66: el impuesto alto hace las obras un poco más lentas
-  function gemasParaTerminar(seg) { return Math.max(1, Math.ceil(Math.max(0, seg) / 600) * GEMAS_POR_10MIN); }
+  function gemasParaTerminar(seg) { return Math.max(1, Math.ceil(Math.max(0, seg) / 3600 * GEMAS_HORA)); } // v8.02: 20 gemas por hora (antes 1 cada 10 min)
   // v6.40: la cola puede tener miles de tropas; el resumen se calcula una vez y se reusa mientras no cambie
   var resumenCola = { n: -1, p: null, v: -1, resto: 0, cuenta: {}, ordenes: [] };
   function infoCola() {
@@ -10694,15 +10694,17 @@
   var RULETA = [
     // v6.89: el timón de la Capitana (iconos/ui/rul_timon.webp): 7 cofres en el orden del dibujo, empezando arriba y en el sentido del reloj
     // v6.92: el timón nuevo de Maikel: 8 casillas desde arriba en el sentido del reloj, con 3 llaves
-    { k: 'llave', p: 2.5 }, { k: 'inv_8h', p: 15 }, { k: 'cofre_tesoro', p: 6 }, { k: 'llave', p: 2.5 },
-    { k: 'cofre_plata', p: 28 }, { k: 'llave', p: 2.5 }, { k: 'acel_8h', p: 18 }, { k: 'cofre_oro', p: 18.5 }
+    { k: 'llave', p: 1 }, { k: 'inv_8h', p: 15 }, { k: 'cofre_tesoro', p: 6 }, { k: 'llave', p: 1 }, // v8.02: llaves más raras (antes 2,5 cada una)
+    { k: 'cofre_plata', p: 28 }, { k: 'llave', p: 1 }, { k: 'acel_8h', p: 18 }, { k: 'cofre_oro', p: 18.5 }
   ];
-  var RUL_SIN_LLAVE_MAX = 20; // una llave más o menos cada 13 tiradas, y seguro una cada 20
+  var RUL_SIN_LLAVE_MAX = 40; // v8.02 (antes 20) // una llave más o menos cada 13 tiradas, y seguro una cada 20
   var SETS_RULETA = ['sol', 'luna', 'ancla'], RUL_PIEZA = 0.02; // de vez en cuando, una pieza del Alba, Estelar o del Mar Hondo
   function piezaDeSet(set) { var tiene = piezas().filter(function (p) { return p.s === set; }).map(function (p) { return p.t; }), faltan = TIPOS_EQ.filter(function (t) { return tiene.indexOf(t) < 0; }); var t = (faltan.length ? faltan : TIPOS_EQ)[Math.floor(Math.random() * (faltan.length || TIPOS_EQ.length))]; var p = darPieza(t, 'mitico'); if (p) p.s = set; return p; }
   var RUL_LLAVE = 0.06; // la llave del Galeón sale de regalo de vez en cuando (6%), y seguro una cada 25 tiradas
   var GALEON = { estrella_mar: 1, caracola: 2, cofre_oro: 2, acel_8h: 1, cofre_tesoro: 1 }; // v7.09: sin gemas (las gemas no se regalan)
-  var RUL_FICHAS = 3, RUL_GEMAS = 15;
+  var RUL_FICHAS = 3, RUL_GEMAS = 3; // v8.02: 3 gemas por tirada (antes 15) y 50 tiradas con descuento
+  var RUL_PAQUETE = { 50: 125 };
+  function precioRuleta(n) { return RUL_PAQUETE[n] || RUL_GEMAS * n; }
   function estadoRuleta(id) { var r = estado.ruleta; if (!r) r = estado.ruleta = { id: id, llaves: 0 }; r.id = id; r.llaves = Math.max(0, Math.floor(+r.llaves || 0)); r.sinLlave = Math.max(0, Math.floor(+r.sinLlave || 0)); return r; }
   function htmlRueda() {
     var n = RULETA.length, paso = 360 / n;
@@ -10728,7 +10730,7 @@
       (falta ? '<p>' + L('Junta 5 llaves para abrir el Cofre del Galeón', 'Collect 5 keys to open the Galleon Chest') + ' <b>(' + r.llaves + '/5)</b></p>' : '<button class="az-b verde rul-abrir" data-accion="rul-galeon">' + L('¡Abrir el Cofre del Galeón!', 'Open the Galleon Chest!') + '</button>') + '</div>' +
       '<div class="az-botones rul-botones">' + [[1], [9], [50]].map(function (q) {
         var n = q[0], conF = n < 50 && f >= RUL_FICHAS * n;
-        return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🪙 ' + (RUL_FICHAS * n) : '💎 ' + (RUL_GEMAS * n)) + '</small></button>';
+        return '<button class="az-b ' + (conF ? 'azul' : 'verde') + '" data-accion="rul-tirar" data-n="' + n + '">' + n + ' ' + L(n > 1 ? 'tiradas' : 'tirada', n > 1 ? 'spins' : 'spin') + '<small>' + (conF ? '🪙 ' + (RUL_FICHAS * n) : '💎 ' + precioRuleta(n)) + '</small></button>';
       }).join('') + '</div>';
     // v6.88: si ya está abierta solo se cambia el contenido (sin bajar y subir la ventana) y se mantiene donde estabas
     if (panelActual && panelActual.tipo === 'ruleta' && !$('panel').classList.contains('oculto')) {
@@ -10754,13 +10756,18 @@
     return quedan[quedan.length - 1];
   }
   function sortearRuleta() { var t = RULETA.reduce(function (s, x) { return s + x.p; }, 0), n = Math.random() * t; for (var i = 0; i < RULETA.length; i++) { n -= RULETA[i].p; if (n <= 0) return i; } return 0; }
-  var girando = false;
+  // v8.02: candado: mientras una tirada o el Galeón se procesa, no se puede tocar otra vez (antes, tocando muy rápido, se doblaban cofres)
+  var girando = false, procesandoTirada = false, ultimoToqueRul = 0;
+  function candadoRuleta(on) { procesandoTirada = on; var p = $('panel'); if (p) p.classList.toggle('rul-ocupada', on); }
   function tirarRuleta(n) {
-    if (girando) return;
+    if (girando || procesandoTirada || Date.now() - ultimoToqueRul < 600) return;
+    ultimoToqueRul = Date.now(); candadoRuleta(true);
+    var liberar = true; try {
     var a = eventoActivo('ruleta'); if (!a) { cerrarPanel(); return; }
     var conF = n < 50 && fichasAzar() >= RUL_FICHAS * n;
     if (conF) { if (!estado.gemasInfinitas) estado.fichas -= RUL_FICHAS * n; }
-    else if (!pagar(0, RUL_GEMAS * n)) return;
+    else if (!pagar(0, precioRuleta(n))) return;
+    liberar = false;
     var r = estadoRuleta(a.id), ganados = [], idx = [];
     for (var i = 0; i < n; i++) {
       var j = sortearSinRepetir(r);
@@ -10787,15 +10794,17 @@
     var giro = (rueda && +rueda.dataset.giro || 0); giro += 360 * (n === 1 ? 5 : 3) + (360 - ((giro % 360) + 360) % 360) - ult * paso;
     girando = true; sonar('magia');
     if (rueda) { rueda.style.transition = 'transform ' + (n === 1 ? 3.2 : 1.6) + 's cubic-bezier(.17,.67,.2,1)'; rueda.style.transform = 'rotate(' + giro + 'deg)'; rueda.dataset.giro = giro; }
-    setTimeout(function () { girando = false; mostrarPremiosRuleta(ganados); }, n === 1 ? 3300 : 1700);
+    setTimeout(function () { girando = false; mostrarPremiosRuleta(ganados); setTimeout(function () { candadoRuleta(false); }, 400); }, n === 1 ? 3300 : 1700);
+    } finally { if (liberar) candadoRuleta(false); }
   }
   // v6.88: abrir el Cofre del Galeón con 5 llaves (sin depender del evento: las llaves no se pierden)
   function abrirGaleon() {
-    var r = estado.ruleta; if (!r || r.llaves < 5) return;
+    var r = estado.ruleta; if (!r || r.llaves < 5 || procesandoTirada) return;
+    candadoRuleta(true); setTimeout(function () { candadoRuleta(false); }, 1600);
     var veces = Math.floor(r.llaves / 5); r.llaves -= veces * 5; // v6.88: con 10, 15… llaves se abren todos los galeones a la vez
-    var l = [{ ico: '<img class="ico-obj" src="iconos/ui/o_galeon.webp" alt="🎁">', nom: L('Cofre del Galeón', 'Galleon Chest') + (veces > 1 ? ' ×' + veces : ''), gordo: true }];
-    Object.keys(GALEON).forEach(function (k) { estado.mochila[k] = (estado.mochila[k] || 0) + GALEON[k] * veces; l.push({ ico: OBJETOS[k].icono, nom: N(k) + ' ×' + GALEON[k] * veces, cat: subcatObjeto(k) }); });
-    for (var gv = 0; gv < veces; gv++) { var gp = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (gp) l.push({ ico: icoPieza(gp), nom: nombrePieza(gp), cat: 'equipo', gordo: true }); }
+    // v8.02: el Cofre del Galeón va primero al Inventario › Cofre; desde ahí se abre (uno o en masa)
+    estado.mochila.cofre_galeon = (estado.mochila.cofre_galeon || 0) + veces;
+    var l = []; for (var gv = 0; gv < veces; gv++) l.push({ ico: OBJETOS.cofre_galeon.icono, nom: N('cofre_galeon'), cat: 'cofre', gordo: true });
     guardar(true); actualizarHUD();
     var c = document.querySelector('.rul-cofre'); if (c) c.classList.add('abriendo');
     sonar('magia'); setTimeout(function () { mostrarPremiosRuleta(l, true); }, 900);
@@ -11007,6 +11016,7 @@
     else if (o.paquete) { estado.mochila[k]--; Object.keys(o.paquete).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.paquete[q]; }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ objetos: o.paquete })); return; }
     else if (o.mejora) { estado.mochila[k]--; var pzs = o.mejora.map(function (r) { return darPieza(null, r); }); Object.keys(o.extra || {}).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + o.extra[q]; }); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: pzs, objetos: o.extra })); return; }
     else if (o.tropas) { var nt = 0; Object.keys(o.tropas).forEach(function (t) { for (var q = 0; q < o.tropas[t]; q++) { if (tropasOcupadas() >= capacidad()) break; crearTropa(t, puertaCuartel()); nt++; } }); if (!nt) { consejoTemporal(T('sin_espacio')); sonar('error'); return; } estado.mochila[k]--; sonar('cuerno'); consejoTemporal(L('¡Llegaron ' + nt + ' reclutas!', nt + ' recruits arrived!')); actualizarHUD(); guardar(true); reabrirPanel(); return; }
+    else if (o.galeon) { estado.mochila[k]--; var gObj = {}; Object.keys(GALEON).forEach(function (q) { estado.mochila[q] = (estado.mochila[q] || 0) + GALEON[q]; gObj[q] = GALEON[q]; }); var gpz = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ objetos: gObj, piezas: gpz ? [gpz] : [] })); return; } // v8.02
     else if (o.equipo) { estado.mochila[k]--; var pz1 = darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'); guardar(true); reabrirPanel(); mostrarRecompensas(N(k), premioAItems({ piezas: [pz1] })); return; }
     else if (o.cofre) {
       premio = {};
@@ -11055,6 +11065,7 @@
       if (o.paquete) Object.keys(o.paquete).forEach(function (q) { objs[q] = (objs[q] || 0) + o.paquete[q]; });
       if (o.mejora) o.mejora.forEach(function (r) { pzs.push(darPieza(null, r)); });
       if (o.extra) Object.keys(o.extra).forEach(function (q) { objs[q] = (objs[q] || 0) + o.extra[q]; }); // v7.97
+      if (o.galeon) { Object.keys(GALEON).forEach(function (q) { objs[q] = (objs[q] || 0) + GALEON[q]; }); var gpm = piezaDeSet(SETS_RULETA[Math.floor(Math.random() * SETS_RULETA.length)]); if (gpm) pzs.push(gpm); } // v8.02
       if (o.equipo) pzs.push(darPieza(null, Math.random() < 0.2 ? 'legendario' : 'raro'));
       if (TROPAS_COFRE[k]) { var tq = TROPAS_COFRE[k][Math.floor(Math.random() * TROPAS_COFRE[k].length)]; tot.tropas = tot.tropas || {}; tot.tropas[tq[0]] = (tot.tropas[tq[0]] || 0) + tq[1]; }
       (EXTRA_COFRE[k] || []).forEach(function (e) { if (Math.random() >= e[2]) return; if (e[0] === 'pieza') pzs.push(darPieza(null, e[1])); else objs[e[0]] = (objs[e[0]] || 0) + e[1]; });
@@ -11095,7 +11106,7 @@
     if (o.portal) l.push(['🌀', o.portal === 'elegir' ? L('Mueve tu reino al lugar que elijas', 'Moves your kingdom where you choose') : L('Mueve tu reino a un lugar al azar', 'Moves your kingdom to a random place'), '']);
     return l;
   }
-  function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo || o.da); } // v7.06: bolsas y sacos de recursos también se abren en masa
+  function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo || o.da || o.galeon); } // v7.06: bolsas y sacos de recursos también se abren en masa
   // v6.89: los cofres no traen solo recursos: también armaduras/armas para los héroes, aceleradores, libros y escudos (con su probabilidad)
   var EXTRA_COFRE = {
     cofre_madera: [['pieza', 'comun', 0.12], ['acel_1h', 1, 0.3], ['libro_peq', 1, 0.2]],

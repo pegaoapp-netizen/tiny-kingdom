@@ -97,6 +97,15 @@ try {
   if (/GALEON_GEMAS\s*\*/.test(jg)) err('El Cofre del Galeón suma GALEON_GEMAS: las gemas no se regalan.');
 } catch (e) {}
 
+// 9) la portada: el dibujo que dice PORTADA.foto en js/tk-portada.js tiene que existir
+try {
+  const pt = fs.readFileSync(path.join(RAIZ, 'js', 'tk-portada.js'), 'utf8');
+  const m = pt.match(/foto:\s*'([^']+)'/);
+  if (!m) err('No encontré "foto:" en PORTADA (js/tk-portada.js).');
+  else if (!existe(m[1])) err('La portada usa "' + m[1] + '" pero ese archivo no existe. Ponlo en esa carpeta o corrige el nombre en js/tk-portada.js.');
+  else if (fs.statSync(path.join(RAIZ, m[1])).size > 1500 * 1024) avi('La foto de la portada pesa más de 1,5 MB: guárdala en JPG calidad 80 para que cargue rápido en el teléfono.');
+} catch (e) { if (e.code !== 'ENOENT') err('No se pudo revisar la portada: ' + e.message); }
+
 // 7) lo que carga la página
 try {
   const html = fs.readFileSync(path.join(RAIZ, 'index.html'), 'utf8');

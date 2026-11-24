@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.01';
+var VERSION_JUEGO = '8.02';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -448,6 +448,7 @@ var NOMBRES = {
   estrella_mar: { es: 'Estrella de Mar', en: 'Starfish', des_es: 'Hace falta para subir un edificio o la muralla a los niveles con estrella (13★ al 16★).', des_en: 'Needed to upgrade a building or the wall to star levels (13★ to 16★).' },
   lingote: { es: 'Lingote real', en: 'Royal ingot', des_es: 'Un lingote que vale 1.000.000 de oro.', des_en: 'An ingot worth 1,000,000 gold.' },
   cofre_tesoro: { es: 'Cofre del Tesoro', en: 'Treasure chest', des_es: 'Muchos recursos al abrirlo.', des_en: 'Lots of resources when opened.' },
+  cofre_galeon: { es: 'Cofre del Galeón', en: 'Galleon Chest', des_es: 'Se gana con 5 llaves en la Ruleta. Trae Estrella de Mar, Caracolas, Cofres de oro, un Acelerador de 8 horas, un Cofre del Tesoro y una pieza de armadura de héroe.', des_en: 'Won with 5 keys on the Wheel. Holds a Sea Star, Conches, Golden chests, an 8-hour Speed-up, a Treasure chest and a hero armor piece.' }, // v8.02
   pack_tesoro7: { es: '7 Cofres del Tesoro', en: '7 Treasure chests', des_es: 'Paquete de 7 cofres del tesoro.', des_en: 'Pack of 7 treasure chests.' },
   pack_tesoro15: { es: '15 Cofres del Tesoro', en: '15 Treasure chests', des_es: 'Paquete de 15 cofres del tesoro.', des_en: 'Pack of 15 treasure chests.' },
   cofre_acel: { es: 'Cofre de aceleradores', en: 'Speed-up chest', des_es: '10 de 15 min, 5 de 1 hora, 2 de 8 horas y 1 de 24 horas.', des_en: '10× 15 min, 5× 1 hour, 2× 8 hours and 1× 24 hours.' },
@@ -791,6 +792,7 @@ var OBJETOS = {
   caracola_real: { icono: '🐚', especial: true }, perla_rey: { icono: '🫧', especial: true }, corona_coral: { icono: '👑', especial: true },
   caracola:     { icono: '🐚', especial: true }, flor_coral: { icono: '🌺', especial: true },
   elevacion_sol: { icono: '☀️', especial: true }, estrella_rey: { icono: '🌟', especial: true }, estrella_mar: { icono: '⭐', especial: true },
+  cofre_galeon: { icono: '🎁', galeon: true }, // v8.02: se abre en el Inventario (contenido en GALEON, juego.js)
   cofre_tesoro: { icono: '🎁', cofre: { oro: [20000, 50000], comida: [20000, 50000], madera: [20000, 50000], piedra: [10000, 30000] } },
   pack_tesoro7: { icono: '🎁', paquete: { cofre_tesoro: 7 } },
   pack_tesoro15: { icono: '🎁', paquete: { cofre_tesoro: 15 } },
@@ -847,7 +849,7 @@ var ICONOS_IMG = {
   cofre_madera: 'o_cofre_madera', cofre_plata: 'o_cofre_plata', cofre_oro: 'o_cofre_oro',
   cofre_acel: 'o_cofre_acel',
   cofre_equipo: 'o_cofre_equipo',
-  cofre_tesoro: 'o_cofre_tesoro', pack_tesoro7: 'o_cofre_tesoro', pack_tesoro15: 'o_cofre_tesoro',
+  cofre_galeon: 'o_galeon', cofre_tesoro: 'o_cofre_tesoro', pack_tesoro7: 'o_cofre_tesoro', pack_tesoro15: 'o_cofre_tesoro',
   cofre_mejora1: 'o_cofre_mejora', cofre_mejora2: 'o_cofre_mejora', cofre_mejora3: 'o_cofre_mejora', cofre_mejora4: 'o_cofre_mejora'
 };
 // retratos dibujados de las tropas (si no hay, se usa la foto del modelo 3D)
@@ -1038,7 +1040,7 @@ var PUNTO_REUNION = [-12.5, 2.5];
 // el que quiera rápido usa gemas o el Acelerador.
 // (v4.9: los tiempos ahora salen de TIEMPO_NIVEL y BASE_EDIFICIO, arriba; el castillo va de 5 min a 24 h)
 // Terminar ya con gemas: 1 gema por cada 10 minutos que falten
-var GEMAS_POR_10MIN = 1;
+var GEMAS_POR_10MIN = 1; var GEMAS_HORA = 20; // v8.02: Instantánea cuesta 20 gemas por hora
 // El Acelerador quita este tiempo (segundos) a todas las obras
 var ACELERADOR_SEG = 3600;
 

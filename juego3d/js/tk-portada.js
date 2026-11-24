@@ -1,8 +1,18 @@
 // v7.12: PORTADA AL ABRIR EL JUEGO
 // Sale apenas se abre la página (antes de que cargue el 3D): un héroe pintado de Tiny Kingdom en grande,
 // el título en una cinta dorada y una barra de carga dorada. Cuando el juego está listo se desvanece.
-// Los héroes son los nuestros (iconos/ui/h_*.webp). Si algún día hay un dibujo grande vertical,
-// v7.13: ahora usa iconos/ui/portada.jpg (la portada del dibujante); si no carga, la dibujada con un héroe.
+// v7.13: usa la portada del dibujante; si no carga, la dibujada con uno de nuestros héroes (iconos/ui/h_*.webp).
+//
+// ===== CÓMO CAMBIAR LA PORTADA CUANDO SALE UN HÉROE NUEVO FUERTE =====
+//  1. Pon el dibujo vertical (por ejemplo 1152 × 2048) en iconos/ui/ con un nombre nuevo, por ejemplo portada_tritón.jpg
+//     (que pese poco: guardarlo en JPG calidad 80 deja unos 500 KB).
+//  2. Cambia SOLO las líneas de PORTADA de aquí abajo: foto = ese archivo; nuevo = el nombre del héroe (o '' para no poner letrero).
+//  3. Sube el número de la versión (?v=) de tk-portada.js en index.html. El revisor no deja publicar si la foto no existe.
+var PORTADA = {
+  foto: 'iconos/ui/portada.jpg',   // el dibujo de la portada
+  nuevo: '',                       // nombre del héroe nuevo: sale «¡Nuevo héroe: …!» encima; '' = sin letrero
+  version: 713                     // súbelo cuando cambies la foto, para que los teléfonos no muestren la vieja
+};
 (function () {
   if (document.getElementById('tk-portada')) return;
   var HEROES = [['luna', 'Luna'], ['sol', 'Sir Sol'], ['ancla', 'Capitán Ancla'], ['trueno', 'Trueno'], ['fenix', 'Fénix']];
@@ -43,7 +53,11 @@
     '#tk-portada .pt-foto { position: absolute; inset: 0; background: #1a0f08 no-repeat top center / contain; animation: ptFoto .9s ease-out both; -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(177.7vw - 110px), transparent calc(177.7vw - 4px)); mask-image: linear-gradient(180deg, #000 0, #000 calc(177.7vw - 110px), transparent calc(177.7vw - 4px)); }',
     '#tk-portada.con-foto { background: linear-gradient(180deg, #2a1a10, #120a05); }',
     '#tk-portada .pt-espacio { flex: 1; }',
-    '#tk-portada.con-foto .pt-pie { padding-top: 110px; background: linear-gradient(180deg, transparent 0%, rgba(18,10,5,.75) 45%, #120a05 75%); }',
+    '#tk-portada .pt-nuevo { position: relative; z-index: 4; display: table; margin: 0 auto 14px; padding: 6px 24px 8px; text-align: center; border-radius: 14px; background: linear-gradient(180deg, #b8231e, #6a0d0a); border: 3px solid #ffd25a; box-shadow: 0 0 22px rgba(255,200,80,.7), 0 6px 14px rgba(0,0,0,.6); animation: ptNuevo 1.6s ease-in-out infinite; }',
+    '#tk-portada .pt-nuevo span { display: block; color: #ffe9a8; font: 800 13px system-ui, sans-serif; letter-spacing: 2px; text-transform: uppercase; }',
+    '#tk-portada .pt-nuevo b { display: block; color: #fff; font: 900 24px Georgia, serif; text-shadow: 0 2px 0 #4a0a08, 0 0 10px rgba(255,210,90,.8); }',
+    '@keyframes ptNuevo { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }',
+    '#tk-portada.con-foto .pt-pie { padding-top: 70px; background: linear-gradient(180deg, transparent 0%, rgba(18,10,5,.75) 45%, #120a05 75%); }',
     '@keyframes ptFoto { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }',
     '#tk-portada .pt-pie { position: relative; }',
     '#tk-portada .pt-txt { margin-top: 8px; color: #f3dfae; font: 600 13px system-ui, sans-serif; text-shadow: 0 1px 2px #000; }'
@@ -52,7 +66,7 @@
 
   var d = document.createElement('div'); d.id = 'tk-portada';
   // v7.13: la portada del dibujante (título, castillo junto al mar y Sir Sol) a pantalla completa; si no carga, sale la portada dibujada de antes
-  var FOTO = 'iconos/ui/portada.jpg?v=713';
+  var FOTO = PORTADA.foto + '?v=' + PORTADA.version;
   // v7.15: copia diminuta de la portada dentro del código: se ve desde el primer instante (borrosa) mientras carga la grande
   var MINI = 'data:image/jpeg;base64,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';
   var PIE = '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div><div id="pt-version" style="position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 6px);font:600 11px system-ui,sans-serif;color:#f3dfae;opacity:.7"></div></div>';
@@ -63,7 +77,8 @@
     '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
   }
   d.className = 'con-foto';
-  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-espacio"></div>' + PIE;
+  var LETRERO = PORTADA.nuevo ? '<div class="pt-nuevo"><span>' + (en ? 'New hero' : '¡Nuevo héroe!') + '</span><b>' + String(PORTADA.nuevo).replace(/</g, '&lt;') + '</b></div>' : '';
+  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-espacio"></div>' + PIE.replace('<div class="pt-pie">', '<div class="pt-pie">' + LETRERO);
   var prueba = new Image(); prueba.onerror = function () { var av = document.getElementById('pt-avance'), w = av ? av.style.width : ''; d.className = ''; armarDibujada(); var av2 = document.getElementById('pt-avance'); if (av2) av2.style.width = w; }; prueba.src = FOTO;
   (document.body || document.documentElement).appendChild(d);
 
