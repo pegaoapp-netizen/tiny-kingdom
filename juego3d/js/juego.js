@@ -5313,7 +5313,7 @@
       if (M3.camelot) g.traverse(function (o) { o.frustumCulled = false; if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = !!M3.ov; o.material.transparent = o.material.transparent && o.material.opacity < 1; o.material.opacity = o.material.transparent ? o.material.opacity : 1; if (o.material.emissive && (o.isSkinnedMesh || o.material.map)) { o.material.emissive.setHex(0x3a3a3a); if (o.material.map) o.material.emissiveMap = o.material.map; } o.renderOrder = 8; o.userData.encima = true; } });
       // etiqueta con lo que falta (se cambia una vez por segundo)
       var txt = v.txt + ' · ' + fmtTiempo((v.llega - ahora) / 1000);
-      if (g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) {
+      if (false && g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) { // v8.11: sin letreros en el mapa (todo sale en Marchar, abajo)
         if (g.userData.et) g.remove(g.userData.et); g.children.filter(function (c) { return c.userData && c.userData.esEt; }).forEach(function (c) { g.remove(c); }); // v7.26: nunca dos carteles
         var et = M.etiquetaEdificio(txt, v.carro ? '🛒' : v.enemigo ? '🔥' : '⚔'); et.position.set(0, g.userData.col.userData.sprites ? 2.6 : 1.9, 0); et.scale.multiplyScalar(0.5); g.add(et);
         et.userData.esEt = true; g.userData.et = et; g.userData.txt = txt; g.userData.tEt = ahora;
@@ -13100,6 +13100,25 @@
       m.llega = nueva; sonar('magia'); consejoTemporal('⚡ ' + L('¡Marcha acelerada!', 'March sped up!')); guardar(true); actualizarHUD(); actualizarDock();
     }).catch(function () { consejoTemporal(L('No se pudo acelerar. Prueba otra vez.', 'Could not speed up. Try again.')); sonar('error'); });
   }
+  // v8.11: todo lo que va en camino (ataques, marchas a bestias y aldeas, carretas de ida y vuelta, lo que te llega y las tropas que regresan)
+  function listaMovimientos(ahora) {
+    var l = [];
+    marchas.forEach(function (m) { if (!m.resuelto && !m.cancelado && m.llega > ahora) l.push({ ico: '⚔️', txt: escaparHTML(m.defensorNombre || ''), llega: m.llega, id: m.id, ataque: true }); });
+    marchasPVE.forEach(function (m) { if (m.llega > ahora) l.push({ ico: m.vuelta ? '🏇' : '⚔️', txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven a casa', 'Returning home')) : escaparHTML(String(m.txt || '').replace(/^\S+\s/, '')), llega: m.llega }); });
+    carretas().viajes.forEach(function (v) { if (!v.de || !v.a) return; if (ahora < v.llega) l.push({ ico: '🛒', txt: '×' + v.n + (v.nombre ? ' → ' + escaparHTML(v.nombre) : ''), llega: v.llega }); else if (v.vuelve && ahora < v.vuelve) l.push({ ico: '🛒', txt: '×' + v.n + ' ' + L('vuelven', 'returning'), llega: v.vuelve }); });
+    enviosEnCamino.forEach(function (e) { if (e.llega > ahora) l.push({ ico: '📦', txt: escaparHTML(e.deNombre || '?') + ' → ' + L('a ti', 'to you'), llega: e.llega }); });
+    (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) l.push({ ico: '🏇', txt: L('Regresan', 'Returning') + (v.nombre ? ' ' + L('de ', 'from ') + escaparHTML(v.nombre) : ''), llega: v.llega }); });
+    return l.sort(function (a, b) { return a.llega - b.llega; });
+  }
+  function pintarListaMarchas(movs, ahora) {
+    var d = $('dock-procesos'); if (!d) return;
+    var c = $('dk-lista'); if (!c) { c = document.createElement('div'); c.id = 'dk-lista'; d.appendChild(c); c.addEventListener('click', function (ev) { var b = ev.target.closest('[data-macel],[data-mret]'); if (!b || enMenu) return; sonar('click'); if (b.hasAttribute('data-macel')) { acelerarMarcha(b.getAttribute('data-macel')); return; } var id = b.getAttribute('data-mret'), m = marchas.filter(function (x) { return x.id === id; })[0]; if (!m) return; confirmarJuego('↩ ' + L('Retirar marcha', 'Recall march'), L('¿Retirar la marcha? Tus tropas vuelven a casa sin pelear.', 'Recall the march? Your troops come home without fighting.'), L('Retirar', 'Recall'), function () { cancelarMarcha(m); actualizarDock(); }); }); }
+    var ver = dockPest === 'marchar' && movs.length > 0;
+    c.style.display = ver ? '' : 'none'; d.classList.toggle('con-lista', ver);
+    if (!ver) { c.innerHTML = ''; c.dataset.h = ''; return; }
+    var h = movs.map(function (x) { return '<div class="dkl-fila"><span class="dkl-ico">' + x.ico + '</span><span class="dkl-txt">' + x.txt + '</span><b class="dkl-t">⏱ ' + fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000))) + '</b>' + (x.ataque ? '<button class="dkl-b acel" data-macel="' + x.id + '">⚡</button><button class="dkl-b ret" data-mret="' + x.id + '">↩</button>' : '') + '</div>'; }).join('');
+    if (c.dataset.h !== h) { c.dataset.h = h; c.innerHTML = h; }
+  }
   function actualizarDock() {
     var d = crearDock();
     var hayMarchaYa = marchas.some(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }) || marchasPVE.length > 0;
@@ -13130,6 +13149,10 @@
       btn = lleno ? L('Ver', 'View') : L('Conquistar', 'Conquer'); acc = 'mundo';
     } else if (dockPest === 'marchar') {
       lleno = activo.marchar;
+      var movs = listaMovimientos(ahora);
+      if (movs.length) { lleno = true; txt = '🏇 ' + L('En camino: ', 'On the way: ') + movs.length; btn = ''; acc = ''; pintarListaMarchas(movs, ahora); }
+      else pintarListaMarchas([], ahora);
+    } else if (false) {
       // v7.19: la marcha que llega primero, con ⚡ Acelerar y ↩ Retirar (como KoC: nada flota encima del menú)
       var prox = marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > ahora; }).sort(function (x, y) { return x.llega - y.llega; })[0];
       if (prox) {
@@ -13149,7 +13172,9 @@
       txt = lleno ? '📚 ' + (ti ? ti.icono + ' ' : '') + N('inv_' + inv.id) + ' → ' + L('Nv ', 'Lv ') + inv.nivel + ' · <b>⏱ ' + fmtTiempo(faltaInvestigacion()) + '</b>' : L('No hay ninguna investigación activa.', 'No research in progress.');
       btn = lleno ? '⏩ ' + L('Acelerar', 'Speed up') : L('Comenzar', 'Start'); acc = lleno ? 'acel:invest' : 'invest';
     }
+    if (dockPest !== 'marchar') pintarListaMarchas([], ahora);
     var t = $('dk-txt'), b = $('dk-accion'), b2 = $('dk-retirar');
+    b.style.display = btn ? '' : 'none';
     var idRet = dockPest === 'marchar' && acc.indexOf('macel:') === 0 ? acc.slice(6) : '';
     b2.style.display = idRet ? '' : 'none'; b2.setAttribute('data-id', idRet);
     if (t.dataset.h !== txt) { t.dataset.h = txt; t.innerHTML = txt; }
