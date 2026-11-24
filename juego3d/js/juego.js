@@ -2945,7 +2945,7 @@
   }
   // v8.13: tropas acampadas en tus terrenos (se quedan hasta que las llames)
   function guarniciones() { var l = [], cs = estado.casillas || {}; for (var id in cs) if (cs[id] && cs[id].g) l.push({ id: id, c: cs[id], g: cs[id].g }); return l; }
-  function nombreGuarnicion(q) { var p = String(q.id).split('_'); return T('cas_' + q.c.tipo) + ' ' + L('Nv ', 'Lv ') + q.c.nivel + (p.length >= 2 ? ' · ' + p[p.length - 2] + ',' + p[p.length - 1] : ''); }
+  function nombreGuarnicion(q) { var p = String(q.id).split('_'); return T('cas_' + q.c.tipo) + ' ' + L('Nv ', 'Lv ') + q.c.nivel + (p.length >= 2 ? ' (' + p[p.length - 2] + ', ' + p[p.length - 1] + ')' : ''); } /* v8.58 */
   function llamarGuarnicion(id, callado) {
     var cs = (estado.casillas || {})[id]; if (!cs || !cs.g) return;
     var g = cs.g, ahora = Date.now(), nom = T('cas_' + cs.tipo); delete cs.g;
@@ -13717,6 +13717,12 @@
     var ver = dockPest === 'marchar' && dockAbierto && movs.length > 0;
     c.style.display = ver ? '' : 'none'; d.classList.toggle('con-lista', ver);
     if (!ver) { c.innerHTML = ''; c.dataset.h = ''; return; }
+    var est = movs.map(function (x) { return (x.id || x.gid || x.txt) + (x.ataque ? 'a' : x.acel ? 'c' : x.gid ? 'g' : ''); }).join('|');
+    if (c.dataset.est === est && c.children.length === movs.length) {
+      movs.forEach(function (x, j) { var k = x.id || x.gid || (x.txt + x.llega), fila = c.children[j]; if (!fila) return; var tot = Math.max(1, x.llega - (inicioMov[k] || ahora)), pct = x.gid ? 100 : Math.max(4, Math.min(100, Math.round((ahora - (inicioMov[k] || ahora)) / tot * 100))); var bi = fila.querySelector('.kc-barra i'), tb = fila.querySelector('.kc-barra b'); if (bi) bi.style.width = pct + '%'; if (tb && !x.gid) { var tt = fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000))); if (tb.textContent !== tt) tb.textContent = tt; } });
+      return;
+    }
+    c.dataset.est = est; c.dataset.h = '';
     var h = movs.map(function (x) {
       var k = x.id || x.gid || (x.txt + x.llega); if (!inicioMov[k]) inicioMov[k] = ahora; var tot = Math.max(1, x.llega - inicioMov[k]), pct = x.gid ? 100 : Math.max(4, Math.min(100, Math.round((ahora - inicioMov[k]) / tot * 100)));
       var nom = x.ataque ? L('Atacar ', 'Attack ') + x.txt : x.txt, t = x.gid ? L('Acampadas', 'Camped') : fmtTiempo(Math.max(0, Math.ceil((x.llega - ahora) / 1000)));

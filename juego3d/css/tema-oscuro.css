@@ -1596,3 +1596,7 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 
 /* v8.57: todas las marchas (hasta 10) una encima de otra, sin barra de desplazamiento */
 #dk-lista { max-height: none !important; overflow: visible !important; }
+
+/* v8.58: el número rojo va en la esquina del botón Marchar, sin tapar el nombre */
+#dock-procesos [data-dk="marchar"] { position: relative !important; overflow: visible !important; }
+.kc-badge { top: -9px !important; right: -4px !important; left: auto !important; min-width: 17px; height: 17px; font-size: 10.5px; line-height: 15px; z-index: 2; }
