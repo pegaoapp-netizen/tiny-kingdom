@@ -1372,3 +1372,22 @@ html body #panel .rul-tab-p.extra i { background: #c8901e; }
 
 /* v8.02: mientras la Ruleta procesa una tirada, sus botones no responden (no se doblan premios) */
 html body #panel.rul-ocupada [data-accion="rul-tirar"], html body #panel.rul-ocupada [data-accion="rul-galeon"] { pointer-events: none !important; filter: grayscale(.6) brightness(.8); }
+
+/* ===== v8.07: botón flotante del Torneo y compensación por Correo ===== */
+#btn-torneo-flot { position: fixed; z-index: 34; right: 6px; top: calc(env(safe-area-inset-top) + 470px); width: 62px; padding: 4px 2px 5px; border-radius: 14px; border: 2px solid #f2c45a; background: radial-gradient(circle at 50% 30%, #8a4a1a, #3a1c08); color: #ffe9a8; display: flex; flex-direction: column; align-items: center; gap: 1px; box-shadow: 0 4px 10px rgba(0,0,0,.55), 0 0 12px rgba(255,200,90,.45); animation: tfLatido 2.4s ease-in-out infinite; }
+#btn-torneo-flot.oculto { display: none !important; }
+#btn-torneo-flot .tf-ico { font-size: 26px; line-height: 1; }
+#btn-torneo-flot b { font: 800 11px system-ui, sans-serif; }
+#btn-torneo-flot small { font: 700 10px system-ui, sans-serif; color: #fff; background: rgba(0,0,0,.45); border-radius: 6px; padding: 0 4px; }
+@keyframes tfLatido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+html body #panel .comp-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; margin: 8px 0; }
+html body #panel .comp-it { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border-radius: 10px; background: rgba(255,230,170,.10); border: 1px solid rgba(242,196,90,.35); text-align: center; }
+html body #panel .comp-ic { font-size: 30px; line-height: 1; } html body #panel .comp-ic img { width: 40px; height: 40px; object-fit: contain; }
+html body #panel .comp-it small { font-size: 11px; line-height: 1.15; } html body #panel .comp-it b { color: #7fe07a; font-size: 13px; }
+html body #panel .comp-it .co-borrar { position: absolute; top: 2px; right: 2px; }
+html body #panel .comp-vence { margin: 6px 0; font-weight: 700; color: #ffcf6a; text-align: center; }
+html body #panel .comp-cobrar, html body #panel .co-leer .comp-cobrar { width: 100%; min-height: 50px; font-size: 18px !important; }
+html body #panel .comp-panel h4 { margin: 12px 0 6px; }
+html body #panel .comp-panel input, html body #panel .comp-panel textarea, html body #panel .comp-panel select { width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #b08a4a; background: #fff8e2; color: #2a1a08; padding: 7px; font-size: 15px; }
+html body #panel .comp-fila { display: flex; gap: 6px; } html body #panel .comp-fila input[type=number] { width: 80px; flex: none; }
+html body #panel .comp-rec { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; } html body #panel .comp-rec label { display: flex; align-items: center; gap: 6px; font-size: 18px; }

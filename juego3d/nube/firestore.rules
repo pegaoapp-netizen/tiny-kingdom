@@ -373,6 +373,18 @@ service cloud.firestore {
       allow delete: if request.auth != null && (resource.data.para == request.auth.uid || esDueno());
     }
 
+    // v8.07: COMPENSACIONES. Solo el dueño las crea; cada jugador lee las suyas y las de «todos».
+    match /compensaciones/{id} {
+      allow read: if request.auth != null && (resource.data.para == 'todos' || resource.data.para == request.auth.uid || esDueno());
+      allow create: if esDueno()
+        && request.resource.data.keys().hasOnly(['para', 'paraNombre', 'deNombre', 'titulo', 'texto', 'premio', 'fecha', 'vence'])
+        && request.resource.data.para is string && request.resource.data.para.size() <= 64
+        && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 80
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 600
+        && request.resource.data.premio is map && request.resource.data.premio.size() <= 20
+        && request.resource.data.fecha is int && request.resource.data.vence is int;
+      allow delete: if esDueno();
+    }
     // v7.07: SOPORTE. Cada jugador crea sus mensajes y lee solo los suyos; el dueño lee todos, responde y borra.
     match /soporte/{id} {
       allow read: if request.auth != null && (resource.data.de == request.auth.uid || esDueno());

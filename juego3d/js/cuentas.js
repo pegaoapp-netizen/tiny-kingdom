@@ -405,6 +405,9 @@ var Cuentas = (function () {
       return db.collection('regalos').where('para', '==', usuario.uid).limit(20).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); });
     },
     borrarRegalo: function (id) { return db.collection('regalos').doc(id).delete(); },
+    // v8.07: COMPENSACIONES del dueño por Correo (a un jugador o a todos)
+    enviarCompensacion: function (d) { return db.collection('compensaciones').add(d); },
+    misCompensaciones: function () { if (!usuario) return Promise.resolve([]); return db.collection('compensaciones').where('para', 'in', ['todos', usuario.uid]).limit(40).get().then(function (q) { return q.docs.map(function (d) { var x = d.data(); x.id = d.id; return x; }); }); },
     buscarJugador: function (nombre) {
       // v6.94: nombre exacto o que empiece así
       var t = String(nombre).trim(); function lista(q) { return q.docs.map(function (d) { var x = normAldea(d.data()); x.uid = d.id; return x; }); }
