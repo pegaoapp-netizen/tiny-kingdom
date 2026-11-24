@@ -204,6 +204,8 @@ var Cuentas = (function () {
         var e = d.espia || {}, es = {};
         ['nivelJ', 'castillo', 'muralla', 'heroes'].forEach(function (k) { if (e[k] !== undefined) es[k] = ent(e[k], 0, 1e9); });
         if (e.tropas && typeof e.tropas === 'object') { es.tropas = {}; Object.keys(e.tropas).slice(0, 40).forEach(function (k) { es.tropas[k] = ent(e.tropas[k], 0, 1e9); }); }
+        // v8.31: los recursos (los ve el espía)
+        if (e.rec && typeof e.rec === 'object') { es.rec = {}; ['comida', 'oro', 'madera', 'piedra', 'hierro'].forEach(function (k) { if (e.rec[k] !== undefined) es.rec[k] = ent(e.rec[k], 0, 1e15); }); }
         // v8.16: el héroe defensor también viaja (antes se perdía y el que defendía peleaba sin su héroe)
         if (e.hd && typeof e.hd === 'object') { es.hd = { h: String(e.hd.h || '').slice(0, 30) }; ['n', 'c', 'a', 'v', 'fa', 'fv', 's'].forEach(function (k) { var v = +e.hd[k]; if (isFinite(v)) es.hd[k] = Math.max(-1e6, Math.min(1e6, Math.round(v * 10) / 10)); }); }
         doc.espia = es;

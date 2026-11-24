@@ -167,7 +167,8 @@ service cloud.firestore {
           || esCanciller(resource.data.get('alD', '')) || esCanciller(resource.data.get('alA', ''))
           || esMiembroAl(resource.data.get('alD', '')) || esMiembroAl(resource.data.get('alA', ''))); // v7.99: Muro › Informes
       allow create: if request.auth != null
-        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto', 'llega', 'resuelto', 'cobrado', 'bajas', 'alA', 'alD', 'dia'])
+        && request.resource.data.keys().hasOnly(['atacante', 'atacanteNombre', 'defensor', 'defensorNombre', 'gano', 'botin', 'fuerza', 'defensa', 'fecha', 'visto', 'llega', 'resuelto', 'cobrado', 'bajas', 'alA', 'alD', 'dia', 'tropasA'])
+        && (!('tropasA' in request.resource.data) || (request.resource.data.tropasA is map && request.resource.data.tropasA.size() <= 20)) // v8.31: con qué tropas atacó
         && request.resource.data.atacante == request.auth.uid
         && (!('dia' in request.resource.data) || (request.resource.data.dia is string && request.resource.data.dia.size() == 10))
         && (!('alA' in request.resource.data) || (request.resource.data.alA is string
