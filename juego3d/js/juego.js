@@ -4435,41 +4435,49 @@
       }
     } catch (e) { /* sin audio */ }
   }
-  // ---------- MÚSICA DE FONDO (medieval, hecha con código) ----------
-  // Re dórico: laúd con arpegios, un bordón grave y tambor. En la batalla va más rápida y con redoblante.
+  // ---------- v8.50: MÚSICA DE GUERRA (hecha con código, original) ----------
+  // Re menor, lenta y grave: timbales, metales graves sostenidos, un motivo de trompas y, en la batalla, redoble militar y más tempo.
   var musica = { on: false, gan: null, sig: 0, paso: 0, timer: null };
-  var ACORDES = [[146.8, 174.6, 220], [130.8, 164.8, 196], [146.8, 174.6, 220], [110, 130.8, 164.8], [174.6, 220, 261.6], [130.8, 164.8, 196], [146.8, 174.6, 220], [146.8, 220, 293.7]];
-  var ESCALA = [293.7, 329.6, 349.2, 392, 440, 493.9, 523.3, 587.3];
+  var VOL_MUSICA = { bajo: 0.25, medio: 0.5, alto: 0.8 };
+  function volMusica() { var v = leerPref().musicaVol; return VOL_MUSICA[v] !== undefined ? VOL_MUSICA[v] : VOL_MUSICA.medio; }
+  // Dm, Sib, Solm, La, Dm, Fa, Do, La (graves)
+  var ACORDES = [[73.4, 87.3, 110], [58.3, 73.4, 87.3], [49, 58.3, 73.4], [55, 69.3, 82.4], [73.4, 87.3, 110], [87.3, 110, 130.8], [65.4, 82.4, 98], [55, 69.3, 82.4]];
+  var MOTIVO = [[293.7, 0, 2], [220, 2, 1], [293.7, 3, 1], [349.2, 4, 2], [329.6, 6, 1], [293.7, 7, 1]]; // [frecuencia, corchea, largo en corcheas]
   function arrancarMusica() {
     if (musica.on || !musicaOn || !estado.sonido || !audio || enMenu) return;
     musica.on = true;
     musica.gan = audio.createGain(); musica.gan.gain.value = 0.0001; musica.gan.connect(salida);
-    musica.gan.gain.exponentialRampToValueAtTime(0.55, audio.currentTime + 2);
+    musica.gan.gain.exponentialRampToValueAtTime(Math.max(0.001, volMusica()), audio.currentTime + 2.5);
     musica.sig = audio.currentTime + 0.1; musica.paso = 0;
     musica.timer = setInterval(programarMusica, 120);
   }
+  function volumenMusica() { if (musica.on && musica.gan && audio) { try { musica.gan.gain.cancelScheduledValues(audio.currentTime); musica.gan.gain.setValueAtTime(Math.max(0.001, volMusica()), audio.currentTime); } catch (e) {} } }
   function pararMusica() {
     if (!musica.on) return;
     musica.on = false; clearInterval(musica.timer);
     var g = musica.gan; try { g.gain.cancelScheduledValues(audio.currentTime); g.gain.setValueAtTime(g.gain.value, audio.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.6); } catch (e) {}
     setTimeout(function () { try { g.disconnect(); } catch (e) {} }, 800);
   }
+  function timbal(cuando, vol, dest, fr) { nota(fr || 65, cuando, 0.9, { hasta: (fr || 65) * 0.8, vol: vol, ataque: 0.004, filtro: 300, destino: dest, eco: 0.3 }); sruido(cuando, 0.12, { tipo: 'lowpass', fr: 400, vol: vol * 0.4, destino: dest }); }
+  function metalGrave(fr, cuando, dur, vol, dest) { [-6, 6].forEach(function (dt) { nota(fr, cuando, dur, { tipo: 'sawtooth', vol: vol, ataque: 0.35, filtro: 320, filtroHasta: 700, detune: dt, destino: dest, eco: 0.35 }); }); }
+  function trompa(fr, cuando, dur, vol, dest) { [-5, 5].forEach(function (dt) { nota(fr, cuando, dur, { tipo: 'sawtooth', vol: vol, ataque: 0.08, filtro: 900, filtroHasta: 1800, detune: dt, destino: dest, eco: 0.45, vibrato: true }); }); }
   function programarMusica() {
     if (!musica.on || !audio) return;
-    var batalla = oleadaActiva, negra = 60 / (batalla ? 112 : 84), corchea = negra / 2, dest = musica.gan;
+    var batalla = oleadaActiva, negra = 60 / (batalla ? 104 : 72), corchea = negra / 2, dest = musica.gan;
     while (musica.sig < audio.currentTime + 0.5) {
       var p = musica.paso, compas = Math.floor(p / 8) % ACORDES.length, tiempoC = p % 8, ac = ACORDES[compas], cu = musica.sig - audio.currentTime;
-      if (tiempoC === 0) { // bordón grave del acorde
-        nota(ac[0] / 2, cu, negra * 4.1, { tipo: 'triangle', vol: 0.05, ataque: 0.3, filtro: 380, destino: dest });
-        nota(ac[0] / 2 * 1.5, cu, negra * 4.1, { tipo: 'sine', vol: 0.025, ataque: 0.4, destino: dest });
+      if (tiempoC === 0) { // acorde grave de metales, sostenido todo el compás
+        ac.forEach(function (fr, k) { metalGrave(fr * (k ? 2 : 1), cu, negra * 4.2, k ? 0.018 : 0.028, dest); });
+        nota(ac[0] / 2, cu, negra * 4.2, { tipo: 'sine', vol: 0.05, ataque: 0.5, destino: dest });
       }
-      // laúd: arpegio del acorde, y a veces una nota de la melodía
-      var fr = (tiempoC % 2 === 0) ? ac[(tiempoC / 2) % 3] * 2 : (Math.random() < 0.45 ? ESCALA[Math.floor(Math.random() * ESCALA.length)] : 0);
-      if (fr) laud(fr, cu, corchea * 2.2, tiempoC % 2 === 0 ? 0.035 : 0.025, dest);
-      // tambor
-      if (tiempoC === 0 || tiempoC === 4) bombo(cu, batalla ? 0.11 : 0.07, dest);
-      if (tiempoC === 2 || tiempoC === 6) sruido(cu, 0.09, { tipo: 'lowpass', fr: 700, vol: 0.05, destino: dest });
-      if (batalla && tiempoC % 2 === 1) sruido(cu, 0.05, { tipo: 'highpass', fr: 2500, vol: 0.03, destino: dest });
+      // motivo de trompas en los compases 1 y 5 (y siempre en la batalla)
+      if (compas % 4 === 0 || batalla) MOTIVO.forEach(function (m) { if (m[1] === tiempoC) trompa(m[0] * (compas >= 4 ? 0.89 : 1), cu, corchea * m[2] * 1.1, 0.02, dest); });
+      // timbales: golpe fuerte en 1, más suave en 3, y un pequeño redoble al final de cada 2 compases
+      if (tiempoC === 0) timbal(cu, batalla ? 0.16 : 0.12, dest, ac[0] * 0.9);
+      if (tiempoC === 4) timbal(cu, batalla ? 0.11 : 0.07, dest, ac[0] * 0.9 * 1.5);
+      if (compas % 2 === 1 && tiempoC === 7) { timbal(cu, 0.06, dest); timbal(cu + corchea / 2, 0.08, dest); }
+      // en la batalla: redoble militar (caja) en cada corchea, acentos en 2 y 4
+      if (batalla) { sruido(cu, 0.07, { tipo: 'highpass', fr: 1800, vol: (tiempoC === 2 || tiempoC === 6) ? 0.06 : 0.025, destino: dest }); if (tiempoC === 2 || tiempoC === 6) sruido(cu + corchea / 2, 0.05, { tipo: 'highpass', fr: 2200, vol: 0.02, destino: dest }); }
       musica.sig += corchea; musica.paso++;
     }
   }
@@ -12279,7 +12287,7 @@
       '<button class="comprar' + (estado.idioma === 'en' ? '' : ' morado') + '" data-accion="idioma" data-valor="en">English</button></div></div>' +
       (hayCuenta() ? '<div class="carta"><h3>♻️ ' + L('Copia de seguridad', 'Backup') + '</h3><p class="nota">' + (respaldo ? L('Última copia: ', 'Last backup: ') + new Date(respaldo.actualizado).toLocaleString() : L('Se hace sola cada 30 minutos mientras juegas.', 'It is made automatically every 30 minutes while you play.')) + '</p>' + (respaldo ? '<button class="comprar" data-accion="recuperar-reino">♻️ ' + L('Recuperar mi reino', 'Restore my kingdom') + '</button>' : '') + '</div>' : '') +
       '<div class="carta"><h3>' + T('sonido') + '</h3><button class="comprar" data-accion="sonido">' + (estado.sonido ? '🔊 ON' : '🔇 OFF') + '</button></div>' +
-      '<div class="carta"><h3>' + T('musica') + '</h3><button class="comprar" data-accion="musica">' + (musicaOn ? '🎵 ON' : '🔇 OFF') + '</button></div>' +
+      '<div class="carta"><h3>' + T('musica') + '</h3><button class="comprar" data-accion="musica">' + (musicaOn ? '🎵 ON' : '🔇 OFF') + '</button><div class="mus-vol">' + [['bajo', '🔈', L('Bajo', 'Low')], ['medio', '🔉', L('Medio', 'Medium')], ['alto', '🔊', L('Alto', 'High')]].map(function (q) { return '<button class="comprar mini' + ((leerPref().musicaVol || 'medio') === q[0] ? ' verde' : '') + '" data-accion="musica-vol" data-v="' + q[0] + '">' + q[1] + ' ' + q[2] + '</button>'; }).join('') + '</div></div>' +
       '<div class="carta"><h3>' + T('velocidad') + '</h3><button class="comprar" data-accion="velocidad">x' + velocidad + '</button></div>' +
       '<div class="carta"><h3>' + T('calidad') + '</h3><div class="stats"><button class="comprar' + (calidad === 'alta' ? '' : ' morado') + '" data-accion="calidad" data-valor="alta">' + T('calidad_alta') + '</button><button class="comprar' + (calidad === 'baja' ? '' : ' morado') + '" data-accion="calidad" data-valor="baja">' + T('calidad_baja') + '</button></div><p class="nota">' + T('calidad_txt') + '</p></div>' +
       '</div>';
@@ -12615,6 +12623,7 @@
     else if (a === 'heroe') invocarHeroe();
     else if (a === 'idioma') { estado.idioma = b.getAttribute('data-valor'); aplicarIdioma(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'sonido') { cambiarSonido(); reabrirPanel(); }
+    else if (a === 'musica-vol') { sonar('click'); try { var pv = leerPref(); pv.musicaVol = b.getAttribute('data-v'); localStorage.setItem(CLAVE_PREF, JSON.stringify(pv)); } catch (e) {} volumenMusica(); reabrirPanel(); } /* v8.50 */
     else if (a === 'musica') { musicaOn = !musicaOn; if (musicaOn) { sonar('click'); arrancarMusica(); } else pararMusica(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'velocidad') { cambiarVelocidad(); reabrirPanel(); }
     else if (a === 'calidad') { calidad = b.getAttribute('data-valor'); aplicarCalidad(); guardarPreferencias(); reabrirPanel(); }
@@ -12954,7 +12963,7 @@
   }
   function guardarPreferencias(sinPartida) {
     try {
-      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad }));
+      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad, musicaVol: leerPref().musicaVol || 'medio' })); /* v8.50 */
     } catch (e) {}
     if (!enMenu && !sinPartida) guardar();
   }
@@ -14190,6 +14199,7 @@
     render.setSize(window.innerWidth, window.innerHeight);
   });
   window.addEventListener('beforeunload', function () { if (!enMenu) guardar(); });
+  window.addEventListener('pagehide', function () { if (!enMenu) guardar(true); }); /* v8.50: en el iPhone guarda y sube a la nube al salir */
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
