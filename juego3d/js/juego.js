@@ -7293,15 +7293,34 @@
         var faltan = Math.max(0, finDeSemana(sem) - Date.now()) / 1000;
         var como = [[L('Ganar una oleada', 'Win a wave'), PUNTOS_TORNEO.oleada], [L('Ganar un ataque a otro jugador', 'Win an attack on a player'), PUNTOS_TORNEO.ataque], [L('Vencer un campamento bárbaro', 'Beat a barbarian camp'), PUNTOS_TORNEO.campamentos],
           [L('Terminar una obra', 'Finish a building'), PUNTOS_TORNEO.obra], [L('Recolectar un campo', 'Collect a field'), PUNTOS_TORNEO.recolectas], [L('Usar un acelerador', 'Use a speed-up'), PUNTOS_TORNEO.acel], [L('Entrenar una tropa', 'Train a troop'), PUNTOS_TORNEO.tropas]];
-        var premios = [['🥇 1', 0], ['🥈 2', 1], ['🥉 3', 2], ['4 – 10', 3], ['11 – 50', 4], [L('Todos los demás', 'Everyone else'), 5]];
+        // v8.37: Torneo semanal renovado: sin «undefined» (las gemas no se regalan), podio con sus premios dibujados, mejores arriba,
+        // barra hacia el siguiente puesto, iconos del juego y el mismo formato de tiempo que el botón de la ciudad
+        function IMG(n, c) { return '<img class="' + (c || 'tq-ico') + '" src="iconos/ui/' + n + '.webp" alt="">'; }
+        function premiosHTML(p, grande) {
+          var h = '<span class="tq-pr">' + IMG('r_oro') + '<b>' + formatoNumero(p.oro || 0) + '</b><small>' + L('oro', 'gold') + '</small></span>';
+          if (p.objeto && OBJETOS[p.objeto]) h += '<span class="tq-pr">' + (ICONOS_IMG && ICONOS_IMG[p.objeto] ? IMG(ICONOS_IMG[p.objeto]) : '<i>' + OBJETOS[p.objeto].icono + '</i>') + '<b>×1</b><small>' + escaparHTML(N(p.objeto)) + '</small></span>';
+          if (p.piezas) h += '<span class="tq-pr">' + IMG('q_pechera_sol') + '<b>×' + p.piezas + '</b><small>' + L('Pieza de armadura mítica', 'Mythic armor piece') + '</small></span>';
+          if (p.mitico) h += '<span class="tq-pr tq-mit">' + (grande ? '<span class="tq-heroes">' + ['leon', 'fenix', 'titan', 'aguila'].map(function (k) { return IMG('h_' + k, 'tq-h'); }).join('') + '</span>' : IMG('h_leon')) + '<b>×1</b><small>' + L('Héroe mítico', 'Mythic hero') + '</small></span>';
+          return h;
+        }
+        var podio = [[1, '🥇', 'oro'], [2, '🥈', 'plata'], [3, '🥉', 'bronce']].map(function (q) { var p = PREMIOS_TORNEO[q[0] - 1]; return '<div class="tq-pod tq-' + q[2] + '"><div class="tq-pos">' + q[1] + ' #' + q[0] + '</div><div class="tq-prs">' + premiosHTML(p, q[0] === 1) + '</div></div>'; }).join('');
+        var resto = [['4 – 10', 3], ['11 – 50', 4], [L('Todos los demás', 'Everyone else'), 5]].map(function (q) { var p = PREMIOS_TORNEO[q[1]]; return '<div class="tq-fila"><b>' + q[0] + '</b><div class="tq-prs">' + premiosHTML(p, false) + '</div></div>'; }).join('');
+        // hacia el siguiente puesto
+        var meta = null, txtMeta = '';
+        if (i === 0) txtMeta = '👑 ' + L('¡Vas primero! Defiende tu puesto.', 'You are first! Hold your place.');
+        else if (i > 0) { meta = Math.max(misP + 1, (lista[i - 1].puntos || 0) + 1); txtMeta = L('Te faltan ', 'You need ') + formatoNumero(meta - misP) + L(' puntos para el puesto #', ' points for place #') + i; }
+        else { meta = lista.length >= 50 ? (lista[lista.length - 1].puntos || 0) + 1 : Math.max(1, lista.length ? (lista[lista.length - 1].puntos || 0) : 1); txtMeta = L('Te faltan ', 'You need ') + formatoNumero(Math.max(0, meta - misP)) + L(' puntos para entrar al ranking', ' points to enter the ranking'); }
+        var barra = '<div class="tq-barra"><i style="width:' + (i === 0 ? 100 : Math.min(100, Math.round(misP / Math.max(1, meta) * 100))) + '%"></i></div><p class="nota">' + txtMeta + '</p>';
+        var ICO_COMO = ['b_campana', 'b_mundo', 'e_relevo', 'b_edificios', 'e_granja', 'o_acel', 'e_cuartel'];
+        var top10 = lista.slice(0, 10), mas = lista.slice(10);
+        function filas(l, desde) { return l.map(function (a, k) { return filaRanking(desde + k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span>', a.uid === yo); }).join(''); }
         listo('<div class="carta rk-tuyo"><b>' + L('Tus puntos: ', 'Your points: ') + formatoNumero(misP) + '</b><span class="chip">' + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</span>' +
-          '<p class="reloj-panel">⏳ ' + L('Termina en ', 'Ends in ') + fmtTiempo(faltan) + '</p></div>' +
-          '<div class="carta" style="margin-top:8px"><h3>' + L('Cómo ganar puntos', 'How to earn points') + '</h3>' + como.map(function (c) { return '<div class="fila-miembro"><b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</div>' +
-          '<div class="carta" style="margin-top:8px"><h3>' + L('Premios del lunes', 'Monday prizes') + '</h3>' + premios.map(function (q) { var p = PREMIOS_TORNEO[q[1]]; return '<div class="fila-miembro"><b>' + q[0] + '</b><span class="chip">💎 ' + p.gemas + '</span><span class="chip">🪙 ' + formatoNumero(p.oro) + '</span>' + (p.piezas ? '<span class="chip">🛡️ ×' + p.piezas + '</span>' : '') + (p.mitico ? '<span class="chip">🦸</span>' : '') + '</div>'; }).join('') +
-          '<p class="nota">🛡️ ' + L('Pieza de la armadura mítica de uno de tus héroes (6 piezas por héroe; 3 piezas: +15% daño; 6 piezas: +30% daño y +10% defensa).', 'A piece of one of your heroes\' mythic armor (6 pieces per hero; 3 pieces: +15% damage; 6 pieces: +30% damage and +10% defense).') + '<br>🦸 ' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle.') + '</p>' +
-          '<p class="nota">' + L('Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>' +
-          '<div class="carta" style="margin-top:8px"><h3>' + L('Mejores de la semana', 'Top of the week') + '</h3>' +
-          (lista.length ? lista.map(function (a, k) { return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">⭐ ' + formatoNumero(a.puntos || 0) + '</span>', a.uid === yo); }).join('') : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>');
+          '<p class="reloj-panel">⏳ ' + L('Termina en ', 'Ends in ') + fmtLargo(faltan) + '</p>' + barra + '</div>' +
+          '<div class="carta" style="margin-top:8px"><h3>🏆 ' + L('Mejores de la semana', 'Top of the week') + '</h3>' + (top10.length ? filas(top10, 0) : '<p>' + L('Nadie tiene puntos todavía. ¡Sé el primero!', 'No one has points yet. Be the first!') + '</p>') + '</div>' +
+          '<div class="carta tq-premios" style="margin-top:8px"><h3>🎁 ' + L('Premios del lunes', 'Monday prizes') + '</h3>' + podio + resto +
+          '<p class="nota">' + L('Héroe mítico: León Dorado, Fénix, Titán o Águila. Necesitas al menos 1 punto. El premio llega solo cuando entras la semana siguiente.', 'Mythic hero: Golden Lion, Phoenix, Titan or Eagle. You need at least 1 point. The prize arrives when you log in next week.') + '</p></div>' +
+          '<div class="carta" style="margin-top:8px"><h3>' + L('Cómo ganar puntos', 'How to earn points') + '</h3>' + como.map(function (c, k) { return '<div class="fila-miembro tq-como">' + IMG(ICO_COMO[k] || 'b_campana') + '<b>' + c[0] + '</b><span class="chip">+' + c[1] + '</span></div>'; }).join('') + '</div>' +
+          (mas.length ? '<div class="carta" style="margin-top:8px"><h3>' + L('Resto del ranking', 'Rest of the ranking') + '</h3>' + filas(mas, 10) + '</div>' : ''));
       }).catch(error);
     }
   }
