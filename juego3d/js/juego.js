@@ -1939,7 +1939,7 @@
       multD = multiplicadoresHeroe(op.defHeroe !== undefined ? op.defHeroe : liderActual()); if (buffActivo('def')) multD.vida += 20;
     } else {
       atk = op.tropas || miComposicion(); var heroe = op.heroe !== undefined ? op.heroe : liderActual();
-      multA = multiplicadoresHeroe(heroe); if (buffActivo('atk')) multA.atk += 20;
+      multA = multiplicadoresHeroe(heroe); if (buffActivo('atk')) multA.atk += 20; if (buffActivo('vida')) multA.vida += 20; /* v8.18 */
       var base = valorDe(atk) + valorHeroe(heroe); if (base > 0) escA = Math.max(0.5, Math.min(4, f / base));
       if (op.defTropas && Object.keys(op.defTropas).length) {
         def = {}; var vt = 0; for (var k2 in op.defTropas) if (COMBATE_KOC[k2] && op.defTropas[k2] > 0) { def[k2] = op.defTropas[k2]; vt += def[k2] * valorUnidadTipo(k2); }
@@ -9488,6 +9488,23 @@
     function heroesOrdenados() { return Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; }).sort(function (x, y) { return fuerzaHeroe(y) - fuerzaHeroe(x); }); }
     function lineaHeroe2(id) { var st = statsHeroe(id), mh = multiplicadoresHeroe(id); return L('Nv ', 'Lv ') + nivelHeroe(id) + ' · ⚔️ ' + formatoNumero(st.dano) + ' · +' + Math.round(mh.atk) + '% ' + L('Atq', 'Atk') + ' · +' + Math.round(mh.vida) + '% ' + L('Vida', 'HP'); }
     function lineaHeroe(id) { var st = statsHeroe(id); return L('Nv. ', 'Lv. ') + nivelHeroe(id) + ' · ⚔️ ' + formatoNumero(st.dano) + ' · ❤️ ' + formatoNumero(st.vida); } // v7.18: el nivel en vez del 0 % que parecía un error
+    // v8.18: potenciadores antes de marchar (ataque, vida, velocidad y tamaño de la marcha): tocas uno y se activa 1 hora
+    var POT_MARCHA = ['cuerno_guerra', 'tambor_batalla', 'marcha_rapida', 'ampliar_marcha'];
+    function htmlPotenciadores() {
+      var b = buffs();
+      return '<div class="mc-pot"><span class="mc-pot-t">⚡ ' + L('Potenciadores', 'Boosts') + '</span><div class="mc-pot-l">' + POT_MARCHA.filter(function (k) { return OBJETOS[k]; }).map(function (k) {
+        var o = OBJETOS[k], e = o.efecto, act = (b[e] || 0) > Date.now(), n = (estado.mochila || {})[k] || 0;
+        return '<button class="mc-pot-b' + (act ? ' on' : '') + (!act && !n && !estado.dueno ? ' sin' : '') + '" data-mc="pot" data-k="' + k + '"><span class="mc-pot-i">' + o.icono + '</span><b>' + L(NOM_BUFF[e][0], NOM_BUFF[e][1]).replace(/^\S+\s/, '') + '</b><small>' + (act ? '✅ ' + fmtTiempo((b[e] - Date.now()) / 1000) : estado.dueno ? '∞' : '×' + formatoNumero(n)) + '</small></button>';
+      }).join('') + '</div></div>';
+    }
+    function usarPotenciador(k) {
+      var o = OBJETOS[k]; if (!o) return;
+      var n = (estado.mochila || {})[k] || 0;
+      if (!n && !estado.dueno) { var it = TIENDA.filter(function (x) { return x.id === k; })[0]; consejoTemporal(o.icono + ' ' + L('No tienes ', 'You have no ') + N(k) + (it ? L('. Cómpralo en la Tienda › Combate (', '. Buy it in the Shop › Combat (') + it.gemas + ' 💎).' : '.')); sonar('error'); return; }
+      var b = buffs(), e = o.efecto; b[e] = Math.max(Date.now(), b[e] || 0) + o.horas * 3600000;
+      if (!estado.dueno) estado.mochila[k] = n - 1;
+      sonar('magia'); consejoTemporal(o.icono + ' ' + L(NOM_BUFF[e][0], NOM_BUFF[e][1]) + ' — ' + fmtTiempo((b[e] - Date.now()) / 1000)); guardar(true);
+    }
     function htmlUnica() {
       var tipos = tiposDisponibles().filter(function (k) { return libresParaMarcha(k) > 0; }), tt = total(), cap = tamanoMarcha(sel.heroe), mios = Object.keys(estado.heroes || {}).filter(function (k) { return HEROE[k]; });
       var ali = estado.alianza && a.alianza === estado.alianza;
@@ -9496,6 +9513,7 @@
         '<div class="mc1-datos"><span>👥 <b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a, sel.heroe || null) / 1000) + '</b></span></div></div>' +
         '<div class="mc1-otros"><button class="comprar mini" data-mc="tipo" data-t="explorar">🔍 ' + L('Explorar', 'Scout') + '</button>' + (ali ? '<button class="comprar mini" data-mc="tipo" data-t="reforzar">🛡️ ' + L('Reforzar', 'Reinforce') + '</button>' : '') +
         '<button class="comprar mini" data-mc="todo">' + L('Todas', 'All') + '</button><button class="comprar mini" data-mc="nada">' + L('Ninguna', 'None') + '</button></div>' +
+        htmlPotenciadores() +
         '<div class="mc-lista">';
       if (!tipos.length) h += '<p class="nota">' + T('at_sin_tropas') + '</p>';
       tipos.forEach(function (k) {
@@ -9615,6 +9633,7 @@
       else if (q === 'heroe') { sel.heroe = b.dataset.id || null; vista = 'unica'; }
       else if (q === 'guardar') { guardarFormacion(); return; }
       else if (q === 'siguiente') { if (total() <= 0) { $('mc-aviso').textContent = L('Elige al menos una tropa.', 'Choose at least one troop.'); sonar('error'); return; } vista = 'recursos'; }
+      else if (q === 'pot') usarPotenciador(b.dataset.k); // v8.18
       else if (q === 'marchar') {
         if (total() <= 0) { consejoTemporal(L('Elige al menos una tropa.', 'Choose at least one troop.')); sonar('error'); return; }
         var f = fuerza(); b.disabled = true;
@@ -11121,7 +11140,7 @@
   // ================= v7.14: EFECTOS DE LOS OBJETOS NUEVOS DE LA TIENDA =================
   function buffs() { return estado.buffs || (estado.buffs = {}); }
   function buffActivo(k) { return (buffs()[k] || 0) > Date.now(); }
-  var NOM_BUFF = { atk: ['⚔️ +20 % ataque', '⚔️ +20% attack'], def: ['🛡️ +20 % defensa', '🛡️ +20% defense'], velMarcha: ['🏃 Marchas +50 % rápidas', '🏃 Marches +50% faster'], capMarcha: ['🚩 +25 % tropas por marcha', '🚩 +25% troops per march'],
+  var NOM_BUFF = { vida: ['❤️ +20 % vida', '❤️ +20% HP'], atk: ['⚔️ +20 % ataque', '⚔️ +20% attack'], def: ['🛡️ +20 % defensa', '🛡️ +20% defense'], velMarcha: ['🏃 Marchas +50 % rápidas', '🏃 Marches +50% faster'], capMarcha: ['🚩 +25 % tropas por marcha', '🚩 +25% troops per march'],
     prod_comida: ['🌾 +25 % comida', '🌾 +25% food'], prod_madera: ['🪵 +25 % madera', '🪵 +25% wood'], prod_piedra: ['🪨 +25 % piedra', '🪨 +25% stone'], prod_oro: ['🪙 +25 % oro', '🪙 +25% gold'], obras: ['👷 Obras +25 % rápidas', '👷 Builds +25% faster'] };
   function htmlBuffsActivos() {
     var b = buffs(), act = Object.keys(b).filter(function (k) { return NOM_BUFF[k] && b[k] > Date.now(); });

@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.17';
+var VERSION_JUEGO = '8.18';
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
@@ -406,6 +406,7 @@ var NOMBRES = {
   amatista_100: { es: 'Amatista rúnica ×100', en: 'Runic amethyst ×100', des_es: '100 Amatistas rúnicas para las investigaciones de nivel 11 o más. Solo se ganan en eventos y combates.', des_en: '100 Runic amethysts for level 11+ research. Only won in events and battles.' },
   amatista_500: { es: 'Amatista rúnica ×500', en: 'Runic amethyst ×500', des_es: '500 Amatistas rúnicas para las investigaciones de nivel 11 o más. Solo se ganan en eventos y combates.', des_en: '500 Runic amethysts for level 11+ research. Only won in events and battles.' },
   cristal_arcano: { es: 'Cristal arcano', en: 'Arcane crystal', des_es: 'Para la Ascensión de ★11 a ★15. Se gana en campamentos, bestias y aldeas de nivel 13 o más.', des_en: 'For Ascension ★11 to ★15. Won at level 13+ camps, beasts and villages.' },
+  tambor_batalla: { es: 'Tambor de batalla', en: 'Battle drum', des_es: '+20 % de vida a tus tropas cuando atacan, durante 1 hora. Aguantan más golpes.', des_en: '+20% HP to your troops when attacking, for 1 hour.' },
   cuerno_guerra: { es: 'Cuerno de guerra', en: 'War horn', des_es: '+20 % de ataque a tus tropas durante 1 hora. Para atacar un campamento fuerte.', des_en: '+20% troop attack for 1 hour.' },
   coraza_acero: { es: 'Coraza de acero', en: 'Steel armor', des_es: '+20 % de defensa (vida de tus tropas al defender) durante 1 hora. Úsala si te avisan de un ataque.', des_en: '+20% defense for 1 hour.' },
   marcha_rapida: { es: 'Marcha rápida', en: 'Swift march', des_es: 'Tus marchas van un 50 % más rápido durante 1 hora.', des_en: 'Your marches go 50% faster for 1 hour.' },
@@ -755,6 +756,7 @@ var OBJETOS = {
   cristal_encantado: { icono: '💠', inv: 'reliquia', especial: true },
   cristal_arcano:    { icono: '🔮', inv: 'reliquia', especial: true },
   cuerno_guerra:   { icono: '📯', inv: 'combate', efecto: 'atk', horas: 1 },
+  tambor_batalla:  { icono: '🥁', inv: 'combate', efecto: 'vida', horas: 1 }, // v8.18
   coraza_acero:    { icono: '🛡️', inv: 'combate', efecto: 'def', horas: 1 },
   marcha_rapida:   { icono: '🏃', inv: 'combate', efecto: 'velMarcha', horas: 1 },
   retirada_marcha: { icono: '🏳️', inv: 'combate', efecto: 'retirada' },
@@ -825,7 +827,7 @@ var TIENDA = [
   { id: 'acelerador', gemas: 20, cat: 'acelerar' }, /* v6.54: el cofre de equipo ya no se vende: el equipo se gana jugando */ { id: 'cofre_plata', gemas: 15, cat: 'cofres' }, { id: 'cofre_oro', cat: 'cofres', gemas: 40 },
   { id: 'escudo_2h', gemas: 10, cat: 'combate' }, { id: 'escudo_8h', gemas: 30, cat: 'combate' }, { id: 'escudo_12h', gemas: 45, cat: 'combate' },
   // v7.14: pestañas que estaban vacías
-  { id: 'cuerno_guerra', gemas: 15, cat: 'combate' }, { id: 'coraza_acero', gemas: 15, cat: 'combate' }, { id: 'marcha_rapida', gemas: 10, cat: 'combate' }, { id: 'retirada_marcha', gemas: 20, cat: 'combate' }, { id: 'ampliar_marcha', gemas: 35, cat: 'combate' },
+  { id: 'cuerno_guerra', gemas: 15, cat: 'combate' }, { id: 'tambor_batalla', gemas: 15, cat: 'combate' }, { id: 'coraza_acero', gemas: 15, cat: 'combate' }, { id: 'marcha_rapida', gemas: 10, cat: 'combate' }, { id: 'retirada_marcha', gemas: 20, cat: 'combate' }, { id: 'ampliar_marcha', gemas: 35, cat: 'combate' },
   { id: 'bono_comida', gemas: 10, cat: 'varios' }, { id: 'bono_madera', gemas: 10, cat: 'varios' }, { id: 'bono_piedra', gemas: 10, cat: 'varios' }, { id: 'bono_oro', gemas: 10, cat: 'varios' }, { id: 'constructor_exp', gemas: 25, cat: 'varios' }, { id: 'vip_100', gemas: 20, cat: 'varios' }, { id: 'carreta_sum', gemas: 5, cat: 'varios' }, { id: 'carretas_x10', gemas: 40, cat: 'varios' }, { id: 'cosecha_ya', gemas: 15, cat: 'varios' },
   { id: 'comida_2m', gemas: 25, cat: 'recursos' }, { id: 'madera_2m', gemas: 25, cat: 'recursos' }, { id: 'piedra_2m', gemas: 25, cat: 'recursos' }, { id: 'oro_1m', gemas: 30, cat: 'recursos' }, { id: 'mixto_1m', gemas: 45, cat: 'recursos' },
   { id: 'ficha_x1', gemas: 15, cat: 'varios' }, { id: 'ficha_x5', gemas: 65, cat: 'varios' }, { id: 'energia_heroe', gemas: 10, cat: 'varios' }, { id: 'llave_bronce', gemas: 20, cat: 'varios' }, { id: 'llave_plata', gemas: 20, cat: 'varios' },

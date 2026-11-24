@@ -1409,3 +1409,14 @@ html body .st-base { opacity: .6; font-weight: 400; } html body .st-mas { font-s
 #dk-lista .dkl-t { flex: none; color: #ffe08a; }
 #dk-lista .dkl-b { flex: none; width: 34px; height: 30px; border-radius: 6px; border: 0; font-size: 15px; color: #fff; }
 #dk-lista .dkl-b.acel { background: linear-gradient(#f2b23a, #c47a12); } #dk-lista .dkl-b.ret { background: linear-gradient(#d84a3a, #8a1a10); }
+
+/* v8.18: potenciadores en la ventana de Marcha */
+.mc-pot { margin: 6px 0 4px; }
+.mc-pot-t { display: block; font: 700 13px system-ui, sans-serif; color: #f2c45a; margin: 0 2px 4px; }
+.mc-pot-l { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.mc-pot-b { display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 6px 2px; border-radius: 10px; border: 1px solid rgba(242,196,90,.35); background: rgba(0,0,0,.35); color: #f3e6c8; font: 600 11px system-ui, sans-serif; line-height: 1.15; min-width: 0; }
+.mc-pot-b b { font-weight: 700; font-size: 11px; text-align: center; }
+.mc-pot-b small { color: #ffe08a; font-size: 11px; }
+.mc-pot-i { font-size: 22px; }
+.mc-pot-b.on { border-color: #4fd06a; background: rgba(40,120,50,.35); box-shadow: 0 0 8px rgba(79,208,106,.45); }
+.mc-pot-b.sin { opacity: .55; }
