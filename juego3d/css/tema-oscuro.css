@@ -1452,7 +1452,7 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 #pantalla.como-portada #pantalla-texto { color: #f3dfae !important; font: 600 13px system-ui, sans-serif !important; text-shadow: 0 1px 2px #000; }
 
 /* v8.33: niebla roja cuando te atacan (fina, se ve todo) */
-#niebla-ataque { position: fixed; inset: 0; z-index: 8500; pointer-events: none; box-shadow: inset 0 0 110px 34px rgba(225, 20, 20, .6); background: radial-gradient(ellipse at center, rgba(255,0,0,.04) 40%, rgba(210,0,0,.28) 100%); animation: nieblaRoja 1.8s ease-in-out infinite alternate; }
+#niebla-ataque { position: fixed; inset: 0; z-index: 8500; pointer-events: none; box-shadow: inset 0 0 45px rgba(220, 38, 38, .55), inset 0 0 90px 10px rgba(220, 38, 38, .25); background: none; /* v8.34: solo en los bordes; el centro queda limpio */ animation: nieblaRoja 1.8s ease-in-out infinite alternate; }
 #niebla-ataque span { position: absolute; left: 50%; top: calc(env(safe-area-inset-top) + 112px); transform: translateX(-50%); padding: 3px 12px; border-radius: 12px; background: rgba(120, 0, 0, .75); border: 1px solid #ff6a5a; color: #fff; font: 700 12px system-ui, sans-serif; white-space: nowrap; }
 @keyframes nieblaRoja { from { opacity: .7; } to { opacity: 1; } }
 .ib-contra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; justify-content: space-between; }
