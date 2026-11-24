@@ -5279,7 +5279,7 @@
     var ahora = Date.now(), vivos = {}, lista = [], yo = miLugar();
     marchas.forEach(function (m) { if (m.resuelto || m.cancelado || m.llega <= ahora) return; var d = (estado.destinos || {})[m.id] || lugarDe(m.defensor); if (d) lista.push({ id: 'm' + m.id, de: yo, a: d, sale: m.fecha, llega: m.llega, color: 0x2a6ad0, txt: '⚔️ ' + String(m.defensorNombre || '').slice(0, 9) }); });
     entrantes.forEach(function (r) { if (r.resuelto || r.llega <= ahora || r.cancelado) return; var d = lugarDe(r.atacante) || (r.prueba ? { x: Math.min(98, yo.x + 18), y: Math.max(1, yo.y - 14) } : null); if (d) lista.push({ id: 'e' + r.id, de: d, a: yo, sale: r.fecha || (r.llega - 120000), llega: r.llega, color: 0xd0302a, txt: '🔥 ' + String(r.atacanteNombre || '').slice(0, 12), enemigo: true }); });
-    marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven', 'Returning')) : L('Van a atacar', 'Attacking') }); });
+    marchasPVE.forEach(function (m) { if (m.llega > ahora) lista.push({ id: m.id, de: m.de, a: m.a, sale: m.sale, llega: m.llega, color: 0x2a6ad0, txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven', 'Returning')) : L('Van a atacar', 'Attacking'), pelea: !!(m.vuelta && ahora < m.sale) }); });
     // v8.01: las carretas de suministro hacen el mismo recorrido que una marcha (ida, vuelta y las que te llegan)
     carretas().viajes.forEach(function (v) { if (!v.de || !v.a) return; if (ahora < v.llega) lista.push({ id: 'c' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, carro: true, txt: '×' + v.n + (v.nombre ? ' → ' + String(v.nombre).slice(0, 8) : '') });
       else if (ahora < v.vuelve) lista.push({ id: 'c' + v.id + 'r', de: v.a, a: v.de, sale: v.llega, llega: v.vuelve, color: 0x3fe05a, carro: true, txt: '×' + v.n + ' ' + L('vuelven', 'back') }); });
@@ -5313,7 +5313,8 @@
       if (M3.camelot) g.traverse(function (o) { o.frustumCulled = false; if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = !!M3.ov; o.material.transparent = o.material.transparent && o.material.opacity < 1; o.material.opacity = o.material.transparent ? o.material.opacity : 1; if (o.material.emissive && (o.isSkinnedMesh || o.material.map)) { o.material.emissive.setHex(0x3a3a3a); if (o.material.map) o.material.emissiveMap = o.material.map; } o.renderOrder = 8; o.userData.encima = true; } });
       // etiqueta con lo que falta (se cambia una vez por segundo)
       var txt = v.txt + ' · ' + fmtTiempo((v.llega - ahora) / 1000);
-      if (false && g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) { // v8.11: sin letreros en el mapa (todo sale en Marchar, abajo)
+      if (!v.pelea && g.userData.et) { g.remove(g.userData.et); g.userData.et = null; g.userData.txt = ''; }
+      if (v.pelea && g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) { // v8.12: solo la etiqueta pequeña «Peleando»; sin «Regresando» ni las de carretas
         if (g.userData.et) g.remove(g.userData.et); g.children.filter(function (c) { return c.userData && c.userData.esEt; }).forEach(function (c) { g.remove(c); }); // v7.26: nunca dos carteles
         var et = M.etiquetaEdificio(txt, v.carro ? '🛒' : v.enemigo ? '🔥' : '⚔'); et.position.set(0, g.userData.col.userData.sprites ? 2.6 : 1.9, 0); et.scale.multiplyScalar(0.5); g.add(et);
         et.userData.esEt = true; g.userData.et = et; g.userData.txt = txt; g.userData.tEt = ahora;
