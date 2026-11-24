@@ -2621,7 +2621,7 @@
     var act = i === villaActiva(), d = e.datos || {};
     $('mundo-info').innerHTML = '<div class="carta casilla-info pergamino tarjeta-terreno"><h3 class="perg-tit">🏘️ ' + escaparHTML(nombreVilla(i)) + '</h3><p class="perg-sub">' + e.x + ', ' + e.y + '</p><div class="tt-datos"><div class="tt-dueno">' + L('Tu villa', 'Your village') + '</div><div>🏰 ' + L('Castillo nv ', 'Castle lv ') + (act ? (estado.castillo || 1) : (d.castillo || 1)) + '</div></div>' +
       '<div class="perg-botones">' + (act ? '<span class="nota">' + L('Estás aquí', 'You are here') + '</span>' : '<button class="comprar verde" id="mv-ir">🏘️ ' + L('Ir a esta villa', 'Go to this village') + '</button>') + '</div>' +
-      (act ? '' : '<div class="perg-botones mv-rapido"><button class="comprar azul" id="mv-destacar">⚔️ ' + L('Destacar / Reforzar', 'Station / Reinforce') + '</button><button class="comprar azul" id="mv-transp">🐴 ' + L('Transportar', 'Transport') + '</button></div>') + '</div>'; /* v8.47: menú rápido de tu villa */
+      (act ? '' : '<div class="perg-botones mv-rapido"><button class="comprar azul" id="mv-destacar">⚔️ ' + L('Destacar tropas', 'Station troops') + '</button><button class="comprar azul" id="mv-transp">🐴 ' + L('Transportar', 'Transport') + '</button></div>') + '</div>'; /* v8.47: menú rápido de tu villa */
     var b = $('mv-ir'); if (b) b.addEventListener('click', function () { cambiarVilla(i); });
     var bd = $('mv-destacar'); if (bd) bd.addEventListener('click', function () { sonar('click'); abrirDestacar(i); });
     var bt = $('mv-transp'); if (bt) bt.addEventListener('click', function () { sonar('click'); abrirEnvioVillas(i); });
@@ -3965,11 +3965,15 @@
   function impuestoTransporte() { var n = Math.max(1, mercadoNivel()); return Math.max(0.02, Math.round((0.20 - (n - 1) * 0.012) * 1000) / 1000); }
   function conImpuesto(rec) { var t = impuestoTransporte(), o = {}; Object.keys(rec).forEach(function (r) { o[r] = Math.floor((rec[r] || 0) * (1 - t)); }); return o; }
   var REC_ALIADO = ['oro', 'comida', 'madera', 'piedra', 'hierro'];
+  /* v8.52: MÍNIMO POR VIAJE: nada de mandar carretas casi vacías (entre tus villas y a aliados). Para cumplir un pedido de ayuda no hay mínimo. */
+  var MIN_ENVIO = 10000;
+  function txtMinEnvio() { return L('El mínimo por viaje es ' + formatoNumero(MIN_ENVIO) + ' recursos en total.', 'The minimum per trip is ' + formatoNumero(MIN_ENVIO) + ' resources in total.'); }
   function mandarTransporte(b) {
     if (!trSel) return;
     var rec = { oro: 0, comida: 0, madera: 0, piedra: 0, hierro: 0 }, tot = 0;
     REC_ALIADO.forEach(function (r) { var nu = $('trn-' + r); var n = nu ? Math.max(0, Math.min(Math.floor(+nu.value || 0), +nu.max, cantRec(r), TOPE_ENVIO)) : 0; rec[r] = n; tot += n; });
     if (!tot) { $('tr-error').textContent = L('Elige cuánto quieres mandar.', 'Choose how much to send.'); sonar('error'); return; }
+    if (tot < MIN_ENVIO && !(trSel && trSel.pedido)) { $('tr-error').textContent = '📦 ' + txtMinEnvio(); sonar('error'); return; } /* v8.52 */
     var nc = carretasPara(tot); if (carretasLibres() < nc) { $('tr-error').textContent = T('car_faltan', { n: nc, l: carretasLibres() }); sonar('error'); return; }
     if (rec.hierro > cantRec('hierro')) return;
     var pago = {}; Object.keys(rec).forEach(function (r) { if (rec[r] && r !== 'hierro') pago[r] = rec[r]; }); if (!pagar(pago)) return; if (rec.hierro) quitarRec('hierro', rec.hierro);
@@ -7774,8 +7778,8 @@
       var tot = 0; REC_CARAVANA.forEach(function (r) { tot += envioSel.c[r] || 0; });
       var uso = carretasParaVilla(tot) || { carretilla: 0, carreta: 0, convoy: 0 }, seg = tot ? Math.round(segViaje(aqui, alla) * velDeUso(uso)) : 0, e = $('ev-resumen'), b = $('ev-enviar');
       var txtU = SUMINISTRO_ORDEN.filter(function (t) { return uso[t]; }).map(function (t) { return SUMINISTRO[t].icono + '×' + uso[t]; }).join(' ') || L('solo el Mercado', 'Market only');
-      if (e) e.innerHTML = tot ? '📦 ' + formatoNumero(tot) + ' · ' + txtU + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Mueve las barras o toca Máx.', 'Move the sliders or tap Max.');
-      if (b) b.disabled = !tot || !hayMer;
+      if (e) e.innerHTML = tot && tot < MIN_ENVIO ? '⚠️ ' + txtMinEnvio() : tot ? '📦 ' + formatoNumero(tot) + ' · ' + txtU + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Mueve las barras o toca Máx.', 'Move the sliders or tap Max.');
+      if (b) b.disabled = !tot || tot < MIN_ENVIO || !hayMer; /* v8.52 */
     }
     document.querySelectorAll('#panel .ev-rango').forEach(function (inp) {
       inp.addEventListener('input', function () {
@@ -7792,6 +7796,7 @@
     var v = misVillas(), a = envioSel.a, rec = {}, tot = 0;
     if (!v.lista[a] || a === v.activa || !edificiosDe('mercado').length) { sonar('error'); return; }
     REC_CARAVANA.forEach(function (r) { var n = Math.min(envioSel.c[r] || 0, cantRec(r)); if (n > 0) { rec[r] = n; tot += n; } });
+    if (tot && tot < MIN_ENVIO) { consejoTemporal('📦 ' + txtMinEnvio()); sonar('error'); return; } /* v8.52 */
     if (!tot || tot > maxCaravana()) { consejoTemporal(L('No tienes carretas libres para tanta carga.', 'Not enough free carts for that load.')); sonar('error'); return; }
     var uso = carretasParaVilla(tot); if (!uso) { consejoTemporal(L('No tienes carretas libres para tanta carga.', 'Not enough free carts for that load.')); sonar('error'); return; }
     var n = eqDeUso(uso), aqui = lugarVilla(v.activa), alla = lugarVilla(a), seg = Math.round(segViaje(aqui, alla) * velDeUso(uso)), ahora = Date.now();
