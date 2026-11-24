@@ -5291,6 +5291,35 @@
     return g;
   }
   var marchasVistas = {};
+  // v8.14: al pelear, encima del objetivo solo se ven dos espadas cruzadas que chocan
+  var texEspadas = null;
+  function spriteEspadas() {
+    if (!texEspadas) {
+      var c = document.createElement('canvas'); c.width = c.height = 128; var x = c.getContext('2d');
+      x.translate(64, 64); x.lineCap = 'round';
+      [-1, 1].forEach(function (lado) {
+        x.save(); x.rotate(lado * Math.PI / 4);
+        x.strokeStyle = 'rgba(0,0,0,.55)'; x.lineWidth = 15; x.beginPath(); x.moveTo(0, -50); x.lineTo(0, 38); x.stroke();
+        x.strokeStyle = '#f4f6fa'; x.lineWidth = 9; x.beginPath(); x.moveTo(0, -50); x.lineTo(0, 22); x.stroke();
+        x.strokeStyle = '#9aa4b4'; x.lineWidth = 3; x.beginPath(); x.moveTo(2, -44); x.lineTo(2, 20); x.stroke();
+        x.strokeStyle = '#e8b53a'; x.lineWidth = 8; x.beginPath(); x.moveTo(-15, 24); x.lineTo(15, 24); x.stroke();
+        x.strokeStyle = '#7a3e14'; x.lineWidth = 7; x.beginPath(); x.moveTo(0, 26); x.lineTo(0, 40); x.stroke();
+        x.fillStyle = '#e8b53a'; x.beginPath(); x.arc(0, 44, 5, 0, 7); x.fill();
+        x.restore();
+      });
+      texEspadas = new THREE.CanvasTexture(c);
+    }
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texEspadas, transparent: true, depthTest: false }));
+    sp.renderOrder = 9; sp.userData.encima = true; return sp;
+  }
+  function modeloTienda() {
+    var g = new THREE.Group(), blanco = new THREE.MeshLambertMaterial({ color: 0xa9b3c2 }), azul = new THREE.MeshLambertMaterial({ color: 0x2f5a9a });
+    var t = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.75, 8), blanco); t.position.y = 0.38; g.add(t);
+    var b = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.12, 8), azul); b.position.y = 0.06; g.add(b);
+    var p = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4), new THREE.MeshLambertMaterial({ color: 0x5a3a1a })); p.position.y = 0.88; g.add(p);
+    var fl = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.13), new THREE.MeshLambertMaterial({ color: 0xd8342a, side: THREE.DoubleSide })); fl.position.set(0.11, 0.96, 0); g.add(fl);
+    g.userData.us = []; return g;
+  }
   function actualizarMarchasMundo() {
     if (!M3) return;
     M3.columnas = M3.columnas || {};
@@ -5302,7 +5331,7 @@
     carretas().viajes.forEach(function (v) { if (!v.de || !v.a) return; if (ahora < v.llega) lista.push({ id: 'c' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, carro: true, txt: '×' + v.n + (v.nombre ? ' → ' + String(v.nombre).slice(0, 8) : '') });
       else if (ahora < v.vuelve) lista.push({ id: 'c' + v.id + 'r', de: v.a, a: v.de, sale: v.llega, llega: v.vuelve, color: 0x3fe05a, carro: true, txt: '×' + v.n + ' ' + L('vuelven', 'back') }); });
     enviosEnCamino.forEach(function (e) { var de = lugarDe(e.de); if (de && e.llega > ahora) lista.push({ id: 'ce' + e.id, de: de, a: yo, sale: e.fecha, llega: e.llega, color: 0x3fe05a, carro: true, txt: String(e.deNombre || '').slice(0, 8) + ' ×' + (e.carretas || 1) }); });
-    guarniciones().forEach(function (q) { if (q.g.a) lista.push({ id: 'g' + q.id, de: q.g.a, a: q.g.a, sale: ahora - 1000, llega: ahora, color: 0x2a6ad0, txt: '', quieto: true }); }); // v8.13: acampadas
+    guarniciones().forEach(function (q) { if (q.g.a) lista.push({ id: 'g' + q.id, de: q.g.a, a: q.g.a, sale: ahora - 1000, llega: ahora, color: 0x2a6ad0, txt: '', quieto: true, tienda: true }); }); // v8.13: acampadas
     (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) lista.push({ id: 'v' + v.id, de: v.de, a: v.a, sale: v.sale, llega: v.llega, color: 0x3fe05a, txt: '🏇 ' + L('Regresando a la villa', 'Returning home'), botin: false }); });
     var t = performance.now() / 1000;
     lista.forEach(function (v) {
@@ -5310,7 +5339,7 @@
       var u = Math.max(0, Math.min(1, (ahora - v.sale) / Math.max(1, v.llega - v.sale)));
       var g = M3.columnas[v.id];
       if (!g) {
-        g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col; if (v.carro) { col = new THREE.Group(); var mc = modeloCarreta(); mc.rotation.y = -Math.PI / 2; col.add(mc); col.userData.us = []; } else col = modeloColumna(v.color, tipoC); g.add(col); g.userData.col = col; col.traverse(function (o) { o.frustumCulled = false; });
+        g = new THREE.Group(); var tipoC = v.enemigo ? 'miliciano' : 'espadachin', col; if (v.carro) { col = new THREE.Group(); var mc = modeloCarreta(); mc.rotation.y = -Math.PI / 2; col.add(mc); col.userData.us = []; } else if (v.tienda) col = modeloTienda(); else col = modeloColumna(v.color, tipoC); /* v8.14: tienda en el terreno */ g.add(col); g.userData.col = col; col.traverse(function (o) { o.frustumCulled = false; });
         if (v.botin) { var saco = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), new THREE.MeshLambertMaterial({ color: 0xe8c45a })); saco.position.set(0, 0.25, -0.75); col.add(saco); }
         var lg = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p0.x, 0.14, p0.z), new THREE.Vector3(p1.x, 0.14, p1.z)]);
         var linea = new THREE.Line(lg, new THREE.LineDashedMaterial({ color: v.color === 0x3fe05a ? 0x3fe05a : 0xff3a2a, dashSize: 0.55, gapSize: 0.35, transparent: true, opacity: 1 })); /* v7.18: verde las tuyas, roja la que te ataca */ linea.computeLineDistances(); M3.e.add(linea); g.userData.linea = linea;
@@ -5320,7 +5349,7 @@
         var somb = new THREE.Mesh(new THREE.CircleGeometry(0.6, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.38, depthWrite: false })); somb.rotation.x = -Math.PI / 2; somb.position.y = 0.02; somb.renderOrder = -1; g.add(somb);
         (M3.ov || M3.e).add(g); M3.columnas[v.id] = g;
         // en el mapa pintado los dibujos están parados frente a la cámara: la columna se dibuja encima y un poco más grande
-        if (M3.camelot) { col.scale.setScalar(v.carro ? 1 : (M3.ov ? 2.6 : 3.6)); if (M3.ov) somb.scale.setScalar(1.6); linea.material.depthTest = false; linea.renderOrder = 7; }
+        if (M3.camelot) { col.scale.setScalar(v.carro ? 1 : v.tienda ? (M3.ov ? 1.3 : 1.8) : (M3.ov ? 2.6 : 3.6)); if (M3.ov) somb.scale.setScalar(1.6); linea.material.depthTest = false; linea.renderOrder = 7; }
       }
       g.position.set(p0.x + (p1.x - p0.x) * u, 0.06, p0.z + (p1.z - p0.z) * u);
       g.userData.col.rotation.y = Math.atan2(p1.x - p0.x, p1.z - p0.z);
@@ -5332,8 +5361,12 @@
       if (M3.camelot) g.traverse(function (o) { o.frustumCulled = false; if ((o.isMesh || o.isSkinnedMesh) && !o.userData.encima) { o.material = o.material.clone(); o.material.depthTest = !!M3.ov; o.material.transparent = o.material.transparent && o.material.opacity < 1; o.material.opacity = o.material.transparent ? o.material.opacity : 1; if (o.material.emissive && (o.isSkinnedMesh || o.material.map)) { o.material.emissive.setHex(0x3a3a3a); if (o.material.map) o.material.emissiveMap = o.material.map; } o.renderOrder = 8; o.userData.encima = true; } });
       // etiqueta con lo que falta (se cambia una vez por segundo)
       var txt = v.txt + ' · ' + fmtTiempo((v.llega - ahora) / 1000);
-      if (!v.pelea && g.userData.et) { g.remove(g.userData.et); g.userData.et = null; g.userData.txt = ''; }
-      if (v.pelea && g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) { // v8.12: solo la etiqueta pequeña «Peleando»; sin «Regresando» ni las de carretas
+      if (g.userData.et) { g.remove(g.userData.et); g.userData.et = null; g.userData.txt = ''; }
+      g.userData.col.visible = !v.pelea; // v8.14: mientras pelean solo se ven las espadas
+      if (v.pelea && !g.userData.esp) { var spE = spriteEspadas(); spE.position.set(0, M3.camelot ? (M3.ov ? 1.6 : 2.2) : 1.2, 0); g.add(spE); g.userData.esp = spE; }
+      if (!v.pelea && g.userData.esp) { g.remove(g.userData.esp); g.userData.esp = null; }
+      if (g.userData.esp) { var sE = (M3.camelot ? (M3.ov ? 1.8 : 2.6) : 1.2) * (1 + 0.14 * Math.abs(Math.sin(t * 7))); g.userData.esp.scale.set(sE, sE, 1); g.userData.esp.material.rotation = 0.16 * Math.sin(t * 7); }
+      if (false && v.pelea && g.userData.txt !== txt && (!g.userData.tEt || ahora - g.userData.tEt > 900)) { // v8.12: solo la etiqueta pequeña «Peleando»; sin «Regresando» ni las de carretas
         if (g.userData.et) g.remove(g.userData.et); g.children.filter(function (c) { return c.userData && c.userData.esEt; }).forEach(function (c) { g.remove(c); }); // v7.26: nunca dos carteles
         var et = M.etiquetaEdificio(txt, v.carro ? '🛒' : v.enemigo ? '🔥' : '⚔'); et.position.set(0, g.userData.col.userData.sprites ? 2.6 : 1.9, 0); et.scale.multiplyScalar(0.5); g.add(et);
         et.userData.esEt = true; g.userData.et = et; g.userData.txt = txt; g.userData.tEt = ahora;
