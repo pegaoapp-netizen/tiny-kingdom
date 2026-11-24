@@ -1534,3 +1534,15 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .tqm-cuerpo { overflow-y: auto; padding: 8px 12px 12px; }
 /* v8.42: el aviso de «Te atacan» se lee en el tema oscuro */
 #opciones-ataque p { color: #ffe9c0 !important; } #opciones-ataque .oa-info { color: #ffd27a !important; opacity: 1 !important; }
+
+/* v8.43: Mis tropas: rejilla de 2 columnas, dibujo a la izquierda, nombre y cantidad a la derecha */
+.mt-nota { margin: 6px 0; }
+.mt-rejilla { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px 0 8px; }
+.mt-tarjeta { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px; border-radius: 9px; border: 1px solid #6b4a1a; background: linear-gradient(#3a2812, #241606); color: #f5e6c8; text-align: left; cursor: pointer; font: inherit; }
+.mt-tarjeta[type="button"] { cursor: default; }
+.mt-foto { flex: none; width: 58px; height: 58px; border-radius: 6px; overflow: hidden; border: 2px solid #a87a35; background: #120a03; display: grid; place-items: center; }
+.mt-foto img { width: 100%; height: 100%; object-fit: cover; } .mt-foto .ru-emoji { font-size: 30px; }
+.mt-dat { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mt-dat b { font: 800 12.5px system-ui, sans-serif; color: #ffe08a; line-height: 1.15; overflow-wrap: anywhere; }
+.mt-dat span { font: 700 13px system-ui, sans-serif; color: #fff; }
+.pest-tropa { flex-wrap: wrap; }

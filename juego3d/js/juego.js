@@ -7877,7 +7877,7 @@
   var PESTANAS_TROPA = { cuartel: ['explorador', 'miliciano', 'espadachin', 'guardian', 'balista', 'ariete', 'catapulta', 'torre_asedio'], establo: ['jinete', 'caballeria', 'caballeria_pesada'], tiro: ['arquero', 'ballestero', 'arquero_largo', 'tirador_elite'] };
   var ICONO_PESTANA = { cuartel: '🏰', establo: '🐎', tiro: '🏹' };
   var ROMANO = ['I', 'II', 'III', 'IV', 'V'];
-  var vistaTropa = { pest: 'cuartel', tipo: 'espadachin', rango: null, n: 1, modo: 'lista' }; // v6.94: modo lista (cada tropa en su fila) o detalle
+  var vistaTropa = { pest: 'todas', tipo: 'espadachin', rango: null, n: 1, modo: 'lista' }; // v6.94: modo lista (cada tropa en su fila) o detalle
   var visor = null;
   // Escuadrón: el líder adelante y 7 soldados en formación detrás (todos del rango elegido)
   function escuadron(tipo, rango) {
@@ -7959,17 +7959,31 @@
     if (conGemas) t.gemas = gemasParaTerminar(segTropas(tipo, n));
     return t;
   }
+  /* v8.43: MIS TROPAS: todas tus tropas en una sola rejilla de 2 columnas (dibujo a la izquierda, nombre y cantidad) que se desliza */
+  function htmlRejillaTropas(accion) {
+    var tipos = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; });
+    if (!tipos.length) return '<p class="iv-vacio">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</p>';
+    return '<div class="mt-rejilla">' + tipos.map(function (k) { return '<button class="mt-tarjeta"' + (accion ? ' data-accion="' + accion + '" data-tipo="' + k + '"' : ' type="button"') + '><span class="mt-foto">' + fotoHTML(k, '<span class="ru-emoji">' + TROPAS[k].icono + '</span>') + '</span><span class="mt-dat"><b>' + N(k) + '</b><span>' + formatoNumero(cuentaTipo(k)) + '</span></span></button>'; }).join('') + '</div>';
+  }
   function abrirPanelTropas() {
     vistos().tropasDia = hoyTexto();
     var v = vistaTropa, t = v.tipo, d = TROPAS[t], na = nivelArmadura(t);
     if (v.rango === null || v.rango > ARMADURA.max) v.rango = na;
-    var r = v.rango, bloq = r > na, lista = PESTANAS_TROPA[v.pest];
+    if (v.pest === 'todas' && v.modo === 'detalle') v.pest = edificioTropa(t) === 'establo' ? 'establo' : edificioTropa(t) === 'galeria' ? 'tiro' : 'cuartel';
+    var r = v.rango, bloq = r > na, lista = PESTANAS_TROPA[v.pest] || [];
     var arriba = panelActual && panelActual.tipo === 'tropas' ? $('panel').scrollTop : 0;
     var html = subtabsHeroes('tropas');
-    var pestHTML = '<div class="subtabs pest-tropa">' + Object.keys(PESTANAS_TROPA).map(function (k) {
+    var pestHTML = '<div class="subtabs pest-tropa"><button data-accion="tropa-pest" data-pest="todas" class="' + (v.pest === 'todas' ? 'activo' : '') + '">👥 ' + L('Mis tropas', 'My troops') + '</button>' + Object.keys(PESTANAS_TROPA).map(function (k) {
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
     // v6.94: como Kingdoms of Camelot: primero la lista, cada tropa en su fila (foto, nombre, «Tienes: X» y descripción)
+    if (v.modo !== 'detalle' && v.pest === 'todas') {
+      var nT = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; }).length;
+      html += pestHTML + '<p class="nota mt-nota">' + L('Todas tus tropas en casa. Toca una para entrenar más.', 'All your troops at home. Tap one to train more.') + '</p>' + htmlRejillaTropas('tropa-fila') +
+        '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (nT ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
+      abrirPanel(T('p_heroes'), html, { tipo: 'tropas' });
+      return;
+    }
     if (v.modo !== 'detalle') {
       html += pestHTML + '<div class="cq2-lista tk-tropas-lista">' + lista.map(function (k) {
         var ok = puedeEntrenarTipo(k), ent = infoCola().cuenta[k] || 0;
@@ -8269,9 +8283,7 @@
       // v7.63: MIS TROPAS como en la referencia: tarjetas grandes en 2 columnas (dibujo pintado, nombre y cantidad) y Marchar fijo abajo
       var heridos = totalHeridos(), ref = tropas.filter(function (u) { return u.refuerzo; }).length;
       var tiposCasa = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; });
-      h += tiposCasa.length ? '<div class="ru-rejilla">' + tiposCasa.map(function (k) {
-        return '<div class="ru-tarjeta"><div class="ru-dibujo">' + fotoHTML(k, '<span class="ru-emoji">' + TROPAS[k].icono + '</span>') + '</div><b class="ru-nom">' + N(k) + '</b><span class="ru-cant">' + formatoNumero(cuentaTipo(k)) + '</span></div>';
-      }).join('') + '</div>' : '<p class="iv-vacio">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</p>';
+      h += htmlRejillaTropas(''); /* v8.43 */
       h += '<div class="ru-res"><span>🛡️ ' + L('Refuerzos de tu alianza: ', 'Alliance reinforcements: ') + '<b>' + ref + '</b></span><span>💚 ' + L('Heridos: ', 'Wounded: ') + '<b>' + heridos + '</b></span></div>';
       if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) h += '<div class="ru-res"><button class="comprar mini" data-accion="villas-destacar">⚔️ ' + L('Destacar Tropas a otra villa', 'Station troops to another village') + '</button><button class="comprar mini" data-accion="villas-enviar">🐴 ' + L('Enviar Recursos', 'Send Resources') + '</button></div>'; // v7.86
       h += '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (tiposCasa.length ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
@@ -12354,7 +12366,7 @@
     else if (a === 'mer-enviar') enviarMercado(b);
     else if (a === 'armadura-gemas') mejorarArmadura(b.getAttribute('data-tipo'), true);
     else if (a === 'sub-tropas') abrirPanelTropas();
-    else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.modo = 'lista'; if (PESTANAS_TROPA[vistaTropa.pest]) vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-fila') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.modo = 'detalle'; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-lista') { vistaTropa.modo = 'lista'; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-tipo') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
