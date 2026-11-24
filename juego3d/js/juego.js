@@ -1942,6 +1942,12 @@
     function poderLado(g) { return g.reduce(function (t, x) { return t + x.n * Math.sqrt(Math.max(0, x.atk) * Math.max(1, x.vida)); }, 0); }
     var pA = poderLado(A), pD = poderLado(D) + (op.fijas && op.fijas.v > 0 ? Math.sqrt(Math.max(0, op.fijas.a) * op.fijas.v) : 0);
     if (pA > 0 && pD > 0) { var rz = pA / pD, fA = Math.max(0.35, Math.min(3, Math.pow(rz, 0.3))), fD = Math.max(0.35, Math.min(3, Math.pow(1 / rz, 0.3))); A.forEach(function (x) { x.atk *= fA; }); D.forEach(function (x) { x.atk *= fD; }); }
+    /* v8.63 (dueño): EL HÉROE MANDA. La diferencia de héroe (nivel + piezas + estrellas) entre los dos lados multiplica el daño:
+       un héroe nivel 300 bien vestido contra una villa sin caballero hace muchísimo más daño y recibe muchísimo menos.
+       Ventaja = (1 + bono del héroe A) / (1 + bono del héroe D), con bono = (ataque % + vida %) / 100. Se aplica entera (hasta ×60). */
+    var bonoHA = Math.max(0, (mA.atk || 0) + (mA.vida || 0)) / 100, bonoHD = Math.max(0, (mD.atk || 0) + (mD.vida || 0)) / 100, venH = (1 + bonoHA) / (1 + bonoHD);
+    if (venH > 1.05) { var vA = Math.min(60, venH); A.forEach(function (x) { x.atk *= vA; }); D.forEach(function (x) { x.atk /= vA; }); }
+    else if (venH < 0.95) { var vD = Math.min(60, 1 / venH); D.forEach(function (x) { x.atk *= vD; }); A.forEach(function (x) { x.atk /= vD; }); }
     if (op.fijas && op.fijas.v > 0) D.push({ tipo: 'defensas', n: 100, ini: 100, pos: 1500, rango: 2000, vel: 0, dist: true, atk: Math.max(0, op.fijas.a) / 100 * (op.escalaD || 1), vida: op.fijas.v / 100 * muro }); // v8.32
     function vivos(g) { return g.filter(function (x) { return x.n > 0.5; }); }
     function cerca(g, lista) { var m = null, dm = 1e9; lista.forEach(function (e) { var dd = Math.abs(e.pos - g.pos); if (dd < dm) { dm = dd; m = e; } }); return m; }
