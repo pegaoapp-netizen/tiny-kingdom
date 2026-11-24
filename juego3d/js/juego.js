@@ -2760,7 +2760,7 @@
     var items = [];
     [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
-      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')]] : [])
+      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Héroes lanzados', 'Released heroes')]] : [])
       .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span>' + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') + '</button>';
@@ -2995,6 +2995,7 @@
     nuevoCorreo('informes', L('Campamento de trasgos nv ' + cm.nivel + ': ', 'Goblin camp lv ' + cm.nivel + ': ') + (res.gano ? L('victoria', 'victory') : L('derrota', 'defeat')), L('Expedición', 'Expedition'), htmlInforme([[L('Resultado', 'Result'), res.gano ? '🏆 ' + L('Victoria', 'Victory') : '💔 ' + L('Derrota', 'Defeat')], [L('Tu fuerza', 'Your strength'), formatoNumero(f)], [L('Defensa', 'Defense'), formatoNumero(d)]], res.gano ? botin : null));
     if (res.gano && Math.random() < 0.15) { estado.mochila.vip_100 = (estado.mochila.vip_100 || 0) + 1; setTimeout(function () { consejoTemporal('👑 ' + L('El cofre del campamento traía ', 'The camp chest had ') + N('vip_100')); }, 3500); } // v7.79
     if (res.gano && Math.random() < 0.2) { estado.mochila.carreta_sum = (estado.mochila.carreta_sum || 0) + 1; setTimeout(function () { consejoTemporal('🐴 ' + L('Botín de campaña: ', 'Campaign loot: ') + N('carreta_sum')); }, 5000); } // v7.86
+    if (res.gano && Math.random() < 0.25) { var mB = darMedallas(heroeParaMedallas(null), 1 + Math.floor(Math.random() * 2)); if (mB) setTimeout(function () { consejoTemporal(textoMedallas(mB)); }, 2600); } // v8.40
     if (res.gano) { sumarXP(8 * cm.nivel); sumarPuntosAlianza(20); sumarLogro('campamentos'); darBlasones(3 + 2 * cm.nivel); estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; estado.mochila.acel_15m = (estado.mochila.acel_15m || 0) + 1; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (botin[r]) sumarRecurso(r, botin[r]); }); sumarGemas(premioCamp.gemas); sonar('victoria'); setTimeout(function () { darPieza(null, rarezaAlAzar(cm.nivel)); guardar(); }, 1500); } else sonar('derrota');
     estado.cdCamp = estado.cdCamp || {}; estado.cdCamp[i] = Date.now() + 20 * 60 * 1000;
     listo = '<h3 class="bp-gran ' + (res.gano ? 'si' : 'no') + '">' + (res.gano ? T('bp_victoria') : T('bp_derrota')) + '</h3><p>' + (res.gano ? T('at_gano', { b: textoBotin(botin) }) + '<br>📗 +1 ' + N('libro_gra') + ' · ⏱️ +1 ' + N('acel_15m') : T('camp_perdio')) + '</p><p class="nota">' + T('at_bajas', { n: caidas }) + '</p>';
@@ -8648,7 +8649,7 @@
       (hlTab === 'lista' ? '<div class="hl-grid">' + lista.map(cartaHeroeLista).join('') + '</div>' : htmlArbolHeroes()) +
       '<div class="carta" style="margin-top:10px"><h3>🦸 ' + T('reclutar') + '</h3><p class="nota">' + T('reclutar_txt') + '</p><div class="stats">' +
       (reclutaGratisHoy() ? '<button class="comprar naranja" data-accion="reclutar" data-n="gratis">' + T('reclutar_gratis') + '</button>' : botonGemas(RECLUTAR.uno, 'reclutar', 'data-n="1"', '×1')) +
-      botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>';
+      botonGemas(RECLUTAR.diez, 'reclutar', 'data-n="10"', '×10') + '</div></div>' + htmlMedallasHeroes(); // v8.40
     abrirPanel(L('Héroes', 'Heroes'), html, { tipo: 'heroes' }); $('panel').classList.add('hl-panel');
   }
   // ---------- EQUIPO DE LOS HÉROES: 6 espacios, cada pieza con rareza y nivel ----------
@@ -8744,10 +8745,9 @@
   }
   // héroe mítico de premio: si no lo tienes, es tuyo; si ya lo tienes, ganas fragmentos
   function darHeroeMitico() {
-    var mit = HEROES.filter(function (h) { return h.rareza === 'mitico'; }), nuevos = mit.filter(function (h) { return !estado.heroes[h.id]; });
-    var h = (nuevos.length ? nuevos : mit)[Math.floor(Math.random() * (nuevos.length || mit.length))];
-    if (!estado.heroes[h.id]) { estado.heroes[h.id] = { nivel: 1, estrellas: 1, frag: 0 }; cargarModelosHeroes(); return { id: h.id, nuevo: true }; }
-    estado.heroes[h.id].frag += 30; return { id: h.id, nuevo: false };
+    // v8.40: ya no da el héroe entero: 30 medallas de un mítico lanzado (o del mejor lanzado que haya)
+    var id = heroeParaMedallas('mitico') || heroeParaMedallas('legendario') || heroeParaMedallas(null) || 'sol';
+    var r = darMedallas(id, 30) || { id: id, nuevo: false }; return { id: id, nuevo: !!r.nuevo };
   }
   function rarezaAlAzar(nivel) { var r = Math.random(); return r < 0.03 + nivel * 0.006 ? 'legendario' : r < 0.25 + nivel * 0.02 ? 'raro' : 'comun'; }
   function costoMejoraPieza(p) { var m = MULT_RAREZA_EQ[p.r]; return { oro: Math.round(60 * m * Math.pow(p.n, 1.35)), piedra: Math.round(20 * m * p.n) }; }
@@ -9176,12 +9176,50 @@
     else { if (estado.equipo.length >= 3) { consejoTemporal(T('equipo_lleno')); sonar('error'); return; } estado.equipo.push(id); }
     sonar('click'); ponerEquipo(); guardar(); abrirPanelHeroe(id);
   }
+  // v8.40: HÉROES POCO A POCO. Solo salen los héroes LANZADOS (el dueño los lanza desde la nube, por temporadas).
+  // Los héroes no salen enteros: se juntan MEDALLAS y al llegar a las necesarias el héroe se recluta solo.
+  var HEROES_LANZADOS_BASE = ['sol', 'roble', 'trueno', 'pluma'], heroesLanzados = HEROES_LANZADOS_BASE.slice();
+  var MEDALLAS_PARA = { comun: 20, raro: 30, legendario: 50, mitico: 100 };
+  function cargarLanzados() { if (!hayCuenta() || !Cuentas.leerConfigHeroes) return; Cuentas.leerConfigHeroes().then(function (l) { if (Array.isArray(l) && l.length) heroesLanzados = l.filter(function (id) { return HEROE[id]; }); }).catch(function () {}); }
+  setTimeout(cargarLanzados, 6000); setInterval(cargarLanzados, 600000);
+  function lanzado(id) { return heroesLanzados.indexOf(id) >= 0; }
+  function medallasPara(id) { return MEDALLAS_PARA[(HEROE[id] || {}).rareza] || 50; }
+  function medallasDe(id) { return ((estado.medH || {})[id]) || 0; }
+  function darMedallas(id, n) {
+    if (!HEROE[id] || !(n > 0)) return null;
+    if (estado.heroes[id]) { estado.heroes[id].frag = (estado.heroes[id].frag || 0) + n; return { id: id, n: n, nuevo: false, tenia: true }; }
+    var m = estado.medH || (estado.medH = {}); m[id] = (m[id] || 0) + n;
+    if (m[id] >= medallasPara(id)) { var sobra = m[id] - medallasPara(id); delete m[id]; estado.heroes[id] = { nivel: 1, estrellas: 1, frag: sobra }; cargarModelosHeroes(); return { id: id, n: n, nuevo: true }; }
+    return { id: id, n: n, nuevo: false };
+  }
+  // un héroe lanzado que todavía no tienes (si ya los tienes todos, cualquiera lanzado)
+  function heroeParaMedallas(rareza) { var l = HEROES.filter(function (h) { return lanzado(h.id) && (!rareza || h.rareza === rareza); }), sin = l.filter(function (h) { return !estado.heroes[h.id]; }); var p = sin.length ? sin : l; return p.length ? p[Math.floor(Math.random() * p.length)].id : null; }
+  function textoMedallas(r) { if (!r) return ''; return r.nuevo ? '🎉 ' + L('¡Nuevo héroe: ', 'New hero: ') + NH(r.id) + '!' : '🏅 +' + r.n + ' ' + L('medallas de ', 'medals of ') + NH(r.id) + (estado.heroes[r.id] ? '' : ' (' + medallasDe(r.id) + '/' + medallasPara(r.id) + ')'); }
+  function htmlMedallasHeroes() {
+    var l = HEROES.filter(function (h) { return lanzado(h.id) && !estado.heroes[h.id]; }), prox = HEROES.filter(function (h) { return !lanzado(h.id) && !estado.heroes[h.id]; }).length;
+    if (!l.length && !prox) return '';
+    return '<div class="carta mh-caja"><h3>🏅 ' + L('Medallas de héroes', 'Hero medals') + '</h3><p class="nota">' + L('Junta medallas en la Campaña, las aldeas bárbaras, el Torneo y el Reclutamiento. Al completarlas, el héroe se une a ti.', 'Collect medals in the Campaign, barbarian villages, the Tournament and Recruiting. When complete, the hero joins you.') + '</p>' +
+      l.map(function (h) { var m = medallasDe(h.id), t = medallasPara(h.id); return '<div class="mh-fila">' + fotoHTML('h_' + h.id, '🦸') + '<div class="mh-dat"><b>' + NH(h.id) + '</b><div class="tq-barra"><i style="width:' + Math.round(m / t * 100) + '%"></i></div><small>' + m + ' / ' + t + ' ' + L('medallas', 'medals') + '</small></div></div>'; }).join('') +
+      (prox ? '<p class="nota">🔒 ' + prox + L(' héroes más llegarán en las próximas temporadas.', ' more heroes will arrive in coming seasons.') + '</p>' : '') + '</div>';
+  }
+  // dueño: qué héroes están lanzados
+  function abrirLanzarHeroes() {
+    var sel = heroesLanzados.slice();
+    function pintar() {
+      abrirPanel('🦸 ' + L('Héroes lanzados', 'Released heroes'), '<p class="nota">' + L('Solo los héroes marcados salen en el Reclutamiento y los premios (por medallas). Lánzalos poco a poco, por temporadas.', 'Only checked heroes appear in Recruiting and prizes (as medals). Release them little by little, by seasons.') + '</p>' +
+        '<div class="hl-grid">' + HEROES.map(function (h) { var on = sel.indexOf(h.id) >= 0; return '<button class="lz-h' + (on ? ' on' : '') + '" data-accion="lz-tog" data-id="' + h.id + '">' + fotoHTML('h_' + h.id, '🦸') + '<b>' + NH(h.id) + '</b><small>' + T('rareza_' + h.rareza) + ' · ' + (on ? '✅' : '🔒') + '</small></button>'; }).join('') + '</div>' +
+        '<button class="comprar verde" data-accion="lz-guardar" style="margin-top:10px">💾 ' + L('Guardar en la nube', 'Save to the cloud') + '</button>', { tipo: 'lanzar' });
+    }
+    abrirLanzarHeroes.sel = sel; abrirLanzarHeroes.pintar = pintar; pintar();
+  }
   function sacarHeroeAlAzar(mejor) {
     var tot = 0, k;
     for (k in RAREZAS) if (!mejor || k !== 'comun') tot += RAREZAS[k].peso;
     var r = Math.random() * tot, rz = 'comun';
     for (k in RAREZAS) { if (mejor && k === 'comun') continue; r -= RAREZAS[k].peso; if (r <= 0) { rz = k; break; } }
-    var de = HEROES.filter(function (h) { return h.rareza === rz; });
+    var de = HEROES.filter(function (h) { return h.rareza === rz && lanzado(h.id); }); // v8.40: solo lanzados
+    if (!de.length) de = HEROES.filter(function (h) { return lanzado(h.id); });
+    if (!de.length) de = HEROES.filter(function (h) { return h.id === 'sol'; });
     return de[Math.floor(Math.random() * de.length)].id;
   }
   function reclutar(n) {
@@ -9193,10 +9231,10 @@
     for (var i = 0; i < cuantos; i++) res.push(sacarHeroeAlAzar(cuantos === 10 && i === 9 && !res.some(function (id) { return HEROE[id].rareza !== 'comun'; })));
     var html = '<div class="heroes-grid reclutados">';
     res.forEach(function (id) {
-      var nuevo = !estado.heroes[id];
-      if (nuevo) { estado.heroes[id] = { nivel: 1, estrellas: 1, frag: 0 }; cargarModelosHeroes(); } else estado.heroes[id].frag += RECLUTAR.repetido;
+      var rz = HEROE[id].rareza, cuantas = rz === 'comun' ? 3 + Math.floor(Math.random() * 3) : rz === 'raro' ? 2 + Math.floor(Math.random() * 3) : rz === 'legendario' ? 1 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
+      var rm = darMedallas(id, cuantas), nuevo = rm && rm.nuevo; // v8.40: medallas (1 a 5), el héroe se une al completarlas
       html += '<div class="reclutado">' + tarjetaHeroe(HEROE[id]).replace('data-accion="heroe-ver"', 'data-accion="heroe-ver" tabindex="-1"') +
-        '<p class="nota">' + (nuevo ? '<b>' + T('heroe_nuevo', { n: NH(id) }) + '</b>' : T('heroe_frag', { f: RECLUTAR.repetido, n: NH(id) })) + '</p></div>';
+        '<p class="nota">' + (nuevo ? '<b>' + T('heroe_nuevo', { n: NH(id) }) + '</b>' : textoMedallas(rm)) + '</p></div>';
     });
     html += '</div><button class="comprar naranja boton-oleada-grande" data-accion="sub-heroes">' + T('volver') + '</button>';
     sonar('magia');
@@ -10670,6 +10708,8 @@
       ids.forEach(function (id) { if (estado.heroes[id]) darExp(id, expH); });
       items.push({ ico: '🦸', nom: L('EXP de cada héroe', 'EXP per hero'), n: '+' + formatoNumero(expH) });
       sumarXP(expR); items.push({ ico: '⭐', nom: L('EXP del reino', 'Kingdom EXP'), n: '+' + formatoNumero(expR) });
+      var hm = heroeParaMedallas(null), fm = 2 + Math.floor(n / 5); // v8.40: medallas de un héroe lanzado que aún no tienes
+      if (hm && !estado.heroes[hm]) { var rmc = darMedallas(hm, fm); items.push({ img: RETRATOS_IMG['h_' + hm] ? 'iconos/ui/' + RETRATOS_IMG['h_' + hm] + '.webp' : '', ico: '🏅', nom: rmc && rmc.nuevo ? L('¡Nuevo héroe! ', 'New hero! ') + NH(hm) : L('Medallas de ', 'Medals of ') + NH(hm), n: '×' + fm }); }
       var hf = ids[Math.floor(Math.random() * ids.length)], fr = 2 + Math.floor(n / 5);
       if (hf && estado.heroes[hf]) { estado.heroes[hf].frag = (estado.heroes[hf].frag || 0) + fr; items.push({ img: RETRATOS_IMG['h_' + hf] ? 'iconos/ui/' + RETRATOS_IMG['h_' + hf] + '.webp' : '', ico: '🧩', nom: L('Fragmentos de ', 'Shards of ') + NH(hf), n: '×' + fr }); }
       var lib = n % 5 === 0 ? 'libro_gra' : 'libro_peq', nl = 1 + Math.floor(n / 10), ac = n % 10 === 0 ? 'acel_1h' : 'acel_15m';
@@ -12365,6 +12405,8 @@
       if (rr === 'miembro') delete rg[ru]; else rg[ru] = rr;
       Cuentas.ajustesAlianza(alCache.al.tag, { rangos: rg }).then(function () { alCache.al.rangos = rg; alRangoAbierto = null; pintarHubAlianza(); consejoTemporal(nomRangoAl(rr)); }).catch(function () { consejoTemporal(L('No se pudo cambiar el rango.', 'Could not change the rank.')); sonar('error'); });
     }
+    else if (a === 'lz-tog') { var lz = abrirLanzarHeroes.sel || [], lzi = b.getAttribute('data-id'), lzk = lz.indexOf(lzi); if (lzk >= 0) lz.splice(lzk, 1); else lz.push(lzi); sonar('click'); abrirLanzarHeroes.pintar(); } // v8.40
+    else if (a === 'lz-guardar') { b.disabled = true; Cuentas.guardarConfigHeroes(abrirLanzarHeroes.sel).then(function () { heroesLanzados = abrirLanzarHeroes.sel.slice(); sonar('moneda'); consejoTemporal('✅ ' + L('Héroes lanzados guardados: ', 'Released heroes saved: ') + heroesLanzados.length); }).catch(function (er) { b.disabled = false; consejoTemporal(L('No se pudo guardar', 'Could not save') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
     else if (a === 'tm-sub') { sonar('click'); htmlTemporada.sub = b.getAttribute('data-s'); document.querySelectorAll('.tm-subs button').forEach(function (x) { x.classList.toggle('activo', x === b); }); document.querySelectorAll('.tm-sec').forEach(function (x) { x.hidden = x.getAttribute('data-s') !== htmlTemporada.sub; }); } // v8.39
     else if (a === 'reparar-defensas') { sonar('click'); repararDefensas(); } // v8.35
     else if (a === 'ir-atacante') { sonar('click'); irAlAtacante(b.getAttribute('data-uid')); } // v8.33
@@ -12600,6 +12642,7 @@
     var b = ev.target.closest('[data-mg]'); if (!b) return; var id = b.getAttribute('data-mg'); cerrarMenuGrande();
     if (id === 'mg-azar') { sonar('click'); abrirAzar('normal'); return; }
     if (id === 'mg-compensar') { sonar('click'); abrirCompensar(); return; }
+    if (id === 'mg-lanzar') { sonar('click'); abrirLanzarHeroes(); return; } // v8.40
     if (id === 'mg-soporte') { sonar('click'); abrirSoporte('escribir'); return; }
     if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
     if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
@@ -13148,6 +13191,7 @@
       estado.misHechas = g.misHechas || {};
       estado.misDia = g.misDia || null;
       estado.regresos = g.regresos || [];
+      estado.medH = g.medH || {}; // v8.40: medallas de héroes
       estado.fdPct = g.fdPct; estado.fdRep = g.fdRep || null; // v8.35
       estado.pve = g.pve || []; window.__tkPveCarga = true; // v8.17
       estado.destinos = g.destinos || {};
