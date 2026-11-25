@@ -1,0 +1,28 @@
+RIG HUMANO DE BROTHER KINGDOM (esqueleto para los personajes de Campaña)
+=========================================================================
+Viene de tu script «imperios_avalon_humanoid_rig1.py» (mismos 43 huesos, mismas medidas: 1,80 m, pose T).
+
+ARCHIVOS
+- juego3d/modelos/rig_humano.glb  -> el resultado para el juego (Three.js lee GLB): esqueleto + maniquí unido a los huesos
+                                     + animaciones «Caminar» (1 s), «Correr» (0,5 s) y «Atacar» (0,67 s), en bucle.
+- juego3d/rig.html                 -> página de prueba (no la usa el juego): botones Caminar / Correr / Atacar, ver huesos, lento.
+- rig_datos.py                     -> los huesos, las poses de las animaciones y el maniquí (un solo sitio para cambiarlos).
+- crear_rig_glb.py                 -> crea el GLB sin Blender (python3 crear_rig_glb.py) y además el script de Blender.
+- rig_humano_blender.py            -> tu script corregido para Blender 3.6 / 4.x / 5.x: crea lo mismo y exporta rig_humano.glb.
+
+QUÉ SE CORRIGIÓ DE TU SCRIPT
+1. Blender 4.4 y 5.0 ya no tienen action.fcurves (ahora las acciones tienen «capas» y «slots»): tu script fallaba ahí.
+   Ya no se usa; y en las pistas NLA se asigna el slot cuando existe.
+2. Las acciones no tenían «usuario falso»: al guardar el .blend, Blender borraba Caminar/Correr/Atacar. Ahora se guardan.
+3. Los giros se daban en los ejes locales de cada hueso (dependen del «roll»), así que brazos y piernas podían girar
+   hacia el lado equivocado. Ahora las poses se escriben en ejes del armazón y se pasan a cada hueso (L = R⁻¹·q·R).
+4. Se caminaba y corría con los brazos en cruz (pose T): ahora bajan junto al cuerpo y se balancean al revés que las piernas.
+5. Los dedos se abrían hacia arriba (eje Z); con la palma hacia abajo se abren de delante a atrás (eje Y). Corregido.
+6. Añadido a las animaciones: rodilla que se dobla al pasar la pierna, sube y baja de la cadera, giro del tronco,
+   inclinación al correr, y en el ataque: carga por encima del hombro, golpe adelante, giro del pecho y paso al frente.
+7. Solo creaba huesos (sin cuerpo) y no exportaba: ahora crea un maniquí unido a los huesos y exporta el GLB.
+8. Borraba objetos «IOA_» pero dejaba datos sueltos; ahora limpia todo lo suyo («BK_»). El nombre es Brother Kingdom.
+
+PARA PONERLE UN PERSONAJE DE VERDAD
+El maniquí es de cajas, para probar el movimiento. Un personaje real (por ejemplo de Tripo) se une a estos mismos huesos
+en Blender (Ctrl+P > Con pesos automáticos) y se exporta a GLB; las animaciones de este rig le sirven tal cual.

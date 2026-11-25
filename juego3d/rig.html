@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1120">
+<title>Brother Kingdom · Prueba del rig humano</title>
+<!-- Página de PRUEBA del rig humano (modelos/rig_humano.glb). No cambia nada del juego: index.html no la usa. -->
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1120; color: #f3ead2; font-family: "Segoe UI", system-ui, sans-serif; touch-action: none; user-select: none; }
+  canvas { display: block; }
+  .arriba { position: fixed; top: calc(env(safe-area-inset-top) + 8px); left: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 6px; z-index: 5; }
+  .chip { background: rgba(14,18,32,.86); border: 1px solid rgba(232,195,106,.55); border-radius: 12px; padding: 7px 11px; font-size: 13px; }
+  .chip b { color: #e8c36a; }
+  .abajo { position: fixed; left: 8px; right: 8px; bottom: calc(env(safe-area-inset-bottom) + 12px); display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; z-index: 5; }
+  button { font-family: inherit; color: #f8efd6; background: linear-gradient(#2b3350, #171d31); border: 1px solid rgba(232,195,106,.55); border-radius: 14px; font-size: 15px; font-weight: 700; padding: 14px 6px; }
+  button.on { background: linear-gradient(#c79a3c, #8a6420); color: #1a1206; border-color: #ffe39a; }
+  .fila2 { grid-column: 1 / -1; display: flex; gap: 8px; } .fila2 button { flex: 1; font-size: 12px; padding: 9px 4px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="arriba"><span class="chip">🦴 <b id="info">Cargando…</b></span><span class="chip" id="clip">—</span></div>
+<div class="abajo">
+  <button id="b-Caminar">🚶 Caminar</button><button id="b-Correr">🏃 Correr</button><button id="b-Atacar">⚔️ Atacar</button>
+  <div class="fila2"><button id="b-huesos">🦴 Ver huesos</button><button id="b-lento">🐢 Lento</button></div>
+</div>
+<script src="js/three.min.js"></script>
+<script src="js/GLTFLoader.js"></script>
+<script>
+(function () {
+  var T = THREE, W = innerWidth, H = innerHeight;
+  var ren = new T.WebGLRenderer({ antialias: true }); ren.setPixelRatio(Math.min(devicePixelRatio, 2)); ren.setSize(W, H); ren.outputEncoding = T.sRGBEncoding; document.body.appendChild(ren.domElement);
+  var esc = new T.Scene(); esc.background = new T.Color(0x1c2638);
+  var cam = new T.PerspectiveCamera(38, W / H, 0.05, 50); cam.position.set(2.6, 1.5, 3.4); cam.lookAt(0, 0.95, 0);
+  esc.add(new T.HemisphereLight(0xfff4e0, 0x3a3020, 0.9)); var sol = new T.DirectionalLight(0xffffff, 0.9); sol.position.set(3, 5, 4); esc.add(sol);
+  var suelo = new T.Mesh(new T.CircleGeometry(3, 48), new T.MeshLambertMaterial({ color: 0x4f6b3a })); suelo.rotation.x = -Math.PI / 2; esc.add(suelo);
+  esc.add(new T.GridHelper(6, 12, 0x6b8455, 0x5a7449));
+  var modelo = null, mezcla = null, acciones = {}, actual = null, huesos = null, lento = false, reloj = new T.Clock(), giro = 0;
+  window.__rig = { listo: false };
+  new T.GLTFLoader().load('modelos/rig_humano.glb?v=1', function (g) {
+    modelo = g.scene; esc.add(modelo);
+    modelo.traverse(function (o) { if (o.isMesh) { o.material.vertexColors = true; o.frustumCulled = false; } });
+    mezcla = new T.AnimationMixer(modelo);
+    g.animations.forEach(function (c) { acciones[c.name] = mezcla.clipAction(c); });
+    huesos = new T.SkeletonHelper(modelo); huesos.visible = false; esc.add(huesos);
+    var nh = 0; modelo.traverse(function (o) { if (o.isBone) nh++; });
+    document.getElementById('info').textContent = nh + ' huesos · ' + g.animations.length + ' animaciones';
+    window.__rig = { listo: true, huesos: nh, clips: g.animations.map(function (c) { return c.name + ' ' + c.duration.toFixed(2) + 's'; }), modelo: modelo, gltf: g, tocar: tocar, mezcla: mezcla };
+    tocar('Caminar');
+  }, undefined, function (e) { document.getElementById('info').textContent = 'Error: ' + e; window.__rig = { error: String(e) }; });
+  function tocar(n) {
+    var a = acciones[n]; if (!a) return;
+    a.reset(); a.setLoop(T.LoopRepeat, Infinity); a.play();
+    if (actual && actual !== a) actual.crossFadeTo(a, 0.25, false); // paso suave de una animación a otra
+    actual = a; document.getElementById('clip').textContent = n;
+    ['Caminar', 'Correr', 'Atacar'].forEach(function (k) { document.getElementById('b-' + k).classList.toggle('on', k === n); });
+  }
+  ['Caminar', 'Correr', 'Atacar'].forEach(function (k) { document.getElementById('b-' + k).onclick = function () { tocar(k); }; });
+  document.getElementById('b-huesos').onclick = function () { if (huesos) { huesos.visible = !huesos.visible; this.classList.toggle('on', huesos.visible); } };
+  document.getElementById('b-lento').onclick = function () { lento = !lento; this.classList.toggle('on', lento); };
+  (function bucle() {
+    requestAnimationFrame(bucle);
+    var dt = Math.min(0.05, reloj.getDelta()) * (lento ? 0.25 : 1);
+    if (mezcla) mezcla.update(dt);
+    giro += dt * 0.15; cam.position.set(Math.sin(giro + 0.65) * 4.3, 1.5, Math.cos(giro + 0.65) * 4.3); cam.lookAt(0, 0.95, 0);
+    ren.render(esc, cam);
+  })();
+  addEventListener('resize', function () { W = innerWidth; H = innerHeight; ren.setSize(W, H); cam.aspect = W / H; cam.updateProjectionMatrix(); });
+})();
+</script>
+</body>
+</html>
