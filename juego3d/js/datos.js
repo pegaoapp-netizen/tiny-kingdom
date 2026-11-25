@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.88';
+var VERSION_JUEGO = '8.89';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.88","2026-11-24","Torre del homenaje › Promociones: el número son las que ya puedes aceptar, cada pestaña dice las suyas y se ven todas las pestañas.","Keep › Promotions: the number is what you can accept now, each tab shows its own and all tabs are visible."],
+var NOVEDADES_VER = [["8.89","2026-11-24","El castillo es más grande y llena su plaza.","The castle is bigger and fills its square."],
+  ["8.88","2026-11-24","Torre del homenaje › Promociones: el número son las que ya puedes aceptar, cada pestaña dice las suyas y se ven todas las pestañas.","Keep › Promotions: the number is what you can accept now, each tab shows its own and all tabs are visible."],
   ["8.87","2026-11-24","Cuarteles, Cabañas y Enfermerías: todas las que quieras. Los demás edificios, uno por villa.","Barracks, Huts and Infirmaries: as many as you want. Other buildings: one per village."],
   ["8.86","2026-11-24","Techos: todos azules, menos el Cuartel (rojo), la Enfermería (verde) y el Almacén (carmelita).","Roofs: all blue except Barracks (red), Infirmary (green) and Storehouse (brown)."],
   ["8.85","2026-11-24","Se pueden construir hasta 5 Enfermerías por villa para tener más camas.","You can build up to 5 Infirmaries per village for more beds."],

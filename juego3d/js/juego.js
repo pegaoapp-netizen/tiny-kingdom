@@ -1050,6 +1050,7 @@
   }
   setTimeout(ponerAdornosCiudad, 1500);
   var altoCastillo = 12;
+  var TAM_CASTILLO = 1.78; /* v8.89 (dueño): el castillo más grande para llenar su parcela (antes 1.44) */
   function ponerCastillo() {
     escena.remove(castillo);
     // v6.32: 5 etapas (madera, piedra con 3 torres, 5 torres, 8 torres y el ULTRA del nivel 30) y dentro de cada etapa crece un poco
@@ -1061,7 +1062,8 @@
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
     // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
-    var metaC = 1.44 * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
+    var metaC = TAM_CASTILLO * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
+    if (nvC >= 16) metaC *= 1.3; /* v8.89: los castillos grandes llenan su plaza */
     if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
     castillo.position.y = COLINA.alto; // v7.55: arriba de su colina
     escena.add(castillo);
