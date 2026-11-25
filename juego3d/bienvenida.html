@@ -64,7 +64,7 @@ footer a { color: #cbb58a; }
 .foto figcaption { margin-top: 8px; font: 700 14px Georgia, serif; color: #ffe6a6; }
 .pasos li b { color: #ffe6a6; }
 .novedades { max-width: 680px; margin: 0 auto; padding: 0; list-style: none; display: grid; gap: 10px; }
-.novedades li { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 14px; border-radius: 14px; background: var(--tarjeta); border: 1px solid var(--borde); }
+.novedades li { display: grid; grid-template-columns: 1fr; gap: 4px 12px; padding: 12px 14px; border-radius: 14px; background: var(--tarjeta); border: 1px solid var(--borde); }
 .novedades .ver { grid-row: span 2; align-self: start; padding: 3px 9px; border-radius: 10px; background: linear-gradient(180deg, #ffcf4a, #c8841c); color: #2a1404; font: 900 13px Georgia, serif; white-space: nowrap; }
 .novedades .fecha { font-size: 12px; color: #8f7a55; }
 .novedades .txt { font-size: 15px; color: var(--texto); }
@@ -177,7 +177,7 @@ html[lang="en"] [data-en] { display: revert; }
   poner(idi);
   b.addEventListener('click', function () { poner(idi === 'es' ? 'en' : 'es'); });
   /* novedades: salen solas de la lista del juego (js/datos.js) */
-  var cuantas = 8;
+  var cuantas = 3; /* v8.98 (dueño): la lista larga estaba de más; solo las 3 últimas, sin números de versión */
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function pintarNov() {
     var l = window.NOVEDADES_VER || [], ul = document.getElementById('novedades'), mb = document.getElementById('mas-nov');
@@ -185,9 +185,9 @@ html[lang="en"] [data-en] { display: revert; }
     ul.innerHTML = l.slice(0, cuantas).map(function (n) {
       var f = '';
       try { f = n[1] ? new Date(n[1] + 'T12:00:00').toLocaleDateString(idi === 'es' ? 'es' : 'en', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (e) { f = n[1] || ''; }
-      return '<li><span class="ver">v' + esc(n[0]) + '</span><span class="fecha">' + esc(f) + '</span><span class="txt">' + esc(idi === 'es' ? n[2] : (n[3] || n[2])) + '</span></li>';
+      return '<li><span class="fecha">' + esc(f) + '</span><span class="txt">' + esc(idi === 'es' ? n[2] : (n[3] || n[2])) + '</span></li>';
     }).join('');
-    mb.hidden = cuantas >= l.length;
+    mb.hidden = true;
   }
   document.getElementById('mas-nov').addEventListener('click', function () { cuantas += 10; pintarNov(); });
   b.addEventListener('click', pintarNov);
