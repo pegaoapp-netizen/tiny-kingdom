@@ -11030,6 +11030,19 @@
     nuevoCorreo('sistema', '🧪 ' + L('Botellas de campaña', 'Campaign flasks') + ' +' + n, L('Campaña', 'Campaign'), '<p>' + escaparHTML(txt.join(' · ')) + '</p><p>' + L('Úsalas para jugar las misiones del mapa de Campaña.', 'Use them to play the Campaign map missions.') + '</p>');
   }
   setTimeout(regaloBotellas, 12000); setInterval(regaloBotellas, 600000);
+  // v9.12: puente del CALENDARIO DE PREMIOS del mes (js/tk-calendario.js). Solo da objetos al Inventario (nunca gemas)
+  window.__tkCal = {
+    L: L, sonar: sonar, consejo: consejoTemporal, num: formatoNumero,
+    listo: function () { return !enMenu && !!(estado && estado.mochila); },
+    datos: function () { if (!estado.calMes || typeof estado.calMes !== 'object') estado.calMes = {}; if (!estado.calMes.cob || typeof estado.calMes.cob !== 'object') estado.calMes.cob = {}; return estado.calMes; },
+    guardar: function () { guardar(true); actualizarHUD(); },
+    existe: function (k) { return !!OBJETOS[k]; },
+    icono: function (k) { return OBJETOS[k] ? OBJETOS[k].icono : '🎁'; },
+    nombre: function (k) { return OBJETOS[k] ? N(k) : String(k); },
+    dar: function (k, n) { if (!OBJETOS[k] || !(n > 0)) return false; estado.mochila[k] = (estado.mochila[k] || 0) + n; return true; },
+    recompensas: function (t, items, cb) { mostrarRecompensas(t, items, cb); },
+    ocupado: function () { return !!(panelActual || $('recompensas') || $('confirmar-juego') || $('cofre-bienvenida') || window.__tkCampanaAbierta); }
+  };
   // v8.27: puente con la Campaña en batalla (js/tk-campana.js)
   window.__tkCamp = {
     L: L, sonar: sonar, consejo: consejoTemporal,
