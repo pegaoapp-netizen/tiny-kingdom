@@ -4,10 +4,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.10';
+var VERSION_JUEGO = '9.11';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.10","2026-11-25","Perfil del jugador desde el chat: ahora tiene ✕ arriba, y al tocar fuera se cierra solo la tarjeta y sigues en el chat.","Player profile from the chat now has a ✕, and tapping outside closes only the card so you stay in the chat."],
+var NOVEDADES_VER = [["9.11","2026-11-25","Tienda: elige cuántos objetos compras con gemas (con total y gemas que te quedan). Inventario: usa varios de golpe también la energía de héroe, el megáfono, la cosecha y las tropas. Calles de adoquines más realistas. Con dos dedos puedes mover el mapa mientras acercas o giras. El panel de abajo empieza recogido y los botones laterales ocupan menos.","Shop: choose how many items to buy with gems. Inventory: use several at once for more items. More realistic cobblestone streets. Two-finger pan while zooming or rotating. Bottom panel starts collapsed and side buttons take less space."],
+  ["9.10","2026-11-25","Perfil del jugador desde el chat: ahora tiene ✕ arriba, y al tocar fuera se cierra solo la tarjeta y sigues en el chat.","Player profile from the chat now has a ✕, and tapping outside closes only the card so you stay in the chat."],
   ["8.99","2026-11-25","Marcha: ahora ves cuántas tropas tienes y cuántas mandas. El cofre diario se cierra con la ✕. «Jugar sin cuenta» entra con un toque. Ajustes más limpio y el botón Actualizar ya no tapa nada.","March shows the troops you have and the ones you send. The daily chest closes with ✕. Play without account works with one tap. Cleaner Settings."],
   ["8.98","2026-11-25","Pantalla de entrar nueva: la portada de Brother Kingdom de fondo, el escudo del sol y botones más claros. También puedes ver la contraseña con el ojo.","New sign-in screen with the Brother Kingdom cover, the sun shield and clearer buttons. You can also show your password with the eye."],
   ["8.97","2026-11-25","Cada edificio tiene ya su color de techo para encontrarlo rápido: Cuartel rojo, Enfermería verde, Almacén carmelita, Establo amarillo, Galería morada, Herrería gris, Academia azul, Embajada turquesa, Mercado rosado, Cabaña naranja y Relevo blanco.","Every building now has its own roof color so you can find it fast."],
