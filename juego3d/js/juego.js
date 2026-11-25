@@ -13838,7 +13838,7 @@
   }
   function actualizarDock() {
     var d = crearDock();
-    var hayMarchaYa = marchas.some(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }) || marchasPVE.length > 0 || guarniciones().length > 0 || (estado.regresos || []).some(function (v) { return v.llega > Date.now(); });
+    var hayMarchaYa = marchas.some(function (m) { return !m.resuelto && !m.cancelado && m.llega > Date.now(); }) || marchasPVE.length > 0 || guarniciones().length > 0 || (estado.regresos || []).some(function (v) { return v.llega > Date.now(); }) || carretas().viajes.some(function (v) { return v.de && v.a && v.tipo !== 'ataque' && ((v.llega || 0) > Date.now() || (v.vuelve || 0) > Date.now()); }) || (enviosEnCamino || []).some(function (e) { return e.llega > Date.now(); }); /* v8.81: también en el Mundo cuando van caravanas, para poder acelerarlas */
     var ocultar = enMenu || (enMundo && !hayMarchaYa) || !!panelActual || document.body.classList.contains('panel-abierto');
     d.classList.toggle('en-mundo', !!enMundo);
     d.classList.toggle('oculto', ocultar);
