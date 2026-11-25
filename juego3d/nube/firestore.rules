@@ -148,8 +148,8 @@ service cloud.firestore {
     // Ataques con marcha: se crean al salir, se resuelven al llegar (lo hace el defensor o el atacante, una sola vez)
     function botinOk(b) {
       return b.keys().hasOnly(['oro', 'comida', 'madera', 'piedra'])
-        && b.oro is int && b.oro >= 0 && b.oro <= 65000 && b.comida is int && b.comida >= 0 && b.comida <= 65000
-        && b.madera is int && b.madera >= 0 && b.madera <= 65000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 65000;
+        && b.oro is int && b.oro >= 0 && b.oro <= 1000000000000000 && b.comida is int && b.comida >= 0 && b.comida <= 1000000000000000
+        && b.madera is int && b.madera >= 0 && b.madera <= 1000000000000000 && b.piedra is int && b.piedra >= 0 && b.piedra <= 1000000000000000; // v8.65: si lo dejas en cero te llevas todo
     }
     // v7.39: el Canciller (líder) de una alianza ve los ataques de sus miembros y contra ellos
     function esMiembroAl(tag) {

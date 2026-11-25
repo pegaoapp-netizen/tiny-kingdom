@@ -1609,3 +1609,9 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .ev-desl .ev-rap { flex: 0 0 32px; width: 32px; height: 28px; padding: 0; border-radius: 6px; border: 1px solid #2f6fc0; background: linear-gradient(#3d7ed0, #1f4f94); color: #fff; font: 800 10.5px system-ui, sans-serif; cursor: pointer; }
 .ev-desl .ev-rap:disabled { opacity: .4; }
 .ev-desl .ev-max { flex: 0 0 auto !important; padding: 4px 6px !important; font-size: 11px !important; }
+
+/* v8.65: las marcas 10M, 20M, 30M van sobre la misma barra */
+.ev-desl .ev-pista { position: relative; flex: 1 1 60px; min-width: 50px; display: flex; align-items: center; padding-top: 12px; }
+.ev-desl .ev-pista input[type=range] { flex: 1 1 auto; width: 100%; min-width: 0; margin: 0; }
+.ev-desl .ev-marca { position: absolute; top: 0; transform: translateX(-50%); font: 800 9px/1 system-ui, sans-serif; font-style: normal; color: #9fd0ff; pointer-events: none; white-space: nowrap; }
+.ev-desl .ev-marca::after { content: ''; position: absolute; left: 50%; top: 11px; width: 1px; height: 8px; background: #9fd0ff; opacity: .8; }
