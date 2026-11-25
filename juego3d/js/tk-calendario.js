@@ -81,9 +81,10 @@
     v.innerHTML = '<div class="cal-caja" role="dialog" aria-label="' + L('Premios por conectarte', 'Log-in rewards') + '">' +
       '<button class="cal-x" type="button" aria-label="' + L('Cerrar', 'Close') + '">✕</button>' +
       '<h2>' + L('Premios de ', 'Log-in Rewards · ') + nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) + '</h2><div class="cal-raya"></div>' +
-      '<p class="cal-txt">' + L('Este mes has entrado <b>' + d.dias + '</b> día(s). Toca los premios iluminados para recogerlos.', 'You have logged in <b>' + d.dias + '</b> day(s) this month. Tap the glowing rewards to collect them.') + '</p>' +
+      '<p class="cal-txt">' + L('Este mes has entrado <b>' + d.dias + '</b> día(s). Toca cualquier día para ver su premio; los iluminados ya son tuyos.', 'You have logged in <b>' + d.dias + '</b> day(s) this month. Tap any day to see its reward; glowing ones are yours.') + '</p>' +
       '<p class="cal-txt cal-bot-txt">🧪 ' + L('Día ' + DIA_GRANDE + ': <b>' + bot[1] + ' botellas de campaña</b> para jugar la Campaña.', 'Day ' + DIA_GRANDE + ': <b>' + bot[1] + ' campaign flasks</b> to play the Campaign.') + '</p>' +
       '<div class="cal-rejilla">' + celdas + '</div>' +
+      '<div class="cal-info" id="cal-info"></div>' + /* v9.16: qué es el premio que tocas */
       '<div class="cal-pie"><small>' + L('Nuevo calendario en ', 'New calendar in ') + dd + 'd ' + hh + 'h</small>' +
       (n > 1 ? '<button type="button" class="comprar verde cal-todo">' + L('Recoger todo (' + n + ')', 'Collect all (' + n + ')') + '</button>' : '') + '</div></div>';
     document.body.appendChild(v);
@@ -93,11 +94,22 @@
     Array.prototype.forEach.call(v.querySelectorAll('.cal-dia'), function (el) {
       el.addEventListener('click', function () {
         var i = +el.getAttribute('data-dia');
-        if (el.classList.contains('listo')) { recoger([i]); return; }
-        var p = premio(i); c.sonar('click');
-        c.consejo((d.cob[i] ? '✓ ' + L('Ya recogido: ', 'Already collected: ') : '🔒 ' + L('Día ' + i + ': ', 'Day ' + i + ': ')) + c.nombre(p[0]) + ' ×' + c.num(p[1]));
+        if (el.classList.contains('listo') && el.classList.contains('elegido')) { recoger([i]); return; } // segundo toque: lo recoges
+        c.sonar('click'); info(i);
       });
     });
+    // ficha del premio: dibujo grande, nombre, cantidad, para qué sirve y cuándo se cobra
+    function info(i) {
+      var p = premio(i), nm = window.NOMBRES && NOMBRES[p[0]], q = nm && nm.des_es ? [nm.des_es, nm.des_en || nm.des_es] : null, est = d.cob[i] ? 'cogido' : i <= d.dias ? 'listo' : 'futuro', falta = i - d.dias;
+      Array.prototype.forEach.call(v.querySelectorAll('.cal-dia'), function (e) { e.classList.toggle('elegido', +e.getAttribute('data-dia') === i); });
+      v.querySelector('#cal-info').innerHTML = '<div class="ci-img">' + icono(p) + '</div><div class="ci-txt"><b>' + L('Día ', 'Day ') + i + ' · ' + c.nombre(p[0]) + ' ×' + c.num(p[1]) + '</b>' +
+        (q ? '<span>' + L(q[0], q[1]) + '</span>' : '') +
+        '<em class="ci-' + est + '">' + (est === 'cogido' ? '✓ ' + L('Ya lo recogiste.', 'Already collected.') : est === 'listo' ? '🎁 ' + L('¡Ya es tuyo! Toca otra vez la casilla o el botón para recogerlo.', 'It is yours! Tap the square again or the button to collect.') : '🔒 ' + L('Se desbloquea cuando entres ' + falta + ' día' + (falta > 1 ? 's' : '') + ' más este mes.', 'Unlocks after ' + falta + ' more log-in day' + (falta > 1 ? 's' : '') + ' this month.')) + '</em>' +
+        (est === 'listo' ? '<button type="button" class="comprar verde ci-recoger">' + L('Recoger', 'Collect') + '</button>' : '') + '</div>';
+      var br = v.querySelector('.ci-recoger'); if (br) br.addEventListener('click', function () { recoger([i]); });
+    }
+    var primero = 0; for (var j = 1; j <= total && !primero; j++) if (!d.cob[j]) primero = j; // al abrir: el premio que toca ahora
+    info(primero || Math.min(total, d.dias));
     var bt = v.querySelector('.cal-todo');
     if (bt) bt.addEventListener('click', function () { var l = []; for (var i = 1; i <= d.dias; i++) if (!d.cob[i]) l.push(i); recoger(l); });
   }
@@ -152,6 +164,14 @@
     '#cal-ventana .cal-dia.grande { background: radial-gradient(circle at 50% 40%, #ffe9a0, #d8402e 75%); border-color: #ffd34d; }',
     '#cal-ventana .cal-dia.grande::after { content: "★"; position: absolute; right: 3px; top: 0; color: #fff6c8; font-size: 12px; text-shadow: 0 0 4px #b8860b; }',
     '#cal-ventana .cal-dia.grande.listo { border-color: #7dff3a; }',
+    '#cal-ventana .cal-dia.elegido { outline: 3px solid #ffd34d; outline-offset: 1px; z-index: 1; }',
+    '#cal-ventana .cal-info { display: flex; gap: 10px; align-items: center; margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.45); border: 2px solid #b8925a; min-height: 74px; }',
+    '#cal-ventana .ci-img { flex: 0 0 58px; height: 58px; border-radius: 8px; background: linear-gradient(#5b7fb0, #2e4f80); border: 2px solid #a89070; display: grid; place-items: center; font-size: 30px; }',
+    '#cal-ventana .ci-img img, #cal-ventana .ci-img svg { width: 84%; height: 84%; object-fit: contain; }',
+    '#cal-ventana .ci-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 13px; line-height: 1.3; color: #4a3218; }',
+    '#cal-ventana .ci-txt b { font-size: 14px; color: #3a2414; } #cal-ventana .ci-txt em { font-style: normal; font-weight: 700; font-size: 12.5px; }',
+    '#cal-ventana .ci-cogido { color: #3f7a22; } #cal-ventana .ci-listo { color: #2f7a10; } #cal-ventana .ci-futuro { color: #8a4a12; }',
+    '#cal-ventana .ci-recoger { align-self: flex-start; margin-top: 4px; padding: 6px 16px; }',
     '#cal-ventana .cal-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding: 0 4px; }',
     '#cal-ventana .cal-pie small { color: #6a4a22; font-weight: 700; white-space: nowrap; }',
     '#cal-ventana .cal-todo { flex: 0 0 auto; padding: 8px 14px; }',
