@@ -685,19 +685,40 @@
   // ---------- CAMINOS DE TIERRA entre los campos, y de los campos a la mina ----------
   (function caminosCampos() {
     // adoquines pintados en el momento (sin imágenes)
-    function texturaAdoquin() {
-      var T = 256, c = document.createElement('canvas'); c.width = c.height = T;
-      var x = c.getContext('2d'), s = 9; x.fillStyle = '#7d776c'; x.fillRect(0, 0, T, T);
+    function texturaAdoquin() { /* v9.09: adoquines irregulares de piedra (tonos, juntas oscuras, desgaste y musgo) */
+      var T = 512, c = document.createElement('canvas'); c.width = c.height = T;
+      var x = c.getContext('2d'); x.fillStyle = '#5b5348'; x.fillRect(0, 0, T, T);
       var r = (function (q) { return function () { q = (q * 16807) % 2147483647; return q / 2147483647; }; })(777);
-      for (var fy = 0; fy < T; fy += 21) for (var fx = -((fy / 21) % 2) * 16; fx < T; fx += 32) {
-        var tono = 150 + Math.floor(r() * 50); x.fillStyle = 'rgb(' + (tono + 8) + ',' + (tono + 4) + ',' + (tono - 6) + ')';
-        x.beginPath(); x.roundRect ? x.roundRect(fx + 2, fy + 2, 28, 17, 5) : x.rect(fx + 2, fy + 2, 28, 17); x.fill();
-        x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(fx + 5, fy + 4, 20, 3);
+      for (var i = 0; i < 900; i++) { x.fillStyle = 'rgba(' + (60 + r() * 40 | 0) + ',' + (54 + r() * 34 | 0) + ',' + (44 + r() * 26 | 0) + ',.5)'; x.fillRect(r() * T, r() * T, 2 + r() * 3, 2 + r() * 3); }
+      var FH = 32, n = T / FH;
+      for (var f = 0; f < n; f++) {
+        var fy = f * FH, fx = -r() * 30;
+        while (fx < T) {
+          var w = 26 + r() * 22, h = FH - 4 - r() * 3;
+          var tono = 128 + Math.floor(r() * 62), cal = r() < 0.3 ? 10 : r() < 0.5 ? -8 : 0;
+          var ox = fx + 2 + (r() - 0.5) * 2, oy = fy + 2 + (r() - 0.5) * 2;
+          [0, T].forEach(function (dx) { [0, T].forEach(function (dy) { /* se repite sin cortes en los bordes */
+            if ((dx && ox + w < T) || (dy && f < n - 1)) return;
+            var px = ox - dx, py = oy - dy;
+            var gr = x.createLinearGradient(px, py, px + w * 0.4, py + h);
+            gr.addColorStop(0, 'rgb(' + (tono + 22 + cal) + ',' + (tono + 18) + ',' + (tono + 8 - cal) + ')');
+            gr.addColorStop(1, 'rgb(' + (tono - 18 + cal) + ',' + (tono - 22) + ',' + (tono - 30 - cal) + ')');
+            x.fillStyle = gr; x.beginPath();
+            if (x.roundRect) x.roundRect(px, py, w, h, 7 + r() * 4); else x.rect(px, py, w, h);
+            x.fill();
+            x.fillStyle = 'rgba(255,250,235,.16)'; x.beginPath(); x.ellipse(px + w * 0.42, py + h * 0.32, w * 0.28, h * 0.16, 0, 0, Math.PI * 2); x.fill();
+            if (r() < 0.25) { x.strokeStyle = 'rgba(40,34,28,.35)'; x.lineWidth = 1; x.beginPath(); x.moveTo(px + r() * w, py + 3); x.lineTo(px + r() * w, py + h - 3); x.stroke(); }
+          }); });
+          fx += w + 3 + r() * 2;
+        }
       }
-      var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; return t;
+      for (i = 0; i < 160; i++) { x.fillStyle = 'rgba(' + (70 + r() * 30 | 0) + ',' + (100 + r() * 30 | 0) + ',50,.35)'; x.beginPath(); x.arc(r() * T, (Math.floor(r() * n) * FH) + (r() < 0.5 ? 1 : FH - 1), 1.5 + r() * 2.5, 0, Math.PI * 2); x.fill(); }
+      var t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(0.5, 0.5);
+      try { t.anisotropy = Math.min(8, render.capabilities.getMaxAnisotropy()); } catch (e) {}
+      return t;
     }
     var tex = texturaAdoquin(), matPiedra = new THREE.MeshLambertMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -3 });
-    var matBorde = new THREE.MeshLambertMaterial({ color: 0x6a655c, polygonOffset: true, polygonOffsetFactor: -2 });
+    var matBorde = new THREE.MeshLambertMaterial({ color: 0x564c40, polygonOffset: true, polygonOffsetFactor: -2 });
     // todo se dibuja en un grupo girado con los ejes de la ciudad: (a, b) -> (x = -b, z = a)
     var G = new THREE.Group(); G.rotation.y = Math.atan2(EJE_U.x, EJE_U.z);
     function losa(a0, a1, b0, b1, y, ancho) {
