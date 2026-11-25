@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Brother Kingdom · Reinos del Caribe</title>
+<meta name="description" content="Brother Kingdom: juego de estrategia gratis. Levanta tu castillo en una isla del Caribe, entrena tu ejército, recluta héroes y únete a una alianza.">
+<meta property="og:title" content="Brother Kingdom · Reinos del Caribe">
+<meta property="og:description" content="Levanta tu castillo, entrena tu ejército y conquista el Caribe. Gratis, en el navegador.">
+<meta property="og:image" content="https://brotherkingdom.com/iconos/ui/portada.jpg?v=893">
+<meta property="og:url" content="https://brotherkingdom.com/">
+<meta name="theme-color" content="#120a05">
+<link rel="icon" href="iconos/icono-192.png">
+<link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
+<style>
+:root { --oro: #ffd86a; --oro2: #c8841c; --fondo: #120a05; --tarjeta: #24150b; --borde: #6b4a22; --texto: #f3e6c8; --suave: #cbb58a; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--fondo); color: var(--texto); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+a { color: inherit; }
+img { display: block; max-width: 100%; }
+.envoltura { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+/* barra de arriba */
+.barra { justify-content: flex-end !important; position: fixed; top: 0; left: 0; right: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; background: linear-gradient(180deg, rgba(18,10,5,.92), rgba(18,10,5,0)); }
+.marca { display: flex; align-items: center; gap: 8px; font: 800 17px Georgia, serif; color: var(--oro); text-decoration: none; text-shadow: 0 1px 3px #000; }
+.marca img { width: 30px; height: 30px; border-radius: 8px; }
+.idioma { background: rgba(0,0,0,.45); border: 1px solid var(--borde); color: var(--texto); border-radius: 20px; padding: 5px 12px; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+
+/* portada */
+.portada { position: relative; min-height: 100vh; min-height: 100svh; display: flex; align-items: flex-end; justify-content: center; text-align: center; background: var(--fondo) url(iconos/ui/portada.jpg?v=893) top center / contain no-repeat; }
+.portada::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: min(177.8vw, 100%); background: linear-gradient(180deg, transparent 58%, rgba(18,10,5,.7) 80%, var(--fondo) 99%); }
+.portada .dentro { position: relative; z-index: 1; padding: 0 16px calc(env(safe-area-inset-bottom) + 34px); max-width: 560px; }
+.portada p { margin: 0 0 18px; font-size: 18px; color: #fff3d6; text-shadow: 0 2px 6px #000; }
+.boton { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 0 34px; border-radius: 40px; border: 3px solid #ffe7a0; background: linear-gradient(180deg, #ffcf4a, #e08a16 60%, #b35a0c); color: #2a1404; font: 900 21px Georgia, serif; letter-spacing: .5px; text-decoration: none; box-shadow: 0 8px 24px rgba(0,0,0,.6), 0 0 24px rgba(255,190,70,.45); cursor: pointer; transition: transform .15s ease; }
+.boton:hover { transform: translateY(-2px); }
+.boton:active { transform: translateY(1px); }
+.nota { margin-top: 10px; font-size: 13px; color: var(--suave); }
+
+/* secciones */
+section { padding: 56px 0; }
+h2 { margin: 0 0 10px; font: 900 clamp(26px, 6vw, 38px)/1.15 Georgia, serif; color: var(--oro); text-align: center; }
+.intro { max-width: 640px; margin: 0 auto 30px; text-align: center; color: var(--suave); font-size: 17px; }
+.rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.tarjeta { display: flex; gap: 14px; align-items: flex-start; padding: 16px; border-radius: 16px; background: linear-gradient(180deg, #2c1a0d, var(--tarjeta)); border: 1px solid var(--borde); }
+.tarjeta img { width: 64px; height: 64px; flex: none; object-fit: contain; }
+.tarjeta h3 { margin: 2px 0 4px; font: 800 18px Georgia, serif; color: #ffe6a6; }
+.tarjeta p { margin: 0; font-size: 15px; color: var(--suave); }
+
+.heroes { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x mandatory; }
+.heroe { flex: 0 0 150px; scroll-snap-align: start; text-align: center; padding: 12px 8px; border-radius: 16px; background: radial-gradient(ellipse at 50% 30%, rgba(255,200,110,.25), transparent 70%), var(--tarjeta); border: 1px solid var(--borde); }
+.heroe img { width: 120px; height: 150px; margin: 0 auto 6px; object-fit: contain; object-position: bottom; }
+.heroe b { font: 800 15px Georgia, serif; color: #ffe6a6; }
+
+.pasos { counter-reset: paso; display: grid; gap: 12px; max-width: 640px; margin: 0 auto; padding: 0; list-style: none; }
+.pasos li { counter-increment: paso; position: relative; padding: 14px 16px 14px 60px; border-radius: 14px; background: var(--tarjeta); border: 1px solid var(--borde); color: var(--texto); }
+.pasos li::before { content: counter(paso); position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #ffcf4a, #c8841c); color: #2a1404; font: 900 16px Georgia, serif; }
+
+.final { text-align: center; background: radial-gradient(ellipse 70% 80% at 50% 100%, rgba(255,150,40,.18), transparent 70%); }
+footer { padding: 26px 16px calc(env(safe-area-inset-bottom) + 26px); text-align: center; color: #8f7a55; font-size: 13px; border-top: 1px solid #2c1a0d; }
+footer a { color: #cbb58a; }
+[data-en] { display: none; }
+html[lang="en"] [data-es] { display: none; }
+html[lang="en"] [data-en] { display: revert; }
+</style>
+</head>
+<body>
+<header class="barra">
+  <button class="idioma" id="idioma" type="button">EN</button>
+</header>
+
+<main>
+  <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Brother Kingdom · Reinos del Caribe</h1>
+  <div class="portada">
+    <div class="dentro">
+      <p><span data-es>Levanta tu castillo, entrena tu ejército y conquista el Caribe.</span><span data-en>Raise your castle, train your army and conquer the Caribbean.</span></p>
+      <a class="boton jugar" href="/?jugar=1">⚔️ <span data-es>Jugar gratis</span><span data-en>Play free</span></a>
+      <div class="nota"><span data-es>Se juega en el navegador, en el teléfono o en la computadora.</span><span data-en>Plays in your browser, on phone or computer.</span></div>
+    </div>
+  </div>
+
+  <section>
+    <div class="envoltura">
+      <h2><span data-es>¿Qué es Brother Kingdom?</span><span data-en>What is Brother Kingdom?</span></h2>
+      <p class="intro"><span data-es>Es un juego de estrategia medieval en las islas del Caribe. Empiezas con un castillo pequeño y lo haces crecer hasta tener un reino fuerte, con villas, ejército, héroes y aliados. Juegas contra otros jugadores de verdad en el mismo mapa.</span><span data-en>A medieval strategy game in the Caribbean islands. Start with a small castle and grow it into a strong kingdom with villages, an army, heroes and allies. Play against real players on the same map.</span></p>
+      <div class="rejilla">
+        <div class="tarjeta"><img src="iconos/ui/e_cuartel.webp" alt=""><div><h3><span data-es>Construye tu reino</span><span data-en>Build your kingdom</span></h3><p><span data-es>Granjas, minas, aserraderos, cuarteles y murallas. Sube tu castillo de nivel y abre villas nuevas.</span><span data-en>Farms, mines, sawmills, barracks and walls. Level up your castle and open new villages.</span></p></div></div>
+        <div class="tarjeta"><img src="iconos/ui/t_caballeria.webp" alt=""><div><h3><span data-es>Entrena tu ejército</span><span data-en>Train your army</span></h3><p><span data-es>Milicianos, espadachines, arqueros, caballería, balistas y catapultas. Cada tropa le gana a otra.</span><span data-en>Militia, swordsmen, archers, cavalry, ballistas and catapults. Every troop beats another.</span></p></div></div>
+        <div class="tarjeta"><img src="iconos/ui/h_sol.webp" alt=""><div><h3><span data-es>Recluta héroes</span><span data-en>Recruit heroes</span></h3><p><span data-es>Caballeros con armaduras y poderes propios que mandan tus tropas al ataque o defienden tu castillo.</span><span data-en>Knights with their own armor and powers who lead your troops or defend your castle.</span></p></div></div>
+        <div class="tarjeta"><img src="iconos/ui/b_mundo.webp" alt=""><div><h3><span data-es>Ataca en el mapa</span><span data-en>Attack on the map</span></h3><p><span data-es>Explora el mundo, espía a tus vecinos y manda hasta 10 marchas a la vez. Tus carretas traen el botín.</span><span data-en>Explore the world, scout your neighbors and send up to 10 marches at once. Your carts bring back the loot.</span></p></div></div>
+        <div class="tarjeta"><img src="iconos/ui/m_alianza.webp" alt=""><div><h3><span data-es>Únete a una alianza</span><span data-en>Join an alliance</span></h3><p><span data-es>Chatea, manda refuerzos y recursos a tus aliados y defiéndanse juntos.</span><span data-en>Chat, send reinforcements and resources to your allies and defend together.</span></p></div></div>
+        <div class="tarjeta"><img src="iconos/ui/m_ranking.webp" alt=""><div><h3><span data-es>Gana torneos</span><span data-en>Win tournaments</span></h3><p><span data-es>Torneos cada semana de entrenamiento y de poder, con premios para los mejores.</span><span data-en>Weekly training and power tournaments with prizes for the best.</span></p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="envoltura">
+      <h2><span data-es>Tus héroes</span><span data-en>Your heroes</span></h2>
+      <p class="intro"><span data-es>Cada héroe tiene su estilo. Equípalos y súbelos de nivel.</span><span data-en>Every hero has a style. Gear them up and level them.</span></p>
+      <div class="heroes">
+        <div class="heroe"><img src="iconos/ui/h_sol.webp" alt="" loading="lazy"><b>Sir Sol</b></div>
+        <div class="heroe"><img src="iconos/ui/h_luna.webp" alt="" loading="lazy"><b>Luna</b></div>
+        <div class="heroe"><img src="iconos/ui/h_ancla.webp" alt="" loading="lazy"><b><span data-es>Capitán Ancla</span><span data-en>Captain Anchor</span></b></div>
+        <div class="heroe"><img src="iconos/ui/h_trueno.webp" alt="" loading="lazy"><b><span data-es>Trueno</span><span data-en>Thunder</span></b></div>
+        <div class="heroe"><img src="iconos/ui/h_fenix.webp" alt="" loading="lazy"><b><span data-es>Fénix</span><span data-en>Phoenix</span></b></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="envoltura">
+      <h2><span data-es>Empieza en un minuto</span><span data-en>Start in a minute</span></h2>
+      <ol class="pasos">
+        <li><span data-es>Toca «Jugar gratis».</span><span data-en>Tap “Play free”.</span></li>
+        <li><span data-es>Crea tu cuenta y ponle nombre a tu reino.</span><span data-en>Create your account and name your kingdom.</span></li>
+        <li><span data-es>Construye, entrena y sal a conquistar.</span><span data-en>Build, train and go conquer.</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="envoltura">
+      <h2><span data-es>Tu reino te espera</span><span data-en>Your kingdom awaits</span></h2>
+      <p class="intro"><span data-es>Gratis. Sin descargar nada.</span><span data-en>Free. Nothing to download.</span></p>
+      <a class="boton jugar" href="/?jugar=1">⚔️ <span data-es>Jugar ahora</span><span data-en>Play now</span></a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  © 2026 Brother Kingdom · <a href="privacidad.html"><span data-es>Privacidad</span><span data-en>Privacy</span></a>
+</footer>
+
+<script>
+(function () {
+  var html = document.documentElement, b = document.getElementById('idioma');
+  var idi = (navigator.language || '').toLowerCase().indexOf('es') === 0 ? 'es' : 'en';
+  try { var g = localStorage.getItem('bk_idioma'); if (g) idi = g; } catch (e) {}
+  function poner(i) { idi = i; html.lang = i; b.textContent = i === 'es' ? 'EN' : 'ES'; try { localStorage.setItem('bk_idioma', i); } catch (e) {} }
+  poner(idi);
+  b.addEventListener('click', function () { poner(idi === 'es' ? 'en' : 'es'); });
+  /* al tocar Jugar, la próxima vez brotherkingdom.com abre el juego directo */
+  Array.prototype.forEach.call(document.querySelectorAll('.jugar'), function (a) {
+    a.addEventListener('click', function () { try { localStorage.setItem('bk_jugar', '1'); } catch (e) {} });
+  });
+})();
+</script>
+</body>
+</html>
