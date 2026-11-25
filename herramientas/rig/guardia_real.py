@@ -85,10 +85,11 @@ def escribir(ruta, j, b):
     with open(ruta, 'wb') as f:
         f.write(struct.pack('<III', 0x46546C67, 2, 12 + 8 + len(js) + 8 + len(b))); f.write(struct.pack('<II', len(js), 0x4E4F534A)); f.write(js)
         f.write(struct.pack('<II', len(b), 0x004E4942)); f.write(b)
-def principal(entrada, salida, anims=None):
+def principal(entrada, salida, anims=None, extra=None):
+    """extra(nombre, tiempos) -> [(nodo, 'rotation'|'translation', valores glTF planos)] para huesos que no son del rig humano (p. ej. el caballo)"""
     anims_def = anims or ANIMS
     j, B = leer(entrada)
-    usados = set(j['skins'][0].get('inverseBindMatrices') is not None and [j['skins'][0]['inverseBindMatrices']] or [])
+    usados = {sk['inverseBindMatrices'] for sk in j.get('skins', []) if sk.get('inverseBindMatrices') is not None}
     for m in j['meshes']:
         for pr in m['primitives']: usados |= set(pr['attributes'].values()); usados.add(pr['indices'])
     nuevos_acc, vistas, binario, mapa = [], [], bytearray(), {}
@@ -103,8 +104,9 @@ def principal(entrada, salida, anims=None):
     for m in j['meshes']:
         for pr in m['primitives']:
             pr['attributes'] = {k: mapa[x] for k, x in pr['attributes'].items()}; pr['indices'] = mapa[pr['indices']]
-    j['skins'][0]['inverseBindMatrices'] = mapa[j['skins'][0]['inverseBindMatrices']]
-    nodo = {n['name']: i for i, n in enumerate(j['nodes'])}
+    for sk in j.get('skins', []):
+        if sk.get('inverseBindMatrices') is not None: sk['inverseBindMatrices'] = mapa[sk['inverseBindMatrices']]
+    nodo = {n.get('name'): i for i, n in enumerate(j['nodes'])}
     def acc(vals, fmt, n, tipo, mm=None):
         a = {"bufferView": vista(struct.pack('<' + fmt * len(vals), *vals)), "componentType": 5126, "count": n, "type": tipo}
         if mm: a["min"], a["max"] = mm
@@ -128,6 +130,9 @@ def principal(entrada, salida, anims=None):
                     prev = q; vals += q
                 sam.append({"input": at, "output": acc(vals, 'f', len(mu), "VEC4"), "interpolation": "LINEAR"}); ruta = "rotation"
             can.append({"sampler": len(sam) - 1, "target": {"node": nodo[h], "path": ruta}})
+        for nd, ruta, vals in (extra(nombre, ts) if extra else []):
+            sam.append({"input": at, "output": acc(vals, 'f', len(ts), "VEC4" if ruta == "rotation" else "VEC3"), "interpolation": "LINEAR"})
+            can.append({"sampler": len(sam) - 1, "target": {"node": nodo[nd], "path": ruta}})
         anims.append({"name": nombre, "channels": can, "samplers": sam})
     j['accessors'] = nuevos_acc; j['bufferViews'] = vistas; j['animations'] = anims; j['buffers'] = [{"byteLength": len(binario)}]
     j.setdefault('extras', {})['animaciones'] = "Reposo, Caminar, Correr, Atacar, Defender (guardia_real.py)"
