@@ -2,12 +2,12 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script>/* Brother Kingdoms se juega solo con internet: si se abre desde el disco, va a la página del juego */ if (location.protocol === "file:") location.replace("https://tinykingdom-pegao.web.app/");</script>
+<script>/* Brother Kingdom se juega solo con internet: si se abre desde el disco, va a la página del juego */ if (location.protocol === "file:") location.replace("https://tinykingdom-pegao.web.app/");</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Brother Kingdoms">
+<meta name="apple-mobile-web-app-title" content="Brother Kingdom">
 <meta name="theme-color" content="#0b1120">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png?v=623">
@@ -24,11 +24,11 @@ window.addEventListener("error", function (e) {
   }
 });
 </script>
-<title>Brother Kingdoms</title>
+<title>Brother Kingdom</title>
 <!-- v7.15: la portada sale desde el primer segundo (antes había pantalla blanca y negra mientras cargaba) -->
 <style>html, body { background: #120a05; margin: 0; }</style>
 <link rel="preload" as="image" href="iconos/ui/portada.jpg?v=713">
-<script src="js/tk-portada.js?v=890"></script>
+<script src="js/tk-portada.js?v=891"></script>
 <link rel="stylesheet" href="css/estilo.css?v=801">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=UnifrakturCook:wght@700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
@@ -257,7 +257,7 @@ window.addEventListener("error", function (e) {
 <div id="pantalla">
   <div class="tarjeta">
     <div class="logo" id="pantalla-logo">🏰</div>
-    <h1 id="pantalla-titulo">Brother Kingdoms</h1>
+    <h1 id="pantalla-titulo">Brother Kingdom</h1>
     <p id="pantalla-texto">Construye tu reino, entrena caballeros y defiende el camino del bosque.</p>
     <div id="pantalla-form"></div>
     <p id="pantalla-version" style="position:absolute;right:12px;bottom:6px;margin:0;font-size:11px;opacity:.5"></p>
@@ -284,7 +284,7 @@ window.addEventListener("error", function (e) {
 <script src="js/sistemas/pagos.js?v=801"></script>
 <script src="js/juego.js"></script>
 <script src="js/tema-oscuro.js?v=663"></script>
-<div id="sin-red" class="oculto" role="alertdialog" aria-live="assertive"><div class="sr-caja"><div class="sr-ico">📡</div><h2 id="sr-tit">Sin conexión</h2><p id="sr-txt">Brother Kingdoms se juega con internet. Revisa tu wifi o tus datos y vuelve a intentarlo.</p><button id="sr-reintentar">Reintentar</button></div></div>
+<div id="sin-red" class="oculto" role="alertdialog" aria-live="assertive"><div class="sr-caja"><div class="sr-ico">📡</div><h2 id="sr-tit">Sin conexión</h2><p id="sr-txt">Brother Kingdom se juega con internet. Revisa tu wifi o tus datos y vuelve a intentarlo.</p><button id="sr-reintentar">Reintentar</button></div></div>
 <script>
 // Sin internet no se puede jugar: el aviso tapa el juego hasta que vuelva la conexión
 (function () {
@@ -292,7 +292,7 @@ window.addEventListener("error", function (e) {
   function en() { try { return (JSON.parse(localStorage.getItem("tinykingdom_pref") || "{}").idioma || "es") === "en"; } catch (e) { return false; } }
   function revisar() {
     var sin = navigator.onLine === false;
-    if (sin && en()) { document.getElementById("sr-tit").textContent = "No connection"; document.getElementById("sr-txt").textContent = "Brother Kingdoms needs the internet. Check your wifi or data and try again."; b.textContent = "Try again"; }
+    if (sin && en()) { document.getElementById("sr-tit").textContent = "No connection"; document.getElementById("sr-txt").textContent = "Brother Kingdom needs the internet. Check your wifi or data and try again."; b.textContent = "Try again"; }
     d.classList.toggle("oculto", !sin);
   }
   window.addEventListener("offline", revisar); window.addEventListener("online", revisar);

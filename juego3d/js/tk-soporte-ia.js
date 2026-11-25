@@ -1,4 +1,4 @@
-/* Brother Kingdoms · Soporte con IA gratis (v8.24)
+/* Brother Kingdom · Soporte con IA gratis (v8.24)
  * Gemini por Firebase AI Logic (Gemini Developer API, plan gratis de Firebase): sin servidor de pago
  * y sin clave a la vista (usa la configuración de Firebase del juego).
  * Se enciende una sola vez en: console.firebase.google.com › tiny-kingdom-pegao › AI Logic › Comenzar (Gemini Developer API).
@@ -11,7 +11,7 @@
   // v8.27: «pase» de App Check (reCAPTCHA v3, gratis; clave PÚBLICA de sitio; la secreta nunca va en el código)
   var RECAPTCHA_SITIO = '6LeojC8uAAAAAFdKO4aUxQ1EVUF4s-IEBWPerU9v';
   var GUIA = [
-    'Eres el equipo de soporte de Brother Kingdoms, un juego de estrategia medieval (ciudad, tropas, héroes, alianzas y ataques en el mapa del Mundo).',
+    'Eres el equipo de soporte de Brother Kingdom, un juego de estrategia medieval (ciudad, tropas, héroes, alianzas y ataques en el mapa del Mundo).',
     'Contesta en el mismo idioma que el jugador (español o inglés), con frases cortas y sencillas, como una persona amable. Máximo 450 caracteres.',
     'Lo que sabes del juego:',
     '- Atacar: tocar el lugar en el Mundo › Ataque › elegir tropas y héroe › Marchar. A bárbaros, bestias y terrenos el viaje tarda de 20 s a 2 min. Aunque cierre el juego, la marcha sigue.',

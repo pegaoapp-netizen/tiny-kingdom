@@ -1,5 +1,5 @@
 // v7.12: PORTADA AL ABRIR EL JUEGO
-// Sale apenas se abre la página (antes de que cargue el 3D): un héroe pintado de Brother Kingdoms en grande,
+// Sale apenas se abre la página (antes de que cargue el 3D): un héroe pintado de Brother Kingdom en grande,
 // el título en una cinta dorada y una barra de carga dorada. Cuando el juego está listo se desvanece.
 // v7.13: usa la portada del dibujante; si no carga, la dibujada con uno de nuestros héroes (iconos/ui/h_*.webp).
 //
@@ -76,13 +76,13 @@ var PORTADA = {
   var PIE = '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div><div id="pt-version" style="position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 6px);font:600 11px system-ui,sans-serif;color:#f3dfae;opacity:.7"></div></div>';
   function armarDibujada() {
     d.innerHTML = '<div class="pt-sala"></div><div class="pt-trono"></div><div class="pt-gradas"></div><div class="pt-dosel"></div><div class="pt-cortina izq"></div><div class="pt-cortina der"></div><div class="pt-velas"></div>' +
-    '<div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Brother Kingdoms</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div>' +
+    '<div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Brother Kingdom</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div>' +
     '<div class="pt-heroe"><img id="pt-img" alt="" src="iconos/ui/h_' + h[0] + '.webp"><span class="pt-nombre-h">' + h[1] + '</span></div>' +
     '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
   }
   d.className = 'con-foto';
   var LETRERO = PORTADA.nuevo ? '<div class="pt-nuevo"><span>' + (en ? 'New hero' : '¡Nuevo héroe!') + '</span><b>' + String(PORTADA.nuevo).replace(/</g, '&lt;') + '</b></div>' : '';
-  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-cielo"></div><div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Brother Kingdoms</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div><div class="pt-espacio"></div>' + PIE.replace('<div class="pt-pie">', '<div class="pt-pie">' + LETRERO);
+  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-cielo"></div><div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Brother Kingdom</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div><div class="pt-espacio"></div>' + PIE.replace('<div class="pt-pie">', '<div class="pt-pie">' + LETRERO);
   var prueba = new Image(); prueba.onerror = function () { var av = document.getElementById('pt-avance'), w = av ? av.style.width : ''; d.className = ''; armarDibujada(); var av2 = document.getElementById('pt-avance'); if (av2) av2.style.width = w; }; prueba.src = FOTO;
   (document.body || document.documentElement).appendChild(d);
 
