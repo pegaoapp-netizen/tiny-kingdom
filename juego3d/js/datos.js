@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.05';
+var VERSION_JUEGO = '9.06';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
 var NOVEDADES_VER = [["8.99","2026-11-25","Marcha: ahora ves cuántas tropas tienes y cuántas mandas. El cofre diario se cierra con la ✕. «Jugar sin cuenta» entra con un toque. Ajustes más limpio y el botón Actualizar ya no tapa nada.","March shows the troops you have and the ones you send. The daily chest closes with ✕. Play without account works with one tap. Cleaner Settings."],

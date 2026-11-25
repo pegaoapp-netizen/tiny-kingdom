@@ -728,8 +728,8 @@
       '<h3>⭐ ' + L('Estrellas', 'Stars') + '</h3><div class="tkm-conds">' + conds.map(function (t2, k) { return '<div class="' + (best > k ? 'ok' : '') + '"><b>★</b>' + esc(t2) + '</div>'; }).join('') + '</div>' +
       '<h3>👹 ' + L('Enemigos', 'Enemies') + '</h3><div class="tkm-enes">' + Object.keys(unicos).map(function (k) { var e = unicos[k]; return '<span><em>' + e.ico + '</em>' + esc(e.nom) + (e.d ? ' 🏹' : '') + (e.sana ? ' ✚' : '') + '</span>'; }).join('') + '</div>' +
       '<div class="tkm-pod" style="margin-top:8px"><div>' + L('Poder de tus héroes', 'Your heroes power') + '<b style="color:' + col + '">' + num(po.mio) + '</b></div><div>' + L('Poder enemigo', 'Enemy power') + '<b>' + num(po.ene) + '</b></div></div>' +
-      '<h3>🎁 ' + (primera ? L('Premios de la primera victoria', 'First victory rewards') : L('Premios al repetir', 'Replay rewards')) + '</h3>' + (sinPremio ? '<p>' + L('Ya usaste las ' + REP_DIA + ' repeticiones con premio de hoy. Puedes jugarla igual, pero sin premios.', 'You used today\'s ' + REP_DIA + ' rewarded replays. You can still play it, without rewards.') + '</p>' : htmlPremios(p)) +
-      (best < 3 ? '<h3>👑 ' + L('Extra por 3 estrellas (una vez)', '3-star bonus (once)') + '</h3>' + htmlPremios(premioTres(M)) : '') +
+      '<h3>🎲 ' + (primera ? L('Botín posible (primera victoria)', 'Possible loot (first victory)') : L('Botín posible al repetir', 'Possible replay loot')) + '</h3><p class="tkm-nota" style="margin:0 0 5px">' + L('Los premios son al azar: pueden salir más, menos o ninguno.', 'Loot is random: you may get more, less or nothing.') + '</p>' + (sinPremio ? '<p>' + L('Ya usaste las ' + REP_DIA + ' repeticiones con premio de hoy. Puedes jugarla igual, pero sin premios.', 'You used today\'s ' + REP_DIA + ' rewarded replays. You can still play it, without rewards.') + '</p>' : htmlPremios(p)) +
+      (best < 3 ? '<h3>👑 ' + L('Extra posible por 3 estrellas (una vez)', 'Possible 3-star bonus (once)') + '</h3>' + htmlPremios(premioTres(M)) : '') +
       (!primera ? '<p class="tkm-nota">🔁 ' + L('Repeticiones con premio hoy: ', 'Rewarded replays today: ') + rep + ' / ' + REP_DIA + '</p>' : '') +
       (!primera && best >= 3 ? '<h3>⚡ ' + L('Barrido (3 ★)', 'Sweep (3 ★)') + '</h3><p class="tkm-nota" style="margin:0 0 4px">' + L('Ya la dominas: pásala automáticamente y recibe los premios al instante, sin batalla y sin perder tropas.', 'You mastered it: pass it automatically and get the rewards instantly, with no battle and no troop losses.') + '</p><div class="tkm-bts" style="margin-top:4px"><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="1"' + (sinPremio ? ' disabled' : '') + '>⚡ ×1 · 🧪' + cst + '</button><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="' + nBar + '"' + (sinPremio ? ' disabled' : '') + '>⚡ ×' + nBar + ' · 🧪' + nBar * cst + '</button></div>' : (!primera ? '<p class="tkm-nota">⚡ ' + L('Consigue 3 ★ para poder pasarla automáticamente (Barrido).', 'Get 3 ★ to pass it automatically (Sweep).') + '</p>' : '')) +
       '<div class="tkm-bts"><button class="tkm-b gris" data-c="x">' + L('Cerrar', 'Close') + '</button>' + (tengo >= cst ? '<button class="tkm-b rojo" data-c="atacar" data-cap="' + c + '" data-i="' + i + '">⚔️ ' + L('Atacar', 'Attack') + ' · 🧪' + cst + '</button>' : '<button class="tkm-b verde" data-c="botellas">🧪 ' + L('Conseguir botellas', 'Get flasks') + '</button>') + '</div>';
@@ -783,8 +783,23 @@
     void f; st().visto['c' + c] = 1; G.guardar();
   }
   function ventanaPremio(tit, items) {
-    ventana('<h2>' + tit + '</h2><div class="tkm-prs" style="margin-top:10px">' + items.map(function (x) { return '<div class="tkm-pr">' + (x.img ? '<img src="' + esc(x.img) + '" alt="">' : '<span>' + x.ico + '</span>') + '<b>' + esc(x.n) + '</b><small style="display:block;font-size:9px;color:#f3e6c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(x.nom) + '</small></div>'; }).join('') + '</div><div class="tkm-bts"><button class="tkm-b verde" data-c="x">' + L('¡Genial!', 'Great!') + '</button></div>');
+    ventana('<h2>' + tit + '</h2>' + (items.length ? '' : '<p class="tkm-nota">💨 ' + L('Esta vez no salió nada. ¡Prueba otra vez!', 'Nothing this time. Try again!') + '</p>') + '<div class="tkm-prs" style="margin-top:10px">' + items.map(function (x) { return '<div class="tkm-pr">' + (x.img ? '<img src="' + esc(x.img) + '" alt="">' : '<span>' + x.ico + '</span>') + '<b>' + esc(x.n) + '</b><small style="display:block;font-size:9px;color:#f3e6c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(x.nom) + '</small></div>'; }).join('') + '</div><div class="tkm-bts"><button class="tkm-b verde" data-c="x">' + L('¡Genial!', 'Great!') + '</button></div>');
   }
+  // v9.06: PREMIOS AL AZAR (petición del dueño): cada victoria tira los dados. 12 % sin botín; si no, cada premio
+  // sale por su cuenta: nada (25 %), poco (30–70 %, 35 %), normal (80–120 %, 30 %) o botín grande (150–200 %, 10 %)
+  var SIN_BOTIN = 0.12;
+  function tirada() { var r = Math.random(); return r < 0.25 ? 0 : r < 0.6 ? 0.3 + Math.random() * 0.4 : r < 0.9 ? 0.8 + Math.random() * 0.4 : 1.5 + Math.random() * 0.5; }
+  function azar(p) {
+    if (Math.random() < SIN_BOTIN) return { q: {}, suerte: 'nada' };
+    var q = {}, suma = 0, n = 0;
+    ['oro', 'madera', 'piedra', 'hierro', 'expH', 'expR', 'frag'].forEach(function (k) { if (!p[k]) return; var m = tirada(); suma += m; n++; var v = Math.round(p[k] * m); if (v > 0) q[k] = v; });
+    q.obj = (p.obj || []).map(function (o) { var m = tirada(); suma += m; n++; return [o[0], Math.round(o[1] * m)]; }).filter(function (o) { return o[1] > 0; });
+    if (p.pieza) { if (Math.random() < 0.6) q.pieza = p.pieza; } else if (p.piezaProb) { q.piezaProb = p.piezaProb * (0.5 + Math.random()); q.piezaR = p.piezaR; }
+    var med = n ? suma / n : 0;
+    return { q: q, suerte: med >= 1.25 ? 'grande' : med < 0.55 ? 'poca' : 'normal' };
+  }
+  function notaSuerte(s2) { return s2 === 'nada' ? '💨 ' + L('Esta vez no hubo botín.', 'No loot this time.') : s2 === 'poca' ? '😕 ' + L('Poco botín esta vez.', 'Little loot this time.') : s2 === 'grande' ? '🍀 ' + L('¡Botín grande!', 'Big loot!') : '🎲 ' + L('Botín normal.', 'Normal loot.'); }
+  function darAzar(p, ids, cuenta) { var a = azar(p); if (cuenta) cuenta[a.suerte] = (cuenta[a.suerte] || 0) + 1; return { items: a.suerte === 'nada' ? [] : dar(a.q, ids), suerte: a.suerte }; }
   // dar premios (con la pieza al azar si toca)
   function dar(p, ids) { var q = {}; Object.keys(p).forEach(function (k) { q[k] = p[k]; }); if (!q.pieza && q.piezaProb && Math.random() < q.piezaProb) q.pieza = q.piezaR; return G.darMision(q, ids || []); }
 
@@ -793,14 +808,15 @@
     var d = st().dif, M = mision(c, i, d), base = premiosBase(M), rp = st().rep || {}, todo = [], hechas2 = 0;
     if (estrellas(d, c, i) < 3) return;
     if (rp.d !== hoy()) rp = { d: hoy(), n: 0 };
-    var cst = coste(M);
+    var cst = coste(M), suertes = {};
     if (botellas() < cst) { ventanaBotellas(); return; }
-    for (var k = 0; k < n && rp.n < REP_DIA; k++) { if (!G.gastarBotellas(cst)) break; rp.n++; hechas2++; st().nRep = (st().nRep || 0) + 1; var r = st().m[clave(d, c, i)]; r.n = (r.n || 0) + 1; todo = todo.concat(dar(premiosRepetir(base), G.equipo())); }
+    for (var k = 0; k < n && rp.n < REP_DIA; k++) { if (!G.gastarBotellas(cst)) break; rp.n++; hechas2++; st().nRep = (st().nRep || 0) + 1; var r = st().m[clave(d, c, i)]; r.n = (r.n || 0) + 1; todo = todo.concat(darAzar(premiosRepetir(base), G.equipo(), suertes).items); }
     st().rep = rp; if (hechas2) sumarSemana(M, hechas2); G.guardar(); if (hechas2) publicar();
     if (!hechas2) { G.consejo(L('Ya usaste las repeticiones con premio de hoy.', 'Today\'s rewarded replays are used.')); return; }
     var junto = {}, orden = []; todo.forEach(function (x) { var m = /^([+×]?)([\d.,]+)/.exec(x.n || ''), v = m ? +m[2].replace(/[.,]/g, '') : 0; if (!junto[x.nom]) { junto[x.nom] = { img: x.img, ico: x.ico, nom: x.nom, pre: m ? m[1] : '', v: 0, txt: x.n }; orden.push(x.nom); } junto[x.nom].v += v; });
     G.sonar('moneda'); pintarUI();
-    ventanaPremio('⚡ ' + L('Barrido ×', 'Sweep ×') + hechas2 + ' · ' + esc(M.titulo), orden.map(function (k2) { var j = junto[k2]; return { img: j.img, ico: j.ico, nom: j.nom, n: j.v ? j.pre + num(j.v) : j.txt }; }));
+    var resu = [['grande', '🍀'], ['normal', '🎲'], ['poca', '😕'], ['nada', '💨']].filter(function (q) { return suertes[q[0]]; }).map(function (q) { return q[1] + ' ×' + suertes[q[0]]; }).join('  ');
+    ventanaPremio('⚡ ' + L('Barrido ×', 'Sweep ×') + hechas2 + ' · ' + esc(M.titulo) + '<div class="tkm-sub" style="margin-top:4px">' + resu + '</div>', orden.map(function (k2) { var j = junto[k2]; return { img: j.img, ico: j.ico, nom: j.nom, n: j.v ? j.pre + num(j.v) : j.txt }; }));
   }
   // ---- empezar una misión ----
   function atacar(c, i) {
@@ -814,10 +830,12 @@
       if (!res.gano) { if (cst > 1) G.darBotellas(cst - 1); return { items: [] }; }
       var antes = r.e || 0; r.n = (r.n || 0) + 1; r.e = Math.max(antes, res.estrellas); st().m[k] = r;
       var base = premiosBase(M);
-      if (primera) { items = dar(base, res.heroes); nota = '🆕 ' + L('¡Primera victoria!', 'First victory!'); }
-      else { var rp = st().rep || {}; if (rp.d !== hoy()) rp = { d: hoy(), n: 0 }; st().nRep = (st().nRep || 0) + 1; if (rp.n < REP_DIA) { rp.n++; items = dar(premiosRepetir(base), res.heroes); nota = '🔁 ' + rp.n + ' / ' + REP_DIA; } else nota = L('Sin premio: ya usaste las repeticiones de hoy.', 'No reward: today\'s replays are used.'); st().rep = rp; }
+      var tir = null;
+      if (primera) { tir = darAzar(base, res.heroes); items = tir.items; nota = '🆕 ' + L('¡Primera victoria!', 'First victory!'); }
+      else { var rp = st().rep || {}; if (rp.d !== hoy()) rp = { d: hoy(), n: 0 }; st().nRep = (st().nRep || 0) + 1; if (rp.n < REP_DIA) { rp.n++; tir = darAzar(premiosRepetir(base), res.heroes); items = tir.items; nota = '🔁 ' + rp.n + ' / ' + REP_DIA; } else nota = L('Sin premio: ya usaste las repeticiones de hoy.', 'No reward: today\'s replays are used.'); st().rep = rp; }
       sumarSemana(M, 1);
-      if (res.estrellas >= 3 && antes < 3) { items = items.concat(dar(premioTres(M), res.heroes)); nota += (nota ? ' · ' : '') + '👑 ' + L('¡Extra por 3 estrellas!', '3-star bonus!'); }
+      if (tir) nota = notaSuerte(tir.suerte) + ' · ' + nota;
+      if (res.estrellas >= 3 && antes < 3) { items = items.concat(darAzar(premioTres(M), res.heroes).items); nota += (nota ? ' · ' : '') + '👑 ' + L('¡Extra por 3 estrellas!', '3-star bonus!'); }
       G.guardar(); publicar();
       return { items: items, nota: nota };
     };
