@@ -12038,7 +12038,7 @@
     }
     if (t === 'defensa') {
       var casa = {};
-      tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; casa[u.tipo] = (casa[u.tipo] || 0) + 1; });
+      tiposCombate().forEach(function (k) { var q = Math.max(0, cuentaTipo(k) - enMarcha(k)); if (q > 0) casa[k] = q; }); /* v8.74: TODAS las tropas de casa (también las de reserva), igual que en la batalla */
       cuerpo = htmlDefensaVilla() +
         '<div class="cs-caja"><h4>' + L('Defensores en casa', 'Defenders at home') + '</h4><table class="ru-tabla"><tr><th>' + L('Tropa', 'Troop') + '</th><th>' + L('Cantidad', 'Amount') + '</th></tr>' + (Object.keys(casa).length ? Object.keys(casa).map(function (k) { return '<tr><td>' + TROPAS[k].icono + ' ' + N(k) + '</td><td>' + formatoNumero(casa[k]) + '</td></tr>'; }).join('') : '<tr><td colspan="2">' + L('No tienes tropas en casa.', 'No troops at home.') + '</td></tr>') + '</table>' +
         '<p class="cs-txt">🛡️ ' + T('at_defensa') + ': <b>' + formatoNumero(Math.round(defensaReino())) + '</b></p></div>';
