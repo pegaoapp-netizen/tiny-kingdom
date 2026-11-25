@@ -11,7 +11,7 @@
 var PORTADA = {
   foto: 'iconos/ui/portada.jpg',   // el dibujo de la portada
   nuevo: '',                       // nombre del héroe nuevo: sale «¡Nuevo héroe: …!» encima; '' = sin letrero
-  version: 892                     // súbelo cuando cambies la foto, para que los teléfonos no muestren la vieja
+  version: 893                     // súbelo cuando cambies la foto, para que los teléfonos no muestren la vieja
 };
 (function () {
   if (document.getElementById('tk-portada')) return;

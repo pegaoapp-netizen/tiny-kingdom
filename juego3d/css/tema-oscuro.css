@@ -1446,7 +1446,7 @@ html body #panel.rul-panel .rul-rueda { will-change: transform; }
 html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 6px 14px rgba(0,0,0,.55); }
 
 /* v8.28: una sola pantalla de carga: la de después de entrar usa la misma portada */
-#pantalla.como-portada { background: #120a05 url(../iconos/ui/portada.jpg?v=713) center top / cover no-repeat !important; }
+#pantalla.como-portada { background: #120a05 url(../iconos/ui/portada.jpg?v=893) center top / cover no-repeat !important; }
 #pantalla.como-portada .tarjeta { position: absolute !important; left: 0; right: 0; bottom: 0; top: auto !important; transform: none !important; max-width: none !important; width: 100% !important; margin: 0 !important; padding: 70px 20px calc(env(safe-area-inset-bottom) + 34px) !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; background: linear-gradient(180deg, transparent 0%, rgba(18,10,5,.75) 45%, #120a05 75%) !important; text-align: center; }
 #pantalla.como-portada #pantalla-logo, #pantalla.como-portada #pantalla-titulo, #pantalla.como-portada #pantalla-version { display: none !important; }
 #pantalla.como-portada #pantalla-texto { color: #f3dfae !important; font: 600 13px system-ui, sans-serif !important; text-shadow: 0 1px 2px #000; }
