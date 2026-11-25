@@ -1,0 +1,44 @@
+BROTHER KINGDOM · ANIMACIONES REALISTAS DE MIXAMO PARA LOS MODELOS DE TRIPO
+==========================================================================
+
+Por qué Mixamo
+- Es gratis (cuenta gratuita de Adobe) y sus animaciones se pueden usar en un juego comercial
+  siempre que vayan dentro del juego (no se pueden vender ni repartir sueltas).
+- Son de captura de movimiento real. El espadachín, el aldeano, el trasgo y el ogro de Tripo ya
+  tienen el esqueleto de Mixamo («mixamorig:…»), así que se usan sin cambiar los modelos.
+- Los dedos del espadachín (huesos Bone_0xx que añade Tripo) no los mueve Mixamo: se quedan
+  cerrados sobre la espada y el escudo, como deben.
+
+PRIMERA PRUEBA: el espadachín (lleva espada y escudo) — 6 animaciones
+En mixamo.com, buscar «sword and shield» y descargar estas (o la más parecida si cambia el nombre):
+  nombre en el juego   animación de Mixamo
+  reposo               Sword And Shield Idle
+  atacar               Sword And Shield Slash
+  bloquear             Sword And Shield Block
+  golpe                Sword And Shield Impact
+  morir                Sword And Shield Death
+  victoria             Sword And Shield Power Up
+Opcionales (ya tiene Caminar y Correr de Mixamo, pero sin escudo en guardia):
+  caminar              Sword And Shield Walk   (marcar «In Place»)
+  correr               Sword And Shield Run    (marcar «In Place»)
+
+Opciones de descarga (botón DOWNLOAD):
+  Format: Collada (.dae) · Skin: Without Skin · Frames per second: 30 · Keyframe Reduction: none
+No hace falta subir el espadachín a Mixamo: sirve el personaje por defecto. La adaptación al
+esqueleto de Tripo la hace el juego con el giro desde la pose de reposo (igual que intentarRetarget).
+
+Convertir (sin Blender, solo Python 3 + numpy):
+  python3 herramientas/mixamo/dae_a_glb.py ~/Descargas/Sword_And_Shield_Slash.zip --nombre atacar --salida juego3d/modelos/anim_mixamo
+Crea atacar.glb (~80–200 KB, solo animación) y actualiza juego3d/modelos/anim_mixamo/lista.json.
+Opciones: --recortar 0.1:1.3 (quita trozos sobrantes) · --sin-traslacion (quieto en el sitio).
+
+Comprobar:
+  python3 herramientas/mixamo/prueba_conversor.py      (el conversor sigue siendo exacto)
+  cd juego3d && python3 -m http.server 8765  → http://localhost:8765/pruebas/espadachin.html
+  python3 juego3d/pruebas/visual.py --pantallas '' --pruebas espadachin   (capturas y que se mueva)
+
+Siguiente fase (cuando el dueño apruebe la prueba):
+  1. Pasar los clips al juego ampliando intentarRetarget de modelos.js (no crear otro sistema).
+  2. Máquina de estados visual en un módulo tk-*.js que solo mira u.ataque y u.vida, sin tocar
+     las fórmulas de combate (protegidas por el freno).
+  3. Aldeano, trasgo y ogro con los mismos clips; arquero y guardián con auto-rig de Mixamo.

@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Brother Kingdom · Prueba del espadachín (Tripo + Mixamo)</title>
+<style>
+html,body{margin:0;height:100%;background:#120a05;color:#f3e6c8;font:14px system-ui,sans-serif;overflow:hidden}
+#ui{position:fixed;left:0;right:0;bottom:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:linear-gradient(#0000,#120a05e6 30%)}
+#estados{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+button{background:#3b2818;color:#f3e6c8;border:1px solid #87633b;border-radius:8px;padding:8px 10px;font:600 13px system-ui}
+button.on{background:#946432;border-color:#efc477}button.falta{opacity:.45;border-style:dashed}
+#info{position:fixed;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;font-size:12px;line-height:1.4;text-shadow:0 1px 2px #000}
+h1{font:700 15px Georgia,serif;margin:0 0 2px;color:#f2c45a}
+</style></head><body>
+<div id="info"><h1>Espadachín original de Tripo · animaciones de Mixamo</h1><div id="estado">Cargando…</div></div>
+<div id="ui"><div id="estados"></div><div style="text-align:center;margin-top:6px"><button id="secuencia">▶ Secuencia de combate</button> <button id="girar">Girar cámara</button> <button id="lento">Velocidad ×1</button></div></div>
+<script src="../js/three.min.js"></script><script src="../js/GLTFLoader.js"></script><script src="../js/SkeletonUtils.js"></script>
+<script>
+/* Prueba independiente: no forma parte del juego ni se publica (pruebas/ está excluida del hosting).
+   Usa el modelo de Tripo tal cual (modelos/espadachin_anim.glb) y las animaciones convertidas con
+   herramientas/mixamo/dae_a_glb.py en modelos/anim_mixamo/. Adapta cada animación con el mismo
+   método que el juego (intentarRetarget en modelos.js: giro desde la pose de reposo). */
+(function () {
+  'use strict';
+  var ESTADOS = [
+    { id: 'reposo', txt: 'Reposo', bucle: true, mixamo: 'Sword And Shield Idle' },
+    { id: 'caminar', txt: 'Caminar', bucle: true, propio: 'Walking', mixamo: 'Sword And Shield Walk' },
+    { id: 'correr', txt: 'Correr', bucle: true, propio: 'Running', mixamo: 'Sword And Shield Run' },
+    { id: 'atacar', txt: 'Atacar', vuelve: 'reposo', mixamo: 'Sword And Shield Slash' },
+    { id: 'bloquear', txt: 'Bloquear', vuelve: 'reposo', mixamo: 'Sword And Shield Block' },
+    { id: 'golpe', txt: 'Recibir golpe', vuelve: 'reposo', mixamo: 'Sword And Shield Impact' },
+    { id: 'morir', txt: 'Morir', fin: true, mixamo: 'Sword And Shield Death' },
+    { id: 'victoria', txt: 'Victoria', bucle: true, mixamo: 'Sword And Shield Power Up' }
+  ];
+  var FUNDIDO = 0.2, T = THREE;
+  var escena = new T.Scene(), camara = new T.PerspectiveCamera(35, 1, 0.05, 200);
+  var render = new T.WebGLRenderer({ antialias: true });
+  render.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); render.shadowMap.enabled = true; render.shadowMap.type = T.PCFSoftShadowMap;
+  render.outputEncoding = T.sRGBEncoding; document.body.insertBefore(render.domElement, document.body.firstChild);
+  escena.background = new T.Color(0x2a3a4a); escena.fog = new T.Fog(0x2a3a4a, 12, 40);
+  escena.add(new T.HemisphereLight(0xe6e2d4, 0x6a5a3a, 0.9));
+  var sol = new T.DirectionalLight(0xffdcae, 1.2); sol.position.set(4, 8, 5); sol.castShadow = true; sol.shadow.mapSize.set(1024, 1024);
+  sol.shadow.camera.left = sol.shadow.camera.bottom = -4; sol.shadow.camera.right = sol.shadow.camera.top = 4; escena.add(sol);
+  var suelo = new T.Mesh(new T.CircleGeometry(8, 48), new T.MeshStandardMaterial({ color: 0x5c6b3a, roughness: 1 }));
+  suelo.rotation.x = -Math.PI / 2; suelo.receiveShadow = true; escena.add(suelo);
+
+  var modelo, mixer, accion, actual = null, clips = {}, reposoD = {}, alturaCadera = 1, girar = true, ang = 0.6, vel = 1, centroY = 1, dist = 4;
+  var $ = function (id) { return document.getElementById(id); };
+  function nombreLimpio(n) { return T.PropertyBinding.sanitizeNodeName(n); }
+
+  // Adapta un clip de otro esqueleto Mixamo al del espadachín (como «delta» en modelos.js)
+  function adaptar(clip, reposoS, caderaS) {
+    var esc = caderaS ? alturaCadera / caderaS : 1, q = new T.Quaternion(), inv = new T.Quaternion();
+    var pistas = clip.tracks.map(function (t) {
+      var hueso = t.name.slice(0, t.name.lastIndexOf('.')), prop = t.name.slice(t.name.lastIndexOf('.') + 1);
+      if (!reposoD[hueso]) return null;
+      var nt = t.clone();
+      if (prop === 'quaternion') {
+        var rs = reposoS[hueso], rd = reposoD[hueso].q; if (!rs) return nt;
+        inv.copy(rs).invert();
+        for (var i = 0; i < nt.values.length; i += 4) { q.fromArray(nt.values, i).premultiply(inv).premultiply(rd); q.toArray(nt.values, i); }
+        return nt;
+      }
+      if (prop === 'position' && /Hips$/.test(hueso)) { for (var k = 0; k < nt.values.length; k++) nt.values[k] *= esc; return nt; }
+      return null; // solo la cadera se desplaza; el resto conserva las medidas del modelo de Tripo
+    }).filter(Boolean);
+    return new T.AnimationClip(clip.name, clip.duration, pistas);
+  }
+
+  function poner(id) {
+    var e = ESTADOS.filter(function (x) { return x.id === id; })[0], c = clips[id]; if (!e || !c) return false;
+    var a = mixer.clipAction(c);
+    a.reset(); a.setLoop(e.bucle ? T.LoopRepeat : T.LoopOnce, Infinity); a.clampWhenFinished = !e.bucle; a.enabled = true; a.setEffectiveWeight(1).play();
+    if (accion && accion !== a) a.crossFadeFrom(accion, FUNDIDO, true);
+    accion = a; actual = id; pintar(); return true;
+  }
+  function pintar() {
+    $('estados').innerHTML = ESTADOS.map(function (e) {
+      return '<button data-id="' + e.id + '" class="' + (actual === e.id ? 'on ' : '') + (clips[e.id] ? '' : 'falta') + '">' + e.txt + '</button>';
+    }).join('');
+    var faltan = ESTADOS.filter(function (e) { return !clips[e.id]; });
+    $('estado').innerHTML = huesos + ' huesos · ' + (ESTADOS.length - faltan.length) + '/' + ESTADOS.length + ' animaciones · ' + fps + ' fps' +
+      (faltan.length ? '<br>Faltan de Mixamo: ' + faltan.map(function (e) { return '«' + e.mixamo + '»'; }).join(', ') : '');
+  }
+  $('estados').addEventListener('click', function (ev) { var b = ev.target.closest('button'); if (b) poner(b.getAttribute('data-id')); });
+  $('girar').onclick = function () { girar = !girar; };
+  $('lento').onclick = function () { vel = vel === 1 ? 0.25 : 1; this.textContent = 'Velocidad ×' + vel; };
+  var temporizador = null;
+  $('secuencia').onclick = function () {
+    var pasos = [['caminar', 2.2], ['atacar'], ['atacar'], ['golpe'], ['bloquear'], ['atacar'], ['victoria', 3]], i = 0;
+    clearTimeout(temporizador);
+    (function siguiente() {
+      if (i >= pasos.length) return; var p = pasos[i++];
+      if (!poner(p[0])) return siguiente();
+      var d = p[1] || (clips[p[0]].duration / vel) - FUNDIDO; temporizador = setTimeout(siguiente, d * 1000);
+    })();
+  };
+
+  var huesos = 0, fps = 0;
+  var cargador = new T.GLTFLoader();
+  cargador.load('../modelos/espadachin_anim.glb', function (g) {
+    modelo = g.scene; escena.add(modelo);
+    modelo.traverse(function (o) {
+      if (o.isMesh) { o.castShadow = true; if (o.material && o.material.map) o.material.map.encoding = T.sRGBEncoding; }
+      if (o.isBone) { huesos++; reposoD[o.name] = { q: o.quaternion.clone(), p: o.position.clone() }; }
+    });
+    var caja = new T.Box3().setFromObject(modelo), tam = caja.getSize(new T.Vector3());
+    modelo.position.y -= caja.min.y; centroY = tam.y * 0.55; dist = tam.y * 2.6;
+    var cad = Object.keys(reposoD).filter(function (n) { return /Hips$/.test(n); })[0]; alturaCadera = cad ? reposoD[cad].p.length() : 1;
+    mixer = new T.AnimationMixer(modelo);
+    mixer.addEventListener('finished', function (ev) {
+      var e = ESTADOS.filter(function (x) { return x.id === actual; })[0]; if (e && e.vuelve && ev.action === accion) poner(clips[e.vuelve] ? e.vuelve : 'caminar');
+    });
+    ESTADOS.forEach(function (e) { var c = e.propio && g.animations.filter(function (a) { return a.name === e.propio; })[0]; if (c) clips[e.id] = c; });
+    poner(clips.reposo ? 'reposo' : 'caminar');
+    fetch('../modelos/anim_mixamo/lista.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; }).then(function (lista) {
+      lista.forEach(function (it) {
+        cargador.load('../modelos/anim_mixamo/' + it.archivo, function (ga) {
+          var rs = {}, cadS = 0;
+          ga.scene.traverse(function (o) { if (o.name) { rs[o.name] = o.quaternion.clone(); if (/Hips$/.test(o.name)) cadS = o.position.length(); } });
+          ga.animations.forEach(function (c) { if (ESTADOS.some(function (e) { return e.id === it.nombre; })) clips[it.nombre] = adaptar(c, rs, cadS); });
+          if (it.nombre === 'reposo' && actual === 'caminar') poner('reposo'); else pintar();
+        });
+      });
+    });
+  }, undefined, function () { $('estado').textContent = 'No se pudo cargar modelos/espadachin_anim.glb'; });
+
+  function medida() { render.setSize(innerWidth, innerHeight); camara.aspect = innerWidth / innerHeight; camara.updateProjectionMatrix(); }
+  addEventListener('resize', medida); medida();
+  var reloj = new T.Clock(), cuadros = 0, t0 = performance.now();
+  (function bucle() {
+    requestAnimationFrame(bucle);
+    var dt = Math.min(reloj.getDelta(), 0.05);
+    if (mixer) mixer.update(dt * vel);
+    if (girar) ang += dt * 0.35;
+    camara.position.set(Math.sin(ang) * dist, centroY + dist * 0.25, Math.cos(ang) * dist); camara.lookAt(0, centroY, 0);
+    render.render(escena, camara);
+    cuadros++; if (performance.now() - t0 > 1000) { fps = cuadros; cuadros = 0; t0 = performance.now(); if (mixer) pintar(); }
+  })();
+  // Para las pruebas automáticas (pruebas/visual.py)
+  window.__prueba = { poner: poner, estado: function () { return { actual: actual, clips: Object.keys(clips), huesos: huesos, fps: fps }; },
+    pausar: function (v) { vel = v ? 0 : 1; girar = !v; }, irA: function (seg) { if (mixer) mixer.setTime(seg); } };
+})();
+</script></body></html>

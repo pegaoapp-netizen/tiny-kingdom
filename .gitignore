@@ -13,3 +13,4 @@ juego3d/nube/.firebase/
 .DS_Store
 Thumbs.db
 app/android/
+__pycache__/
