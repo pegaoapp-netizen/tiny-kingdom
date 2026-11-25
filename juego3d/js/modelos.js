@@ -595,7 +595,16 @@ var M = (function () {
   /* v8.86 (dueño): TODOS con techo azul, y solo algunos con su color para encontrarlos rápido:
      Cuartel rojo · Enfermería verde · Almacén carmelita (marrón). Para cambiar uno: [tono 0-360, saturación] */
   var AZUL_T = [212, 0.65];
-  var TEJADO = { cuartel: [2, 0.75], enfermeria: [140, 0.6], almacen: [28, 0.55], establo: AZUL_T, galeria: AZUL_T, herreria: AZUL_T, academia: AZUL_T, embajada: AZUL_T, mercado: AZUL_T, cabana: AZUL_T, relevo: AZUL_T, vigia: AZUL_T, torre: AZUL_T };
+  /* v8.97 (dueño): cada edificio con su color de techo para identificarlo: [tono 0-360, saturación, luz (1 = igual)] */
+  var TEJADO = { cuartel: [0, 0.85, 0.9], enfermeria: [135, 0.65, 1], almacen: [24, 0.6, 0.62], establo: [48, 0.9, 1.15], galeria: [280, 0.6, 1], herreria: [220, 0.08, 0.7], academia: AZUL_T, embajada: [178, 0.65, 1], mercado: [320, 0.65, 1], cabana: [32, 0.95, 1.1], relevo: [0, 0, 1.35], vigia: AZUL_T, torre: AZUL_T };
+  /* v8.97: faltaba esta función y el cambio de color fallaba en silencio (los techos se quedaban igual) */
+  function hsl2rgb(h, s, l) {
+    h = ((h % 360) + 360) % 360 / 360; s = Math.max(0, Math.min(1, s)); l = Math.max(0, Math.min(1, l));
+    if (s === 0) { var v = Math.round(l * 255); return [v, v, v]; }
+    var q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    function f(t) { if (t < 0) t += 1; if (t > 1) t -= 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; }
+    return [Math.round(f(h + 1 / 3) * 255), Math.round(f(h) * 255), Math.round(f(h - 1 / 3) * 255)];
+  }
   function recolorTejado(tex, tipo) {
     var tj = TEJADO[tipo]; if (!tj || !tex || !tex.image || !tex.image.width) return tex;
     var im = tex.image, w = im.width, h = im.height, c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -603,7 +612,7 @@ var M = (function () {
     for (var i = 0; i < p.length; i += 4) {
       var r = p[i] / 255, g = p[i + 1] / 255, b = p[i + 2] / 255, mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, dd = mx - mn;
       var sat = dd < 0.001 ? 0 : dd / (1 - Math.abs(2 * l - 1)), hue = dd < 0.001 ? 0 : (mx === r ? ((g - b) / dd + 6) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4) * 60, o = null;
-      if ((hue < 24 || hue > 335) && sat > 0.4 && l > 0.18) o = hsl2rgb(tj[0], Math.min(1, Math.max(tj[1], sat * 0.9)), l); // tejas
+      if ((hue < 36 || hue > 335) && sat > 0.38 && l > 0.16) o = hsl2rgb(tj[0], tj[1] < 0.2 ? tj[1] : Math.min(1, Math.max(tj[1], sat * 0.9)), Math.min(0.92, l * (tj[2] || 1))); // tejas (v8.97: también las naranjas)
       else if (sat < 0.22 && l > 0.32 && l < 0.85) o = hsl2rgb(40, 0.32, Math.min(0.9, l * 0.75 + 0.24)); // piedra -> crema claro
       else if (PROTO3D && hue >= 18 && hue <= 55 && sat < 0.62 && l > 0.36) o = hsl2rgb(42, 0.3, Math.min(0.92, l * 0.6 + 0.36)); // v7.72 prototipo: arenisca -> piedra clara
       else if (PROTO3D && sat > 0.18) o = hsl2rgb(hue, Math.min(1, sat * 1.35), l); // v7.72 prototipo: colores más vivos
