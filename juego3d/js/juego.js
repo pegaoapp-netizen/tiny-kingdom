@@ -5624,7 +5624,7 @@
     var cap = capacidadEnfermeria(), n = totalHeridos(), pct = cap ? Math.min(100, Math.round(n / cap * 100)) : 0;
     var h = '<div class="carta hosp-carta"><h3>🏥 ' + L('Hospital', 'Hospital') + '</h3>' +
       '<div class="hosp-camas"><span>🛏️ ' + L('Camas: ', 'Beds: ') + '<b>' + formatoNumero(n) + ' / ' + formatoNumero(cap) + '</b></span><div class="hosp-barra"><i style="width:' + pct + '%"></i></div></div>' +
-      '<p class="nota">' + L('Las tropas que caen en batalla vienen aquí en vez de morir (si hay camas). Se curan solas al terminar la oleada, o cúralas ya.', 'Troops that fall in battle come here instead of dying (if there are beds). They heal by themselves when the wave ends, or heal them now.') + '</p>';
+      '<p class="nota">' + L('Las tropas heridas en batalla se quedan aquí (si hay camas) hasta que tú las cures. Al curarlas vuelven a tus tropas y sube tu poder (cuenta en el Torneo de Poder).', 'Troops that fall in battle come here instead of dying (if there are beds). They heal by themselves when the wave ends, or heal them now.') + '</p>';
     var tipos = Object.keys(estado.heridos || {}).filter(function (k) { return estado.heridos[k] > 0 && TROPAS[k]; });
     if (!tipos.length) return h + '<p class="nota hosp-vacio">✅ ' + L('No hay heridos.', 'No wounded troops.') + '</p></div>';
     h += '<div class="cq2-lista hosp-lista">' + tipos.map(function (k) {
@@ -5645,8 +5645,10 @@
     estado.heridos = cur; curarHeridos(); estado.heridos = {}; Object.keys(guarda).forEach(function (k) { if (guarda[k] > 0) estado.heridos[k] = guarda[k]; });
     sonar('magia'); guardar(true); actualizarHUD(); reabrirPanel();
   }
+  /* v8.83 (dueño): la Enfermería guarda a los heridos hasta que TÚ los cures; muchas más camas */
+  var CAMAS_POR_PUNTO = 50000;
   function capacidadEnfermeria() {
-    return Math.floor(slots.reduce(function (a, s) { return a + (s.edificio && s.edificio.tipo === 'enfermeria' ? EDIFICIOS.enfermeria.capacidad[s.edificio.nivel - 1] : 0); }, 0) * (1 + bonoTalento('enfermeria')));
+    return CAMAS_POR_PUNTO * Math.floor(slots.reduce(function (a, s) { return a + (s.edificio && s.edificio.tipo === 'enfermeria' ? EDIFICIOS.enfermeria.capacidad[s.edificio.nivel - 1] : 0); }, 0) * (1 + bonoTalento('enfermeria')));
   }
   function totalHeridos() { var n = 0; for (var k in estado.heridos) n += estado.heridos[k]; return n; }
   function curarHeridos() {
@@ -5654,12 +5656,9 @@
     if (!n) return;
     var enf = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'enfermeria'; })[0];
     var base = enf ? enf.pos.clone().add(new V3(Math.sin(enf.grupo.rotation.y), 0, Math.cos(enf.grupo.rotation.y)).multiplyScalar(2.2)) : puertaCuartel();
-    Object.keys(estado.heridos).forEach(function (tipo) {
-      for (var k = 0; k < estado.heridos[tipo]; k++) {
-        var u = crearTropa(tipo, base.clone().add(new V3((Math.random() - 0.5) * 2, 0, (Math.random() - 0.5) * 2)));
-        chispas(u.pos.clone().setY(1), 0x7fe39a, 6, 2);
-      }
-    });
+    Object.keys(estado.heridos).forEach(function (tipo) { var q = Math.floor(estado.heridos[tipo] || 0); if (q > 0 && TROPAS[tipo]) reserva()[tipo] = (reserva()[tipo] || 0) + q; }); /* v8.83 */
+    try { chispas(base.clone().setY(1), 0x7fe39a, 20, 3); } catch (e) {}
+    try { puntosTX('p'); programarTX(); } catch (e) {} /* el poder recuperado cuenta en el Torneo de Poder */
     estado.heridos = {};
     consejoTemporal(T('curados', { n: n }));
     actualizarHUD();
@@ -6079,7 +6078,7 @@
     setTimeout(function () { guardar(true); }, 50);
     // las tropas heridas se curan
     tropas.forEach(function (u) { u.vida = u.max; u.barra.visible = false; M.ponerVida(u.barra, 1); });
-    curarHeridos();
+    /* v8.83: los heridos se quedan en la Enfermería hasta que los cures tú */
     repararBarricadas();
     guardar();
     publicarAldea(true);
@@ -13401,7 +13400,6 @@
         if (MODO_CAMPO) { volverDelCampo(); cerrarBarraBatalla(); }
         limpiarEnemigos();
         estado.vidaCastillo = vidaMaxCastillo();
-        curarHeridos();
         repararBarricadas();
         guardar();
         ocultarPantalla();
@@ -13627,7 +13625,6 @@
     if (typeof estado.xp !== 'number') estado.xp = xpDeProgreso();
     if (!estado.xp2) { var vj = 1; while (vj < 60 && estado.xp >= 25 * vj * (vj + 1)) vj++; estado.xp = Math.max(estado.xp, xpParaNivel(vj)); estado.xp2 = 1; } // v7.79: curva nueva, se queda tu nivel
     estado.vidaCastillo = vidaMaxCastillo();
-    curarHeridos();
     tiempoJuego = 0;
     cam.objetivo.copy(CENTRO_REINO); cam.meta.copy(CENTRO_REINO); cam.vel.set(0, 0, 0); cam.distMeta = distInicial();
     ocultarPantalla();

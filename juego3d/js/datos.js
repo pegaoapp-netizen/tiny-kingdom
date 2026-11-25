@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.82';
+var VERSION_JUEGO = '8.83';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.82","2026-11-24","Fortaleza › Explorar da premios que se notan (recursos según tu castillo, aceleradores, libros, cofres) y los enseña en una ventana.","Fortress › Explore gives real rewards (resources by castle level, speed-ups, books, chests) and shows them."],
+var NOVEDADES_VER = [["8.83","2026-11-24","Enfermería: muchas más camas; los heridos se quedan hasta que tú los cures y al curarlos sube tu poder (cuenta en el Torneo de Poder).","Infirmary: many more beds; wounded stay until you heal them, and healing raises your power (counts in the Power Tournament)."],
+  ["8.82","2026-11-24","Fortaleza › Explorar da premios que se notan (recursos según tu castillo, aceleradores, libros, cofres) y los enseña en una ventana.","Fortress › Explore gives real rewards (resources by castle level, speed-ups, books, chests) and shows them."],
   ["8.81","2026-11-24","En el Mundo también sale la barra de marchas con Acelerar cuando van caravanas entre villas.","On the World map the march bar with Speed up also shows while caravans travel."],
   ["8.80","2026-11-24","Las caravanas entre villas se pueden acelerar, de ida y de vuelta.","Caravans between villages can be sped up, going and returning."],
   ["8.79","2026-11-24","Alianzas: la lista se ordena por el poder total de los miembros y ya no cuenta a los expulsados.","Alliances: the list is sorted by members total power and no longer counts removed players."],
@@ -170,7 +171,7 @@ var TEXTOS = {
     info_madera: 'Madera 🪵: la da el Aserradero. Sirve para construir y mejorar.',
     info_piedra: 'Piedra 🪨: la da la Mina. Sirve para torres, muralla de piedra y mejoras.',
     info_gemas: 'Gemas 💎: se ganan al superar oleadas. Sirven para invocar.',
-    camas: 'Camas', a_enfermeria: '💚 A la enfermería', curados: '💚 Se curaron {n} tropas', en_enfermeria: 'En la enfermería: {n} (vuelven al terminar la oleada)',
+    camas: 'Camas', a_enfermeria: '💚 A la enfermería', curados: '💚 Se curaron {n} tropas', en_enfermeria: 'En la enfermería: {n} (cúralas cuando quieras)',
     atacar: '⚔️ Atacar', atacar_ya: '⚔️ ¡Atacar con todas mis tropas!', at_titulo: 'Atacar a {n}',
     at_fuerza: 'Tu ejército', at_defensa: 'Su defensa (aprox.)', at_botin: 'Botín si ganas (hasta)', at_facil: '😀 Fácil', at_parejo: '😐 Parejo', at_dificil: '😬 Difícil',
     at_nota: 'Atacar quita tu protección. Las tropas que caen pueden ir a tu Enfermería.', at_sin_tropas: 'No tienes tropas para atacar. Entrena en la Guardia.',
@@ -387,7 +388,7 @@ var NOMBRES = {
   torre:      { es: 'Torre del homenaje', en: 'Keep',
                 des_es: 'Custodia los blasones que ganas al vencer campamentos y aldeas bárbaras. Con los blasones consigues objetos especiales en Artefactos y Promociones. También dispara flechas a los enemigos.', des_en: 'Guards the crests you win by beating camps and barbarian villages. Trade crests for special items in Artifacts and Promotions. It also shoots arrows at enemies.' },
   enfermeria: { es: 'Enfermería',   en: 'Infirmary',
-                des_es: 'Las tropas que caen se curan aquí y vuelven al terminar la oleada.', des_en: 'Fallen troops heal here and come back when the wave ends.' },
+                des_es: 'Las tropas heridas se quedan aquí hasta que tú las cures. Al curarlas sube tu poder.', des_en: 'Fallen troops heal here and come back when the wave ends.' },
   muralla:    { es: 'Muralla',      en: 'Wall',
                 des_es: 'Rodea todo el reino y le da más vida al castillo.', des_en: 'Surrounds the whole kingdom and gives the castle more health.' },
   explorador: { es: 'Explorador', en: 'Scout', des_es: 'Conoce los caminos: rápido y ligero, pelea mientras otros cargan el botín.', des_en: 'Knows the roads: fast and light, fights while others carry the loot.' },
