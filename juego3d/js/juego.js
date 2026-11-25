@@ -4690,7 +4690,9 @@
     return M.mejorarPorTramo(m, tramo, tipo);
   }
 
-  function repetibleCiudad(tipo) { return tipo === 'cabana' || tipo === 'cuartel'; }
+  /* v8.85 (dueño): la Enfermería también se repite (hasta 5 por villa) para tener más camas */
+  var MAX_ENFERMERIAS = 5;
+  function repetibleCiudad(tipo) { if (tipo === 'enfermeria') return contarEdificios('enfermeria') < MAX_ENFERMERIAS; return tipo === 'cabana' || tipo === 'cuartel'; }
   function parcelaAcepta(s, tipo) {
     if (!s || s.campo !== esCampo(tipo)) return false;
     if (s.campo) return true;
