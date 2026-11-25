@@ -7168,8 +7168,8 @@
   // para que haga falta entrenar mucho, acelerar y gastar. Es la única excepción a «las gemas no se regalan».
   var MIN_GEMAS_TORNEO = 30000, GEMAS_PODIO = [2000, 1200, 800];
   var PREMIOS_TORNEO = PREMIOS_TORNEO_SIN([
-    { hasta: 1, gemas: 500, oro: 200000, objeto: 'acel_15m', piezas: 3, mitico: true }, { hasta: 2, gemas: 300, oro: 120000, piezas: 2, mitico: true }, { hasta: 3, gemas: 200, oro: 80000, piezas: 2, mitico: true },
-    { hasta: 10, gemas: 100, oro: 40000, piezas: 1 }, { hasta: 50, gemas: 50, oro: 15000, piezas: 1 }, { hasta: 1e9, gemas: 20, oro: 5000 }
+    { hasta: 1, gemas: 500, oro: 200000, objeto: 'acel_15m', piezas: 3, mitico: true, botellas: 60 }, { hasta: 2, gemas: 300, oro: 120000, piezas: 2, mitico: true, botellas: 45 }, { hasta: 3, gemas: 200, oro: 80000, piezas: 2, mitico: true, botellas: 35 },
+    { hasta: 10, gemas: 100, oro: 40000, piezas: 1, botellas: 25 }, { hasta: 50, gemas: 50, oro: 15000, piezas: 1, botellas: 15 }, { hasta: 1e9, gemas: 20, oro: 5000, botellas: 5 }
   ]);
   GEMAS_PODIO.forEach(function (g, k) { if (PREMIOS_TORNEO[k]) PREMIOS_TORNEO[k].gemas = g; });
   function semanaActual() { return Math.floor((Date.now() / 86400000 + 3) / 7); } // la semana empieza el lunes
@@ -7209,6 +7209,7 @@
       if (p.gemas && hechos < MIN_GEMAS_TORNEO) { p = JSON.parse(JSON.stringify(p)); delete p.gemas; } // v8.38: las gemas solo con 30.000 puntos o más
       var items = (p.gemas ? [{ ico: '💎', n: p.gemas, nom: L('Gemas', 'Gems') }] : []).concat([{ ico: '🪙', n: p.oro, nom: T('r_oro') }]); // v8.07: sin línea de gemas vacía
       if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) });
+      if (p.botellas) items.push({ ico: '🧪', n: p.botellas, nom: N('botella') });
       nuevoCorreo('sistema', '🏆 ' + L('Torneo de la semana: puesto ', 'Weekly tournament: place ') + (pos > 100 ? '100+' : pos), L('Torneo', 'Tournament'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos > 100 ? '100+' : '#' + pos], [L('Ganador', 'Winner'), lista[0] ? '🥇 ' + escaparHTML(lista[0].nombre || '?') + ' · ' + formatoNumero(Math.round(lista[0].puntos || 0)) : '—'], [L('Premio', 'Prize'), (p.gemas ? p.gemas + ' 💎 · ' : '') + formatoNumero(p.oro) + ' 🪙' + (p.objeto && OBJETOS[p.objeto] ? ' · ' + N(p.objeto) : '') + (p.piezas ? ' · ' + p.piezas + ' 🛡️' : '')]])); // v8.07
       for (var ip = 0; ip < (p.piezas || 0); ip++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza de armadura de héroe', 'Hero armor piece') });
       if (p.mitico) items.push({ ico: '🦸', n: 1, nom: L('Héroe mítico', 'Mythic hero') });
@@ -7227,7 +7228,7 @@
     e: { ico: '🛡️', es: 'Torneo de Entrenamiento', en: 'Training Tournament', des: ['¡Gana quien más tropas entrene esta semana!', 'Whoever trains the most troops this week wins!'], unidad: ['tropas', 'troops'] },
     p: { ico: '💪', es: 'Torneo de Poder', en: 'Power Tournament', des: ['¡Gana quien más suba su poder esta semana!', 'Whoever raises their power the most this week wins!'], unidad: ['de poder', 'power'] }
   };
-  var PREMIOS_TX = [{ hasta: 1, oro: 150000, objeto: 'acel_15m', piezas: 2 }, { hasta: 3, oro: 80000, piezas: 1 }, { hasta: 10, oro: 40000 }, { hasta: 50, oro: 12000 }, { hasta: 1e9, oro: 3000 }];
+  var PREMIOS_TX = [{ hasta: 1, oro: 150000, objeto: 'acel_15m', piezas: 2, botellas: 40 }, { hasta: 3, oro: 80000, piezas: 1, botellas: 25 }, { hasta: 10, oro: 40000, botellas: 15 }, { hasta: 50, oro: 12000, botellas: 8 }, { hasta: 1e9, oro: 3000, botellas: 3 }];
   function premioTX(pos) { for (var i = 0; i < PREMIOS_TX.length; i++) if (pos <= PREMIOS_TX[i].hasta) return PREMIOS_TX[i]; return PREMIOS_TX[PREMIOS_TX.length - 1]; }
   function torneoX(k) { estado.tx = estado.tx || {}; var t = estado.tx[k]; if (!t) t = estado.tx[k] = { semana: semanaActual(), puntos: 0, cobrada: 0 }; return t; }
   function puntosTX(k) {
@@ -7247,7 +7248,7 @@
       revisarTX['a' + k] = false; if (t.cobrada === sem) return;
       var yo = Cuentas.usuario().uid, i = lista.map(function (x) { return x.uid; }).indexOf(yo), pos = i >= 0 ? i + 1 : 101, p = premioTX(pos), hechos = t.puntos, cfg = TORNEOS_X[k];
       t.cobrada = sem; t.semana = semanaActual(); t.puntos = 0; t.base = null; guardar(true);
-      var items = [{ ico: '🪙', n: p.oro, nom: T('r_oro') }]; if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) });
+      var items = [{ ico: '🪙', n: p.oro, nom: T('r_oro') }]; if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) }); if (p.botellas) items.push({ ico: '🧪', n: p.botellas, nom: N('botella') });
       for (var ip = 0; ip < (p.piezas || 0); ip++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza de armadura de héroe', 'Hero armor piece') });
       nuevoCorreo('sistema', cfg.ico + ' ' + L(cfg.es, cfg.en) + ': ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), L('Torneo', 'Tournament'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos > 100 ? '100+' : '#' + pos]]));
       mostrarRecompensas(cfg.ico + ' ' + L(cfg.es, cfg.en) + ' · ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), items, function () { darPremio(p); for (var q = 0; q < (p.piezas || 0); q++) darPiezaHeroe(); guardar(true); });
@@ -10964,9 +10965,9 @@
   function idRankCamp(t, sem) { return t === 'semana' ? '91' + ('000' + ((sem || semanaActual()) % 10000)).slice(-4) : '900000'; }
   // v9.04: premios del lunes para el podio de la Campaña semanal (sin gemas: las gemas no se regalan)
   var PREMIOS_CAMP = [
-    { pos: 1, oro: 150000, madera: 80000, piedra: 80000, hierro: 40000, pieza: 'mitico', obj: [['acel_24h', 1], ['libro_gra', 5]] },
-    { pos: 2, oro: 100000, madera: 50000, piedra: 50000, hierro: 25000, pieza: 'legendario', obj: [['acel_8h', 2], ['libro_gra', 3]] },
-    { pos: 3, oro: 70000, madera: 35000, piedra: 35000, hierro: 15000, pieza: 'legendario', obj: [['acel_8h', 1], ['libro_gra', 2]] }
+    { pos: 1, oro: 150000, madera: 80000, piedra: 80000, hierro: 40000, pieza: 'mitico', obj: [['acel_24h', 1], ['libro_gra', 5], ['botella', 60]] },
+    { pos: 2, oro: 100000, madera: 50000, piedra: 50000, hierro: 25000, pieza: 'legendario', obj: [['acel_8h', 2], ['libro_gra', 3], ['botella', 40]] },
+    { pos: 3, oro: 70000, madera: 35000, piedra: 35000, hierro: 15000, pieza: 'legendario', obj: [['acel_8h', 1], ['libro_gra', 2], ['botella', 25]] }
   ];
   function revisarCampSemana() {
     var dc = estado.campMapa, sem = semanaActual(); if (!dc || !hayCuenta() || revisarCampSemana.va) return;
@@ -10988,6 +10989,19 @@
     }).catch(function () { revisarCampSemana.va = false; });
   }
   setTimeout(revisarCampSemana, 9000); setInterval(revisarCampSemana, 600000);
+  // v9.05: BOTELLAS DE CAMPAÑA. El juego regala 10 cada día y 50 cada mes al entrar (se avisa y queda en el Correo)
+  var BOT_DIA = 10, BOT_MES = 50;
+  function regaloBotellas() {
+    if (enMenu || !estado || !estado.mochila) return;
+    var f = new Date(), dia = f.getFullYear() + '-' + (f.getMonth() + 1) + '-' + f.getDate(), mes = f.getFullYear() + '-' + (f.getMonth() + 1), n = 0, txt = [];
+    if (estado.botDia !== dia) { estado.botDia = dia; n += BOT_DIA; txt.push(L('regalo del día', 'daily gift') + ' +' + BOT_DIA); }
+    if (estado.botMes !== mes) { estado.botMes = mes; n += BOT_MES; txt.push(L('regalo del mes', 'monthly gift') + ' +' + BOT_MES); }
+    if (!n) return;
+    estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true);
+    consejoTemporal('🧪 ' + L('Botellas de campaña: ', 'Campaign flasks: ') + txt.join(' · ') + L(' (tienes ', ' (you have ') + estado.mochila.botella + ')');
+    nuevoCorreo('sistema', '🧪 ' + L('Botellas de campaña', 'Campaign flasks') + ' +' + n, L('Campaña', 'Campaign'), '<p>' + escaparHTML(txt.join(' · ')) + '</p><p>' + L('Úsalas para jugar las misiones del mapa de Campaña.', 'Use them to play the Campaign map missions.') + '</p>');
+  }
+  setTimeout(regaloBotellas, 12000); setInterval(regaloBotellas, 600000);
   // v8.27: puente con la Campaña en batalla (js/tk-campana.js)
   window.__tkCamp = {
     L: L, sonar: sonar, consejo: consejoTemporal,
@@ -11013,6 +11027,12 @@
     rankPublicar: function (tipo, puntos) { if (!hayCuenta() || !Cuentas.puntosTorneo) return Promise.resolve(); return Cuentas.puntosTorneo(idRankCamp(tipo), { nombre: Cuentas.nombrePublico(), puntos: Math.max(0, Math.min(100000000, Math.round(puntos || 0))), alianza: estado.alianza || null, actualizado: Date.now() }).catch(function () {}); },
     rankTop: function (tipo) { if (!hayCuenta() || !Cuentas.topTorneo) return Promise.reject(new Error('sin cuenta')); return Cuentas.topTorneo(idRankCamp(tipo), 100); },
     premiosSemana: function () { return PREMIOS_CAMP; },
+    botellas: function () { return Math.max(0, Math.floor((estado.mochila && estado.mochila.botella) || 0)); },
+    gastarBotellas: function (n) { var t = (estado.mochila && estado.mochila.botella) || 0; if (n > t) return false; estado.mochila.botella = t - n; guardar(true); return true; },
+    darBotellas: function (n) { if (n > 0) { estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); } },
+    comprarBotellas: function (n, g) { if (!(n > 0) || !(g > 0) || !pagarViejo(0, g)) return false; estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); sonar('moneda'); return true; },
+    gemas: function () { return estado.gemasInfinitas ? Infinity : estado.gemas || 0; },
+    regalosBotellas: function () { return { dia: BOT_DIA, mes: BOT_MES }; },
     revisarSemana: function () { revisarCampSemana(); },
     irCuenta: function () { if (window.TKMapa) TKMapa.cerrar(); var b = document.querySelector('[data-accion="ir-cuenta"]'); if (b) b.click(); else abrirPanelRanking('poder'); },
     recursos: function () { return { oro: estado.monedas || 0, madera: estado.madera || 0, piedra: estado.piedra || 0, hierro: estado.hierro || 0 }; },
@@ -11181,6 +11201,7 @@
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (p[r]) sumarRecurso(r, p[r]); });
     if (p.gemas) sumarGemas(p.gemas);
     if (p.objeto) estado.mochila[p.objeto] = (estado.mochila[p.objeto] || 0) + 1;
+    if (p.botellas) estado.mochila.botella = (estado.mochila.botella || 0) + p.botellas; // v9.05: botellas de campaña
     // v8.19: las tropas de premio (torneos, cofres, misiones) van a tu reserva: nunca se pierden aunque estés en el Mundo o el cuartel esté lleno
     if (p.tropas) { var rv = reserva(), tx = []; Object.keys(p.tropas).forEach(function (t) { var q = Math.max(0, Math.floor(+p.tropas[t] || 0)); if (!q || !TROPAS[t]) return; rv[t] = (rv[t] || 0) + q; tx.push(formatoNumero(q) + ' ' + N(t)); }); if (tx.length) consejoTemporal('⚔️ ' + L('Tropas de premio en tu ejército: ', 'Prize troops added to your army: ') + tx.join(', ')); }
     actualizarHUD();

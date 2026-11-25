@@ -3,7 +3,7 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.04';
+var VERSION_JUEGO = '9.05';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
 var NOVEDADES_VER = [["8.99","2026-11-25","Marcha: ahora ves cuántas tropas tienes y cuántas mandas. El cofre diario se cierra con la ✕. «Jugar sin cuenta» entra con un toque. Ajustes más limpio y el botón Actualizar ya no tapa nada.","March shows the troops you have and the ones you send. The daily chest closes with ✕. Play without account works with one tap. Cleaner Settings."],
@@ -508,6 +508,7 @@ var NOMBRES = {
   estrella_rey: { es: 'Estrella del Rey', en: 'King\'s Star', des_es: 'Hace falta para subir el Castillo a los niveles 14★, 15★ y 16★.', des_en: 'Needed to upgrade the Castle to levels 14★, 15★ and 16★.' },
   estrella_mar: { es: 'Estrella de Mar', en: 'Starfish', des_es: 'Hace falta para subir un edificio o la muralla a los niveles con estrella (13★ al 16★).', des_en: 'Needed to upgrade a building or the wall to star levels (13★ to 16★).' },
   lingote: { es: 'Lingote real', en: 'Royal ingot', des_es: 'Un lingote que vale 1.000.000 de oro.', des_en: 'An ingot worth 1,000,000 gold.' },
+  botella: { es: 'Botella de campaña', en: 'Campaign flask', des_es: 'Energía para jugar la Campaña: cada misión gasta botellas. Se ganan cada día y cada mes al entrar, en torneos, logros y cofres, o se compran con gemas.', des_en: 'Energy to play the Campaign: each mission spends flasks. Earned every day and month by logging in, in tournaments, feats and chests, or bought with gems.' }, // v9.05
   cofre_tesoro: { es: 'Cofre del Tesoro', en: 'Treasure chest', des_es: 'Muchos recursos al abrirlo.', des_en: 'Lots of resources when opened.' },
   cofre_galeon: { es: 'Cofre del Galeón', en: 'Galleon Chest', des_es: 'Se gana con 5 llaves en la Ruleta. Trae Estrella de Mar, Caracolas, Cofres de oro, un Acelerador de 8 horas, un Cofre del Tesoro y una pieza de armadura de héroe.', des_en: 'Won with 5 keys on the Wheel. Holds a Sea Star, Conches, Golden chests, an 8-hour Speed-up, a Treasure chest and a hero armor piece.' }, // v8.02
   pack_tesoro7: { es: '7 Cofres del Tesoro', en: '7 Treasure chests', des_es: 'Paquete de 7 cofres del tesoro.', des_en: 'Pack of 7 treasure chests.' },
@@ -859,6 +860,7 @@ var OBJETOS = {
   madera_500k:  { icono: '🪵', da: { madera: 500000 } },
   piedra_500k:  { icono: '🪨', da: { piedra: 500000 } },
   lingote:      { icono: '🥇', da: { oro: 1000000 } },
+  botella:      { icono: '🧪' }, // v9.05: energía de la Campaña (se gasta en el mapa de Campaña)
   caracola_real: { icono: '🐚', especial: true }, perla_rey: { icono: '🫧', especial: true }, corona_coral: { icono: '👑', especial: true },
   caracola:     { icono: '🐚', especial: true }, flor_coral: { icono: '🌺', especial: true },
   elevacion_sol: { icono: '☀️', especial: true }, estrella_rey: { icono: '🌟', especial: true }, estrella_mar: { icono: '⭐', especial: true },

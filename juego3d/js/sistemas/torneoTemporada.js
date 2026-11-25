@@ -15,10 +15,10 @@
     ],
     // cofres personales (cada uno se cobra una vez por temporada)
     hitos: [
-      { puntos: 100000, premio: [['acel_1h', 5]] },
+      { puntos: 100000, premio: [['acel_1h', 5], ['botella', 20]] }, // v9.05: también botellas de campaña
       { puntos: 300000, premio: [['ficha_x5', 1], ['carretas_x10', 1]] },
       { puntos: 600000, premio: [['estrella_mar', 15], ['amatista_100', 1]] },
-      { puntos: 1000000, premio: [['pergamino', 10]] },
+      { puntos: 1000000, premio: [['pergamino', 10], ['botella', 40]] },
       { puntos: 1500000, premio: [['ficha_x5', 2], ['acel_8h', 1], ['amatista_100', 2]] },
       { puntos: 2500000, premio: [['cofre_equipo', 1], ['amatista_500', 1]] } // v7.97: Amatista rúnica
     ],
@@ -30,7 +30,7 @@
       { hasta: 25, piezas: 1, cofres: 2, amatista: 200 }
     ],
     // consuelo para los del top 25 que no llegan al mínimo
-    consuelo: { oro: 100000, objetos: [['acel_1h', 5]] }
+    consuelo: { oro: 100000, objetos: [['acel_1h', 5], ['botella', 15]] }
   };
   // nivel de cada tropa para la fórmula nivel²
   var NIVEL_TROPA = { miliciano: 1, explorador: 1, espadachin: 2, arquero: 2, jinete: 2, guardian: 3, caballeria: 3, caballeria_pesada: 4, balista: 4, ariete: 4, catapulta: 5, torre_asedio: 5 };

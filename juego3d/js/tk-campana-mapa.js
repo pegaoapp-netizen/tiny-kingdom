@@ -93,12 +93,12 @@
     { k: 'pesadilla', es: 'Pesadilla', en: 'Nightmare', m: 4, p: 4, tinte: 'rgba(120,10,10,0.34)' }
   ];
   var LOGROS = [
-    { id: 'prim', es: 'Primera victoria', en: 'First victory', des: ['Gana tu primera misión', 'Win your first mission'], ok: function () { return totalGanadas() >= 1; }, p: { oro: 3000, madera: 2000 } },
-    { id: 'c1', es: 'Libertador del valle', en: 'Valley liberator', des: ['Completa el Capítulo 1', 'Complete Chapter 1'], ok: function () { return hecha('normal', 1, 6); }, p: { hierro: 800, pieza: 'raro' } },
-    { id: 'c2', es: 'Guardián del bosque', en: 'Forest warden', des: ['Completa el Capítulo 2', 'Complete Chapter 2'], ok: function () { return hecha('normal', 2, 6); }, p: { hierro: 1500, obj: [['libro_gra', 1]] } },
-    { id: 'c3', es: 'Señor de las minas', en: 'Lord of the mines', des: ['Completa el Capítulo 3', 'Complete Chapter 3'], ok: function () { return hecha('normal', 3, 6); }, p: { hierro: 3000, pieza: 'legendario' } },
-    { id: 'c4', es: 'Matadragones', en: 'Dragonslayer', des: ['Completa el Capítulo 4', 'Complete Chapter 4'], ok: function () { return hecha('normal', 4, 6); }, p: { hierro: 5000, pieza: 'mitico' } },
-    { id: 'e30', es: 'Estratega', en: 'Strategist', des: ['Consigue 30 estrellas', 'Earn 30 stars'], ok: function () { return totalEstrellas() >= 30; }, max: 30, prog: function () { return totalEstrellas(); }, p: { oro: 15000, obj: [['acel_1h', 2]] } },
+    { id: 'prim', es: 'Primera victoria', en: 'First victory', des: ['Gana tu primera misión', 'Win your first mission'], ok: function () { return totalGanadas() >= 1; }, p: { oro: 3000, madera: 2000, obj: [['botella', 10]] } },
+    { id: 'c1', es: 'Libertador del valle', en: 'Valley liberator', des: ['Completa el Capítulo 1', 'Complete Chapter 1'], ok: function () { return hecha('normal', 1, 6); }, p: { hierro: 800, pieza: 'raro', obj: [['botella', 20]] } },
+    { id: 'c2', es: 'Guardián del bosque', en: 'Forest warden', des: ['Completa el Capítulo 2', 'Complete Chapter 2'], ok: function () { return hecha('normal', 2, 6); }, p: { hierro: 1500, obj: [['libro_gra', 1], ['botella', 25]] } },
+    { id: 'c3', es: 'Señor de las minas', en: 'Lord of the mines', des: ['Completa el Capítulo 3', 'Complete Chapter 3'], ok: function () { return hecha('normal', 3, 6); }, p: { hierro: 3000, pieza: 'legendario', obj: [['botella', 30]] } },
+    { id: 'c4', es: 'Matadragones', en: 'Dragonslayer', des: ['Completa el Capítulo 4', 'Complete Chapter 4'], ok: function () { return hecha('normal', 4, 6); }, p: { hierro: 5000, pieza: 'mitico', obj: [['botella', 40]] } },
+    { id: 'e30', es: 'Estratega', en: 'Strategist', des: ['Consigue 30 estrellas', 'Earn 30 stars'], ok: function () { return totalEstrellas() >= 30; }, max: 30, prog: function () { return totalEstrellas(); }, p: { oro: 15000, obj: [['acel_1h', 2], ['botella', 20]] } },
     { id: 'perf', es: 'Victoria perfecta', en: 'Perfect victory', des: ['Gana a un jefe de capítulo con 3 ★', 'Beat a chapter boss with 3 ★'], ok: function () { return DIFS.some(function (d) { return [1, 2, 3, 4].some(function (c) { return estrellas(d.k, c, 6) >= 3; }); }); }, p: { pieza: 'legendario' } },
     { id: 'rep', es: 'Veterano', en: 'Veteran', des: ['Repite 10 misiones', 'Replay 10 missions'], ok: function () { return (st().nRep || 0) >= 10; }, max: 10, prog: function () { return st().nRep || 0; }, p: { madera: 8000, piedra: 8000, obj: [['acel_15m', 3]] } },
     { id: 'eli', es: 'Élite', en: 'Elite', des: ['Completa un capítulo en Élite', 'Complete a chapter on Elite'], ok: function () { return [1, 2, 3, 4].some(function (c) { return hecha('elite', c, 6); }); }, p: { hierro: 6000, pieza: 'legendario' } },
@@ -143,6 +143,10 @@
     var objTxt = obj === 'jefe' ? L('Derrota a ', 'Defeat ') + (jefe ? L(jefe.es, jefe.en).split(',')[0] : '') : obj === 'tiempo' ? L('Vence en menos de ' + seg + ' s', 'Win in under ' + seg + ' s') : obj === 'sobrevive' ? L('Resiste ' + seg + ' s', 'Survive ' + seg + ' s') : L('Derrota a todos los enemigos', 'Defeat all enemies');
     return { c: c, i: i, dif: dk, gIdx: gIdx, titulo: c + '-' + i + ' · ' + L(m[0], m[1]), corto: L(cap.es, cap.en), num: c + '-' + i, historia: L(m[5], m[6]), fondo: cap.fondo, obj: obj, seg: seg, t3: t3, objTxt: objTxt, enemigos: lista, refuerzos: refu, f: f, jefe: jefe, dm: d.p, esJefe: i === 6, especial: !!jefe && i !== 6 };
   }
+  // v9.05: BOTELLAS. Normal 1, especial 2, jefe 3; Élite ×2, Pesadilla ×3. Si pierdes, se devuelven todas menos 1
+  function coste(M) { return (M.esJefe ? 3 : M.especial ? 2 : 1) * (M.dif === 'pesadilla' ? 3 : M.dif === 'elite' ? 2 : 1); }
+  function botellas() { return G.botellas ? G.botellas() : 0; }
+  var PACKS = [[10, 50], [30, 120], [100, 350]]; // [botellas, gemas]
   function condEstrellas(M) {
     return [L('Gana la batalla', 'Win the battle'), L('Ningún héroe cae', 'No hero falls'), M.obj === 'sobrevive' ? L('Termina con más del 50 % de vida', 'Finish above 50 % health') : L('Gana en menos de ' + M.t3 + ' s', 'Win in under ' + M.t3 + ' s')];
   }
@@ -158,7 +162,7 @@
   }
   function premiosRepetir(p) { return { oro: p.oro * 0.35, madera: p.madera * 0.35, piedra: p.piedra * 0.35, hierro: p.hierro * 0.35, expH: Math.round(p.expH * 0.5), expR: Math.round(p.expR * 0.4), frag: 1, obj: [['acel_5m', 1]], pieza: null, piezaProb: 0.08, piezaR: p.piezaR }; }
   function premioTres(M) { var k = (1 + M.gIdx * 0.3) * M.dm; return { hierro: 300 * k, obj: [['acel_15m', 1], ['libro_peq', 1]], pieza: Math.random() < 0.5 ? RAR[Math.min(3, Math.floor((M.c - 1) / 2) + (M.dif === 'normal' ? 0 : 1))] : null }; }
-  function premioCofre(c, n, dm) { var k = (1 + (c - 1) * 2) * dm; return n === 1 ? { madera: 4000 * k, piedra: 4000 * k, obj: [['acel_15m', 2]] } : n === 2 ? { hierro: 1500 * k, obj: [['libro_gra', 1], ['acel_1h', 1]] } : { oro: 20000 * k, pieza: RAR[Math.min(3, c - 1 + (dm > 1 ? 1 : 0))], obj: [['acel_1h', 2]] }; }
+  function premioCofre(c, n, dm) { var k = (1 + (c - 1) * 2) * dm; return n === 1 ? { madera: 4000 * k, piedra: 4000 * k, obj: [['acel_15m', 2], ['botella', 5]] } : n === 2 ? { hierro: 1500 * k, obj: [['libro_gra', 1], ['acel_1h', 1], ['botella', 10]] } : { oro: 20000 * k, pieza: RAR[Math.min(3, c - 1 + (dm > 1 ? 1 : 0))], obj: [['acel_1h', 2], ['botella', 20]] }; }
 
   // ======================= EL MUNDO =======================
   var WW = 1000, WH = 2400;
@@ -461,7 +465,7 @@
     '#tkm .tkm-d.on.elite{background:linear-gradient(#b82a2a,#5a0a0a)}#tkm .tkm-d.on.pesadilla{background:linear-gradient(#5a2a8a,#20083a)}' +
     '#tkm .tkm-d.no{opacity:.6}' +
     '#tkm .tkm-rec{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) + 88px);display:flex;gap:4px;justify-content:center;flex-wrap:wrap;pointer-events:none}' +
-    '#tkm .tkm-rec span{display:flex;align-items:center;gap:3px;padding:2px 8px 2px 2px;border-radius:12px;background:linear-gradient(#2a2016e8,#120c06e8);border:1px solid #c9a14a88;font:800 11px system-ui;color:#fff;text-shadow:0 1px 1px #000}#tkm .tkm-rec img{width:20px;height:20px}' +
+    '#tkm .tkm-rec span{display:flex;align-items:center;gap:3px;padding:2px 7px 2px 2px;border-radius:12px;background:linear-gradient(#2a2016e8,#120c06e8);border:1px solid #c9a14a88;font:800 11px system-ui;color:#fff;text-shadow:0 1px 1px #000}#tkm .tkm-rec img{width:20px;height:20px}' +
     // botones redondos de los lados
     '#tkm .tkm-lado{position:absolute;top:calc(env(safe-area-inset-top) + 124px);display:flex;flex-direction:column;gap:12px}#tkm .tkm-izq{left:8px}#tkm .tkm-der{right:8px}' +
     '#tkm .tkm-bl{position:relative;width:58px;height:58px;padding:0;border-radius:50%;border:none;background:radial-gradient(circle at 50% 38%,#8a2418,#3a0a06 70%,#1a0402);box-shadow:0 0 0 2px #1a0e04,0 0 0 4px #d8a640,0 0 0 5px #4a2a08,0 5px 10px rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center}' +
@@ -511,6 +515,11 @@
     '#tkm .tkm-rkf .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:700 13px Georgia,serif}#tkm .tkm-rkf .n i{font-style:normal;font:800 10px system-ui;color:#3a2410;background:#e8c060;border-radius:4px;padding:1px 4px;margin-right:5px}#tkm .tkm-rkf b{flex:none;color:#ffe08a;font:800 12px system-ui}' +
     '#tkm .tkm-rkf.top{border-color:#c9a14a;background:linear-gradient(#5a3a18,#2a180a)}#tkm .tkm-rkf.yo{border-color:#9cc4ec;box-shadow:0 0 0 1px #2f6ab8,0 0 10px #2f6ab866}' +
     '#tkm .tkm-rkp div{display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:5px 7px;margin:3px 0;border-radius:6px;background:rgba(90,50,10,.12);border:1px solid #a8803a;font:700 11px system-ui}#tkm .tkm-rkp span{font-size:20px;margin-right:2px}#tkm .tkm-rkp img{width:16px;height:16px}' +
+    '#tkm .tkm-rec .tkm-bot{pointer-events:auto;display:flex;align-items:center;gap:4px;height:26px;padding:0 4px 0 8px;border-radius:13px;border:1px solid #ffd070;background:linear-gradient(#6a4a10,#2a1a04);color:#fff;font:800 12px system-ui;text-shadow:0 1px 1px #000;box-shadow:0 0 8px #ffb03a66}#tkm .tkm-bot b{color:#ffe36a}#tkm .tkm-bot i{font-style:normal;width:18px;height:18px;border-radius:50%;background:linear-gradient(#6fdc5a,#2f8f22);font:900 14px/18px system-ui;text-align:center}' +
+    '#tkm .tkm-cst{margin:8px 0 2px;padding:7px 9px;border-radius:6px;background:linear-gradient(#5a3a10,#2a1a04);color:#fff;font:700 13px Georgia,serif;border:1px solid #ffd070;text-shadow:0 1px 1px #000}#tkm .tkm-cst b{color:#ffe36a}#tkm .tkm-cst small{display:block;font:600 11px system-ui;opacity:.85;margin-top:2px}#tkm .tkm-cst.falta{background:linear-gradient(#7a1a12,#3a0604);border-color:#ff9a8a}' +
+    '#tkm .tkm-fuentes div{padding:5px 8px;margin:3px 0;border-radius:6px;background:rgba(90,50,10,.12);border:1px solid #a8803a;font:700 12px system-ui}#tkm .tkm-fuentes b{color:#2f8f22}' +
+    '#tkm .tkm-packs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#tkm .tkm-pack{padding:8px 4px;border-radius:6px;border:1px solid #c9a14a;background:radial-gradient(circle at 50% 30%,#5a3c20,#24160a);color:#fff;box-shadow:inset 0 0 8px #000,0 2px 4px #0006}#tkm .tkm-pack span{display:block;font-size:30px}#tkm .tkm-pack b{display:block;font:900 16px system-ui;color:#ffe08a}' +
+    '#tkm .tkm-pack i{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:5px;padding:3px;border-radius:4px;background:linear-gradient(#3f80c0,#123660);font:800 12px system-ui;font-style:normal}#tkm .tkm-pack img{width:16px;height:16px}' +
     '#tkm .tkm-hist{font:italic 600 14px Georgia,serif !important;color:#4a2a0a;text-align:center;padding:4px 6px}' +
     '#tkm .tkm-sello{display:block;margin:6px auto;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e0402a,#6a0e08);font-size:38px;line-height:76px;text-align:center;box-shadow:0 0 0 3px #3a0a04,0 0 0 5px #d8a640,0 4px 10px #0008}';
 
@@ -669,14 +678,15 @@
   }
 
   // ---- interfaz HTML ----
-  function htmlRec() { var r = G.recursos(); return ['oro', 'madera', 'piedra', 'hierro'].map(function (k) { return '<span><img src="iconos/ui/r_' + k + '.webp" alt="">' + num(r[k] || 0) + '</span>'; }).join(''); }
+  function corto(n) { n = Math.round(n || 0); return n >= 1e9 ? (n / 1e9).toFixed(1).replace('.0', '') + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1).replace('.0', '') + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : num(n); }
+  function htmlRec() { var r = G.recursos(); return ['oro', 'madera', 'piedra', 'hierro'].map(function (k) { return '<span><img src="iconos/ui/r_' + k + '.webp" alt="">' + corto(r[k]) + '</span>'; }).join(''); }
   function pintarUI() {
     var ui = raiz.querySelector('.tkm-ui'), d = difActual(), cur = actual(), c = cur ? cur[0] : 4, cap = CAPS[c - 1], hechas = 0; for (var i = 1; i <= 6; i++) if (hecha(d.k, c, i)) hechas++;
     var ec = estCap(d.k, c), cof = st().cofres, lg = logrosListos();
     function bl(cmd, im, txt, extra) { return '<button class="tkm-bl" data-c="' + cmd + '">' + (im.charAt(0) === '#' ? im.slice(1) : '<img src="iconos/ui/' + im + '.webp" alt="">') + '<small>' + txt + '</small>' + (extra || '') + '</button>'; }
     ui.innerHTML = '<div class="tkm-marco"></div><div class="tkm-top"><div class="tkm-f1"><button class="tkm-vol" data-c="salir" aria-label="' + L('Volver', 'Back') + '">‹</button><div class="tkm-tit">' + esc(L(cap.es, cap.en)) + '<small>' + L('Campaña · Capítulo ', 'Campaign · Chapter ') + c + '</small></div><div class="tkm-est"><b>★</b>' + totalEstrellas() + '</div></div>' +
       '<div class="tkm-difs">' + DIFS.map(function (x) { var ab = difAbierta(x.k); return '<button class="tkm-d ' + x.k + (x.k === d.k ? ' on' : '') + (ab ? '' : ' no') + '" data-c="dif" data-k="' + x.k + '">' + (ab ? '' : '🔒 ') + L('Modo ', '') + L(x.es, x.en).toLowerCase() + '</button>'; }).join('') + '</div></div>' +
-      '<div class="tkm-rec">' + htmlRec() + '</div>' +
+      '<div class="tkm-rec"><button class="tkm-bot" data-c="botellas">🧪 <b>' + botellas() + '</b><i>+</i></button>' + htmlRec() + '</div>' +
       '<div class="tkm-lado tkm-izq">' + bl('caps', 'm_misiones', L('Capítulos', 'Chapters')) + bl('logros', 'o_estrella_rey', L('Logros', 'Feats'), lg ? '<i>' + lg + '</i>' : '') + bl('heroes', 'b_tropas', L('Héroes', 'Heroes')) + '</div>' +
       '<div class="tkm-lado tkm-der">' + bl('clasif', 'm_ranking', L('Clasificación', 'Ranking')) + bl('etapas', 'b_campana', L('Etapas', 'Stages')) + bl('centrar', '#🧭', L('Misión', 'Mission')) + '</div>' +
       '<div class="tkm-abajo"><div class="tkm-pc"><b>' + L('Capítulo ', 'Chapter ') + c + ' · ' + hechas + '/6 · ★ ' + ec + '/18</b><div class="tkm-bar"><i style="width:' + Math.round(100 * ec / 18) + '%"></i></div></div><div class="tkm-cof">' +
@@ -709,19 +719,20 @@
     var po = poderEquipo(M), col = po.mio >= po.ene * 1.1 ? '#2f8f22' : po.mio >= po.ene * 0.8 ? '#c9781a' : '#c0281e';
     var unicos = {}; M.enemigos.concat(M.refuerzos.reduce(function (a, r) { return a.concat(r.l); }, [])).forEach(function (e) { if (!e.jefe) unicos[e.ico + e.nom] = e; });
     var j = M.jefe, habTxt = j ? j.habs.filter(function (h, k, a) { return a.indexOf(h) === k; }).map(function (h) { return HABN[h] ? L(HABN[h][0], HABN[h][1]) : h; }).join(' · ') : '';
-    var conds = condEstrellas(M);
+    var conds = condEstrellas(M), cst = coste(M), tengo = botellas(), nBar = Math.max(1, Math.min(5, REP_DIA - rep, Math.floor(tengo / cst)));
     var html = '<h2>' + esc(M.titulo) + '</h2><div class="tkm-sub">' + esc(L(cap.es, cap.en)) + ' · ' + esc(L(difActual().es, difActual().en)) + '</div>' +
       (j ? '<div class="tkm-jefe"><div class="ico">' + j.ico + '</div><div><b>' + esc(L(j.es, j.en)) + '</b><small>' + (i === 6 ? L('Jefe del capítulo', 'Chapter boss') : L('Enemigo especial', 'Special enemy')) + '</small><small>✨ ' + esc(habTxt) + '</small></div></div>' : '') +
       '<p class="tkm-hist">“' + esc(M.historia) + '”</p>' +
       '<h3>🎯 ' + L('Objetivo', 'Objective') + '</h3><p><b>' + esc(M.objTxt) + '</b>' + (M.refuerzos.length ? ' · ⚠️ ' + L('llegarán refuerzos', 'reinforcements will arrive') : '') + '</p>' +
+      '<div class="tkm-cst' + (tengo < cst ? ' falta' : '') + '">🧪 ' + L('Coste: ', 'Cost: ') + '<b>' + cst + '</b> ' + L('botella' + (cst > 1 ? 's' : ''), 'flask' + (cst > 1 ? 's' : '')) + ' · ' + L('tienes ', 'you have ') + '<b>' + tengo + '</b><small>' + L('Si pierdes, se te devuelven todas menos 1.', 'If you lose, all but 1 are returned.') + '</small></div>' +
       '<h3>⭐ ' + L('Estrellas', 'Stars') + '</h3><div class="tkm-conds">' + conds.map(function (t2, k) { return '<div class="' + (best > k ? 'ok' : '') + '"><b>★</b>' + esc(t2) + '</div>'; }).join('') + '</div>' +
       '<h3>👹 ' + L('Enemigos', 'Enemies') + '</h3><div class="tkm-enes">' + Object.keys(unicos).map(function (k) { var e = unicos[k]; return '<span><em>' + e.ico + '</em>' + esc(e.nom) + (e.d ? ' 🏹' : '') + (e.sana ? ' ✚' : '') + '</span>'; }).join('') + '</div>' +
       '<div class="tkm-pod" style="margin-top:8px"><div>' + L('Poder de tus héroes', 'Your heroes power') + '<b style="color:' + col + '">' + num(po.mio) + '</b></div><div>' + L('Poder enemigo', 'Enemy power') + '<b>' + num(po.ene) + '</b></div></div>' +
       '<h3>🎁 ' + (primera ? L('Premios de la primera victoria', 'First victory rewards') : L('Premios al repetir', 'Replay rewards')) + '</h3>' + (sinPremio ? '<p>' + L('Ya usaste las ' + REP_DIA + ' repeticiones con premio de hoy. Puedes jugarla igual, pero sin premios.', 'You used today\'s ' + REP_DIA + ' rewarded replays. You can still play it, without rewards.') + '</p>' : htmlPremios(p)) +
       (best < 3 ? '<h3>👑 ' + L('Extra por 3 estrellas (una vez)', '3-star bonus (once)') + '</h3>' + htmlPremios(premioTres(M)) : '') +
       (!primera ? '<p class="tkm-nota">🔁 ' + L('Repeticiones con premio hoy: ', 'Rewarded replays today: ') + rep + ' / ' + REP_DIA + '</p>' : '') +
-      (!primera && best >= 3 ? '<h3>⚡ ' + L('Barrido (3 ★)', 'Sweep (3 ★)') + '</h3><p class="tkm-nota" style="margin:0 0 4px">' + L('Ya la dominas: pásala automáticamente y recibe los premios al instante, sin batalla y sin perder tropas.', 'You mastered it: pass it automatically and get the rewards instantly, with no battle and no troop losses.') + '</p><div class="tkm-bts" style="margin-top:4px"><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="1"' + (sinPremio ? ' disabled' : '') + '>⚡ ×1</button><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="' + Math.max(1, Math.min(5, REP_DIA - rep)) + '"' + (sinPremio ? ' disabled' : '') + '>⚡ ×' + Math.max(1, Math.min(5, REP_DIA - rep)) + '</button></div>' : (!primera ? '<p class="tkm-nota">⚡ ' + L('Consigue 3 ★ para poder pasarla automáticamente (Barrido).', 'Get 3 ★ to pass it automatically (Sweep).') + '</p>' : '')) +
-      '<div class="tkm-bts"><button class="tkm-b gris" data-c="x">' + L('Cerrar', 'Close') + '</button><button class="tkm-b rojo" data-c="atacar" data-cap="' + c + '" data-i="' + i + '">⚔️ ' + L('Atacar', 'Attack') + '</button></div>';
+      (!primera && best >= 3 ? '<h3>⚡ ' + L('Barrido (3 ★)', 'Sweep (3 ★)') + '</h3><p class="tkm-nota" style="margin:0 0 4px">' + L('Ya la dominas: pásala automáticamente y recibe los premios al instante, sin batalla y sin perder tropas.', 'You mastered it: pass it automatically and get the rewards instantly, with no battle and no troop losses.') + '</p><div class="tkm-bts" style="margin-top:4px"><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="1"' + (sinPremio ? ' disabled' : '') + '>⚡ ×1 · 🧪' + cst + '</button><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="' + nBar + '"' + (sinPremio ? ' disabled' : '') + '>⚡ ×' + nBar + ' · 🧪' + nBar * cst + '</button></div>' : (!primera ? '<p class="tkm-nota">⚡ ' + L('Consigue 3 ★ para poder pasarla automáticamente (Barrido).', 'Get 3 ★ to pass it automatically (Sweep).') + '</p>' : '')) +
+      '<div class="tkm-bts"><button class="tkm-b gris" data-c="x">' + L('Cerrar', 'Close') + '</button>' + (tengo >= cst ? '<button class="tkm-b rojo" data-c="atacar" data-cap="' + c + '" data-i="' + i + '">⚔️ ' + L('Atacar', 'Attack') + ' · 🧪' + cst + '</button>' : '<button class="tkm-b verde" data-c="botellas">🧪 ' + L('Conseguir botellas', 'Get flasks') + '</button>') + '</div>';
     ventana(html);
   }
   function ventanaCapitulos() {
@@ -739,6 +750,13 @@
     }).join(''));
   }
   function tiempoHasta(ms) { var s2 = Math.max(0, (ms - Date.now()) / 1000), d = Math.floor(s2 / 86400), h = Math.floor(s2 % 86400 / 3600), m = Math.floor(s2 % 3600 / 60); return d ? d + 'd ' + h + 'h' : h ? h + 'h ' + m + 'm' : m + 'm'; }
+  function ventanaBotellas() {
+    var rg = G.regalosBotellas ? G.regalosBotellas() : { dia: 10, mes: 50 }, gm = G.gemas ? G.gemas() : 0;
+    ventana('<span class="tkm-sello" style="background:radial-gradient(circle at 40% 35%,#ffe36a,#c9781a 60%,#6a3a04)">🧪</span><h2>' + L('Botellas de campaña', 'Campaign flasks') + '</h2><div class="tkm-sub">' + L('Tienes ', 'You have ') + botellas() + '</div>' +
+      '<p class="tkm-nota">' + L('Cada misión gasta botellas: normal 1, enemigo especial 2, jefe 3 (Élite ×2, Pesadilla ×3). El Barrido gasta lo mismo por cada pasada.', 'Each mission spends flasks: normal 1, special enemy 2, boss 3 (Elite ×2, Nightmare ×3). Sweeps cost the same per run.') + '</p>' +
+      '<h3>🎁 ' + L('Gratis', 'Free') + '</h3><div class="tkm-fuentes"><div>📅 ' + L('Cada día al entrar: ', 'Every day you log in: ') + '<b>+' + rg.dia + '</b></div><div>🗓️ ' + L('Cada mes al entrar: ', 'Every month you log in: ') + '<b>+' + rg.mes + '</b></div><div>🏆 ' + L('Torneo semanal, Entrenamiento, Subir poder y Temporada', 'Weekly, Training, Power and Season tournaments') + '</div><div>🗺️ ' + L('Podio de la Campaña semanal, logros y cofres de estrellas', 'Weekly Campaign podium, feats and star chests') + '</div></div>' +
+      '<h3>💎 ' + L('Comprar con gemas', 'Buy with gems') + ' · ' + L('tienes ', 'you have ') + (gm === Infinity ? '∞' : num(gm)) + '</h3><div class="tkm-packs">' + PACKS.map(function (q) { return '<button class="tkm-pack" data-c="comprar" data-n="' + q[0] + '" data-g="' + q[1] + '"><span>🧪</span><b>×' + q[0] + '</b><i><img src="iconos/ui/r_gemas.webp" alt="">' + q[1] + '</i></button>'; }).join('') + '</div>');
+  }
   var rkTab = 'avance';
   function ventanaClasificacion(tab) {
     rkTab = tab = tab || rkTab;
@@ -775,7 +793,9 @@
     var d = st().dif, M = mision(c, i, d), base = premiosBase(M), rp = st().rep || {}, todo = [], hechas2 = 0;
     if (estrellas(d, c, i) < 3) return;
     if (rp.d !== hoy()) rp = { d: hoy(), n: 0 };
-    for (var k = 0; k < n && rp.n < REP_DIA; k++) { rp.n++; hechas2++; st().nRep = (st().nRep || 0) + 1; var r = st().m[clave(d, c, i)]; r.n = (r.n || 0) + 1; todo = todo.concat(dar(premiosRepetir(base), G.equipo())); }
+    var cst = coste(M);
+    if (botellas() < cst) { ventanaBotellas(); return; }
+    for (var k = 0; k < n && rp.n < REP_DIA; k++) { if (!G.gastarBotellas(cst)) break; rp.n++; hechas2++; st().nRep = (st().nRep || 0) + 1; var r = st().m[clave(d, c, i)]; r.n = (r.n || 0) + 1; todo = todo.concat(dar(premiosRepetir(base), G.equipo())); }
     st().rep = rp; if (hechas2) sumarSemana(M, hechas2); G.guardar(); if (hechas2) publicar();
     if (!hechas2) { G.consejo(L('Ya usaste las repeticiones con premio de hoy.', 'Today\'s rewarded replays are used.')); return; }
     var junto = {}, orden = []; todo.forEach(function (x) { var m = /^([+×]?)([\d.,]+)/.exec(x.n || ''), v = m ? +m[2].replace(/[.,]/g, '') : 0; if (!junto[x.nom]) { junto[x.nom] = { img: x.img, ico: x.ico, nom: x.nom, pre: m ? m[1] : '', v: 0, txt: x.n }; orden.push(x.nom); } junto[x.nom].v += v; });
@@ -787,9 +807,11 @@
     var d = st().dif, M = mision(c, i, d), dk = d;
     cerrarVentana();
     M.haySiguiente = i < 6 || c < 4;
+    var cst = coste(M); if (botellas() < cst) { ventanaBotellas(); return; }
+    M.alEmpezar = function () { if (!G.gastarBotellas(cst)) { G.consejo('🧪 ' + L('No te quedan botellas de campaña. Consíguelas en el mapa (botón 🧪 +).', 'You have no Campaign flasks left. Get them on the map (🧪 + button).')); return false; } return true; };
     M.alTerminar = function (res) {
       var k = clave(dk, c, i), r = st().m[k] || { e: 0, n: 0 }, primera = !r.n, items = [], nota = '';
-      if (!res.gano) return { items: [] };
+      if (!res.gano) { if (cst > 1) G.darBotellas(cst - 1); return { items: [] }; }
       var antes = r.e || 0; r.n = (r.n || 0) + 1; r.e = Math.max(antes, res.estrellas); st().m[k] = r;
       var base = premiosBase(M);
       if (primera) { items = dar(base, res.heroes); nota = '🆕 ' + L('¡Primera victoria!', 'First victory!'); }
@@ -816,6 +838,8 @@
     else if (c === 'caps') ventanaCapitulos();
     else if (c === 'logros') ventanaLogros();
     else if (c === 'clasif') ventanaClasificacion();
+    else if (c === 'botellas') ventanaBotellas();
+    else if (c === 'comprar') { var nb = +b.getAttribute('data-n'), gb = +b.getAttribute('data-g'); if (G.comprarBotellas(nb, gb)) { G.consejo('🧪 +' + nb + ' ' + L('botellas de campaña', 'Campaign flasks')); pintarUI(); ventanaBotellas(); } }
     else if (c === 'rk') ventanaClasificacion(b.getAttribute('data-t'));
     else if (c === 'cuenta') G.irCuenta();
     else if (c === 'vercap') { var cc = +b.getAttribute('data-cap'); cerrarVentana(); var p = CAPS[cc - 1].pos[2]; volarA(p[0], p[1] - 40, Math.max(cam.z, zMin * 1.6)); }
