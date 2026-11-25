@@ -1,5 +1,5 @@
 // v7.12: PORTADA AL ABRIR EL JUEGO
-// Sale apenas se abre la página (antes de que cargue el 3D): un héroe pintado de Tiny Kingdom en grande,
+// Sale apenas se abre la página (antes de que cargue el 3D): un héroe pintado de Brother Kingdoms en grande,
 // el título en una cinta dorada y una barra de carga dorada. Cuando el juego está listo se desvanece.
 // v7.13: usa la portada del dibujante; si no carga, la dibujada con uno de nuestros héroes (iconos/ui/h_*.webp).
 //
@@ -60,6 +60,10 @@ var PORTADA = {
     '#tk-portada.con-foto .pt-pie { padding-top: 70px; background: linear-gradient(180deg, transparent 0%, rgba(18,10,5,.75) 45%, #120a05 75%); }',
     '@keyframes ptFoto { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: none; } }',
     '#tk-portada .pt-pie { position: relative; }',
+    /* v8.90: el dibujo trae el nombre viejo pintado arriba; lo tapa un cielo y encima va el nombre nuevo */
+    '#tk-portada .pt-cielo { position: absolute; left: 0; right: 0; top: 0; z-index: 1; height: calc(min(49.8vw, 28vh) + 40px); background: linear-gradient(180deg, #3b4560 0%, #6f6270 40%, #c98d5c 78%, #e2a45e 100%); -webkit-mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 46px), transparent 100%); mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 46px), transparent 100%); animation: ptFoto .9s ease-out both; }',
+    '#tk-portada.con-foto .pt-titulo { position: absolute; left: 0; right: 0; top: 0; z-index: 2; margin-top: 0; height: min(49.8vw, 28vh); display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: env(safe-area-inset-top); box-sizing: border-box; }',
+    '#tk-portada.con-foto .pt-nombre { font-size: clamp(22px, 7.2vw, 46px); letter-spacing: 0; } #tk-portada.con-foto .pt-cinta { padding: 9px 18px 11px; } #tk-portada .pt-nombre { background: none; -webkit-text-fill-color: #ffd86a; color: #ffd86a; filter: none; text-shadow: 0 2px 0 #4a1e0c, 0 3px 5px rgba(0,0,0,.6); }',
     '#tk-portada .pt-txt { margin-top: 8px; color: #f3dfae; font: 600 13px system-ui, sans-serif; text-shadow: 0 1px 2px #000; }'
   ].join('\n');
   var st = document.createElement('style'); st.id = 'tk-portada-css'; st.textContent = css; (document.head || document.documentElement).appendChild(st);
@@ -72,13 +76,13 @@ var PORTADA = {
   var PIE = '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div><div id="pt-version" style="position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 6px);font:600 11px system-ui,sans-serif;color:#f3dfae;opacity:.7"></div></div>';
   function armarDibujada() {
     d.innerHTML = '<div class="pt-sala"></div><div class="pt-trono"></div><div class="pt-gradas"></div><div class="pt-dosel"></div><div class="pt-cortina izq"></div><div class="pt-cortina der"></div><div class="pt-velas"></div>' +
-    '<div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Tiny Kingdom</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div>' +
+    '<div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Brother Kingdoms</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div>' +
     '<div class="pt-heroe"><img id="pt-img" alt="" src="iconos/ui/h_' + h[0] + '.webp"><span class="pt-nombre-h">' + h[1] + '</span></div>' +
     '<div class="pt-pie"><div class="pt-barra"><i id="pt-avance"></i></div><div class="pt-txt" id="pt-txt">' + (en ? 'Loading the kingdom…' : 'Cargando el reino…') + '</div></div>';
   }
   d.className = 'con-foto';
   var LETRERO = PORTADA.nuevo ? '<div class="pt-nuevo"><span>' + (en ? 'New hero' : '¡Nuevo héroe!') + '</span><b>' + String(PORTADA.nuevo).replace(/</g, '&lt;') + '</b></div>' : '';
-  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-espacio"></div>' + PIE.replace('<div class="pt-pie">', '<div class="pt-pie">' + LETRERO);
+  d.innerHTML = '<div class="pt-foto" style="background-image:url(' + FOTO + '), url(' + MINI + ')"></div><div class="pt-cielo"></div><div class="pt-titulo"><div class="pt-cinta"><div class="pt-nombre">Brother Kingdoms</div></div><br><div class="pt-sub">' + (en ? 'Kingdoms of the Caribbean' : 'Reinos del Caribe') + '</div></div><div class="pt-espacio"></div>' + PIE.replace('<div class="pt-pie">', '<div class="pt-pie">' + LETRERO);
   var prueba = new Image(); prueba.onerror = function () { var av = document.getElementById('pt-avance'), w = av ? av.style.width : ''; d.className = ''; armarDibujada(); var av2 = document.getElementById('pt-avance'); if (av2) av2.style.width = w; }; prueba.src = FOTO;
   (document.body || document.documentElement).appendChild(d);
 

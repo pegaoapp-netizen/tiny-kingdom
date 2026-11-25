@@ -10371,7 +10371,7 @@
     if ((estado.escudoHasta || 0) <= estado.burbujaHasta + 1000) estado.escudoHasta = 0;
     estado.burbujaHasta = 0;
     consejoTemporal(T('burbuja_perdida')); sonar('error');
-    nuevoCorreo('sistema', L('Tu burbuja de protección terminó', 'Your protection bubble ended'), 'Tiny Kingdom', '<p>' + T('burbuja_perdida') + '</p>');
+    nuevoCorreo('sistema', L('Tu burbuja de protección terminó', 'Your protection bubble ended'), 'Brother Kingdoms', '<p>' + T('burbuja_perdida') + '</p>');
     guardar(true); publicarAldea(true);
   }
   function protegido() { var tp = Date.now() + BURBUJA.dias * 86400000; if ((estado.escudoHasta || 0) > tp) estado.escudoHasta = tp; if ((estado.burbujaHasta || 0) > tp) estado.burbujaHasta = tp; return (estado.escudoHasta || 0) > Date.now(); }
@@ -10830,7 +10830,7 @@
   function ayudaSoporte(txt) { var l = AYUDA_SOPORTE.filter(function (q) { return q[0].test(txt || ''); }).slice(0, 2); return l.map(function (q) { return L(q[1][0], q[1][1]); }); }
   function htmlAyudaSoporte(txt) {
     var l = ayudaSoporte(txt);
-    return '<div class="sp-resp sp-auto"><b>🤖 ' + L('Respuesta automática', 'Automatic answer') + '</b>' + (l.length ? l.map(function (x) { return '<p>' + x + '</p>'; }).join('') : '<p>' + L('¡Gracias por escribir! Tu mensaje ya le llegó al equipo de Tiny Kingdom. La respuesta sale aquí mismo y te llega al Correo.', 'Thanks for writing! Your message reached the Tiny Kingdom team. The answer shows up here and in your Mail.') + '</p>') + '</div>';
+    return '<div class="sp-resp sp-auto"><b>🤖 ' + L('Respuesta automática', 'Automatic answer') + '</b>' + (l.length ? l.map(function (x) { return '<p>' + x + '</p>'; }).join('') : '<p>' + L('¡Gracias por escribir! Tu mensaje ya le llegó al equipo de Brother Kingdoms. La respuesta sale aquí mismo y te llega al Correo.', 'Thanks for writing! Your message reached the Brother Kingdoms team. The answer shows up here and in your Mail.') + '</p>') + '</div>';
   }
   var relojSoporte = null;
   function pintarSoporteMios() {
@@ -11056,7 +11056,7 @@
   function mostrarCofreBienvenida() {
     if (estado.regaloBienvenidaReclamado || $('cofre-bienvenida')) return;
     var d = document.createElement('div'); d.id = 'cofre-bienvenida';
-    d.innerHTML = '<div class="cb-ventana"><div class="cb-titulo">' + L('¡Bienvenido a Tiny Kingdom!', 'Welcome to Tiny Kingdom!') + '</div>' +
+    d.innerHTML = '<div class="cb-ventana"><div class="cb-titulo">' + L('¡Bienvenido a Brother Kingdoms!', 'Welcome to Brother Kingdoms!') + '</div>' +
       '<div class="cb-sub">👑 ' + L('Cofre Real de Bienvenida', 'Royal Welcome Chest') + '</div>' + SVG_COFRE_BIENV +
       '<p class="cb-txt">' + L('Un regalo del reino para que empieces con fuerza:', 'A gift from the kingdom to start strong:') + '</p>' +
       '<div class="cb-lista">' + itemsCofreBienvenida().map(function (it) { return '<span><i>' + it.ico + '</i><b>' + formatoNumero(it.n) + '</b> ' + escaparHTML(it.nom) + '</span>'; }).join('') + '</div>' +
@@ -11355,7 +11355,7 @@
       var vistas = estado.compVistas || (estado.compVistas = {}), hubo = false;
       l.sort(function (a, b) { return a.fecha - b.fecha; }).forEach(function (c) {
         if (vistas[c.id] || (c.vence && c.vence < Date.now())) return; vistas[c.id] = 1; hubo = true;
-        nuevoCorreo('sistema', '🎁 ' + String(c.titulo || L('Compensación', 'Compensation')).slice(0, 80), c.deNombre || 'Tiny Kingdom', '<p>' + escaparHTML(c.texto || '') + '</p>', c.premio || {}, { comp: true, vence: c.vence || 0 });
+        nuevoCorreo('sistema', '🎁 ' + String(c.titulo || L('Compensación', 'Compensation')).slice(0, 80), c.deNombre || 'Brother Kingdoms', '<p>' + escaparHTML(c.texto || '') + '</p>', c.premio || {}, { comp: true, vence: c.vence || 0 });
       });
       var ks = Object.keys(vistas); if (ks.length > 300) ks.slice(0, ks.length - 300).forEach(function (k) { delete vistas[k]; });
       if (hubo) { guardar(true); sonar('moneda'); consejoTemporal('📨 ' + L('Te llegó una compensación al Correo.', 'You got a compensation in your Mail.')); }
@@ -11382,7 +11382,7 @@
     if (!Object.keys(premio).length) { $('comp-error').textContent = L('Agrega al menos un objeto, gemas o recursos.', 'Add at least one item, gems or resources.'); sonar('error'); return; }
     if (compSel.para !== 'todos' && (!compSel.para || compSel.para === 'uno')) { $('comp-error').textContent = L('Busca y elige al jugador.', 'Search and choose the player.'); sonar('error'); return; }
     b.disabled = true;
-    var doc = { para: compSel.para, paraNombre: String(compSel.para === 'todos' ? L('Todos', 'All') : compSel.paraNombre).slice(0, 30), deNombre: 'Tiny Kingdom', titulo: String(($('comp-titulo') || {}).value || '').slice(0, 80) || L('Compensación', 'Compensation'), texto: String(($('comp-texto') || {}).value || '').slice(0, 600), premio: premio, fecha: Date.now(), vence: Date.now() + 10 * 86400000 };
+    var doc = { para: compSel.para, paraNombre: String(compSel.para === 'todos' ? L('Todos', 'All') : compSel.paraNombre).slice(0, 30), deNombre: 'Brother Kingdoms', titulo: String(($('comp-titulo') || {}).value || '').slice(0, 80) || L('Compensación', 'Compensation'), texto: String(($('comp-texto') || {}).value || '').slice(0, 600), premio: premio, fecha: Date.now(), vence: Date.now() + 10 * 86400000 };
     Cuentas.enviarCompensacion(doc).then(function () { sonar('moneda'); consejoTemporal('✅ ' + L('Compensación enviada a ', 'Compensation sent to ') + escaparHTML(doc.paraNombre)); compSel = { para: 'todos', paraNombre: '', objetos: {} }; cerrarPanel(); })
       .catch(function (er) { b.disabled = false; $('comp-error').textContent = L('No se pudo enviar', 'Could not send') + ' (' + ((er && er.code) || '?') + ')'; sonar('error'); });
   }
@@ -12256,7 +12256,7 @@
     if (!window.NOVEDADES_VER || !NOVEDADES_VER.length) return;
     var hD = new Date(), hoy = hD.getFullYear() + '-' + String(hD.getMonth() + 1).padStart(2, '0') + '-' + String(hD.getDate()).padStart(2, '0'), ult = estado.novMail, lista = correoLista();
     var nuevas = NOVEDADES_VER.filter(function (n) { return ult ? cmpVer(n[0], ult) > 0 : n[1] === hoy; }).filter(function (n) { return !lista.some(function (m) { return m.ver === n[0]; }); }).slice(0, 10).reverse();
-    nuevas.forEach(function (n) { nuevoCorreo('sistema', '📜 ' + L('Actualización ', 'Update ') + 'v' + n[0], 'Tiny Kingdom', '<p>' + escaparHTML(L(n[2], n[3])) + '</p><p class="nota">' + n[1] + '</p>', null, { ver: n[0] }); });
+    nuevas.forEach(function (n) { nuevoCorreo('sistema', '📜 ' + L('Actualización ', 'Update ') + 'v' + n[0], 'Brother Kingdoms', '<p>' + escaparHTML(L(n[2], n[3])) + '</p><p class="nota">' + n[1] + '</p>', null, { ver: n[0] }); });
     estado.novMail = NOVEDADES_VER[0][0]; if (nuevas.length) guardar();
   }
   function novedadesLeidas() {
@@ -12958,7 +12958,7 @@
     if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
     if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
     if (id === 'mg-equipo') { sonar('click'); var hq = (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || 'sol'; pestanaHeroe = 'equipo'; abrirPanelHeroe(hq); return; }
-    if (id === 'mg-publicar') { sonar('click'); var urlJ = 'https://tinykingdom-pegao.web.app', txtJ = L('¡Juega conmigo a Tiny Kingdom!', 'Play Tiny Kingdom with me!'); if (navigator.share) navigator.share({ title: 'Tiny Kingdom', text: txtJ, url: urlJ }).catch(function () {}); else { try { navigator.clipboard.writeText(txtJ + ' ' + urlJ); } catch (e) {} consejoTemporal(L('Enlace copiado: compártelo con tus amigos.', 'Link copied: share it with your friends.')); } return; }
+    if (id === 'mg-publicar') { sonar('click'); var urlJ = 'https://tinykingdom-pegao.web.app', txtJ = L('¡Juega conmigo a Brother Kingdoms!', 'Play Brother Kingdoms with me!'); if (navigator.share) navigator.share({ title: 'Brother Kingdoms', text: txtJ, url: urlJ }).catch(function () {}); else { try { navigator.clipboard.writeText(txtJ + ' ' + urlJ); } catch (e) {} consejoTemporal(L('Enlace copiado: compártelo con tus amigos.', 'Link copied: share it with your friends.')); } return; }
     if (id === 'mg-ciudad') irAVista('ciudad'); else if (id === 'mg-campos') irAVista('campos'); else if (id === 'mg-investigar') { sonar('click'); abrirPanelInvestigacion(ramaInv); } else if (id === 'mg-procesos') { sonar('click'); abrirPanelVigia(); } else if ($(id)) $(id).click();
   });
   $('barra-acciones').addEventListener('click', function (ev) { var b = ev.target.closest('[data-ba]'); if (b) accionBarra(b.getAttribute('data-ba')); });
