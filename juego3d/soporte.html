@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Soporte · Brother Kingdom</title>
+<meta name="description" content="Cómo pedir ayuda en Brother Kingdom: soporte dentro del juego, cuenta, compras y denuncias.">
+<meta name="theme-color" content="#120a05">
+<link rel="icon" href="/iconos/icono-192.png">
+<link rel="apple-touch-icon" href="/iconos/apple-touch-icon.png">
+<link rel="stylesheet" href="/web/sitio.css?v=1">
+</head>
+<body class="bk-pagina">
+<script src="/web/sitio.js?v=1"></script>
+<main class="bk-doc">
+
+<h1><span data-es>Soporte</span><span data-en>Support</span></h1>
+<p class="bk-intro"><span data-es>¿Tienes un problema o una duda? Aquí te decimos cómo pedir ayuda.</span><span data-en>Got a problem or a question? Here is how to get help.</span></p>
+
+<div class="bk-caja">
+<h2>🛟 <span data-es>Desde el juego (lo más rápido)</span><span data-en>From the game (fastest)</span></h2>
+<ol>
+<li><span data-es>Entra al juego y toca <b>▲ Más</b> en la barra de abajo.</span><span data-en>Open the game and tap <b>▲ More</b> on the bottom bar.</span></li>
+<li><span data-es>Toca <b>🛟 Soporte</b>, elige el tipo de problema y escribe qué pasó.</span><span data-en>Tap <b>🛟 Support</b>, pick the type of problem and write what happened.</span></li>
+<li><span data-es>Te contesta al momento nuestro asistente, y la respuesta del equipo te llega al <b>Correo</b> del juego.</span><span data-en>Our assistant answers right away, and the team’s reply arrives in the game <b>Mail</b>.</span></li>
+</ol>
+<p><a class="bk-boton jugar" href="/?jugar=1">⚔️ <span data-es>Abrir el juego</span><span data-en>Open the game</span></a></p>
+</div>
+
+<div class="bk-caja" id="bk-correo" hidden>
+<h2>✉️ <span data-es>Por correo</span><span data-en>By email</span></h2>
+<p><span data-es>Si no puedes entrar al juego, escríbenos a</span><span data-en>If you can’t get into the game, write to</span> <a id="bk-correo-enl" href="#"></a><span data-es>. Dinos tu usuario del juego y qué pasó.</span><span data-en>. Tell us your game username and what happened.</span></p>
+</div>
+
+<h2><span data-es>Problemas comunes</span><span data-en>Common problems</span></h2>
+<ul>
+<li><span data-es><b>Olvidé mi contraseña o no puedo entrar:</b> escríbenos desde Soporte con tu usuario.</span><span data-en><b>I forgot my password or can’t sign in:</b> write to Support with your username.</span></li>
+<li><span data-es><b>Una compra no llegó:</b> espera unos minutos y vuelve a abrir el juego. Si sigue sin llegar, escríbenos por Soporte con la fecha de la compra.</span><span data-en><b>A purchase did not arrive:</b> wait a few minutes and reopen the game. If it still hasn’t arrived, write to Support with the purchase date.</span></li>
+<li><span data-es><b>Alguien me molesta en el chat:</b> toca su nombre y elige <b>Ignorar</b> o <b>Denunciar</b>.</span><span data-en><b>Someone is bothering me in the chat:</b> tap their name and choose <b>Ignore</b> or <b>Report</b>.</span></li>
+<li><span data-es><b>Quiero borrar mi cuenta:</b> en el juego, Ajustes › Cuenta › Borrar mi cuenta.</span><span data-en><b>I want to delete my account:</b> in the game, Settings › Account › Delete my account.</span></li>
+<li><span data-es><b>El juego no se actualiza:</b> toca 🔄 Actualizar arriba, o cierra el juego y ábrelo otra vez.</span><span data-en><b>The game doesn’t update:</b> tap 🔄 Update at the top, or close the game and open it again.</span></li>
+</ul>
+<p><span data-es>Más respuestas en <a href="faq.html">Preguntas frecuentes</a>.</span><span data-en>More answers in the <a href="faq.html">FAQ</a>.</span></p>
+<script>(function () { var c = window.BKSitio && BKSitio.contacto.correo; if (!c) return; var a = document.getElementById('bk-correo-enl'); a.href = 'mailto:' + c; a.textContent = c; document.getElementById('bk-correo').hidden = false; })();</script>
+
+</main>
+</body>
+</html>

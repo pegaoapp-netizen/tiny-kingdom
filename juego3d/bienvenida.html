@@ -11,6 +11,7 @@
 <meta property="og:url" content="https://brotherkingdom.com/">
 <meta name="theme-color" content="#120a05">
 <link rel="preload" as="image" href="iconos/ui/portada.jpg?v=893" fetchpriority="high">
+<link rel="stylesheet" href="web/sitio.css?v=1">
 <link rel="icon" href="iconos/icono-192.png">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
 <style>
@@ -72,15 +73,11 @@ footer a { color: #cbb58a; }
 .novedades .txt { font-size: 15px; color: var(--texto); }
 .mas-nov { display: block; margin: 16px auto 0; background: transparent; border: 1px solid var(--borde); color: var(--suave); border-radius: 20px; padding: 8px 18px; font: 700 14px system-ui, sans-serif; cursor: pointer; }
 .mas-nov[hidden] { display: none; }
-[data-en] { display: none; }
-html[lang="en"] [data-es] { display: none; }
-html[lang="en"] [data-en] { display: revert; }
+
 </style>
 </head>
 <body>
-<header class="barra">
-  <button class="idioma" id="idioma" type="button">EN</button>
-</header>
+<script src="web/sitio.js?v=1"></script>
 
 <main>
   <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Brother Kingdom · Reinos del Caribe</h1>
@@ -134,7 +131,7 @@ html[lang="en"] [data-en] { display: revert; }
     </div>
   </section>
 
-  <section>
+  <section id="como">
     <div class="envoltura">
       <h2><span data-es>Cómo se juega</span><span data-en>How to play</span></h2>
       <ol class="pasos">
@@ -148,7 +145,7 @@ html[lang="en"] [data-en] { display: revert; }
     </div>
   </section>
 
-  <section>
+  <section id="novedades-sec">
     <div class="envoltura">
       <h2><span data-es>Novedades</span><span data-en>News</span></h2>
       <p class="intro"><span data-es>Lo último que le hemos puesto al juego.</span><span data-en>The latest updates to the game.</span></p>
@@ -166,18 +163,12 @@ html[lang="en"] [data-en] { display: revert; }
   </section>
 </main>
 
-<footer>
-  © 2026 Brother Kingdom · <a href="privacidad.html"><span data-es>Privacidad</span><span data-en>Privacy</span></a>
-</footer>
 
 <script>
 (function () {
-  var html = document.documentElement, b = document.getElementById('idioma');
-  var idi = (navigator.language || '').toLowerCase().indexOf('es') === 0 ? 'es' : 'en';
-  try { var g = localStorage.getItem('bk_idioma'); if (g) idi = g; } catch (e) {}
-  function poner(i) { idi = i; html.lang = i; b.textContent = i === 'es' ? 'EN' : 'ES'; try { localStorage.setItem('bk_idioma', i); } catch (e) {} }
-  poner(idi);
-  b.addEventListener('click', function () { poner(idi === 'es' ? 'en' : 'es'); });
+  /* el idioma lo lleva web/sitio.js (botón EN/ES del menú); aquí solo se repintan las novedades */
+  var idi = document.documentElement.lang === 'en' ? 'en' : 'es';
+  document.addEventListener('bk-idioma', function (ev) { idi = ev.detail === 'en' ? 'en' : 'es'; pintarNov(); });
   /* novedades: salen solas de la lista del juego (js/datos.js) */
   var cuantas = 3; /* v8.98 (dueño): la lista larga estaba de más; solo las 3 últimas, sin números de versión */
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
@@ -192,12 +183,8 @@ html[lang="en"] [data-en] { display: revert; }
     mb.hidden = true;
   }
   document.getElementById('mas-nov').addEventListener('click', function () { cuantas += 10; pintarNov(); });
-  b.addEventListener('click', pintarNov);
   var sd = document.createElement('script'); sd.src = 'js/datos.js?v=' + Math.floor(Date.now() / 600000); sd.onload = pintarNov; document.body.appendChild(sd);
-  /* al tocar Jugar, la próxima vez brotherkingdom.com abre el juego directo */
-  Array.prototype.forEach.call(document.querySelectorAll('.jugar'), function (a) {
-    a.addEventListener('click', function () { try { localStorage.setItem('bk_jugar', '1'); } catch (e) {} });
-  });
+  /* «Jugar» recuerda que ya entraste: lo hace web/sitio.js */
 })();
 </script>
 </body>

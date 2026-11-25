@@ -1,0 +1,59 @@
+/* Brother Kingdom · estilos de la página web (menú, pie y páginas de texto). Lo usan bienvenida, términos, soporte, preguntas, acerca de, privacidad y 404. */
+:root { --bk-fondo: #120a05; --bk-tarjeta: #24150b; --bk-borde: #6b4a22; --bk-oro: #ffd86a; --bk-texto: #f3e6c8; --bk-suave: #cbb58a; --bk-tenue: #8f7a55; }
+[data-en] { display: none; }
+html[lang="en"] [data-es] { display: none; }
+html[lang="en"] [data-en] { display: revert; }
+
+/* menú de arriba */
+.bk-cab { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 12px; padding: calc(env(safe-area-inset-top) + 10px) 16px 10px; background: rgba(18,10,5,.94); border-bottom: 1px solid #2c1a0d; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.bk-marca { display: flex; align-items: center; gap: 8px; margin-right: auto; color: var(--bk-oro); text-decoration: none; font: 800 17px Georgia, serif; white-space: nowrap; }
+.bk-marca img { width: 30px; height: 30px; border-radius: 8px; }
+.bk-menu { display: flex; align-items: center; gap: 4px; }
+.bk-menu a { color: var(--bk-texto); text-decoration: none; font-weight: 600; font-size: 15px; padding: 8px 10px; border-radius: 10px; }
+.bk-menu a:hover, .bk-menu a.activo { color: var(--bk-oro); background: rgba(255,216,106,.08); }
+.bk-menu a.bk-jugar { margin-left: 6px; color: #2a1404; background: linear-gradient(180deg, #ffcf4a, #e08a16); border: 2px solid #ffe7a0; font-weight: 800; padding: 7px 14px; border-radius: 22px; }
+.bk-idioma { background: rgba(0,0,0,.45); border: 1px solid var(--bk-borde); color: var(--bk-texto); border-radius: 20px; padding: 6px 12px; font: 700 13px system-ui, sans-serif; cursor: pointer; }
+.bk-hamb { display: none; width: 42px; height: 40px; border-radius: 10px; border: 1px solid var(--bk-borde); background: rgba(0,0,0,.45); cursor: pointer; padding: 9px; flex-direction: column; justify-content: space-between; }
+.bk-hamb span { display: block; height: 2px; border-radius: 2px; background: var(--bk-oro); transition: transform .2s, opacity .2s; }
+@media (max-width: 860px) {
+  .bk-hamb { display: flex; }
+  .bk-menu { display: none; position: absolute; left: 0; right: 0; top: 100%; flex-direction: column; align-items: stretch; gap: 2px; padding: 8px 12px 14px; background: rgba(18,10,5,.98); border-bottom: 1px solid #2c1a0d; }
+  .bk-cab.abierto .bk-menu { display: flex; }
+  .bk-menu a { padding: 12px 12px; font-size: 16px; }
+  .bk-menu a.bk-jugar { margin: 6px 0 0; text-align: center; padding: 12px; }
+  .bk-cab.abierto .bk-hamb span:nth-child(1) { transform: translateY(9px) rotate(45deg); }
+  .bk-cab.abierto .bk-hamb span:nth-child(2) { opacity: 0; }
+  .bk-cab.abierto .bk-hamb span:nth-child(3) { transform: translateY(-9px) rotate(-45deg); }
+}
+/* en la bienvenida el menú flota sobre la portada y se oscurece al bajar */
+body.bk-sobre-portada .bk-cab { position: fixed; left: 0; right: 0; background: linear-gradient(180deg, rgba(18,10,5,.75), rgba(18,10,5,0)); border-bottom-color: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; transition: background .25s; }
+body.bk-sobre-portada .bk-cab.con-fondo, body.bk-sobre-portada .bk-cab.abierto { background: rgba(18,10,5,.96); border-bottom-color: #2c1a0d; }
+body.bk-sobre-portada .bk-cab:not(.con-fondo):not(.abierto) .bk-marca { visibility: hidden; }
+
+/* pie */
+.bk-pie { padding: 26px 16px calc(env(safe-area-inset-bottom) + 26px); text-align: center; color: var(--bk-tenue); font: 13px/1.6 system-ui, sans-serif; border-top: 1px solid #2c1a0d; background: var(--bk-fondo); }
+.bk-pie p { margin: 10px 0 0; color: var(--bk-tenue); }
+.bk-pie-enl { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
+.bk-pie-enl a { color: var(--bk-suave); text-decoration: none; font-weight: 600; padding: 4px 0; }
+.bk-pie-enl a:hover, .bk-pie-enl a.activo { color: var(--bk-oro); }
+.bk-redes, .bk-tiendas { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-bottom: 14px; }
+.bk-red, .bk-tienda { color: var(--bk-texto); text-decoration: none; border: 1px solid var(--bk-borde); border-radius: 20px; padding: 6px 14px; font-weight: 700; }
+.bk-tienda { background: #000; border-color: #555; border-radius: 10px; padding: 9px 16px; }
+
+/* páginas de texto (términos, soporte, preguntas, acerca de, 404) */
+body.bk-pagina { margin: 0; background: var(--bk-fondo); color: var(--bk-texto); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+.bk-doc { max-width: 760px; margin: 0 auto; padding: 28px 16px 48px; }
+.bk-doc h1 { margin: 0 0 6px; font: 900 clamp(26px, 6vw, 36px)/1.15 Georgia, serif; color: var(--bk-oro); }
+.bk-doc h2 { margin: 28px 0 8px; font: 800 20px/1.3 Georgia, serif; color: #ffe6a6; }
+.bk-doc p, .bk-doc li { color: var(--bk-texto); }
+.bk-doc a { color: var(--bk-oro); }
+.bk-doc .bk-fecha { color: var(--bk-tenue); margin: 0 0 20px; font-size: 14px; }
+.bk-doc .bk-intro { color: var(--bk-suave); font-size: 17px; }
+.bk-caja { background: linear-gradient(180deg, #2c1a0d, var(--bk-tarjeta)); border: 1px solid var(--bk-borde); border-radius: 16px; padding: 4px 18px 14px; margin-top: 16px; }
+.bk-boton { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 24px; border-radius: 30px; border: 2px solid #ffe7a0; background: linear-gradient(180deg, #ffcf4a, #e08a16 60%, #b35a0c); color: #2a1404 !important; font: 900 18px Georgia, serif; text-decoration: none; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
+.bk-faq details { background: linear-gradient(180deg, #2c1a0d, var(--bk-tarjeta)); border: 1px solid var(--bk-borde); border-radius: 14px; margin: 10px 0; padding: 0 16px; }
+.bk-faq summary { cursor: pointer; list-style: none; padding: 14px 26px 14px 0; position: relative; font-weight: 700; color: #ffe6a6; }
+.bk-faq summary::-webkit-details-marker { display: none; }
+.bk-faq summary::after { content: "+"; position: absolute; right: 0; top: 10px; font-size: 22px; color: var(--bk-oro); }
+.bk-faq details[open] summary::after { content: "−"; }
+.bk-faq details > div { padding: 0 0 12px; color: var(--bk-texto); }

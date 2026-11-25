@@ -51,6 +51,133 @@
     ],
     "predeploy": [
       "node pruebas/revisar.js"
+    ],
+    "redirects": [
+      {
+        "source": "/terminos",
+        "destination": "/terminos.html",
+        "type": 301
+      },
+      {
+        "source": "/terms.html",
+        "destination": "/terminos.html",
+        "type": 301
+      },
+      {
+        "source": "/terms",
+        "destination": "/terminos.html",
+        "type": 301
+      },
+      {
+        "source": "/condiciones.html",
+        "destination": "/terminos.html",
+        "type": 301
+      },
+      {
+        "source": "/condiciones",
+        "destination": "/terminos.html",
+        "type": 301
+      },
+      {
+        "source": "/soporte",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/support.html",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/support",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/contacto.html",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/contacto",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/contact.html",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/contact",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/ayuda.html",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/ayuda",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/help.html",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/help",
+        "destination": "/soporte.html",
+        "type": 301
+      },
+      {
+        "source": "/faq",
+        "destination": "/faq.html",
+        "type": 301
+      },
+      {
+        "source": "/preguntas.html",
+        "destination": "/faq.html",
+        "type": 301
+      },
+      {
+        "source": "/preguntas",
+        "destination": "/faq.html",
+        "type": 301
+      },
+      {
+        "source": "/acerca",
+        "destination": "/acerca.html",
+        "type": 301
+      },
+      {
+        "source": "/about.html",
+        "destination": "/acerca.html",
+        "type": 301
+      },
+      {
+        "source": "/about",
+        "destination": "/acerca.html",
+        "type": 301
+      },
+      {
+        "source": "/privacy.html",
+        "destination": "/privacidad.html",
+        "type": 301
+      },
+      {
+        "source": "/privacy",
+        "destination": "/privacidad.html",
+        "type": 301
+      },
+      {
+        "source": "/privacidad",
+        "destination": "/privacidad.html",
+        "type": 301
+      }
     ]
   }
 }
