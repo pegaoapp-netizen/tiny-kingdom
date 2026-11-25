@@ -13736,10 +13736,17 @@
     var m = marchas.filter(function (x) { return x.id === id; })[0], aplicar;
     if (m && !m.resuelto) aplicar = function (nueva) { return Cuentas.acelerarMarcha(id, nueva); };
     else { // v8.28: también las marchas a bárbaros, bestias y terrenos, y las tropas que regresan
+      if (String(id).indexOf('v:') === 0) { /* v8.80: caravanas entre villas */
+        var vj = carretas().viajes.filter(function (x) { return 'v:' + x.id === id; })[0], ahV = Date.now(); if (!vj) return;
+        if (ahV < vj.llega) { m = { id: id, llega: vj.llega, defensorNombre: '🛒 ' + (vj.nombre || '') }; aplicar = function (nueva) { var antes = vj.llega, dif = antes - nueva; vj.llega = nueva; if (vj.vuelve) vj.vuelve = Math.max(nueva + 1000, vj.vuelve - dif); (estado.envios || []).forEach(function (e) { if (Math.abs(e.llega - antes) < 1500) e.llega = nueva; }); guardar(true); return Promise.resolve(); }; }
+        else if (vj.vuelve && ahV < vj.vuelve) { m = { id: id, llega: vj.vuelve, defensorNombre: '🛒 ' + L('Vuelven', 'Returning') + (vj.nombre ? ' · ' + vj.nombre : '') }; aplicar = function (nueva) { vj.vuelve = nueva; guardar(true); return Promise.resolve(); }; }
+        else return;
+      } else {
       var mp = marchasPVE.filter(function (x) { return x.id === id; })[0] || (estado.regresos || []).filter(function (x) { return 'r' + x.id === id; })[0];
       if (!mp || mp.llega <= Date.now()) return;
       m = { id: id, llega: mp.llega, defensorNombre: mp.txt ? String(mp.txt).replace(/^\S+\s/, '') : (mp.nombre ? L('Regreso de ', 'Return from ') + mp.nombre : '') };
       aplicar = function (nueva) { mp.llega = nueva; if (mp.sale > nueva - 1000) mp.sale = nueva - 1000; guardarPVE(); guardar(); return Promise.resolve(); };
+      }
     }
     var v = $('acelerar-elegir'); if (v) v.remove();
     var falta = (m.llega - Date.now()) / 1000, gem = estado.gemas || 0, moch = estado.mochila || {};
@@ -13792,7 +13799,7 @@
     var l = [];
     marchas.forEach(function (m) { if (!m.resuelto && !m.cancelado && m.llega > ahora) l.push({ ico: '⚔️', txt: escaparHTML(m.defensorNombre || ''), llega: m.llega, id: m.id, ataque: true }); });
     marchasPVE.forEach(function (m) { if (m.llega > ahora) l.push({ ico: m.vuelta ? '🏇' : '⚔️', txt: m.vuelta ? (ahora < m.sale ? L('Peleando', 'Fighting') : L('Vuelven a casa', 'Returning home')) : escaparHTML(String(m.txt || '').replace(/^\S+\s/, '')), llega: m.llega, id: m.id, acel: !(m.vuelta && ahora < m.sale) }); }); // v8.28: ⚡ también aquí
-    carretas().viajes.forEach(function (v) { if (!v.de || !v.a || v.tipo === 'ataque') return; /* v8.57: las carretas de un ataque no salen aparte */ if (ahora < v.llega) l.push({ ico: '🛒', txt: '×' + v.n + (v.nombre ? ' → ' + escaparHTML(v.nombre) : ''), llega: v.llega }); else if (v.vuelve && ahora < v.vuelve) l.push({ ico: '🛒', txt: '×' + v.n + ' ' + L('vuelven', 'returning'), llega: v.vuelve }); });
+    carretas().viajes.forEach(function (v) { if (!v.de || !v.a || v.tipo === 'ataque') return; /* v8.57: las carretas de un ataque no salen aparte */ if (ahora < v.llega) l.push({ ico: '🛒', txt: '×' + v.n + (v.nombre ? ' → ' + escaparHTML(v.nombre) : ''), llega: v.llega, id: v.id ? 'v:' + v.id : undefined, acel: !!v.id }); else if (v.vuelve && ahora < v.vuelve) l.push({ id: v.id ? 'v:' + v.id : undefined, acel: !!v.id, ico: '🛒', txt: '×' + v.n + ' ' + L('vuelven', 'returning'), llega: v.vuelve }); });
     enviosEnCamino.forEach(function (e) { if (e.llega > ahora) l.push({ ico: '📦', txt: escaparHTML(e.deNombre || '?') + ' → ' + L('a ti', 'to you'), llega: e.llega }); });
     (estado.regresos || []).forEach(function (v) { if (v.llega > ahora) l.push({ ico: '🏇', txt: L('Regresan', 'Returning') + (v.nombre ? ' ' + L('de ', 'from ') + escaparHTML(v.nombre) : ''), llega: v.llega, id: 'r' + v.id, acel: true }); });
     guarniciones().forEach(function (q) { l.push({ ico: '⛺', txt: escaparHTML(nombreGuarnicion(q)), llega: 9e15, gid: q.id }); }); // v8.13
