@@ -1,0 +1,627 @@
+[
+ {
+  "id": "mago",
+  "grupo": "bk_army_v1",
+  "url": "modelos/bk_army_v1/mago.glb",
+  "bytes": 379664,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "espadachin",
+  "grupo": "bk_army_v1",
+  "url": "modelos/bk_army_v1/espadachin.glb",
+  "bytes": 388108,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "lancero",
+  "grupo": "bk_army_v1",
+  "url": "modelos/bk_army_v1/lancero.glb",
+  "bytes": 380424,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "caballero",
+  "grupo": "bk_army_v1",
+  "url": "modelos/bk_army_v1/caballero.glb",
+  "bytes": 414008,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "arquero",
+  "grupo": "bk_army_v1",
+  "url": "modelos/bk_army_v1/arquero.glb",
+  "bytes": 406668,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "castillo",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/castillo.glb",
+  "bytes": 42116,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "torre",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/torre.glb",
+  "bytes": 10332,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "muralla",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/muralla.glb",
+  "bytes": 6940,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "aserradero",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/aserradero.glb",
+  "bytes": 12800,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "granja",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/granja.glb",
+  "bytes": 49160,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "mercado",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/mercado.glb",
+  "bytes": 13564,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "establo",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/establo.glb",
+  "bytes": 10936,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "cuartel",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/cuartel.glb",
+  "bytes": 8512,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "vivienda",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/vivienda.glb",
+  "bytes": 7104,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "templo",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/templo.glb",
+  "bytes": 14592,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "torre_magica",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/torre_magica.glb",
+  "bytes": 8828,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "herreria",
+  "grupo": "bk_buildings_v1",
+  "url": "modelos/bk_buildings_v1/herreria.glb",
+  "bytes": 9144,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "ligera",
+  "grupo": "bk_cavalry_v1",
+  "url": "modelos/bk_cavalry_v1/ligera.glb",
+  "bytes": 1488032,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Trotar",
+   "Galopar",
+   "Atacar",
+   "Morir"
+  ],
+  "huesos": 60
+ },
+ {
+  "id": "caballo",
+  "grupo": "bk_cavalry_v1",
+  "url": "modelos/bk_cavalry_v1/caballo.glb",
+  "bytes": 834268,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Trotar",
+   "Galopar",
+   "Atacar",
+   "Morir"
+  ],
+  "huesos": 17
+ },
+ {
+  "id": "pesada",
+  "grupo": "bk_cavalry_v1",
+  "url": "modelos/bk_cavalry_v1/pesada.glb",
+  "bytes": 1618692,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Trotar",
+   "Galopar",
+   "Atacar",
+   "Morir"
+  ],
+  "huesos": 60
+ },
+ {
+  "id": "arquero_montado",
+  "grupo": "bk_cavalry_v1",
+  "url": "modelos/bk_cavalry_v1/arquero_montado.glb",
+  "bytes": 1510936,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Trotar",
+   "Galopar",
+   "Atacar",
+   "Morir"
+  ],
+  "huesos": 60
+ },
+ {
+  "id": "ogro",
+  "grupo": "bk_heroes_v1",
+  "url": "modelos/bk_heroes_v1/ogro.glb",
+  "bytes": 351448,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "rey",
+  "grupo": "bk_heroes_v1",
+  "url": "modelos/bk_heroes_v1/rey.glb",
+  "bytes": 447256,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "reina",
+  "grupo": "bk_heroes_v1",
+  "url": "modelos/bk_heroes_v1/reina.glb",
+  "bytes": 429836,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "dragon",
+  "grupo": "bk_heroes_v1",
+  "url": "modelos/bk_heroes_v1/dragon.glb",
+  "bytes": 797540,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Volar",
+   "Atacar",
+   "Morir"
+  ],
+  "huesos": 19
+ },
+ {
+  "id": "nigromante",
+  "grupo": "bk_heroes_v1",
+  "url": "modelos/bk_heroes_v1/nigromante.glb",
+  "bytes": 379680,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "paladin",
+  "grupo": "bk_heroes_v1",
+  "url": "modelos/bk_heroes_v1/paladin.glb",
+  "bytes": 453836,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender",
+   "RecibirDano",
+   "Morir",
+   "Victoria"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "comerciante",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/comerciante.glb",
+  "bytes": 347672,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "constructor",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/constructor.glb",
+  "bytes": 345488,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "herrero",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/herrero.glb",
+  "bytes": 354188,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "campesino",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/campesino.glb",
+  "bytes": 345484,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "lenador",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/lenador.glb",
+  "bytes": 354188,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "pescador",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/pescador.glb",
+  "bytes": 344904,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "aldeana",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/aldeana.glb",
+  "bytes": 356372,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "minero",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/minero.glb",
+  "bytes": 345476,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "sanador",
+  "grupo": "bk_civil_v1",
+  "url": "modelos/bk_civil_v1/sanador.glb",
+  "bytes": 361480,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Trabajar",
+   "Transportar",
+   "Morir"
+  ],
+  "huesos": 43
+ },
+ {
+  "id": "rocas",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/rocas.glb",
+  "bytes": 5868,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "oro",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/oro.glb",
+  "bytes": 10776,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "hierro",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/hierro.glb",
+  "bytes": 10776,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "setas",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/setas.glb",
+  "bytes": 8120,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "roble",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/roble.glb",
+  "bytes": 8244,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "bosque",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/bosque.glb",
+  "bytes": 15960,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "flores",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/flores.glb",
+  "bytes": 34352,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "rio",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/rio.glb",
+  "bytes": 1764,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "ruinas",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/ruinas.glb",
+  "bytes": 6428,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "pino",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/pino.glb",
+  "bytes": 2888,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "cueva",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/cueva.glb",
+  "bytes": 15964,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "puente",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/puente.glb",
+  "bytes": 7236,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "terreno",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/terreno.glb",
+  "bytes": 24756,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "arbustos",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/arbustos.glb",
+  "bytes": 5876,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "montana",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/montana.glb",
+  "bytes": 3320,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "camino",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/camino.glb",
+  "bytes": 1208,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "lago",
+  "grupo": "bk_world_v1",
+  "url": "modelos/bk_world_v1/lago.glb",
+  "bytes": 3608,
+  "animaciones": [],
+  "huesos": 0
+ },
+ {
+  "id": "guardia_real_bk_v2",
+  "grupo": "modelos",
+  "url": "modelos/guardia_real_bk_v2.glb",
+  "bytes": 368932,
+  "animaciones": [
+   "Reposo",
+   "Caminar",
+   "Correr",
+   "Atacar",
+   "Defender"
+  ],
+  "huesos": 43
+ }
+]

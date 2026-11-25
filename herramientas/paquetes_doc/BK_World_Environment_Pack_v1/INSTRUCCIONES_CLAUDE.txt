@@ -1,0 +1,2 @@
+Brother Kingdom v9.17 — World Pack v1
+Copiar solo archivos nuevos respetando AGENTS.md. Abrir juego3d/bk-world-v1.html desde el servidor local del juego. Modelos GLB Y-up, metros, origen centrado. Importables en Blender. Manifest con dimensiones y triángulos. Usar GLTFLoader y clonar/instanciar según necesidad. No sustituir mapas existentes ni publicar. Colisiones, navegación, extracción de recursos, agua animada y LOD pendientes. Ejecutar node juego3d/pruebas/revisar.js antes de integrar. Generador requiere numpy y trimesh.

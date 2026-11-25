@@ -1,0 +1,30 @@
+[
+  {
+    "modelo": "caballo",
+    "huesos_caballo": 17,
+    "huesos_jinete": 0,
+    "clips": 6,
+    "vertices_caballo": 11592
+  },
+  {
+    "modelo": "ligera",
+    "huesos_caballo": 17,
+    "huesos_jinete": 43,
+    "clips": 6,
+    "vertices_caballo": 13104
+  },
+  {
+    "modelo": "pesada",
+    "huesos_caballo": 17,
+    "huesos_jinete": 43,
+    "clips": 6,
+    "vertices_caballo": 14616
+  },
+  {
+    "modelo": "arquero_montado",
+    "huesos_caballo": 17,
+    "huesos_jinete": 43,
+    "clips": 6,
+    "vertices_caballo": 13104
+  }
+]

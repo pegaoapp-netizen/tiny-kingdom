@@ -1,0 +1,14 @@
+{
+  "modelos": 54,
+  "clips": 168,
+  "grupos": {
+    "bk_army_v1": 5,
+    "bk_buildings_v1": 12,
+    "bk_cavalry_v1": 4,
+    "bk_heroes_v1": 6,
+    "bk_civil_v1": 9,
+    "bk_world_v1": 17,
+    "modelos": 1
+  },
+  "colisiones_original": 0
+}

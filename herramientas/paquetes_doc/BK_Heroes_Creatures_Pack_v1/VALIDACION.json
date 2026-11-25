@@ -1,0 +1,83 @@
+[
+  {
+    "modelo": "dragon",
+    "huesos": 19,
+    "clips": [
+      "Reposo",
+      "Caminar",
+      "Volar",
+      "Atacar",
+      "Morir"
+    ]
+  },
+  {
+    "modelo": "nigromante",
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  {
+    "modelo": "ogro",
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  {
+    "modelo": "paladin",
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  {
+    "modelo": "reina",
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  {
+    "modelo": "rey",
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  }
+]

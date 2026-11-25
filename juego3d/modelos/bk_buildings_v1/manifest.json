@@ -1,0 +1,62 @@
+{
+  "castillo": {
+    "geometrias": 56,
+    "triangulos": 1148,
+    "bytes": 42116
+  },
+  "muralla": {
+    "geometrias": 10,
+    "triangulos": 120,
+    "bytes": 6940
+  },
+  "torre": {
+    "geometrias": 13,
+    "triangulos": 228,
+    "bytes": 10332
+  },
+  "cuartel": {
+    "geometrias": 11,
+    "triangulos": 128,
+    "bytes": 8512
+  },
+  "herreria": {
+    "geometrias": 12,
+    "triangulos": 140,
+    "bytes": 9144
+  },
+  "mercado": {
+    "geometrias": 19,
+    "triangulos": 220,
+    "bytes": 13564
+  },
+  "vivienda": {
+    "geometrias": 9,
+    "triangulos": 104,
+    "bytes": 7104
+  },
+  "granja": {
+    "geometrias": 66,
+    "triangulos": 1236,
+    "bytes": 49160
+  },
+  "torre_magica": {
+    "geometrias": 8,
+    "triangulos": 224,
+    "bytes": 8828
+  },
+  "establo": {
+    "geometrias": 15,
+    "triangulos": 176,
+    "bytes": 10936
+  },
+  "templo": {
+    "geometrias": 17,
+    "triangulos": 320,
+    "bytes": 14592
+  },
+  "aserradero": {
+    "geometrias": 15,
+    "triangulos": 344,
+    "bytes": 12800
+  }
+}

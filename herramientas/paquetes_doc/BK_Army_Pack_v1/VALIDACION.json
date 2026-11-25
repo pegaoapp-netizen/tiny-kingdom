@@ -1,0 +1,77 @@
+{
+  "mago": {
+    "vertices": 4884,
+    "bytes": 562020,
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  "espadachin": {
+    "vertices": 4956,
+    "bytes": 561076,
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  "lancero": {
+    "vertices": 4824,
+    "bytes": 554500,
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  "caballero": {
+    "vertices": 5424,
+    "bytes": 591948,
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  },
+  "arquero": {
+    "vertices": 5292,
+    "bytes": 583972,
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Atacar",
+      "Reposo",
+      "Defender",
+      "RecibirDano",
+      "Morir",
+      "Victoria"
+    ]
+  }
+}

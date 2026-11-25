@@ -1,0 +1,101 @@
+{
+  "aldeana": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "campesino": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "comerciante": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "constructor": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "herrero": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "lenador": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "minero": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "pescador": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  },
+  "sanador": {
+    "huesos": 43,
+    "clips": [
+      "Caminar",
+      "Correr",
+      "Reposo",
+      "Trabajar",
+      "Transportar",
+      "Morir"
+    ]
+  }
+}
