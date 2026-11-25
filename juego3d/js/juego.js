@@ -12212,6 +12212,15 @@
     return H.map(function (x) { return ('00000000' + (x >>> 0).toString(16)).slice(-8); }).join('');
   }
   // ---------- BUZÓN: las novedades llegan aquí (ya no tapan el reino al entrar) ----------
+  /* v8.70: un correo por versión, solo con lo nuevo de esa versión. La primera vez solo las de hoy (máx. 10). */
+  function cmpVer(a, b) { var x = String(a).split('.').map(Number), y = String(b).split('.').map(Number); for (var i = 0; i < Math.max(x.length, y.length); i++) { var d = (x[i] || 0) - (y[i] || 0); if (d) return d; } return 0; }
+  function mandarNovedadesVer() {
+    if (!window.NOVEDADES_VER || !NOVEDADES_VER.length) return;
+    var hD = new Date(), hoy = hD.getFullYear() + '-' + String(hD.getMonth() + 1).padStart(2, '0') + '-' + String(hD.getDate()).padStart(2, '0'), ult = estado.novMail, lista = correoLista();
+    var nuevas = NOVEDADES_VER.filter(function (n) { return ult ? cmpVer(n[0], ult) > 0 : n[1] === hoy; }).filter(function (n) { return !lista.some(function (m) { return m.ver === n[0]; }); }).slice(0, 10).reverse();
+    nuevas.forEach(function (n) { nuevoCorreo('sistema', '📜 ' + L('Actualización ', 'Update ') + 'v' + n[0], 'Tiny Kingdom', '<p>' + escaparHTML(L(n[2], n[3])) + '</p><p class="nota">' + n[1] + '</p>', null, { ver: n[0] }); });
+    estado.novMail = NOVEDADES_VER[0][0]; if (nuevas.length) guardar();
+  }
   function novedadesLeidas() {
     if (estado.novedadesVistas === VERSION_JUEGO) return true;
     try { return localStorage.getItem('tinykingdom_novedades') === VERSION_JUEGO; } catch (e) { return false; }
@@ -12356,7 +12365,7 @@
     var nueva = !novedadesLeidas();
     try { localStorage.setItem('tinykingdom_novedades', VERSION_JUEGO); } catch (e) {}
     estado.novedadesVistas = VERSION_JUEGO;
-    abrirPanel(T('buzon_titulo'), '<div class="carta buzon-msg"><h3>' + (nueva ? '🔴 ' : '') + '📜 ' + T('buzon_nov', { v: VERSION_JUEGO }) + '</h3><ul style="margin:0;padding-left:18px;line-height:1.5">' + T('novedades_lista') + '</ul>' +
+    abrirPanel(T('buzon_titulo'), '<div class="carta buzon-msg"><h3>' + (nueva ? '🔴 ' : '') + '📜 ' + T('buzon_nov', { v: VERSION_JUEGO }) + '</h3><ul style="margin:0;padding-left:18px;line-height:1.5">' + (window.NOVEDADES_VER && NOVEDADES_VER.length ? '<li>' + escaparHTML(L(NOVEDADES_VER[0][2], NOVEDADES_VER[0][3])) + '</li>' : T('novedades_lista')) + '</ul>' + /* v8.70: solo lo de esta versión */
       '<p class="nota">✓ ' + T('buzon_leido') + '</p></div>', { tipo: 'buzon' });
     actualizarBuzon(); guardar();
   }
@@ -13446,7 +13455,7 @@
       estado.logros = g.logros || { recolectas: 0, tropas: 0, campamentos: 0 };
       estado.tropasDefienden = g.tropasDefienden !== false;
       estado.vistos = g.vistos || null;
-      estado.novedadesVistas = g.novedadesVistas || '';
+      estado.novedadesVistas = g.novedadesVistas || ''; estado.novMail = g.novMail || null; /* v8.70 */
       estado.ultimoPortal = g.ultimoPortal || 0;
       estado.burbujaHasta = Math.min(g.burbujaHasta || 0, Date.now() + BURBUJA.dias * 86400000); // v6.54: nunca más de 7 días
       estado.buzon = Array.isArray(g.buzon) ? g.buzon : [];
@@ -13589,7 +13598,7 @@
     ocultarPantalla();
     $('btn-oleada').classList.remove('oculto');
     vistos(); // foto de lo que ya tienes: los números solo cuentan lo que llegue después
-    if (!correoLista().some(function (m) { return m.ver === VERSION_JUEGO; })) { var mv = nuevoCorreo('sistema', T('buzon_nov', { v: VERSION_JUEGO }), 'Tiny Kingdom', '<ul style="margin:0;padding-left:18px;line-height:1.5">' + T('novedades_lista') + '</ul>', null, { ver: VERSION_JUEGO }); if (novedadesLeidas()) mv.leido = true; }
+    try { mandarNovedadesVer(); } catch (e) {} /* v8.70: un correo por cada versión nueva, solo con lo de esa versión */
     setTimeout(mostrarNovedades, 700);
     cargarModelosHeroes();
     actualizarParcelas();

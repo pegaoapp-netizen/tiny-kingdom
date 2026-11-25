@@ -3,7 +3,23 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.69';
+var VERSION_JUEGO = '8.70';
+/* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
+   Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
+var NOVEDADES_VER = [["8.70","2026-11-24","Cada actualización manda su propio correo, solo con lo nuevo de esa versión.","Each update sends its own mail with only what is new in that version."],
+  ["8.69","2026-11-24","Ventana «Recibiste»: las fotos caben en su casilla y el botón Recoger siempre se ve.","«You got» window: pictures fit their box and the Collect button is always visible."],
+  ["8.68","2026-11-24","Las carretas van en la lista de tropas de la Marcha, al final, como una tropa más.","Carts are in the March troop list, at the end, like any troop."],
+  ["8.67","2026-11-24","Campaña: botón Salir y la ✕ ya no queda tapada.","Campaign: Exit button and the ✕ is no longer hidden."],
+  ["8.66","2026-11-24","El botín lo cargan las carretas: solo te llevas lo que quepa en las que mandes.","Carts carry the loot: you only take what fits in the carts you send."],
+  ["8.65","2026-11-24","Botín todo o nada: si dejas al rival sin tropas te llevas todo; si no, nada. Enviar Recursos con 10M, 20M y 30M en la barra.","All-or-nothing loot: wipe the rival and take everything; otherwise nothing. Send Resources with 10M, 20M, 30M on the bar."],
+  ["8.64","2026-11-24","Enviar Recursos: la cantidad se puede escribir a mano.","Send Resources: type the amount by hand."],
+  ["8.63","2026-11-24","El héroe manda en la batalla: un héroe fuerte contra una villa sin caballero la deja en cero.","The hero rules the battle: a strong hero against a village without a knight wipes it out."],
+  ["8.62","2026-11-24","El ataque lleva tu héroe y sus bonos; el defensor lo ve en el informe.","Attacks carry your hero and its bonuses; the defender sees it in the report."],
+  ["8.61","2026-11-24","En los informes tu lado dice (Tú).","Your side says (You) in reports."],
+  ["8.60","2026-11-24","Defensa en OFF: tus tropas no pelean y el atacante mata la mitad.","Defense OFF: your troops do not fight and the attacker kills half."],
+  ["8.59","2026-11-24","Combate nuevo: infantería > caballería > tiradores > infantería, el más fuerte barre y sin héroe Defensor no hay bono.","New combat: infantry > cavalry > ranged > infantry, the stronger side sweeps and no Defender hero means no bonus."],
+  ["8.55","2026-11-24","Hasta 10 marchas a la vez; las marchas salen en filas debajo de Marchar.","Up to 10 marches at once; marches show as rows under March."]];
+
 var NOMBRE_JUEGO = 'Tiny Kingdom';
 
 // ---------------- Modo DUEÑO (solo para pruebas) ----------------
