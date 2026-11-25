@@ -13126,6 +13126,7 @@
   var pantallaModo = 'inicio';
   function mostrarPantalla(logo, titulo, texto, botones, formulario) {
     enMenu = true;
+    $('pantalla').classList.remove('bk-login', 'bk-crear'); /* v8.98: el diseño nuevo solo en la pantalla de entrar */
     $('pantalla-logo').textContent = logo;
     $('pantalla-titulo').textContent = titulo;
     $('pantalla-texto').textContent = texto;
@@ -13238,9 +13239,14 @@
     } else { guardar(); modoInvitado = false; guardarPreferencias(true); pantallaCuenta(); }
   });
   function pantallaCuenta() {
-    var f = '<input class="campo" id="campo-usuario" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="' + T('usuario') + '">' +
-      '<input class="campo" id="campo-clave" type="password" autocomplete="' + (modoCrear ? 'new-password' : 'current-password') + '" placeholder="' + T('contrasena') + '">' +
-      (modoCrear ? '<input class="campo" id="campo-clave2" type="password" autocomplete="new-password" placeholder="' + T('repetir') + '">' : '') +
+    /* v8.98 (dueño): pantalla de entrar como su diseño: etiqueta arriba, icono dentro y ojo para ver la contraseña */
+    var icoU = '<svg class="bk-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4.2"/><path d="M3.5 21c.8-4.6 4.2-7 8.5-7s7.7 2.4 8.5 7z"/></svg>';
+    var icoC = '<svg class="bk-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7.5a5 5 0 0 1 10 0V10h1.2c.7 0 1.3.6 1.3 1.3v8.4c0 .7-.6 1.3-1.3 1.3H5.8c-.7 0-1.3-.6-1.3-1.3v-8.4c0-.7.6-1.3 1.3-1.3zm2.4 0h5.2V7.5a2.6 2.6 0 0 0-5.2 0z"/></svg>';
+    var ojo = '<button type="button" class="bk-ojo" aria-label="' + L('Ver contraseña', 'Show password') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5C6.5 5 2.7 9.2 1.5 12c1.2 2.8 5 7 10.5 7s9.3-4.2 10.5-7C21.3 9.2 17.5 5 12 5zm0 11.2a4.2 4.2 0 1 1 0-8.4 4.2 4.2 0 0 1 0 8.4zm0-6.4a2.2 2.2 0 1 0 0 4.4 2.2 2.2 0 0 0 0-4.4z"/></svg></button>';
+    function campoBK(id, etq, ico, extra, conOjo) { return '<label class="bk-etq" for="' + id + '">' + etq + '</label><div class="bk-campo">' + ico + '<input class="campo" id="' + id + '" ' + extra + '>' + (conOjo ? ojo : '') + '</div>'; }
+    var f = campoBK('campo-usuario', T('usuario'), icoU, 'autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="' + L('Ingresa tu usuario', 'Enter your username') + '"') +
+      campoBK('campo-clave', T('contrasena'), icoC, 'type="password" autocomplete="' + (modoCrear ? 'new-password' : 'current-password') + '" placeholder="' + L('Ingresa tu contraseña', 'Enter your password') + '"', true) +
+      (modoCrear ? campoBK('campo-clave2', T('repetir'), icoC, 'type="password" autocomplete="new-password" placeholder="' + T('repetir') + '"', true) : '') +
       '<p class="nota aviso-rojo" id="error-cuenta">' + escaparHTML(errorCuenta) + '</p>';
     var botones = modoCrear ? [
       { texto: T('crear_cuenta'), clase: 'naranja', accion: function () { enviarCuenta(true); } },
@@ -13252,6 +13258,13 @@
     botones.push({ texto: T('invitado'), clase: 'morado', accion: function () { modoInvitado = true; errorCuenta = ''; guardarPreferencias(); pantallaInicio(); } });
     botones.push(botonIdioma());
     mostrarPantalla('🏰', NOMBRE_JUEGO, modoCrear ? T('crear_txt') : T('login_txt'), botones, f);
+    try { /* v8.98: diseño nuevo de la pantalla de entrar */
+      var PB = $('pantalla'); PB.classList.add('bk-login'); PB.classList.toggle('bk-crear', !!modoCrear);
+      $('pantalla-logo').innerHTML = '<img src="iconos/web/escudo_sol.webp" alt="">';
+      $('pantalla-titulo').textContent = modoCrear ? L('Crear cuenta', 'Create account') : L('Iniciar sesión', 'Sign in');
+      var bts = $('pantalla-botones').children; if (bts.length) { bts[0].classList.add('bk-prin'); bts[bts.length - 1].classList.add('bk-idioma'); }
+      Array.prototype.forEach.call(PB.querySelectorAll('.bk-ojo'), function (o) { o.addEventListener('click', function () { var i = o.parentNode.querySelector('input'); if (!i) return; var ver = i.type === 'password'; i.type = ver ? 'text' : 'password'; o.classList.toggle('activo', ver); }); });
+    } catch (e) {}
     var cl = $(modoCrear ? 'campo-clave2' : 'campo-clave');
     if (cl) cl.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') enviarCuenta(modoCrear); });
   }

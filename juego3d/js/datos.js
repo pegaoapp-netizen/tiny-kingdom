@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.97';
+var VERSION_JUEGO = '8.98';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.97","2026-11-25","Cada edificio tiene ya su color de techo para encontrarlo rápido: Cuartel rojo, Enfermería verde, Almacén carmelita, Establo amarillo, Galería morada, Herrería gris, Academia azul, Embajada turquesa, Mercado rosado, Cabaña naranja y Relevo blanco.","Every building now has its own roof color so you can find it fast."],
+var NOVEDADES_VER = [["8.98","2026-11-25","Pantalla de entrar nueva: la portada de Brother Kingdom de fondo, el escudo del sol y botones más claros. También puedes ver la contraseña con el ojo.","New sign-in screen with the Brother Kingdom cover, the sun shield and clearer buttons. You can also show your password with the eye."],
+  ["8.97","2026-11-25","Cada edificio tiene ya su color de techo para encontrarlo rápido: Cuartel rojo, Enfermería verde, Almacén carmelita, Establo amarillo, Galería morada, Herrería gris, Academia azul, Embajada turquesa, Mercado rosado, Cabaña naranja y Relevo blanco.","Every building now has its own roof color so you can find it fast."],
   ["8.96","2026-11-25","La página web del juego ahora tiene fotos, cómo se juega y las novedades.","The game's website now has screenshots, how to play and the latest news."],
   ["8.95","2026-11-25","El castillo ya no se sale de su plaza: queda lo más grande posible dentro del foso.","The castle no longer spills out of its plaza: it stays as big as fits inside the moat."],
   ["8.94","2026-11-24","Brother Kingdom estrena su página web en brotherkingdom.com.","Brother Kingdom has its own website at brotherkingdom.com."],

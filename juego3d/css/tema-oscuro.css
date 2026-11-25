@@ -1647,3 +1647,41 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 /* v8.88: las pestañas de la Torre caben todas (ninguna se esconde a la derecha) */
 #panel .tr-subs { display: flex !important; flex-wrap: wrap !important; overflow: visible !important; gap: 6px; }
 #panel .tr-subs button { flex: 1 1 28%; }
+
+
+/* v8.98 (dueño): PANTALLA DE ENTRAR con el diseño nuevo: su portada de fondo (con el logo arriba) y la tarjeta oscura con el escudo del sol */
+html body #pantalla.bk-login { background: #0d0f15 !important; display: block !important; overflow-y: auto !important; padding: 0 !important; }
+html body #pantalla.bk-login::before { content: ""; position: fixed; inset: 0; background: url(../iconos/ui/portada.jpg?v=893) center top / cover no-repeat; filter: blur(14px) brightness(.45); transform: scale(1.08); pointer-events: none; }
+html body #pantalla.bk-login::after { content: ""; position: fixed; inset: 0; background: url(../iconos/ui/portada.jpg?v=893) center top / contain no-repeat; pointer-events: none; }
+html body #pantalla.bk-login .tarjeta { position: relative !important; z-index: 1; left: auto !important; right: auto !important; top: auto !important; bottom: auto !important; transform: none !important; box-sizing: border-box !important;
+  width: min(86vw, 420px) !important; max-width: none !important; margin: calc(min(177.8vw, 100vh) * 0.255) auto 28px !important; padding: 22px 22px 18px !important;
+  background: linear-gradient(180deg, rgba(24,29,42,.96), rgba(14,17,26,.97)) !important; border: 1.5px solid rgba(201,162,74,.55) !important; border-radius: 22px !important;
+  box-shadow: 0 18px 50px rgba(0,0,0,.65), inset 0 0 0 6px rgba(14,17,26,.9), inset 0 0 0 7px rgba(201,162,74,.28) !important; text-align: center; }
+html body #pantalla.bk-login .tarjeta > svg, html body #pantalla.bk-login .tk-carga { display: none !important; }
+html body #pantalla.bk-login #pantalla-logo { width: 96px; height: 86px; margin: 0 auto 2px !important; font-size: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; }
+html body #pantalla.bk-login #pantalla-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+html body #pantalla.bk-login #pantalla-titulo { margin: 4px 0 10px !important; font: 700 22px system-ui, -apple-system, "Segoe UI", sans-serif !important; color: #f5d78a !important; -webkit-text-fill-color: #f5d78a !important; background: none !important; text-shadow: none !important; letter-spacing: 0 !important; }
+html body #pantalla.bk-login:not(.bk-crear) #pantalla-texto { display: none !important; }
+html body #pantalla.bk-login.bk-crear #pantalla-texto { font: 500 13px/1.4 system-ui, sans-serif !important; color: #c9bfa6 !important; margin: 0 0 6px !important; }
+html body #pantalla.bk-login #pantalla-form { gap: 0 !important; margin-top: 4px !important; background: none !important; border: 0 !important; padding: 0 !important; box-shadow: none !important; text-align: left; }
+html body #pantalla.bk-login .bk-etq { display: block; margin: 10px 2px 6px; font: 600 14px system-ui, sans-serif; color: #f0d27e !important; }
+html body #pantalla.bk-login .bk-campo { position: relative; display: flex; align-items: center; }
+html body #pantalla.bk-login .bk-ico { position: absolute; left: 14px; width: 20px; height: 20px; fill: #d9c9a3; opacity: .85; pointer-events: none; }
+html body #pantalla.bk-login .bk-campo .campo { width: 100% !important; box-sizing: border-box !important; height: 50px; margin: 0 !important; padding: 0 46px 0 44px !important; font: 500 16px system-ui, sans-serif !important;
+  background: rgba(8,10,16,.75) !important; color: #f3ead6 !important; border: 1.5px solid rgba(201,162,74,.6) !important; border-radius: 12px !important; box-shadow: none !important; }
+html body #pantalla.bk-login .bk-campo .campo::placeholder { color: #a79c86 !important; opacity: 1; }
+html body #pantalla.bk-login .bk-campo .campo:focus { outline: none; border-color: #f0c45a !important; box-shadow: 0 0 0 3px rgba(240,196,90,.18) !important; }
+html body #pantalla.bk-login .bk-ojo { position: absolute; right: 6px; width: 38px; height: 38px; display: grid; place-items: center; padding: 0 !important; margin: 0 !important; background: none !important; border: 0 !important; box-shadow: none !important; cursor: pointer; min-height: 0 !important; }
+html body #pantalla.bk-login .bk-ojo svg { width: 22px; height: 22px; fill: #d9c9a3; }
+html body #pantalla.bk-login .bk-ojo.activo svg { fill: #f0c45a; }
+html body #pantalla.bk-login #error-cuenta { margin: 8px 2px 0 !important; min-height: 0 !important; font-size: 13px; }
+html body #pantalla.bk-login #error-cuenta:empty { display: none; }
+html body #pantalla.bk-login #pantalla-botones { gap: 14px !important; margin-top: 18px !important; padding-top: 18px !important; border-top: 1px solid rgba(201,162,74,.22) !important; background: none !important; box-shadow: none !important; }
+html body #pantalla.bk-login #pantalla-botones .comprar { height: 52px; padding: 0 16px !important; border-radius: 999px !important; font: 700 19px system-ui, -apple-system, "Segoe UI", sans-serif !important; letter-spacing: 0 !important; text-shadow: none !important;
+  background: rgba(10,12,18,.55) !important; color: #f5d78a !important; border: 1.5px solid rgba(201,162,74,.75) !important; box-shadow: none !important; }
+html body #pantalla.bk-login #pantalla-botones .comprar.bk-prin { background: linear-gradient(180deg, #ffd96a, #f0b83a) !important; color: #2a1c05 !important; border-color: #ffe08a !important; box-shadow: 0 6px 18px rgba(240,184,58,.28) !important; }
+html body #pantalla.bk-login #pantalla-botones .comprar.bk-idioma { align-self: center; height: 42px; margin-top: 4px; padding: 0 22px !important; font-size: 16px !important; position: relative; }
+html body #pantalla.bk-login #pantalla-botones .comprar.bk-idioma::before { content: "🌐"; margin-right: 8px; }
+html body #pantalla.bk-login #pantalla-botones .comprar:active { transform: translateY(1px); }
+html body #pantalla.bk-login #pantalla-version { color: #8c826c !important; }
+@media (min-aspect-ratio: 3/4) { html body #pantalla.bk-login .tarjeta { margin-top: calc(100vh * 0.26) !important; } }
