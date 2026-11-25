@@ -8102,7 +8102,8 @@
   function htmlRejillaTropas(accion) {
     var tipos = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; });
     if (!tipos.length) return '<p class="iv-vacio">' + L('No tienes tropas. Entrénalas en el Cuartel.', 'You have no troops. Train them in the Barracks.') + '</p>';
-    return '<div class="mt-rejilla">' + tipos.map(function (k) { return '<button class="mt-tarjeta"' + (accion ? ' data-accion="' + accion + '" data-tipo="' + k + '"' : ' type="button"') + '><span class="mt-foto">' + fotoHTML(k, '<span class="ru-emoji">' + TROPAS[k].icono + '</span>') + '</span><span class="mt-dat"><b>' + N(k) + '</b><span>' + formatoNumero(cuentaTipo(k)) + '</span></span></button>'; }).join('') + '</div>';
+    var carrosH = SUMINISTRO_ORDEN.filter(function (t) { return (cuentaSum(t) || 0) > 0; }).map(function (t) { var su = SUMINISTRO[t]; return '<button class="mt-tarjeta" type="button"><span class="mt-foto"><img src="iconos/ui/' + su.img + '.webp" alt=""></span><span class="mt-dat"><b>' + L(su.es, su.en) + '</b><span>' + formatoNumero(cuentaSum(t)) + '</span></span></button>'; }).join(''); /* v8.77: las carretas también son tropas */
+    return '<div class="mt-rejilla">' + tipos.map(function (k) { return '<button class="mt-tarjeta"' + (accion ? ' data-accion="' + accion + '" data-tipo="' + k + '"' : ' type="button"') + '><span class="mt-foto">' + fotoHTML(k, '<span class="ru-emoji">' + TROPAS[k].icono + '</span>') + '</span><span class="mt-dat"><b>' + N(k) + '</b><span>' + formatoNumero(cuentaTipo(k)) + '</span></span></button>'; }).join('') + carrosH + '</div>';
   }
   function abrirPanelTropas() {
     vistos().tropasDia = hoyTexto();
