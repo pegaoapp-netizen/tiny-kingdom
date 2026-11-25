@@ -7408,7 +7408,8 @@
       '<button class="' + (tab === 'tx-e' ? 'activo' : '') + '" data-accion="rk-tab" data-t="tx-e">🛡️ ' + L('Entrenamiento', 'Training') + '</button>' +
       '<button class="' + (tab === 'tx-p' ? 'activo' : '') + '" data-accion="rk-tab" data-t="tx-p">📈 ' + L('Subir poder', 'Power up') + '</button>' +
       '<button class="' + (tab === 'liquidacion' ? 'activo' : '') + '" data-accion="rk-tab" data-t="liquidacion">⚔️ ' + L('Liquidación', 'Kills') + '</button>' +
-      '<button class="' + (tab === 'alianzas' ? 'activo' : '') + '" data-accion="rk-tab" data-t="alianzas">🛡️ ' + L('Alianzas', 'Alliances') + '</button></div>';
+      '<button class="' + (tab === 'alianzas' ? 'activo' : '') + '" data-accion="rk-tab" data-t="alianzas">🛡️ ' + L('Alianzas', 'Alliances') + '</button>' +
+      '<button class="' + (tab === 'campana' ? 'activo' : '') + '" data-accion="rk-tab" data-t="campana">🗺️ ' + L('Campaña', 'Campaign') + '</button></div>';
     abrirPanel('🏆 ' + L('Ranking', 'Ranking'), tabs + '<div id="rk-cuerpo"><p class="nota">' + L('Cargando…', 'Loading…') + '</p></div>', { tipo: 'ranking' });
     if (!hayCuenta()) { $('rk-cuerpo').innerHTML = '<div class="carta"><p>' + L('Crea una cuenta para aparecer en el ranking y jugar el torneo.', 'Create an account to show up in the ranking and play the tournament.') + '</p><button class="comprar" data-accion="ir-cuenta">' + T('entrar_o_crear') + '</button></div>'; return; }
     var yo = Cuentas.usuario().uid;
@@ -7422,6 +7423,17 @@
         var lista = Object.keys(por).map(function (k) { return por[k]; }).sort(function (x, y) { return (y.poder + y.kp) - (x.poder + x.kp); });
         listo('<div class="carta"><p class="nota">' + L('Las alianzas por la suma del poder y la liquidación de sus jugadores. Toca una para ver su ficha.', 'Alliances by their players\' total power and kills. Tap one to see it.') + '</p>' +
           (lista.length ? lista.map(function (q, k) { return '<div class="fila-miembro rk-fila al-toca' + (q.tag === estado.alianza ? ' yo' : '') + '" data-accion="al-ver" data-tag="' + escaparHTML(q.tag) + '"><b class="rk-pos">' + (['🥇', '🥈', '🥉'][k] || '#' + (k + 1)) + '</b><span class="etiqueta-al">' + escaparHTML(q.tag) + '</span><span class="chip">💪 ' + corto(q.poder) + '</span><span class="chip rk-kp">⚔️ ' + corto(q.kp) + '</span></div>'; }).join('') : '<p>' + L('Todavía no hay alianzas.', 'No alliances yet.') + '</p>') + '</div>');
+      }).catch(error);
+      return;
+    }
+    if (tab === 'campana') { // v9.03: quién avanzó más en la Campaña
+      if (window.TKMapa && TKMapa.publicar) TKMapa.publicar();
+      Cuentas.topTorneo(idRankCamp('avance'), 100).then(function (lista) {
+        lista = lista.filter(function (a) { return (a.puntos || 0) > 0; });
+        var i = lista.map(function (x) { return x.uid; }).indexOf(yo), dc = estado.campMapa || {}, mis = 0, est = 0; Object.keys(dc.m || {}).forEach(function (k) { if (dc.m[k].n) mis++; est += dc.m[k].e || 0; });
+        listo('<div class="carta rk-tuyo"><b>' + L('Tu puesto: ', 'Your place: ') + (i >= 0 ? '#' + (i + 1) : L('sin puesto aún', 'no place yet')) + '</b><span class="chip">🗺️ ' + mis + ' · ★ ' + est + '</span></div>' +
+          '<div class="carta" style="margin-top:8px"><p class="nota">' + L('Los que más avanzaron en la Campaña: misiones completadas en todas las dificultades y, si empatan, las estrellas. Ábrela con el botón Campaña.', 'Who got furthest in the Campaign: missions completed on every difficulty, then stars. Open it with the Campaign button.') + '</p>' +
+          (lista.length ? lista.map(function (a, k) { return filaRanking(k + 1, a.nombre, a.alianza, '<span class="chip">🗺️ ' + Math.floor(a.puntos / 1000) + ' · ★ ' + (a.puntos % 1000) + '</span>', a.uid === yo); }).join('') : '<p>' + L('Todavía nadie ha completado misiones de Campaña.', 'Nobody has completed Campaign missions yet.') + '</p>') + '</div>');
       }).catch(error);
       return;
     }
@@ -10947,6 +10959,9 @@
       return '<div class="cp-h"><span class="cp-ok">✓</span><b>' + T('oleada') + ' ' + k + '</b><small>' + (x ? new Date(x.f).toLocaleDateString(estado.idioma === 'en' ? 'en-US' : 'es-ES', { day: 'numeric', month: 'short' }) + ' · ❤ ' + x.v + '%' : '') + '</small></div>';
     }).join('') + '</div></div>';
   }
+  // v9.03: CLASIFICACIÓN DE CAMPAÑA. Usa las mismas tablas de la nube que los torneos (torneos/{id}/puntos, mismas reglas):
+  // '900000' = avance de siempre (misiones × 1000 + estrellas) · '91' + semana = puntos de Campaña de esta semana
+  function idRankCamp(t) { return t === 'semana' ? '91' + ('000' + (semanaActual() % 10000)).slice(-4) : '900000'; }
   // v8.27: puente con la Campaña en batalla (js/tk-campana.js)
   window.__tkCamp = {
     L: L, sonar: sonar, consejo: consejoTemporal,
@@ -10964,6 +10979,14 @@
     datos: function () { var d = estado.campMapa; if (!d || typeof d !== 'object') d = estado.campMapa = {}; ['m', 'logros', 'cofres', 'visto'].forEach(function (k) { if (!d[k] || typeof d[k] !== 'object') d[k] = {}; }); if (!d.dif) d.dif = 'normal'; return d; },
     guardar: function () { guardar(true); actualizarHUD(); },
     cerrarPanel: function () { if (panelActual) cerrarPanel(); },
+    semana: function () { return semanaActual(); },
+    finSemana: function () { return finDeSemana(semanaActual()); },
+    cuenta: function () { return hayCuenta(); },
+    yo: function () { return hayCuenta() ? Cuentas.usuario().uid : null; },
+    alianza: function () { return estado.alianza || null; },
+    rankPublicar: function (tipo, puntos) { if (!hayCuenta() || !Cuentas.puntosTorneo) return Promise.resolve(); return Cuentas.puntosTorneo(idRankCamp(tipo), { nombre: Cuentas.nombrePublico(), puntos: Math.max(0, Math.min(100000000, Math.round(puntos || 0))), alianza: estado.alianza || null, actualizado: Date.now() }).catch(function () {}); },
+    rankTop: function (tipo) { if (!hayCuenta() || !Cuentas.topTorneo) return Promise.reject(new Error('sin cuenta')); return Cuentas.topTorneo(idRankCamp(tipo), 100); },
+    irCuenta: function () { if (window.TKMapa) TKMapa.cerrar(); var b = document.querySelector('[data-accion="ir-cuenta"]'); if (b) b.click(); else abrirPanelRanking('poder'); },
     recursos: function () { return { oro: estado.monedas || 0, madera: estado.madera || 0, piedra: estado.piedra || 0, hierro: estado.hierro || 0 }; },
     imgObjeto: function (k) { return ICONOS_IMG[k] ? 'iconos/ui/' + ICONOS_IMG[k] + '.webp' : ''; },
     nombreObjeto: function (k) { return OBJETOS[k] ? N(k) : String(k); },

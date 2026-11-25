@@ -123,6 +123,12 @@
   function hoy() { var f = new Date(); return f.getFullYear() + '-' + (f.getMonth() + 1) + '-' + f.getDate(); }
   function repHoy() { var r = st().rep || {}; return r.d === hoy() ? r.n || 0 : 0; }
   function difActual() { return DIFS.filter(function (d) { return d.k === st().dif; })[0] || DIFS[0]; }
+  // v9.03: CLASIFICACIÓN. Avance = misiones completadas (todas las dificultades) × 1000 + estrellas;
+  // semana = puntos por cada victoria o barrido de esta semana (jefe ×3; Élite ×2, Pesadilla ×3)
+  function puntosAvance() { return totalGanadas() * 1000 + Math.min(999, totalEstrellas()); }
+  function semanaDatos() { var w = st().sem; if (!w || w.s !== G.semana()) w = st().sem = { s: G.semana(), p: 0 }; return w; }
+  function sumarSemana(M, veces) { semanaDatos().p += (M.esJefe ? 3 : 1) * (M.dif === 'pesadilla' ? 3 : M.dif === 'elite' ? 2 : 1) * (veces || 1); }
+  function publicar() { if (!G || !G.cuenta || !G.cuenta()) return; if (totalGanadas()) G.rankPublicar('avance', puntosAvance()); var w = semanaDatos(); if (w.p > 0) G.rankPublicar('semana', w.p); }
   function logrosListos() { var l = st().logros; return LOGROS.filter(function (g) { return !l[g.id] && g.ok(); }).length; }
 
   // la misión ya preparada para la batalla
@@ -499,6 +505,11 @@
     '#tkm .tkm-cap b{display:block;color:#ffe08a;font:700 15px Georgia,serif}#tkm .tkm-cap small{font:600 11px system-ui}' +
     '#tkm .tkm-lg{display:flex;align-items:center;gap:8px;padding:7px;margin:5px 0;border-radius:6px;background:rgba(90,50,10,.1);border:1px solid #a8803a}#tkm .tkm-lg .i{font-size:24px}#tkm .tkm-lg div{flex:1;min-width:0}#tkm .tkm-lg b{display:block;font:700 13px Georgia,serif}#tkm .tkm-lg small{display:block;font:600 11px system-ui}' +
     '#tkm .tkm-lg button{flex:none;height:34px;padding:0 10px;border-radius:5px;border:1px solid #000;background:linear-gradient(#3f80c0,#123660);color:#fff;font:700 12px Georgia,serif;box-shadow:inset 0 1px 0 #fff5}#tkm .tkm-lg button[disabled]{background:#9a8a70;box-shadow:none}#tkm .tkm-lg.ya{opacity:.6}' +
+    '#tkm .tkm-rkt{display:flex;gap:4px;margin:8px 0 4px}#tkm .tkm-rkt button{flex:1;height:34px;border-radius:5px 5px 0 0;border:1px solid #5a3a16;background:linear-gradient(#8a6a40,#5a4024);color:#f3e6c8;font:700 13px Georgia,serif}#tkm .tkm-rkt button.on{background:linear-gradient(#e0782a,#9a3c0e);color:#fff;text-shadow:0 1px 1px #000}' +
+    '#tkm .tkm-rkyo{margin:6px 0;padding:8px;border-radius:6px;background:linear-gradient(#2f6ab8,#123660);color:#fff;font:700 13px Georgia,serif;text-align:center;border:1px solid #9cc4ec;text-shadow:0 1px 1px #000}#tkm .tkm-rkyo b{color:#ffe36a}' +
+    '#tkm .tkm-rkf{display:flex;align-items:center;gap:8px;padding:7px 8px;margin:4px 0;border-radius:6px;background:linear-gradient(#3a2414,#22140a);color:#f3e6c8;border:1px solid #6a5030}#tkm .tkm-rkf .p{flex:none;width:34px;text-align:center;font:900 15px Georgia,serif;color:#e8c060}#tkm .tkm-rkf.top .p{font-size:22px}' +
+    '#tkm .tkm-rkf .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:700 13px Georgia,serif}#tkm .tkm-rkf .n i{font-style:normal;font:800 10px system-ui;color:#3a2410;background:#e8c060;border-radius:4px;padding:1px 4px;margin-right:5px}#tkm .tkm-rkf b{flex:none;color:#ffe08a;font:800 12px system-ui}' +
+    '#tkm .tkm-rkf.top{border-color:#c9a14a;background:linear-gradient(#5a3a18,#2a180a)}#tkm .tkm-rkf.yo{border-color:#9cc4ec;box-shadow:0 0 0 1px #2f6ab8,0 0 10px #2f6ab866}' +
     '#tkm .tkm-hist{font:italic 600 14px Georgia,serif !important;color:#4a2a0a;text-align:center;padding:4px 6px}' +
     '#tkm .tkm-sello{display:block;margin:6px auto;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e0402a,#6a0e08);font-size:38px;line-height:76px;text-align:center;box-shadow:0 0 0 3px #3a0a04,0 0 0 5px #d8a640,0 4px 10px #0008}';
 
@@ -665,8 +676,8 @@
     ui.innerHTML = '<div class="tkm-marco"></div><div class="tkm-top"><div class="tkm-f1"><button class="tkm-vol" data-c="salir" aria-label="' + L('Volver', 'Back') + '">‹</button><div class="tkm-tit">' + esc(L(cap.es, cap.en)) + '<small>' + L('Campaña · Capítulo ', 'Campaign · Chapter ') + c + '</small></div><div class="tkm-est"><b>★</b>' + totalEstrellas() + '</div></div>' +
       '<div class="tkm-difs">' + DIFS.map(function (x) { var ab = difAbierta(x.k); return '<button class="tkm-d ' + x.k + (x.k === d.k ? ' on' : '') + (ab ? '' : ' no') + '" data-c="dif" data-k="' + x.k + '">' + (ab ? '' : '🔒 ') + L('Modo ', '') + L(x.es, x.en).toLowerCase() + '</button>'; }).join('') + '</div></div>' +
       '<div class="tkm-rec">' + htmlRec() + '</div>' +
-      '<div class="tkm-lado tkm-izq">' + bl('caps', 'm_misiones', L('Capítulos', 'Chapters')) + bl('logros', 'm_ranking', L('Logros', 'Feats'), lg ? '<i>' + lg + '</i>' : '') + bl('heroes', 'b_tropas', L('Héroes', 'Heroes')) + '</div>' +
-      '<div class="tkm-lado tkm-der">' + bl('etapas', 'b_campana', L('Etapas', 'Stages')) + bl('centrar', '#🧭', L('Misión', 'Mission')) + '</div>' +
+      '<div class="tkm-lado tkm-izq">' + bl('caps', 'm_misiones', L('Capítulos', 'Chapters')) + bl('logros', 'o_estrella_rey', L('Logros', 'Feats'), lg ? '<i>' + lg + '</i>' : '') + bl('heroes', 'b_tropas', L('Héroes', 'Heroes')) + '</div>' +
+      '<div class="tkm-lado tkm-der">' + bl('clasif', 'm_ranking', L('Clasificación', 'Ranking')) + bl('etapas', 'b_campana', L('Etapas', 'Stages')) + bl('centrar', '#🧭', L('Misión', 'Mission')) + '</div>' +
       '<div class="tkm-abajo"><div class="tkm-pc"><b>' + L('Capítulo ', 'Chapter ') + c + ' · ' + hechas + '/6 · ★ ' + ec + '/18</b><div class="tkm-bar"><i style="width:' + Math.round(100 * ec / 18) + '%"></i></div></div><div class="tkm-cof">' +
       [1, 2, 3].map(function (n) { var k = d.k + ':' + c + ':' + n, ya = cof[k], listo = !ya && ec >= n * 6; return '<button class="tkm-cf' + (ya ? ' ya' : listo ? ' listo' : ' no') + '" data-c="cofre" data-cap="' + c + '" data-n="' + n + '"><img src="iconos/ui/' + ['o_cofre_madera', 'o_cofre_oro', 'o_cofre_tesoro'][n - 1] + '.webp" alt=""><small>★' + n * 6 + '</small></button>'; }).join('') + '</div></div>';
   }
@@ -726,6 +737,25 @@
       return '<div class="tkm-lg' + (ya ? ' ya' : '') + '"><span class="i">' + (ya ? '✅' : ok ? '🏆' : '🎖️') + '</span><div><b>' + esc(L(g.es, g.en)) + '</b><small>' + esc(L(g.des[0], g.des[1])) + pr + '</small></div><button data-c="logro" data-id="' + g.id + '"' + (ya || !ok ? ' disabled' : '') + '>' + (ya ? L('Hecho', 'Done') : L('Reclamar', 'Claim')) + '</button></div>';
     }).join(''));
   }
+  var rkTab = 'avance';
+  function ventanaClasificacion(tab) {
+    rkTab = tab = tab || rkTab;
+    var w = semanaDatos(), tabs = '<div class="tkm-rkt"><button class="' + (tab === 'avance' ? 'on' : '') + '" data-c="rk" data-t="avance">🏰 ' + L('Avance', 'Progress') + '</button><button class="' + (tab === 'semana' ? 'on' : '') + '" data-c="rk" data-t="semana">⚔️ ' + L('Esta semana', 'This week') + '</button></div>';
+    var mio = tab === 'avance' ? '<b>' + totalGanadas() + '</b> ' + L('misiones', 'missions') + ' · ★ <b>' + totalEstrellas() + '</b>' : '<b>' + num(w.p) + '</b> ' + L('puntos', 'points');
+    var ayuda = tab === 'avance' ? L('Gana quien completa más misiones en todas las dificultades. Si empatan, el que tiene más estrellas.', 'Whoever completes the most missions on every difficulty wins. Ties go to the most stars.') : L('Cada victoria o barrido de esta semana da 1 punto (jefe 3). En Élite valen el doble y en Pesadilla el triple. Se reinicia el lunes.', 'Each win or sweep this week gives 1 point (boss 3). Elite doubles them and Nightmare triples them. Resets on Monday.');
+    var f = ventana('<h2>🏆 ' + L('Clasificación', 'Leaderboard') + '</h2><div class="tkm-sub">' + L('Campaña', 'Campaign') + '</div>' + tabs + '<p class="tkm-nota">' + esc(ayuda) + '</p><div class="tkm-rkyo">' + L('Tú: ', 'You: ') + mio + '</div><div class="tkm-rkl">' + (G.cuenta() ? '<p class="tkm-nota">' + L('Cargando…', 'Loading…') + '</p>' : '<p>' + L('Crea una cuenta o entra en la tuya para aparecer en la clasificación.', 'Create an account or sign in to appear on the leaderboard.') + '</p><div class="tkm-bts"><button class="tkm-b azul" data-c="cuenta">' + L('Entrar o crear cuenta', 'Sign in or create account') + '</button></div>') + '</div>');
+    if (!G.cuenta()) return;
+    publicar();
+    G.rankTop(tab).then(function (l) {
+      var caja = f.querySelector('.tkm-rkl'); if (!caja || !f.parentNode || rkTab !== tab) return;
+      l = (l || []).filter(function (a) { return (a.puntos || 0) > 0; }); var yo = G.yo(), pos = l.map(function (a) { return a.uid; }).indexOf(yo);
+      var yoEl = f.querySelector('.tkm-rkyo'); if (yoEl) yoEl.innerHTML = L('Tu puesto: ', 'Your place: ') + '<b>' + (pos >= 0 ? '#' + (pos + 1) : L('sin puesto aún', 'no place yet')) + '</b> · ' + mio;
+      caja.innerHTML = l.length ? l.map(function (a, k) {
+        var val = tab === 'avance' ? '🗺️ ' + Math.floor(a.puntos / 1000) + ' · ★ ' + (a.puntos % 1000) : '⚔️ ' + num(a.puntos);
+        return '<div class="tkm-rkf' + (a.uid === yo ? ' yo' : '') + (k < 3 ? ' top' : '') + '"><span class="p">' + (['🥇', '🥈', '🥉'][k] || '#' + (k + 1)) + '</span><span class="n">' + (a.alianza ? '<i>' + esc(a.alianza) + '</i>' : '') + esc(a.nombre || '?') + (a.uid === yo ? ' · ' + L('Tú', 'You') : '') + '</span><b>' + val + '</b></div>';
+      }).join('') : '<p class="tkm-nota">' + L('Todavía nadie está en esta clasificación. ¡Sé el primero!', 'Nobody is on this leaderboard yet. Be the first!') + '</p>';
+    }).catch(function () { var caja = f.querySelector('.tkm-rkl'); if (caja) caja.innerHTML = '<p class="tkm-nota">' + L('No se pudo cargar. Revisa tu conexión.', 'Could not load. Check your connection.') + '</p>'; });
+  }
   function ventanaHistoria(c) {
     var cap = CAPS[c - 1];
     var f = ventana('<span class="tkm-sello">' + ['🌾', '🌲', '⛰️', '🌋'][c - 1] + '</span><h2>' + L('Capítulo ', 'Chapter ') + c + '</h2><div class="tkm-sub">' + esc(L(cap.es, cap.en)) + '</div><p class="tkm-hist">' + esc(L(cap.hes, cap.hen)) + '</p><div class="tkm-bts"><button class="tkm-b verde" data-c="x">' + L('¡Adelante!', 'Onward!') + '</button></div>');
@@ -743,7 +773,7 @@
     if (estrellas(d, c, i) < 3) return;
     if (rp.d !== hoy()) rp = { d: hoy(), n: 0 };
     for (var k = 0; k < n && rp.n < REP_DIA; k++) { rp.n++; hechas2++; st().nRep = (st().nRep || 0) + 1; var r = st().m[clave(d, c, i)]; r.n = (r.n || 0) + 1; todo = todo.concat(dar(premiosRepetir(base), G.equipo())); }
-    st().rep = rp; G.guardar();
+    st().rep = rp; if (hechas2) sumarSemana(M, hechas2); G.guardar(); if (hechas2) publicar();
     if (!hechas2) { G.consejo(L('Ya usaste las repeticiones con premio de hoy.', 'Today\'s rewarded replays are used.')); return; }
     var junto = {}, orden = []; todo.forEach(function (x) { var m = /^([+×]?)([\d.,]+)/.exec(x.n || ''), v = m ? +m[2].replace(/[.,]/g, '') : 0; if (!junto[x.nom]) { junto[x.nom] = { img: x.img, ico: x.ico, nom: x.nom, pre: m ? m[1] : '', v: 0, txt: x.n }; orden.push(x.nom); } junto[x.nom].v += v; });
     G.sonar('moneda'); pintarUI();
@@ -761,8 +791,9 @@
       var base = premiosBase(M);
       if (primera) { items = dar(base, res.heroes); nota = '🆕 ' + L('¡Primera victoria!', 'First victory!'); }
       else { var rp = st().rep || {}; if (rp.d !== hoy()) rp = { d: hoy(), n: 0 }; st().nRep = (st().nRep || 0) + 1; if (rp.n < REP_DIA) { rp.n++; items = dar(premiosRepetir(base), res.heroes); nota = '🔁 ' + rp.n + ' / ' + REP_DIA; } else nota = L('Sin premio: ya usaste las repeticiones de hoy.', 'No reward: today\'s replays are used.'); st().rep = rp; }
+      sumarSemana(M, 1);
       if (res.estrellas >= 3 && antes < 3) { items = items.concat(dar(premioTres(M), res.heroes)); nota += (nota ? ' · ' : '') + '👑 ' + L('¡Extra por 3 estrellas!', '3-star bonus!'); }
-      G.guardar();
+      G.guardar(); publicar();
       return { items: items, nota: nota };
     };
     M.alSalir = function () { abrir(); };
@@ -781,6 +812,9 @@
     else if (c === 'dif') { var k = b.getAttribute('data-k'); if (!difAbierta(k)) { G.consejo('🔒 ' + L('Completa el Capítulo 1 en ' + (k === 'elite' ? 'Normal' : 'Élite') + ' para abrir esta dificultad.', 'Complete Chapter 1 on ' + (k === 'elite' ? 'Normal' : 'Elite') + ' to unlock this difficulty.')); return; } st().dif = k; G.guardar(); claros = {}; abiertosAntes = { d: k, l: [1, 2, 3, 4].filter(function (c2) { return capAbierto(k, c2); }) }; pintarUI(); centrar(); }
     else if (c === 'caps') ventanaCapitulos();
     else if (c === 'logros') ventanaLogros();
+    else if (c === 'clasif') ventanaClasificacion();
+    else if (c === 'rk') ventanaClasificacion(b.getAttribute('data-t'));
+    else if (c === 'cuenta') G.irCuenta();
     else if (c === 'vercap') { var cc = +b.getAttribute('data-cap'); cerrarVentana(); var p = CAPS[cc - 1].pos[2]; volarA(p[0], p[1] - 40, Math.max(cam.z, zMin * 1.6)); }
     else if (c === 'etapas') { cerrar(); if (window.TKCampana) TKCampana.abrir(); }
     else if (c === 'heroes') { cerrar(); G.heroesPanel(); }
@@ -822,5 +856,5 @@
     if (raiz) raiz.remove(); raiz = null; cx = null; toques = []; inercia = null; vuelo = null;
     if (!aBatalla) { terreno = null; nieblas = {}; claros = {}; if (G) G.abierta(false); }
   }
-  window.TKMapa = { abrir: abrir, cerrar: function () { cerrar(); }, info: function () { return { abierto: !!raiz, dif: G && st().dif, estrellas: G ? totalEstrellas() : 0, actual: G ? actual() : null, cam: cam }; }, _mision: mision };
+  window.TKMapa = { publicar: function () { G = G || window.__tkCamp; if (G && G.datos) publicar(); }, abrir: abrir, cerrar: function () { cerrar(); }, info: function () { return { abierto: !!raiz, dif: G && st().dif, estrellas: G ? totalEstrellas() : 0, actual: G ? actual() : null, cam: cam }; }, _mision: mision };
 })();
