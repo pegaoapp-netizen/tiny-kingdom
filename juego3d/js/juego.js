@@ -4692,7 +4692,7 @@
 
   /* v8.85 (dueño): la Enfermería también se repite (hasta 5 por villa) para tener más camas */
   var MAX_ENFERMERIAS = 5;
-  function repetibleCiudad(tipo) { if (tipo === 'enfermeria') return contarEdificios('enfermeria') < MAX_ENFERMERIAS; return tipo === 'cabana' || tipo === 'cuartel'; }
+  function repetibleCiudad(tipo) { return tipo === 'cabana' || tipo === 'cuartel' || tipo === 'enfermeria'; } /* v8.87 (dueño): Cuartel, Cabaña y Enfermería todas las que quieras; los demás (Almacén incluido) uno por villa */
   function parcelaAcepta(s, tipo) {
     if (!s || s.campo !== esCampo(tipo)) return false;
     if (s.campo) return true;
