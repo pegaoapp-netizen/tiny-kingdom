@@ -10415,15 +10415,21 @@
       }).join('') : '<p class="iv-vacio">' + L('Todavía no tienes héroes. Recluta uno en la pestaña Héroes.', 'You have no heroes yet. Recruit one in the Heroes tab.') + '</p>') + '</div>';
     abrirPanel(L('Fortaleza', 'Fortress'), html, { tipo: 'fortaleza' }); $('panel').classList.add('iv-panel', 'fo-panel');
   }
+  // v8.82: EXPLORAR en la Fortaleza da premios que se notan y se ven en la ventana «Recibiste»
   function explorarHeroe(id) {
     var e = estado.heroes[id]; if (!e || exploracionesHoy(id) <= 0) return;
     estado.explora[id] = (estado.explora[id] || 0) + 1;
-    var exG = Math.round(expNivel(e.nivel) * 0.35), premio = [];
-    darExp(id, exG); premio.push('+' + exG + ' EXP');
-    if (Math.random() < 0.35 && e.estrellas < 5) { e.frag = (e.frag || 0) + 1; premio.push('🧩 +1'); }
-    var rr = ['oro', 'comida', 'madera', 'piedra'][Math.floor(Math.random() * 4)], cant = 150 + Math.round(Math.random() * 250) * (estado.castillo || 1);
-    sumarRecurso(rr, cant); premio.push(ICONO_RECURSO[rr] + ' +' + formatoNumero(cant));
-    sonar('magia'); consejoTemporal('🧭 ' + NH(id) + ': ' + premio.join(' · ')); guardar(true); ponerEquipo && ponerEquipo(); abrirFortaleza();
+    var items = [], nc = Math.max(1, estado.castillo || 1);
+    if (e.nivel < topeNivel(id)) { var exG = Math.round(expNivel(e.nivel) * 0.35); darExp(id, exG); items.push({ ico: '⭐', n: exG, nom: L('EXP de ', 'EXP for ') + NH(id) }); }
+    else { estado.mochila.libro_gra = (estado.mochila.libro_gra || 0) + 1; items.push({ ico: OBJETOS.libro_gra.icono, n: 1, nom: N('libro_gra') }); } /* en su nivel máximo: un libro grande en vez de EXP perdida */
+    if (Math.random() < 0.35 && e.estrellas < 5) { e.frag = (e.frag || 0) + 1; items.push({ ico: '🧩', n: 1, nom: L('Fragmento de ', 'Fragment of ') + NH(id) }); }
+    var rec = {}; ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { if (Math.random() < 0.6) rec[r] = Math.round((4000 + Math.random() * 6000) * nc * nc / 4); });
+    if (!Object.keys(rec).length) rec.oro = Math.round(5000 * nc * nc / 4);
+    Object.keys(rec).forEach(function (r) { sumarRecurso(r, rec[r]); items.push({ ico: ICONO_RECURSO[r], n: rec[r], nom: T('r_' + r) }); });
+    var obj = [['acel_15m', 0.35], ['acel_1h', 0.15], ['libro_peq', 0.3], ['cofre_plata', 0.12], ['cofre_oro', 0.05]];
+    obj.forEach(function (q) { if (Math.random() < q[1] && OBJETOS[q[0]]) { estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + 1; items.push({ ico: OBJETOS[q[0]].icono, n: 1, nom: N(q[0]) }); } });
+    sonar('magia'); guardar(true); actualizarHUD(); ponerEquipo && ponerEquipo(); abrirFortaleza();
+    mostrarRecompensas('🧭 ' + NH(id) + ' · ' + L('Exploración', 'Exploration') + ' (' + (EXPLORAR_DIA - exploracionesHoy(id)) + '/' + EXPLORAR_DIA + ')', items);
   }
   function abrirSalonCaballeros() {
     var mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });

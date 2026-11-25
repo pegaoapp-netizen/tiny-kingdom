@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.81';
+var VERSION_JUEGO = '8.82';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.81","2026-11-24","En el Mundo también sale la barra de marchas con Acelerar cuando van caravanas entre villas.","On the World map the march bar with Speed up also shows while caravans travel."],
+var NOVEDADES_VER = [["8.82","2026-11-24","Fortaleza › Explorar da premios que se notan (recursos según tu castillo, aceleradores, libros, cofres) y los enseña en una ventana.","Fortress › Explore gives real rewards (resources by castle level, speed-ups, books, chests) and shows them."],
+  ["8.81","2026-11-24","En el Mundo también sale la barra de marchas con Acelerar cuando van caravanas entre villas.","On the World map the march bar with Speed up also shows while caravans travel."],
   ["8.80","2026-11-24","Las caravanas entre villas se pueden acelerar, de ida y de vuelta.","Caravans between villages can be sped up, going and returning."],
   ["8.79","2026-11-24","Alianzas: la lista se ordena por el poder total de los miembros y ya no cuenta a los expulsados.","Alliances: the list is sorted by members total power and no longer counts removed players."],
   ["8.78","2026-11-24","Acelerar marcha muestra todos los aceleradores, desde el de 1 minuto, para usar o comprar.","Speed up march shows all speed-ups, from 1 minute, to use or buy."],
