@@ -1,0 +1,16 @@
+MÚSICA DE GUERRA DE BROTHER KINGDOM (v9.14)
+============================================
+Aquí está cómo se hicieron las 7 pistas de juego3d/musica/ (guerra_*.m4a). Son composiciones originales.
+
+Instrumentos: grabaciones reales de la colección VSCO 2 Community Edition (licencia CC0: libre, también para vender
+el juego, sin tener que nombrar a nadie): https://github.com/sgossner/VSCO-2-CE
+La gaita no está en esa colección: se hace con código en motor.py.
+
+Para cambiar o añadir una pista:
+1. Descarga VSCO-2-CE y pon su ruta en VS dentro de motor.py.
+2. Cambia la música en piezas.py (cada función es una pista: preparacion, marcha, batalla, asedio, critica, victoria, derrota).
+3. python3 piezas.py batalla        -> crea salida/guerra_batalla.m4a (y un .mp3 para escucharla)
+4. Copia el .m4a a juego3d/musica/. Para una pista nueva, añádela en PISTAS_GUERRA (juego3d/js/datos.js).
+Necesita Python 3 con numpy y scipy, y ffmpeg.
+
+Las pistas en bucle ya llevan el eco del final sumado al principio: se repiten sin cortes.
