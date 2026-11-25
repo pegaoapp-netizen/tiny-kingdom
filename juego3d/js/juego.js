@@ -7788,7 +7788,7 @@
       '<div class="ev-cars"><span>🏪 ' + L('Mercado Nv ', 'Market Lv ') + mercadoNivel() + '<b>' + corto(baseMercado()) + '</b></span>' + SUMINISTRO_ORDEN.map(function (t) { return '<span>' + SUMINISTRO[t].icono + ' ' + nombreSum(t) + ' ×' + lt[t] + '<b>' + corto(CARGA_VILLA[t]) + ' c/u</b></span>'; }).join('') + '</div>' +
       '<p class="nota">📦 ' + L('Máximo por envío: ', 'Max per shipment: ') + '<b id="ev-max">' + formatoNumero(max) + '</b>' + (hayMer ? '' : '<br>⚠️ ' + L('Necesitas un Mercado en esta villa.', 'You need a Market in this village.')) + '</p>';
     h += REC_CARAVANA.map(function (r) { var tope = Math.min(cantRec(r), max), val = Math.min(envioSel.c[r] || 0, tope);
-      return '<div class="ev-desl"><span class="ev-r">' + icoRec(r) + ' ' + (r === 'hierro' ? L('Hierro', 'Iron') : (function (x) { return x.charAt(0).toUpperCase() + x.slice(1); })(T('r_' + r))) + '</span><input type="range" class="ev-rango" data-r="' + r + '" min="0" max="' + tope + '" step="1" value="' + val + '"' + (tope ? '' : ' disabled') + '><b class="ev-val" data-r="' + r + '">' + corto(val) + '</b><button class="comprar mini ev-max" data-r="' + r + '"' + (tope ? '' : ' disabled') + '>' + L('Máx', 'Max') + '</button></div>'; }).join('');
+      return '<div class="ev-desl"><span class="ev-r">' + icoRec(r) + ' ' + (r === 'hierro' ? L('Hierro', 'Iron') : (function (x) { return x.charAt(0).toUpperCase() + x.slice(1); })(T('r_' + r))) + '</span><input type="range" class="ev-rango" data-r="' + r + '" min="0" max="' + tope + '" step="1" value="' + val + '"' + (tope ? '' : ' disabled') + '><input class="ev-val ev-num" data-r="' + r + '" type="text" inputmode="decimal" value="' + corto(val) + '"' + (tope ? '' : ' disabled') + ' aria-label="' + L('Cantidad', 'Amount') + '">' + [10, 20, 30].map(function (m) { return '<button class="ev-rap" data-r="' + r + '" data-n="' + (m * 1e6) + '"' + (tope ? '' : ' disabled') + '>' + m + 'M</button>'; }).join('') + '<button class="comprar mini ev-max" data-r="' + r + '"' + (tope ? '' : ' disabled') + '>' + L('Máx', 'Max') + '</button></div>'; }).join('');
     h += '<p class="nota" id="ev-resumen"></p><button class="comprar verde boton-oleada-grande" data-accion="ev-enviar" id="ev-enviar">🐴 ' + L('Enviar caravana', 'Send caravan') + '</button></div>';
     var en = (estado.envios || []).filter(function (x) { return x.llega > Date.now() && !x.tropas; });
     if (en.length) h += '<div class="carta"><b>' + L('En camino', 'On the way') + '</b>' + en.map(function (x) { return '<div class="pf-fila"><span>' + textoRecursos(x.rec || (function () { var o = {}; o[x.r] = x.n; return o; })()) + ' → ' + escaparHTML(nombreVilla(x.a)) + '</span><small>⏱ ' + fmtTiempo((x.llega - Date.now()) / 1000) + '</small></div>'; }).join('') + '</div>';
@@ -7797,17 +7797,22 @@
       var tot = 0; REC_CARAVANA.forEach(function (r) { tot += envioSel.c[r] || 0; });
       var uso = carretasParaVilla(tot) || { carretilla: 0, carreta: 0, convoy: 0 }, seg = tot ? Math.round(segViaje(aqui, alla) * velDeUso(uso)) : 0, e = $('ev-resumen'), b = $('ev-enviar');
       var txtU = SUMINISTRO_ORDEN.filter(function (t) { return uso[t]; }).map(function (t) { return SUMINISTRO[t].icono + '×' + uso[t]; }).join(' ') || L('solo el Mercado', 'Market only');
-      if (e) e.innerHTML = tot && tot < MIN_ENVIO ? '⚠️ ' + txtMinEnvio() : tot ? '📦 ' + formatoNumero(tot) + ' · ' + txtU + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Mueve las barras o toca Máx.', 'Move the sliders or tap Max.');
+      if (e) e.innerHTML = tot && tot < MIN_ENVIO ? '⚠️ ' + txtMinEnvio() : tot ? '📦 ' + formatoNumero(tot) + ' · ' + txtU + ' · ⏱ ' + L('ida ', 'there ') + fmtTiempo(seg) + ' · ' + L('vuelta ', 'back ') + fmtTiempo(seg) : L('Escribe la cantidad, toca 10M, 20M, 30M o Máx.', 'Type the amount, tap 10M, 20M, 30M or Max.');
       if (b) b.disabled = !tot || tot < MIN_ENVIO || !hayMer; /* v8.52 */
     }
     document.querySelectorAll('#panel .ev-rango').forEach(function (inp) {
       inp.addEventListener('input', function () {
         var r = inp.getAttribute('data-r'), otros = 0; REC_CARAVANA.forEach(function (q) { if (q !== r) otros += envioSel.c[q] || 0; });
         var val = Math.min(+inp.value || 0, Math.max(0, max - otros)); inp.value = val; envioSel.c[r] = val;
-        var lb = document.querySelector('#panel .ev-val[data-r="' + r + '"]'); if (lb) lb.textContent = corto(val);
+        var lb = document.querySelector('#panel .ev-val[data-r="' + r + '"]'); if (lb && document.activeElement !== lb) lb.value = corto(val);
         resumen();
       });
     });
+    /* v8.64: escribir la cantidad a mano (acepta 15000000, 15m, 2.5b, 300k) y botones rápidos 10M 20M 30M */
+    function leerCant(t) { t = String(t || '').trim().toLowerCase().replace(/\s/g, '').replace(',', '.'); var m = t.match(/^([0-9.]+)([kmbt]?)$/); if (!m) return null; var n = parseFloat(m[1]); if (isNaN(n)) return null; return Math.floor(n * ({ '': 1, k: 1e3, m: 1e6, b: 1e9, t: 1e12 })[m[2]]); }
+    function ponerCant(r, n) { var inp = document.querySelector('#panel .ev-rango[data-r="' + r + '"]'); if (!inp) return; inp.value = Math.max(0, Math.min(+inp.max, n)); inp.dispatchEvent(new Event('input')); var lb = document.querySelector('#panel .ev-val[data-r="' + r + '"]'); if (lb) lb.value = corto(envioSel.c[r] || 0); }
+    document.querySelectorAll('#panel .ev-num').forEach(function (nu) { nu.addEventListener('focus', function () { nu.value = envioSel.c[nu.getAttribute('data-r')] || ''; try { nu.select(); } catch (e) {} }); nu.addEventListener('change', function () { var n = leerCant(nu.value); ponerCant(nu.getAttribute('data-r'), n == null ? 0 : n); }); nu.addEventListener('blur', function () { nu.value = corto(envioSel.c[nu.getAttribute('data-r')] || 0); }); nu.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') nu.blur(); }); });
+    document.querySelectorAll('#panel .ev-rap').forEach(function (bq) { bq.addEventListener('click', function (ev) { ev.stopPropagation(); sonar('click'); ponerCant(bq.getAttribute('data-r'), +bq.getAttribute('data-n')); }); });
     document.querySelectorAll('#panel .ev-max').forEach(function (bm) { bm.addEventListener('click', function (ev) { ev.stopPropagation(); var r = bm.getAttribute('data-r'), inp = document.querySelector('#panel .ev-rango[data-r="' + r + '"]'); if (!inp) return; inp.value = inp.max; inp.dispatchEvent(new Event('input')); sonar('click'); }); });
     resumen();
   }

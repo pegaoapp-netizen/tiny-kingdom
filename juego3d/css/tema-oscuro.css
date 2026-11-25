@@ -1600,3 +1600,12 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 /* v8.58: el número rojo va en la esquina del botón Marchar, sin tapar el nombre */
 #dock-procesos [data-dk="marchar"] { position: relative !important; overflow: visible !important; }
 .kc-badge { top: -9px !important; right: -4px !important; left: auto !important; min-width: 17px; height: 17px; font-size: 10.5px; line-height: 15px; z-index: 2; }
+
+/* v8.64: Enviar Recursos: todo en una línea sin deformarse */
+.ev-desl { gap: 4px !important; flex-wrap: nowrap; }
+.ev-desl .ev-r { flex: 0 0 62px !important; font-size: 11.5px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-desl input[type=range] { flex: 1 1 40px !important; min-width: 30px; }
+.ev-desl .ev-num { flex: 0 0 56px; width: 56px; height: 28px; padding: 0 4px; border-radius: 6px; border: 1px solid #8a6a2a; background: #120a03; color: #ffe08a; font: 800 12px system-ui, sans-serif; text-align: right; }
+.ev-desl .ev-rap { flex: 0 0 32px; width: 32px; height: 28px; padding: 0; border-radius: 6px; border: 1px solid #2f6fc0; background: linear-gradient(#3d7ed0, #1f4f94); color: #fff; font: 800 10.5px system-ui, sans-serif; cursor: pointer; }
+.ev-desl .ev-rap:disabled { opacity: .4; }
+.ev-desl .ev-max { flex: 0 0 auto !important; padding: 4px 6px !important; font-size: 11px !important; }
