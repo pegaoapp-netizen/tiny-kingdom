@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.83';
+var VERSION_JUEGO = '8.84';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.83","2026-11-24","Enfermería: muchas más camas; los heridos se quedan hasta que tú los cures y al curarlos sube tu poder (cuenta en el Torneo de Poder).","Infirmary: many more beds; wounded stay until you heal them, and healing raises your power (counts in the Power Tournament)."],
+var NOVEDADES_VER = [["8.84","2026-11-24","Cada edificio tiene su propio color de techo para reconocerlo de un vistazo.","Each building has its own roof color so you can spot it at a glance."],
+  ["8.83","2026-11-24","Enfermería: muchas más camas; los heridos se quedan hasta que tú los cures y al curarlos sube tu poder (cuenta en el Torneo de Poder).","Infirmary: many more beds; wounded stay until you heal them, and healing raises your power (counts in the Power Tournament)."],
   ["8.82","2026-11-24","Fortaleza › Explorar da premios que se notan (recursos según tu castillo, aceleradores, libros, cofres) y los enseña en una ventana.","Fortress › Explore gives real rewards (resources by castle level, speed-ups, books, chests) and shows them."],
   ["8.81","2026-11-24","En el Mundo también sale la barra de marchas con Acelerar cuando van caravanas entre villas.","On the World map the march bar with Speed up also shows while caravans travel."],
   ["8.80","2026-11-24","Las caravanas entre villas se pueden acelerar, de ida y de vuelta.","Caravans between villages can be sped up, going and returning."],
