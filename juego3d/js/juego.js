@@ -9866,9 +9866,9 @@
         h += '<div class="mc-esc"><div class="mc-foto chica">' + fotoHTML(k, TROPAS[k].icono) + '</div><div class="mc-ed"><b>' + N(k) + '</b><small>' + L('Libres ', 'Free ') + formatoNumero(max) + (fuera ? ' · 🏇 ' + formatoNumero(fuera) + L(' en marcha', ' marching') : '') + '</small>' +
           '<input type="range" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div><input class="mc-num" type="number" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div>';
       });
-      if (!a.pve && !a.bot && !ali) h += '</div>' + htmlCarrosAtaque() + '<div>'; /* v8.66: carretas para el botín */
+      var conCarros = !a.pve && !a.bot && !ali; if (conCarros) h += htmlCarrosFilas(); /* v8.67: las carretas van con las tropas, al final */
       var am = totalMarchando();
-      h += '</div><p class="nota mc1-info">🚩 ' + L('Punto de reunión nv ', 'Rally point lv ') + nivelRelevo() + ' · ' + L('marchas: ', 'marches: ') + am + ' / ' + maxMarchas() + (buffActivo('capMarcha') ? ' · 🚩 +25 %' : '') + '</p>';
+      h += '</div>' + (conCarros ? '<p class="mc-carga" id="mc-carga">📦 ' + L('Las carretas cargan el botín: te puedes llevar hasta ', 'Carts carry the loot: you can take up to ') + '<b>' + formatoNumero(capCarros(carrosElegidos())) + '</b></p>' : '') + '<p class="nota mc1-info">🚩 ' + L('Punto de reunión nv ', 'Rally point lv ') + nivelRelevo() + ' · ' + L('marchas: ', 'marches: ') + am + ' / ' + maxMarchas() + (buffActivo('capMarcha') ? ' · 🚩 +25 %' : '') + '</p>';
       return h + '<p id="mc-aviso" class="mc-rojo"></p><div class="mc-botones"><button class="comprar azul" data-mc="guardar">💾 ' + L('Guardar formación', 'Save formation') + '</button><button class="comprar naranja" data-mc="marchar"' + (tt <= 0 ? ' disabled' : '') + '>⚔️ ' + L('Marchar', 'March') + '</button></div>';
     }
     function htmlMarcha() {
@@ -9935,6 +9935,13 @@
     }
     /* v8.66 (dueño): EL BOTÍN LO CARGAN LAS CARRETAS. Los soldados no cargan nada: eliges cuántas carretas de cada tipo van y
        solo te puedes llevar lo que quepa en ellas (Ligera 5.000, Suministro 25.000, Real 100.000 cada una). */
+    function htmlCarrosFilas() {
+      var lib = libresVillaT(), c = carrosElegidos();
+      return SUMINISTRO_ORDEN.filter(function (t) { return (lib[t] || 0) > 0 || (cuentaSum(t) || 0) > 0; }).map(function (t) { var su = SUMINISTRO[t], max = lib[t] || 0, n = Math.min(c[t] || 0, max);
+        return '<div class="mc-esc mc-esc-carro"><div class="mc-foto chica">' + '<img src="iconos/ui/' + su.img + '.webp" alt="">' + '</div><div class="mc-ed"><b>' + L(su.es, su.en) + '</b><small>' + L('Libres ', 'Free ') + formatoNumero(max) + ' · 📦 ' + formatoNumero(CARGA_VILLA[t]) + ' ' + L('c/u', 'each') + '</small>' +
+          '<input type="range" min="0" max="' + max + '" value="' + n + '" data-carro="' + t + '"></div><input class="mc-num" type="number" min="0" max="' + max + '" value="' + n + '" data-carro="' + t + '"></div>';
+      }).join('');
+    }
     function htmlCarrosAtaque() {
       var lib = libresVillaT(), c = carrosElegidos(), cap = capCarros(c);
       return '<div class="mc-carros"><b>' + iconoCarreta() + ' ' + L('Carretas para el botín', 'Carts for the loot') + '</b><small>' + L('Los soldados no cargan nada: sin carretas no te llevas recursos.', 'Soldiers carry nothing: without carts you take no resources.') + '</small>' +
@@ -9950,6 +9957,7 @@
         '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
     }
     function pintar() {
+      setTimeout(function () { d.querySelectorAll('[data-carro]').forEach(function (inp) { inp.addEventListener('input', function () { var t = inp.getAttribute('data-carro'), mx = +inp.max || 0, n = Math.max(0, Math.min(mx, Math.floor(+inp.value || 0))); estado.carrosAtaque = estado.carrosAtaque || {}; estado.carrosAtaque[t] = n; d.querySelectorAll('[data-carro="' + t + '"]').forEach(function (o) { if (o !== inp) o.value = n; }); var cg = $('mc-carga'); if (cg) cg.innerHTML = '📦 ' + L('Las carretas cargan el botín: te puedes llevar hasta ', 'Carts carry the loot: you can take up to ') + '<b>' + formatoNumero(capCarros(carrosElegidos())) + '</b>'; }); }); }, 0); /* v8.67 */
       setTimeout(function () { d.querySelectorAll('.mc-carro').forEach(function (inp) { inp.addEventListener('input', function () { estado.carrosAtaque = estado.carrosAtaque || {}; estado.carrosAtaque[inp.dataset.t] = Math.max(0, Math.min(+inp.max || 0, Math.floor(+inp.value || 0))); var cg = $('mc-carga'); if (cg) cg.innerHTML = '📦 ' + L('Te puedes llevar hasta ', 'You can take up to ') + '<b>' + formatoNumero(capCarros(carrosElegidos())) + '</b>'; }); inp.addEventListener('change', function () { inp.value = (estado.carrosAtaque || {})[inp.dataset.t] || 0; }); }); }, 0); /* v8.66 */
       d.innerHTML = '<div class="mc-caja">' + (vista === 'unica' ? htmlUnica() : vista === 'heroes' ? htmlHeroes() : htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha())) + '</div>';
       var hs = d.querySelector('#mc-heroe'); if (hs) hs.addEventListener('change', function () { sel.heroe = this.value || null; pintar(); });
