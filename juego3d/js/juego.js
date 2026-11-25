@@ -9871,7 +9871,7 @@
       var ali = estado.alianza && a.alianza === estado.alianza;
       var h = '<div class="mc-cab"><b>' + L('Marcha', 'March') + '</b><small>→ ' + escaparHTML(a.nombre) + (a.x !== undefined ? ' · X ' + a.x + ' · Y ' + a.y : '') + '</small><button class="mc-x" data-mc="cerrar">✕</button></div>' +
         '<div class="mc1-arriba"><div class="mc1-heroe"><span>🦸 ' + L('Héroe', 'Hero') + '</span><button class="mc1-hbtn" data-mc="cambiar">' + (sel.heroe ? retrato(sel.heroe) + '<span class="mc1-hn"><b>' + NH(sel.heroe) + '</b><small>' + lineaHeroe2(sel.heroe) + '</small></span>' : '<span class="mc1-hn"><b>' + L('Sin héroe', 'No hero') + '</b><small>' + (mios.length ? L('Toca para elegir', 'Tap to choose') : L('No tienes héroes', 'No heroes')) + '</small></span>') + '<span class="mc1-flecha">▾</span></button></div>' +
-        '<div class="mc1-datos"><span>👥 <b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a, sel.heroe || null) / 1000) + '</b></span></div></div>' +
+        '<div class="mc1-datos"><span class="mc1-tienes">🛡️ ' + L('Tienes ', 'You have ') + '<b>' + corto(tipos.reduce(function (s0, k) { return s0 + libresParaMarcha(k); }, 0)) + '</b></span><span>👥 ' + L('Mandas ', 'Send ') + '<b id="mc-total">' + formatoNumero(tt) + '</b> / ' + corto(cap) + '</span><span>⏱ <b>' + fmtTiempo(tiempoMarcha(a, sel.heroe || null) / 1000) + '</b></span></div></div>' +
         '<div class="mc1-otros"><button class="comprar mini" data-mc="tipo" data-t="explorar">🔍 ' + L('Explorar', 'Scout') + '</button>' + (ali ? '<button class="comprar mini" data-mc="tipo" data-t="reforzar">🛡️ ' + L('Reforzar', 'Reinforce') + '</button>' : '') +
         '<button class="comprar mini" data-mc="todo">' + L('Todas', 'All') + '</button><button class="comprar mini" data-mc="nada">' + L('Ninguna', 'None') + '</button></div>' +
         htmlPotenciadores() +
@@ -11088,12 +11088,15 @@
   function mostrarRecompensas(titulo, items, alRecoger) {
     var v = $('recompensas'); if (v) v.remove();
     var d = document.createElement('div'); d.id = 'recompensas';
-    d.innerHTML = '<div class="rc-caja"><div class="rc-cinta">🎁 ' + escaparHTML(titulo) + '</div><p class="nota"><b>' + L('Recibiste:', 'You got:') + '</b></p><div class="rc-lista">' +
+    d.innerHTML = '<div class="rc-caja"><button class="rc-x" id="rc-x" aria-label="' + L('Cerrar', 'Close') + '">✕</button><div class="rc-cinta">🎁 ' + escaparHTML(titulo) + '</div><p class="nota"><b>' + L('Recibiste:', 'You got:') + '</b></p><div class="rc-lista">' +
       items.map(function (it, i) { return '<div class="rc-item" style="animation-delay:' + (i * 0.28) + 's"><span class="rc-ico">' + it.ico + '</span><b>+' + formatoNumero(it.n) + '</b><small>' + escaparHTML(it.nom) + '</small></div>'; }).join('') +
       '</div><button class="comprar verde boton-oleada-grande" id="rc-ok">' + L('Recoger', 'Collect') + '</button></div>';
     document.body.appendChild(d); sonar('gemas');
     items.forEach(function (it, i) { setTimeout(function () { sonar('moneda'); }, 200 + i * 280); });
-    $('rc-ok').addEventListener('click', function () { sonar('click'); d.remove(); if (alRecoger) alRecoger(); actualizarHUD(); });
+    /* v8.99 (dueño): ya no bloquea la pantalla: el ✕ o tocar fuera también cierran (y te llevas el premio igual) */
+    var hecho = false; function recoger() { if (hecho) return; hecho = true; sonar('click'); d.remove(); if (alRecoger) alRecoger(); actualizarHUD(); }
+    $('rc-ok').addEventListener('click', recoger); $('rc-x').addEventListener('click', recoger);
+    d.addEventListener('click', function (ev) { if (ev.target === d) recoger(); });
   }
   function textoPremio(p) {
     var partes = [];
@@ -13145,7 +13148,7 @@
     $('pantalla').classList.remove('oculto');
     cerrarPanel();
   }
-  function ocultarPantalla() { $('pantalla').classList.add('oculto'); enMenu = false; cambiarPausa(false); }
+  function ocultarPantalla() { $('pantalla').classList.remove('bk-login', 'bk-crear'); $('pantalla').classList.add('oculto'); enMenu = false; cambiarPausa(false); }
 
   var habiaUsuario = false, duenoPorCuenta = false, modoInvitado = !!leerPref().invitado, modoCrear = false, partidaNube = null, cargandoNube = false, errorCuenta = '';
   function botonIdioma() {

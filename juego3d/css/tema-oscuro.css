@@ -1685,3 +1685,16 @@ html body #pantalla.bk-login #pantalla-botones .comprar.bk-idioma::before { cont
 html body #pantalla.bk-login #pantalla-botones .comprar:active { transform: translateY(1px); }
 html body #pantalla.bk-login #pantalla-version { color: #8c826c !important; }
 @media (min-aspect-ratio: 3/4) { html body #pantalla.bk-login .tarjeta { margin-top: calc(100vh * 0.26) !important; } }
+
+/* v8.99: el cofre diario (y cualquier premio) se cierra con ✕ */
+#recompensas .rc-caja { position: relative; }
+#recompensas .rc-x { position: absolute; top: 8px; right: 8px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid rgba(255,225,150,.6); background: rgba(10,8,6,.7); color: #ffe9b0; font: 700 18px/1 system-ui, sans-serif; display: grid; place-items: center; cursor: pointer; padding: 0; }
+
+/* v8.99 (dueño): el botón «Actualizar» no tapa las ventanas (Ajustes › Idioma): se esconde mientras hay una ventana abierta */
+html body:has(#panel:not(.oculto)) #aviso-version { display: none !important; }
+
+/* v8.99 (dueño): Ajustes sin cajas oscuras vacías (detrás de Cerrar sesión, Idioma y Calidad) */
+#panel-cuerpo .carta .stats:has(> button[data-accion="cerrar-sesion"]), #panel-cuerpo .carta .stats:has(> button[data-accion="idioma"]), #panel-cuerpo .carta .stats:has(> button[data-accion="calidad"]) { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+
+/* v8.99: la pantalla de entrar se cierra de verdad al jugar (antes el diseño nuevo la dejaba encima) */
+html body #pantalla.bk-login.oculto, html body #pantalla.oculto { display: none !important; }
