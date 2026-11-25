@@ -1,0 +1,13 @@
+/* v9.28 · Barra de abajo en el móvil: cada etiqueta en una sola línea y dentro de su botón, sin cambiar la altura ni los iconos.
+   Causa del fallo: «Campaña» (52 px) e «Inventario» (55 px) no cabían en botones de 43-47 px a 11 px y pisaban al vecino.
+   Arreglo: letra de 10 px (9,5 px en pantallas muy estrechas) y los botones de nombre largo toman un poco más de ancho
+   (flex «auto») y los cortos un poco menos. Se usa «span.txt» porque la regla de tema-oscuro.css (v6.73) pesa más que «.txt». */
+@media (max-width: 520px) {
+  html body.barra-oro #abajo > button.pestana, html body.barra-oro #abajo > button#btn-construir, html body.barra-oro #abajo > button#btn-vista { flex: 1 1 auto !important; min-width: 0 !important; }
+  html body.barra-oro #abajo > button span.txt, html body.barra-oro #abajo > button small {
+    font-size: 10px !important; letter-spacing: -0.1px !important; white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important;
+  }
+}
+@media (max-width: 370px) {
+  html body.barra-oro #abajo > button span.txt, html body.barra-oro #abajo > button small { font-size: 9.5px !important; letter-spacing: -0.2px !important; }
+}

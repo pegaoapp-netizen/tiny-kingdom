@@ -47,18 +47,21 @@ JS_LIMPIAR = """() => {
 }"""
 JS_BARRA = """() => {
   var a = document.getElementById('abajo'); if (!a) return null;
-  var r = a.getBoundingClientRect(), cortadas = [], partidas = [];
+  var r = a.getBoundingClientRect(), cortadas = [], partidas = [], desbordan = [], letra = 99;
   a.querySelectorAll(':scope > button').forEach(function (b) {
     var t = b.querySelector('.txt, small'); if (!t || !b.offsetParent) return;
     var txt = (t.innerText || '').trim();
     if (t.scrollWidth > t.clientWidth + 1) cortadas.push(txt);
+    var rg = document.createRange(); rg.selectNodeContents(t); var rt = rg.getBoundingClientRect(), rb = b.getBoundingClientRect();
+    if (rt.left < rb.left - 0.5 || rt.right > rb.right + 0.5) desbordan.push(txt);  // el texto se sale de su botón (pisa al vecino)
+    letra = Math.min(letra, parseFloat(getComputedStyle(t).fontSize) || 99);
     var lh = parseFloat(getComputedStyle(t).lineHeight) || 12;
     if (t.getBoundingClientRect().height > lh * 1.5 && txt.indexOf(' ') < 0) partidas.push(txt);
   });
   var bs = [].slice.call(a.querySelectorAll(':scope > button')).filter(function (b) { return b.offsetParent; });
   var solapes = 0;
   for (var i = 1; i < bs.length; i++) if (bs[i].getBoundingClientRect().left < bs[i - 1].getBoundingClientRect().right - 1) solapes++;
-  return { alto: Math.round(r.height), arriba: Math.round(r.top), botones: bs.length, cortadas: cortadas, palabrasPartidas: partidas, solapes: solapes };
+  return { alto: Math.round(r.height), arriba: Math.round(r.top), botones: bs.length, cortadas: cortadas, palabrasPartidas: partidas, desbordan: desbordan, solapes: solapes, letraMinPx: letra };
 }"""
 JS_RENDER = """() => { var x = window.__tkExtras; if (!x || !x.render) return null; var i = x.render.info;
   return { llamadas: i.render.calls, triangulos: i.render.triangles, texturas: i.memory.textures, geometrias: i.memory.geometries,
@@ -212,8 +215,8 @@ def html(salida, inf):
     filas = []
     for n, d in inf.get('pantallas', {}).items():
         b = d.get('barra') or {}
-        filas.append('<h2>%s</h2><p>Barra: %s px · cortadas %s · partidas %s · solapes %s</p><div class="f">' % (
-            n, b.get('alto'), b.get('cortadas'), b.get('palabrasPartidas'), b.get('solapes')))
+        filas.append('<h2>%s</h2><p>Barra: %s px · letra %s px · cortadas %s · partidas %s · se salen %s · solapes %s</p><div class="f">' % (
+            n, b.get('alto'), b.get('letraMinPx'), b.get('cortadas'), b.get('palabrasPartidas'), b.get('desbordan'), b.get('solapes')))
         for e, v in d['escenas'].items():
             c = inf.get('comparacion', {}).get(v['captura'], {})
             r = v.get('render') or {}
@@ -238,11 +241,13 @@ async def main():
     ap.add_argument('--escenas', default=','.join(ESCENAS))
     ap.add_argument('--pruebas', default='', help='calidad,espadachin')
     ap.add_argument('--comparar', default='')
+    ap.add_argument('--parametros', default='', help='se añaden a la dirección, p. ej. sinLuciernagas=1')
     ap.add_argument('--chrome', default=os.environ.get('BK_CHROME', ''))
     a = ap.parse_args()
     from playwright.async_api import async_playwright
     os.makedirs(a.salida, exist_ok=True)
     srv, url = servidor(a.carpeta)
+    if a.parametros: url += '?' + a.parametros
     inf = {'fecha': time.strftime('%Y-%m-%d %H:%M'), 'carpeta': a.carpeta, 'errores': [], 'fallos': []}
     async with async_playwright() as pw:
         opc = {'args': ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist']}
@@ -255,6 +260,8 @@ async def main():
                 b = d.get('barra') or {}
                 if b.get('palabrasPartidas'): inf['fallos'].append('%s: palabras partidas en la barra %s' % (n, b['palabrasPartidas']))
                 if b.get('solapes'): inf['fallos'].append('%s: %d botones de la barra se solapan' % (n, b['solapes']))
+                if b.get('desbordan'): inf['fallos'].append('%s: etiquetas que se salen de su botón %s' % (n, b['desbordan']))
+                if b.get('letraMinPx', 99) < 9: inf['fallos'].append('%s: letra de la barra demasiado pequeña (%.1f px; mínimo 9)' % (n, b['letraMinPx']))
         if 'calidad' in a.pruebas:
             res, errs, fallos = await prueba_calidad(nav, url)
             inf['calidad'] = res; inf['errores'] += errs; inf['fallos'] += fallos

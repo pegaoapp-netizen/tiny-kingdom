@@ -305,7 +305,7 @@
   [[0, 9, 0, 22], [-9, 3, -6, 12]].forEach(function (q) { var l = new THREE.PointLight(0xff9a3c, 0, q[3], 1.6); l.position.set(q[0], q[1], q[2]); escena.add(l); lucesNoche.push(l); });
   var dirLuna = new V3();
   var brumaCiudad = window.NOCHE ? NOCHE.bruma(escena, 170, 22, 0.8) : null;
-  var luciernagasCiudad = null;
+  var LUGARES_LUCIERNAGAS = []; // v9.28: posiciones (jardines, árboles y río); las dibuja js/tk-luciernagas.js
   var cTmp = new THREE.Color();
   function mezcla(lista, k, d) { return cTmp.copy(lista[0]).lerp(lista[1], k).lerp(lista[2], d * (1 - k * 0.5)); }
   var nocheActual = 0;
@@ -323,7 +323,6 @@
       camara.getWorldDirection(dirLuna); dirLuna.y = 0; dirLuna.normalize(); dirLuna.y = 0.32; domo.lunaDir.value.copy(dirLuna.normalize());
     }
     if (brumaCiudad) brumaCiudad.visible = k > 0.05;
-    if (luciernagasCiudad) { luciernagasCiudad.visible = k > 0.05 && !/[?&]sinLuciernagas=1(?:&|$)/.test(location.search); luciernagasCiudad.material.opacity = k * 0.9; }
     sol.color.copy(mezcla(CIELO.sol, k, d));
     sol.intensity = (1.12 - k * 0.6 - d * 0.14) * (1 + (VISTA.luz - 1) * (1 - k)); // v7.67: de día más claro
     hemi.color.copy(mezcla(CIELO.hemiCielo, k, d));
@@ -953,23 +952,20 @@
     }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
-    // Luciérnagas: semilla independiente; no altera la distribución de otros objetos.
-    if (window.NOCHE) {
-      var puntos = [], sem = 927;
-      function azarL() { sem = (Math.imul(1664525, sem) + 1013904223) >>> 0; return sem / 4294967296; }
-      function puntoL(x, z, y) { if (Math.hypot(x, z) > COLINA.foso1 + 3) puntos.push([x, y + 0.8 + azarL() * 1.8, z]); }
+    // v9.28 (idea de ChatGPT): sitios para las luciérnagas, con semilla propia (no cambia la colocación de nada más).
+    // Solo se calculan aquí; el dibujo, el movimiento y cuándo se ven van en js/tk-luciernagas.js
+    (function () {
+      var sem = 927, azarL = function () { sem = (Math.imul(1664525, sem) + 1013904223) >>> 0; return sem / 4294967296; };
+      var puntoL = function (x, z, y) { if (Math.hypot(x, z) > COLINA.foso1 + 3) LUGARES_LUCIERNAGAS.push([x, y + 0.8 + azarL() * 1.8, z]); };
       BARRIOS.lista.forEach(function (r) {
         [-1, 1].forEach(function (a) { [-1, 1].forEach(function (b) {
           var x = -(r.b + b * (r.hb - 1.6)), z = r.a + a * (r.ha - 1.6);
-          for (var j = 0; j < 7; j++) puntoL(x + azarL()*2-1, z + azarL()*2-1, alturaCiudad(x,z));
+          for (var j = 0; j < 7; j++) puntoL(x + azarL() * 2 - 1, z + azarL() * 2 - 1, alturaCiudad(x, z));
         }); });
       });
-      arboles.forEach(function (a) { if (Math.hypot(a.x,a.z) < 95 && azarL() < 0.55) puntoL(a.x+2, a.z+2, a.y); });
-      for (var j = 0; j < 150; j++) { var p = RIO.curva.getPointAt(0.25 + azarL()*0.5); puntoL(p.x, p.z, altura(p.x,p.z)+0.16); }
-      // PointsMaterial de Three r149 ya multiplica size por pixelRatio y atenúa por profundidad.
-      luciernagasCiudad = NOCHE.puntosLuz(puntos, 0xd6ff8a, 1.15, 0);
-      luciernagasCiudad.visible = false; escena.add(luciernagasCiudad);
-    }
+      arboles.forEach(function (a) { if (Math.hypot(a.x, a.z) < 95 && azarL() < 0.55) puntoL(a.x + 2, a.z + 2, a.y); });
+      for (var j = 0; j < 150; j++) { var p = RIO.curva.getPointAt(0.25 + azarL() * 0.5); puntoL(p.x, p.z, altura(p.x, p.z) + 0.16); }
+    })();
 
     // v7.71 prototipo: los detalles chicos solo se dibujan de cerca (niveles de detalle)
     // v7.69: CASAS MEDIEVALES de relleno en los huecos de la villa (como un reino de verdad): no se tocan ni tapan parcelas
@@ -14664,7 +14660,8 @@
     calidad: function () { return calidad; },
     ponerCalidad: function (q) { if (q !== 'alta' && q !== 'baja') return; calidad = q; aplicarCalidad(); guardarPreferencias(); },
     pref: function () { return leerPref(); }, guardarPref: function (k, v) { try { var p = leerPref(); p[k] = v; localStorage.setItem(CLAVE_PREF, JSON.stringify(p)); } catch (e) {} },
-    consejo: function (t) { consejoTemporal(t); }, L: L
+    consejo: function (t) { consejoTemporal(t); }, L: L,
+    lugaresLuciernagas: function () { return LUGARES_LUCIERNAGAS; } // v9.28: para js/tk-luciernagas.js (solo lectura)
   };
   window.__juego = { mundoPrueba: function () { if (!enMundo) abrirMundo(); return M3 && M3.columnas ? Object.keys(M3.columnas).map(function (k) { var g = M3.columnas[k]; return k + ' ' + (g.userData.txt || '') + ' @' + g.position.x.toFixed(1) + ',' + g.position.z.toFixed(1); }) : null; }, irCeldaPrueba: function (x, y) { var c = celdaDe(x, y); irACeldaMundo(c.x, c.y); }, fichaTropa: function (t) { var c = edificiosDe('cuartel')[0]; if (!c) return 'sin cuartel'; pestCuartel = 'entrenar'; tropaDetalle = t || null; abrirPanelEdificio(c.i); return faltaTropa(t || 'espadachin'); }, rankingT: function (t) { abrirPanelRanking(t); }, faltaObraP: function (q, n) { return faltaObra(q, n); }, alPrueba: function (c, tab, sec, sub) { alCache = c; estado.alianza = c.al.tag; alTab = tab || 'info'; alSeccion = sec || ''; alSubMuro = sub || 'muro'; abrirPanel(T('p_alianza'), '', { tipo: 'alianza' }); pintarHubAlianza(); }, alInfPrueba: function (d) { alInf.datos = d; alInf.t = Date.now(); }, ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },

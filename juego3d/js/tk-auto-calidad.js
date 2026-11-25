@@ -32,5 +32,5 @@
   }
   document.addEventListener('visibilitychange', reiniciar);
   window.TKRendimiento = { informe: function () { return { ultima: ultima && Object.assign({}, ultima), cambios: cambios, muestras: muestras.map(function (m) { return Object.assign({}, m); }) }; } };
-  window.TKExtras = { cadaFotograma: function (dt) { medir(); if (window.TKClima) window.TKClima.cadaFotograma(dt); } };
+  window.TKExtras = { cadaFotograma: function (dt) { medir(); if (window.TKClima) window.TKClima.cadaFotograma(dt); if (window.TKLuciernagas) window.TKLuciernagas.cadaFotograma(dt); } }; // v9.28: luciérnagas
 })();
