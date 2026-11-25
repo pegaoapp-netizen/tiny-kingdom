@@ -11837,19 +11837,27 @@
     reabrirPanel();
   }
   // v6.88: «Uso en masa»: abrir muchos cofres a la vez con un deslizador de 1 a Todos
-  function abrirUsoMasa(k) {
+  function abrirUsoMasa(k, iCompra) { /* v9.07: con iCompra (índice de TIENDA) sirve para COMPRAR varios con gemas */
     var v = $('uso-masa'); if (v) v.remove();
-    var max = estado.mochila[k] || 0; if (!max) return;
+    var it = iCompra != null ? TIENDA[iCompra] : null, tiene = estado.mochila[k] || 0;
+    var max = it ? (estado.gemasInfinitas ? 999 : Math.min(999, Math.floor((estado.gemas || 0) / it.gemas))) : tiene;
+    if (it && max < 1) { pagar(0, it.gemas); return; } /* avisa de que faltan gemas */
+    if (!max) return;
     var d = document.createElement('div'); d.id = 'uso-masa';
-    d.innerHTML = '<div class="um-caja"><button class="um-x" id="um-x">✕</button><h3>' + L('Uso en masa', 'Bulk use') + '</h3>' +
-      '<div class="um-cab"><span class="um-ico">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(max) + '</small></div></div>' +
+    d.innerHTML = '<div class="um-caja"><button class="um-x" id="um-x">✕</button><h3>' + (it ? L('Comprar', 'Buy') : L('Uso en masa', 'Bulk use')) + '</h3>' +
+      '<div class="um-cab"><span class="um-ico">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(tiene) + (it ? ' · 💎 ' + formatoNumero(it.gemas) + L(' cada uno', ' each') : '') + '</small></div></div>' +
       '<div class="um-trae"><b>' + L('Qué trae (cada uno):', 'What is inside (each):') + '</b>' + (htmlContenido(k) || '<p>' + escaparHTML(D(k)) + '</p>') + '</div>' +
       '<div class="um-cant"><button class="um-menos" id="um-menos">−</button><input id="um-n" type="number" inputmode="numeric" min="1" max="' + max + '" value="1"><button class="um-mas" id="um-mas">+</button></div>' +
-      '<div class="um-desl"><span>1</span><input id="um-r" type="range" min="1" max="' + max + '" value="1"><button class="um-todos" id="um-todos">' + L('Todos', 'All') + '</button></div>' +
-      '<button class="um-usa" id="um-usa">' + L('Usa', 'Use') + ' <b id="um-cuenta">1</b></button></div>';
+      '<div class="um-desl"><span>1</span><input id="um-r" type="range" min="1" max="' + max + '" value="1"><button class="um-todos" id="um-todos">' + (it ? L('Máx', 'Max') : L('Todos', 'All')) + '</button></div>' +
+      (it ? '<p class="um-total" id="um-total"></p>' : '') +
+      '<button class="um-usa" id="um-usa">' + (it ? L('Comprar', 'Buy') : L('Usa', 'Use')) + ' <b id="um-cuenta">1</b></button></div>';
     document.body.appendChild(d);
     var inp = $('um-n'), rg = $('um-r');
-    function poner(n) { n = Math.max(1, Math.min(max, Math.floor(+n || 1))); inp.value = n; rg.value = n; $('um-cuenta').textContent = formatoNumero(n); }
+    function poner(n) {
+      n = Math.max(1, Math.min(max, Math.floor(+n || 1))); inp.value = n; rg.value = n; $('um-cuenta').textContent = formatoNumero(n);
+      if (it) $('um-total').innerHTML = L('Total: ', 'Total: ') + '<b>' + formatoNumero(n * it.gemas) + ' 💎</b>' + (estado.gemasInfinitas ? '' : ' · ' + L('te quedan ', 'left: ') + formatoNumero((estado.gemas || 0) - n * it.gemas) + ' 💎');
+    }
+    if (it) poner(1);
     inp.addEventListener('input', function () { if (inp.value !== '') poner(inp.value); });
     inp.addEventListener('blur', function () { poner(inp.value); });
     rg.addEventListener('input', function () { poner(rg.value); });
@@ -11858,7 +11866,7 @@
     $('um-todos').addEventListener('click', function () { poner(max); sonar('click'); });
     $('um-x').addEventListener('click', function () { sonar('click'); d.remove(); });
     d.addEventListener('click', function (ev) { if (ev.target === d) d.remove(); });
-    $('um-usa').addEventListener('click', function () { var n = +inp.value; d.remove(); if (!esCofre(k) && masaEfecto(k)) usarEfectoEnMasa(k, n); else usarEnMasa(k, n); });
+    $('um-usa').addEventListener('click', function () { var n = +inp.value; d.remove(); if (it) comprarTienda(iCompra, n); else if (!esCofre(k) && masaEfecto(k)) usarEfectoEnMasa(k, n); else usarEnMasa(k, n); });
   }
   function usarEnMasa(k, n) {
     var o = OBJETOS[k]; n = Math.max(1, Math.min(estado.mochila[k] || 0, Math.floor(+n || 1)));
@@ -11912,8 +11920,9 @@
     return l;
   }
   /* v8.72: objetos que se pueden usar MUCHOS de golpe (además de los cofres): carretas, VIP, fichas, amatista, paquetes de fichas y potenciadores por horas */
-  var EFECTOS_MASA = { carreta: 1, vip: 1, fichas: 1, amatista: 1 };
-  function masaEfecto(k) { var o = OBJETOS[k] || {}; if (o.fichasPack) return true; if (!o.efecto) return false; if (EFECTOS_MASA[o.efecto]) return true; return !!(o.horas && o.efecto !== 'cosecha' && NOM_BUFF[o.efecto]); }
+  var EFECTOS_MASA = { carreta: 1, vip: 1, fichas: 1, amatista: 1, expHeroe: 1, megafono: 1, cosecha: 1 }; /* v9.07: + energía de héroe, megáfono, cosecha */
+  function tropasGrandes(o) { return !!(o.tropas && Object.keys(o.tropas).some(function (t) { return o.tropas[t] > 20; })); }
+  function masaEfecto(k) { var o = OBJETOS[k] || {}; if (o.fichasPack || tropasGrandes(o)) return true; if (!o.efecto) return false; if (EFECTOS_MASA[o.efecto]) return true; return !!(o.horas && o.efecto !== 'cosecha' && NOM_BUFF[o.efecto]); }
   function usarEfectoEnMasa(k, n) {
     var o = OBJETOS[k]; n = Math.max(1, Math.min(estado.mochila[k] || 0, Math.floor(+n || 1))); if (!(estado.mochila[k] > 0)) return;
     var msg = '';
@@ -11922,6 +11931,15 @@
     else if (o.efecto === 'vip') { vipSumar(o.n * n); msg = '👑 VIP +' + formatoNumero(o.n * n) + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
     else if (o.efecto === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n * n; msg = '🪙 +' + formatoNumero(o.n * n) + ' ' + L('fichas', 'tokens'); }
     else if (o.efecto === 'amatista') { sumarAmatista(o.n * n); msg = '🔮 +' + formatoNumero(o.n * n) + ' ' + L('Amatista rúnica', 'Runic amethyst'); }
+    else if (tropasGrandes(o)) { var ntR = 0; Object.keys(o.tropas).forEach(function (t) { reserva()[t] = (reserva()[t] || 0) + o.tropas[t] * n; ntR += o.tropas[t] * n; }); msg = '⚔️ ' + L('¡Llegaron ' + formatoNumero(ntR) + ' tropas!', formatoNumero(ntR) + ' troops arrived!'); }
+    else if (o.efecto === 'expHeroe') { var h = liderActual() || Object.keys(estado.heroes || {})[0]; if (!h) { consejoTemporal(L('Todavía no tienes héroes.', 'You have no heroes yet.')); sonar('error'); return; } darExp(h, o.n * n); msg = '⚡ ' + NH(h) + ' +' + formatoNumero(o.n * n) + ' EXP'; }
+    else if (o.efecto === 'megafono') { estado.megafono = (estado.megafono || 0) + o.n * n; msg = '📣 ' + L('Tus próximos ', 'Your next ') + estado.megafono + L(' mensajes del chat Global saldrán destacados.', ' Global chat messages will stand out.'); }
+    else if (o.efecto === 'cosecha') {
+      var tot = {}; slots.forEach(function (sl) { if (sl.edificio && esCampo(sl.edificio.tipo)) { var r = EDIFICIOS[sl.edificio.tipo].recurso; tot[r] = (tot[r] || 0) + ritmoCampo(sl) * o.horas * 3600 * n; } });
+      if (!Object.keys(tot).length) { consejoTemporal(L('No tienes campos que produzcan.', 'You have no producing fields.')); sonar('error'); return; }
+      Object.keys(tot).forEach(function (r) { tot[r] = Math.floor(tot[r]); sumarRecurso(r, tot[r]); });
+      estado.mochila[k] -= n; guardar(true); actualizarHUD(); reabrirPanel(); mostrarRecompensas(N(k) + (n > 1 ? ' ×' + formatoNumero(n) : ''), premioAItems(tot)); return;
+    }
     else if (o.horas && NOM_BUFF[o.efecto]) { var b = buffs(); b[o.efecto] = Math.max(Date.now(), b[o.efecto] || 0) + o.horas * 3600000 * n; msg = L(NOM_BUFF[o.efecto][0], NOM_BUFF[o.efecto][1]) + ' — ' + fmtTiempo((b[o.efecto] - Date.now()) / 1000); }
     else return;
     estado.mochila[k] -= n; sonar('magia'); consejoTemporal(msg); guardar(true); actualizarHUD(); reabrirPanel();
@@ -12080,14 +12098,17 @@
   }
   function darFichasPack(fp) { if (fp.azar) estado.fichas = (estado.fichas || 0) + fp.azar; if (fp.ruleta) estado.fichasRul = (estado.fichasRul || 0) + fp.ruleta; }
   function textoFichasPack(fp) { return [fp.azar ? '🪙 +' + fp.azar + ' ' + L('fichas de Azar', 'Lucky tokens') : '', fp.ruleta ? '🎡 +' + fp.ruleta + ' ' + L('fichas de Ruleta', 'Wheel tokens') : ''].filter(Boolean).join(' · '); }
-  function comprarTienda(i) {
-    var it = TIENDA[i];
-    if (!it || !pagar(0, it.gemas)) return;
+  function comprarTienda(i, n) {
+    var it = TIENDA[i]; if (!it) return;
+    if (n == null) { abrirUsoMasa(it.id, i); return; } /* v9.07: primero eliges cuántos */
+    n = Math.max(1, Math.min(999, Math.floor(+n || 1)));
+    var ok; gemasOk = true; try { ok = pagar(0, it.gemas * n); } finally { gemasOk = false; }
+    if (!ok) return;
     var fp = (OBJETOS[it.id] || {}).fichasPack; // v8.19
-    if (fp) { darFichasPack(fp); sonar('moneda'); consejoTemporal('✅ ' + N(it.id) + ': ' + textoFichasPack(fp)); guardar(true); reabrirPanel(); return; }
-    estado.mochila[it.id] = (estado.mochila[it.id] || 0) + 1;
+    if (fp) { for (var q = 0; q < n; q++) darFichasPack(fp); sonar('moneda'); consejoTemporal('✅ ' + N(it.id) + (n > 1 ? ' ×' + n : '') + ': ' + textoFichasPack(fp) + (n > 1 ? ' ×' + n : '')); guardar(true); reabrirPanel(); return; }
+    estado.mochila[it.id] = (estado.mochila[it.id] || 0) + n;
     sonar('moneda');
-    consejoTemporal(T('comprado', { n: N(it.id) }));
+    consejoTemporal(T('comprado', { n: N(it.id) + (n > 1 ? ' ×' + formatoNumero(n) : '') }));
     guardar(true);
     reabrirPanel();
   }

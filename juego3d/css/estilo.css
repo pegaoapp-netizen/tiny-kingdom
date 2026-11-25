@@ -2003,6 +2003,7 @@ html body #panel#panel.desde-abajo.rul-panel { max-height: 66vh !important; }
 #uso-masa .um-desl input { flex: 1; accent-color: #2f6fd0; height: 28px; }
 #uso-masa .um-todos { padding: 8px 12px; border-radius: 10px; border: 2px solid #5a3410; background: #f0c24a; font: 900 15px system-ui; color: #3a2610; }
 #uso-masa .um-usa { display: block; width: 100%; padding: 13px; border-radius: 12px; border: 2px solid #163e7a; background: linear-gradient(180deg, #4f94ef, #2459b4); color: #fff; font: 900 21px system-ui; box-shadow: 0 3px 0 #163e7a; }
+#uso-masa .um-total { margin: 6px 0 10px; text-align: center; font-size: 16px; font-weight: 800; color: #5a3410; } #uso-masa .um-total b { color: #7a2fa8; }
 html body #uso-masa .um-cant input { background: #fffaf0 !important; color: #3a2610 !important; -webkit-text-fill-color: #3a2610; }
 
 /* ===== v6.89: Ruleta como el timón de la Capitana (dibujo de Maikel) ===== */
