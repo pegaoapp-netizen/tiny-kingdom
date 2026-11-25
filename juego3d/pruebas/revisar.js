@@ -12,6 +12,8 @@
 //  5. Que cada tropa tenga costo, comida, tiempo, vida y daño.
 //  6. Que los textos en español e inglés tengan las mismas claves.
 //  7. Que los archivos que carga index.html existan.
+// 10. Que ninguna función que se llama falte (v8.99).
+// 11. Que ninguna ventana quede encima sin poder esconderse (v8.99).
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const RAIZ = path.join(__dirname, '..');
@@ -114,6 +116,56 @@ try {
   const re = /(?:src|href)="([^"#:?]+)(?:\?[^"]*)?"/g; let m;
   while ((m = re.exec(html))) { const p = m[1]; if (/^(https?|data|mailto)/.test(p) || p.startsWith('//') || !/\.(js|css|png|webp|json|ico|svg)$/.test(p)) continue; if (!existe(p)) err('index.html carga "' + p + '" pero ese archivo no existe.'); }
 } catch (e) { err('No se pudo leer index.html: ' + e.message); }
+
+
+// 10) v8.99 (dueño: «no se puede arreglar una cosa y joder otra»): ninguna función que se llama puede faltar.
+//     Así se rompieron los techos de colores en la v8.86 (se borró hsl2rgb y el juego fallaba sin avisar).
+try {
+  const JS = fs.readdirSync(path.join(RAIZ, 'js')).filter((f) => f.endsWith('.js') && !AJENOS.test(f)).map((f) => 'js/' + f)
+    .concat(fs.existsSync(path.join(RAIZ, 'js', 'sistemas')) ? fs.readdirSync(path.join(RAIZ, 'js', 'sistemas')).filter((f) => f.endsWith('.js')).map((f) => 'js/sistemas/' + f) : []);
+  const fuentes = JS.map((f) => [f, fs.readFileSync(path.join(RAIZ, f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:\\'"])\/\/[^\n]*/g, '$1').replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, "''")]);
+  const def = new Set();
+  for (const [, s] of fuentes) {
+    let m; const r1 = /function\s+([A-Za-z_$][\w$]*)\s*\(/g; while ((m = r1.exec(s))) def.add(m[1]);
+    const r2 = /(?:var|let|const)\s+([A-Za-z_$][\w$]*)/g; while ((m = r2.exec(s))) def.add(m[1]);
+    const r3 = /[,(]\s*([A-Za-z_$][\w$]*)\s*=(?![=>])/g; while ((m = r3.exec(s))) def.add(m[1]); /* var a = 1, b = function… */
+    const r3b = /(?:var|let|const)\s+[^;]*?,\s*([A-Za-z_$][\w$]*)\s*[,;]/g; while ((m = r3b.exec(s))) def.add(m[1]);
+    const r3c = /,\s*([A-Za-z_$][\w$]*)\s*(?=;)/g; while ((m = r3c.exec(s))) def.add(m[1]);
+    const r4 = /function\s*[\w$]*\s*\(([^)]*)\)/g; while ((m = r4.exec(s))) m[1].split(',').forEach((x) => def.add(x.replace(/=.*/, '').trim()));
+    const r5 = /\(([\w$\s,]*)\)\s*=>/g; while ((m = r5.exec(s))) m[1].split(',').forEach((x) => def.add(x.trim()));
+    const r6 = /([A-Za-z_$][\w$]*)\s*=>/g; while ((m = r6.exec(s))) def.add(m[1]);
+    const r7 = /(?:window|self|globalThis)\.([A-Za-z_$][\w$]*)\s*=/g; while ((m = r7.exec(s))) def.add(m[1]);
+    const r8 = /catch\s*\(\s*([\w$]+)/g; while ((m = r8.exec(s))) def.add(m[1]);
+  }
+  const GLOBALES = new Set(('if for while switch return typeof catch function new delete void in of do else with await yield super this import ' +
+    'setTimeout setInterval clearTimeout clearInterval requestAnimationFrame cancelAnimationFrame parseInt parseFloat isNaN isFinite ' +
+    'encodeURIComponent decodeURIComponent encodeURI decodeURI escape unescape fetch alert confirm prompt atob btoa getComputedStyle ' +
+    'structuredClone queueMicrotask matchMedia open close print importScripts require define').split(' '));
+  for (const [f, s] of fuentes) {
+    const faltan = new Set(); let m; const rc = /(^|[^.\w$\/|^)\\])([a-z_$][\w$]*)\s*\(/g; /* lo que va dentro de un /patrón/ no cuenta */
+    while ((m = rc.exec(s))) { const n = m[2]; if (!def.has(n) && !GLOBALES.has(n)) faltan.add(n); }
+    for (const n of faltan) err(f + ' llama a «' + n + '()» pero esa función no existe en ningún archivo (se borró o tiene otro nombre).');
+  }
+} catch (e) { avi('No se pudo revisar las funciones: ' + e.message); }
+
+// 11) v8.99: una ventana escondida tiene que quedar escondida. Si un estilo le pone «display ... !important» a la ventana misma,
+//     tiene que haber otra regla que la esconda con .oculto (así se quedó encima la pantalla de entrar en la v8.98).
+try {
+  const css = fs.readdirSync(path.join(RAIZ, 'css')).filter((f) => f.endsWith('.css')).map((f) => fs.readFileSync(path.join(RAIZ, 'css', f), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, ' ');
+  const jsJ = fs.readFileSync(path.join(RAIZ, 'js', 'juego.js'), 'utf8');
+  const ids = new Set(); let m; const ro = /\$\('([\w-]+)'\)\.classList\.(?:add|toggle)\('oculto'/g; while ((m = ro.exec(jsJ))) ids.add(m[1]);
+  const reglas = []; const rr = /([^{}]+)\{([^}]*)\}/g; while ((m = rr.exec(css))) reglas.push([m[1], m[2]]);
+  for (const id of ids) {
+    const esElla = new RegExp('#' + id + '(?:[.:][\\w-]+(?:\\([^)]*\\))?)*\\s*$');
+    let fuerza = false, esconde = false;
+    for (const [sel, cuerpo] of reglas) {
+      const sels = sel.split(',').map((x) => x.trim());
+      if (/display\s*:\s*none\s*!important|visibility\s*:\s*hidden/i.test(cuerpo) && sels.some((x) => new RegExp('#' + id + '\\.oculto').test(x))) esconde = true;
+      if (/display\s*:\s*(?!none)[\w-]+\s*!important/i.test(cuerpo) && sels.some((x) => esElla.test(x) && !/\.oculto/.test(x) && !/:not\(/.test(x))) fuerza = true;
+    }
+    if (fuerza && !esconde) err('#' + id + ' tiene un estilo con «display ... !important» y nada lo esconde con .oculto: esa ventana no se podría cerrar.');
+  }
+} catch (e) { avi('No se pudo revisar las ventanas escondidas: ' + e.message); }
 
 // resultado
 for (const a of avisos) console.log('  aviso: ' + a);
