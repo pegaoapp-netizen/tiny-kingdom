@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.70';
+var VERSION_JUEGO = '8.71';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.70","2026-11-24","Cada actualización manda su propio correo, solo con lo nuevo de esa versión.","Each update sends its own mail with only what is new in that version."],
+var NOVEDADES_VER = [["8.71","2026-11-24","Inventario › Recursos: aviso de que eso ya es tuyo (no hay que cobrarlo) y nombres con mayúscula.","Inventory › Resources: note that it is already yours (nothing to collect) and capitalized names."],
+  ["8.70","2026-11-24","Cada actualización manda su propio correo, solo con lo nuevo de esa versión.","Each update sends its own mail with only what is new in that version."],
   ["8.69","2026-11-24","Ventana «Recibiste»: las fotos caben en su casilla y el botón Recoger siempre se ve.","«You got» window: pictures fit their box and the Collect button is always visible."],
   ["8.68","2026-11-24","Las carretas van en la lista de tropas de la Marcha, al final, como una tropa más.","Carts are in the March troop list, at the end, like any troop."],
   ["8.67","2026-11-24","Campaña: botón Salir y la ✕ ya no queda tapada.","Campaign: Exit button and the ✕ is no longer hidden."],

@@ -11181,9 +11181,10 @@
       });
       if (!filas) filas = '<p class="iv-vacio">' + (subInv === 'equipo' || subInv === 'heroe' ? L('El equipo y los libros se ganan jugando: oleadas, campamentos, bestias, torneos y cofres.', 'Gear and books are earned by playing: waves, camps, beasts, tournaments and chests.') : L('No hay nada para comprar aquí por ahora.', 'Nothing to buy here for now.')) + '</p>';
     } else {
+      if (subInv === 'recursos') filas += '<p class="nota iv-aviso-rec">✅ ' + L('Esto ya es tuyo y ya está en tu reino: no hay que cobrarlo. Es lo que tienes ahora de cada recurso.', 'This is already yours and in your kingdom: nothing to collect. It is what you have of each resource.') + '</p>'; /* v8.71 */
       if (subInv === 'recursos') [['oro', 'monedas', '🪙'], ['comida', 'comida', '🍞'], ['madera', 'madera', '🪵'], ['piedra', 'piedra', '🪨'], ['hierro', 'hierro', '🔩'], ['gemas', 'gemas', '💎'], ['amatista', 'amatista', '🔮']].forEach(function (r) {
         if (estado[r[1]] === undefined && r[0] !== 'amatista') return;
-        filas += filaInv(r[2], T('r_' + r[0]) === 'r_' + r[0] ? r[0] : T('r_' + r[0]), L('Tienes: ', 'Owned: ') + formatoNumero(estado[r[1]] || 0), '', '');
+        var nomR = T('r_' + r[0]) === 'r_' + r[0] ? ({ gemas: L('Gemas', 'Gems'), amatista: L('Amatista rúnica', 'Runic amethyst'), hierro: L('Hierro', 'Iron') })[r[0]] || r[0] : T('r_' + r[0]); filas += filaInv(r[2], nomR.charAt(0).toUpperCase() + nomR.slice(1), L('Tienes: ', 'Owned: ') + formatoNumero(estado[r[1]] || 0), '', '');
       });
       if (subInv === 'cofre' && diarioDisponible()) filas += '<div class="iv-diario">' + htmlDiario() + '</div>';
       if (subInv === 'equipo') piezas().slice().sort(function (a, b) { return MULT_RAREZA_EQ[b.r] - MULT_RAREZA_EQ[a.r] || b.n - a.n; }).forEach(function (p) {
