@@ -10,6 +10,7 @@
 <meta property="og:image" content="https://brotherkingdom.com/iconos/ui/portada.jpg?v=893">
 <meta property="og:url" content="https://brotherkingdom.com/">
 <meta name="theme-color" content="#120a05">
+<link rel="preload" as="image" href="iconos/ui/portada.jpg?v=893" fetchpriority="high">
 <link rel="icon" href="iconos/icono-192.png">
 <link rel="apple-touch-icon" href="iconos/apple-touch-icon.png">
 <style>
@@ -27,7 +28,7 @@ img { display: block; max-width: 100%; }
 .idioma { background: rgba(0,0,0,.45); border: 1px solid var(--borde); color: var(--texto); border-radius: 20px; padding: 5px 12px; font: 700 13px system-ui, sans-serif; cursor: pointer; }
 
 /* portada */
-.portada { position: relative; min-height: 100vh; min-height: 100svh; display: flex; align-items: flex-end; justify-content: center; text-align: center; background: var(--fondo) url(iconos/ui/portada.jpg?v=893) top center / contain no-repeat; }
+.portada { position: relative; min-height: 100vh; min-height: 100svh; display: flex; align-items: flex-end; justify-content: center; text-align: center; background: url(iconos/ui/portada.jpg?v=893) top center / contain no-repeat, url(data:image/jpeg;base64,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) top center / contain no-repeat var(--fondo); }
 .portada::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: min(177.8vw, 100%); background: linear-gradient(180deg, transparent 58%, rgba(18,10,5,.7) 80%, var(--fondo) 99%); }
 .portada .dentro { position: relative; z-index: 1; padding: 0 16px calc(env(safe-area-inset-bottom) + 34px); max-width: 560px; }
 .portada p { margin: 0 0 18px; font-size: 18px; color: #fff3d6; text-shadow: 0 2px 6px #000; }
@@ -46,9 +47,10 @@ h2 { margin: 0 0 10px; font: 900 clamp(26px, 6vw, 38px)/1.15 Georgia, serif; col
 .tarjeta h3 { margin: 2px 0 4px; font: 800 18px Georgia, serif; color: #ffe6a6; }
 .tarjeta p { margin: 0; font-size: 15px; color: var(--suave); }
 
-.heroes { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 12px; scroll-snap-type: x mandatory; }
-.heroe { flex: 0 0 150px; scroll-snap-align: start; text-align: center; padding: 12px 8px; border-radius: 16px; background: radial-gradient(ellipse at 50% 30%, rgba(255,200,110,.25), transparent 70%), var(--tarjeta); border: 1px solid var(--borde); }
-.heroe img { width: 120px; height: 150px; margin: 0 auto 6px; object-fit: contain; object-position: bottom; }
+.heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 4px 0 12px; }
+.heroe { text-align: center; padding: 12px 8px; border-radius: 16px; background: radial-gradient(ellipse at 50% 30%, rgba(255,200,110,.25), transparent 70%), var(--tarjeta); border: 1px solid var(--borde); }
+.heroe:last-child:nth-child(odd) { grid-column: 1 / -1; justify-self: center; width: calc(50% - 6px); }
+.heroe img { width: 100%; height: auto; aspect-ratio: 4 / 5; margin: 0 auto 6px; object-fit: contain; object-position: bottom; }
 .heroe b { font: 800 15px Georgia, serif; color: #ffe6a6; }
 
 .pasos { counter-reset: paso; display: grid; gap: 12px; max-width: 640px; margin: 0 auto; padding: 0; list-style: none; }
@@ -59,7 +61,7 @@ h2 { margin: 0 0 10px; font: 900 clamp(26px, 6vw, 38px)/1.15 Georgia, serif; col
 footer { padding: 26px 16px calc(env(safe-area-inset-bottom) + 26px); text-align: center; color: #8f7a55; font-size: 13px; border-top: 1px solid #2c1a0d; }
 footer a { color: #cbb58a; }
 .fotos { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x mandatory; }
-.foto { flex: 0 0 min(62vw, 230px); scroll-snap-align: center; margin: 0; text-align: center; }
+.foto { flex: 0 0 min(80vw, 320px); scroll-snap-align: center; margin: 0; text-align: center; }
 .foto img { width: 100%; aspect-ratio: 394 / 853; object-fit: cover; border-radius: 22px; border: 3px solid #3a2612; box-shadow: 0 10px 24px rgba(0,0,0,.55); background: #000; }
 .foto figcaption { margin-top: 8px; font: 700 14px Georgia, serif; color: #ffe6a6; }
 .pasos li b { color: #ffe6a6; }
