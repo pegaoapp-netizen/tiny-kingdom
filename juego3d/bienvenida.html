@@ -58,6 +58,18 @@ h2 { margin: 0 0 10px; font: 900 clamp(26px, 6vw, 38px)/1.15 Georgia, serif; col
 .final { text-align: center; background: radial-gradient(ellipse 70% 80% at 50% 100%, rgba(255,150,40,.18), transparent 70%); }
 footer { padding: 26px 16px calc(env(safe-area-inset-bottom) + 26px); text-align: center; color: #8f7a55; font-size: 13px; border-top: 1px solid #2c1a0d; }
 footer a { color: #cbb58a; }
+.fotos { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 14px; scroll-snap-type: x mandatory; }
+.foto { flex: 0 0 min(62vw, 230px); scroll-snap-align: center; margin: 0; text-align: center; }
+.foto img { width: 100%; aspect-ratio: 394 / 853; object-fit: cover; border-radius: 22px; border: 3px solid #3a2612; box-shadow: 0 10px 24px rgba(0,0,0,.55); background: #000; }
+.foto figcaption { margin-top: 8px; font: 700 14px Georgia, serif; color: #ffe6a6; }
+.pasos li b { color: #ffe6a6; }
+.novedades { max-width: 680px; margin: 0 auto; padding: 0; list-style: none; display: grid; gap: 10px; }
+.novedades li { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; padding: 12px 14px; border-radius: 14px; background: var(--tarjeta); border: 1px solid var(--borde); }
+.novedades .ver { grid-row: span 2; align-self: start; padding: 3px 9px; border-radius: 10px; background: linear-gradient(180deg, #ffcf4a, #c8841c); color: #2a1404; font: 900 13px Georgia, serif; white-space: nowrap; }
+.novedades .fecha { font-size: 12px; color: #8f7a55; }
+.novedades .txt { font-size: 15px; color: var(--texto); }
+.mas-nov { display: block; margin: 16px auto 0; background: transparent; border: 1px solid var(--borde); color: var(--suave); border-radius: 20px; padding: 8px 18px; font: 700 14px system-ui, sans-serif; cursor: pointer; }
+.mas-nov[hidden] { display: none; }
 [data-en] { display: none; }
 html[lang="en"] [data-es] { display: none; }
 html[lang="en"] [data-en] { display: revert; }
@@ -95,6 +107,19 @@ html[lang="en"] [data-en] { display: revert; }
 
   <section>
     <div class="envoltura">
+      <h2><span data-es>Fotos del juego</span><span data-en>Screenshots</span></h2>
+      <p class="intro"><span data-es>Así se ve Brother Kingdom en el teléfono.</span><span data-en>This is Brother Kingdom on a phone.</span></p>
+      <div class="fotos">
+        <figure class="foto"><img src="iconos/web/foto_ciudad.webp" alt="" loading="lazy"><figcaption><span data-es>Tu ciudad y tu castillo</span><span data-en>Your city and castle</span></figcaption></figure>
+        <figure class="foto"><img src="iconos/web/foto_mundo.webp" alt="" loading="lazy"><figcaption><span data-es>El mapa del mundo</span><span data-en>The world map</span></figcaption></figure>
+        <figure class="foto"><img src="iconos/web/foto_campana.webp" alt="" loading="lazy"><figcaption><span data-es>Batallas de campaña</span><span data-en>Campaign battles</span></figcaption></figure>
+        <figure class="foto"><img src="iconos/web/foto_heroe.webp" alt="" loading="lazy"><figcaption><span data-es>Tus héroes y sus poderes</span><span data-en>Your heroes and their powers</span></figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="envoltura">
       <h2><span data-es>Tus héroes</span><span data-en>Your heroes</span></h2>
       <p class="intro"><span data-es>Cada héroe tiene su estilo. Equípalos y súbelos de nivel.</span><span data-en>Every hero has a style. Gear them up and level them.</span></p>
       <div class="heroes">
@@ -109,12 +134,24 @@ html[lang="en"] [data-en] { display: revert; }
 
   <section>
     <div class="envoltura">
-      <h2><span data-es>Empieza en un minuto</span><span data-en>Start in a minute</span></h2>
+      <h2><span data-es>Cómo se juega</span><span data-en>How to play</span></h2>
       <ol class="pasos">
-        <li><span data-es>Toca «Jugar gratis».</span><span data-en>Tap “Play free”.</span></li>
-        <li><span data-es>Crea tu cuenta y ponle nombre a tu reino.</span><span data-en>Create your account and name your kingdom.</span></li>
-        <li><span data-es>Construye, entrena y sal a conquistar.</span><span data-en>Build, train and go conquer.</span></li>
+        <li><span data-es><b>Entra gratis.</b> Toca «Jugar gratis», crea tu cuenta y ponle nombre a tu reino.</span><span data-en><b>Join free.</b> Tap “Play free”, create your account and name your kingdom.</span></li>
+        <li><span data-es><b>Junta recursos.</b> Granjas, aserraderos, canteras y minas te dan comida, madera, piedra y hierro. Recoge tus campos seguido.</span><span data-en><b>Gather resources.</b> Farms, sawmills, quarries and mines give food, wood, stone and iron. Collect often.</span></li>
+        <li><span data-es><b>Sube tu castillo.</b> Cada nivel abre edificios nuevos, más tropas y más villas.</span><span data-en><b>Level up your castle.</b> Every level unlocks new buildings, more troops and more villages.</span></li>
+        <li><span data-es><b>Entrena y elige bien.</b> La infantería gana a la caballería, la caballería a los de distancia y los de distancia a la infantería. Pon un héroe al frente.</span><span data-en><b>Train and choose well.</b> Infantry beats cavalry, cavalry beats ranged, ranged beats infantry. Put a hero in front.</span></li>
+        <li><span data-es><b>Sal al mapa.</b> Espía antes de atacar, manda tus marchas con carretas para traer el botín y protege tu reino con la burbuja.</span><span data-en><b>Go to the map.</b> Scout before attacking, send marches with carts to bring loot home and protect your kingdom with the bubble.</span></li>
+        <li><span data-es><b>No juegues solo.</b> Únete a una alianza, pide refuerzos y participa en los torneos de cada semana.</span><span data-en><b>Don't play alone.</b> Join an alliance, ask for reinforcements and enter the weekly tournaments.</span></li>
       </ol>
+    </div>
+  </section>
+
+  <section>
+    <div class="envoltura">
+      <h2><span data-es>Novedades</span><span data-en>News</span></h2>
+      <p class="intro"><span data-es>Lo último que le hemos puesto al juego.</span><span data-en>The latest updates to the game.</span></p>
+      <ul class="novedades" id="novedades"></ul>
+      <button class="mas-nov" id="mas-nov" type="button" hidden><span data-es>Ver más</span><span data-en>Show more</span></button>
     </div>
   </section>
 
@@ -139,6 +176,22 @@ html[lang="en"] [data-en] { display: revert; }
   function poner(i) { idi = i; html.lang = i; b.textContent = i === 'es' ? 'EN' : 'ES'; try { localStorage.setItem('bk_idioma', i); } catch (e) {} }
   poner(idi);
   b.addEventListener('click', function () { poner(idi === 'es' ? 'en' : 'es'); });
+  /* novedades: salen solas de la lista del juego (js/datos.js) */
+  var cuantas = 8;
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function pintarNov() {
+    var l = window.NOVEDADES_VER || [], ul = document.getElementById('novedades'), mb = document.getElementById('mas-nov');
+    if (!ul || !l.length) return;
+    ul.innerHTML = l.slice(0, cuantas).map(function (n) {
+      var f = '';
+      try { f = n[1] ? new Date(n[1] + 'T12:00:00').toLocaleDateString(idi === 'es' ? 'es' : 'en', { day: 'numeric', month: 'short', year: 'numeric' }) : ''; } catch (e) { f = n[1] || ''; }
+      return '<li><span class="ver">v' + esc(n[0]) + '</span><span class="fecha">' + esc(f) + '</span><span class="txt">' + esc(idi === 'es' ? n[2] : (n[3] || n[2])) + '</span></li>';
+    }).join('');
+    mb.hidden = cuantas >= l.length;
+  }
+  document.getElementById('mas-nov').addEventListener('click', function () { cuantas += 10; pintarNov(); });
+  b.addEventListener('click', pintarNov);
+  var sd = document.createElement('script'); sd.src = 'js/datos.js?v=' + Math.floor(Date.now() / 600000); sd.onload = pintarNov; document.body.appendChild(sd);
   /* al tocar Jugar, la próxima vez brotherkingdom.com abre el juego directo */
   Array.prototype.forEach.call(document.querySelectorAll('.jugar'), function (a) {
     a.addEventListener('click', function () { try { localStorage.setItem('bk_jugar', '1'); } catch (e) {} });
