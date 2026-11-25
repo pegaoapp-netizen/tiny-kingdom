@@ -6588,7 +6588,7 @@
     if (ids.length === 2) {
       var a = punteros[ids[0]], b = punteros[ids[1]];
       // v7.73: con dos dedos: separar/juntar = zoom · girar = rotar 360° · subir/bajar los dos juntos = inclinar
-      pellizco = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.distMeta, ang: Math.atan2(b.y - a.y, b.x - a.x), cy: (a.y + b.y) / 2, giro0: CAMV.giroMeta, grados0: CAMV.gradosMeta, modo: '', t: performance.now(), ultAng: null };
+      pellizco = { d: Math.hypot(a.x - b.x, a.y - b.y), dist: cam.distMeta, ang: Math.atan2(b.y - a.y, b.x - a.x), cy: (a.y + b.y) / 2, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, giro0: CAMV.giroMeta, grados0: CAMV.gradosMeta, modo: '', t: performance.now(), ultAng: null };
       CAMV.giroVel = 0;
       arrastre = null;
     }
@@ -6608,6 +6608,12 @@
       CAMV.gradosMeta = Math.max(CAMV.GMIN, Math.min(CAMV.GMAX, pellizco.grados0 + dy * 0.12));
     } else if (pellizco.modo === 'zoom') {
       cam.distMeta = Math.max(zoomMin(), Math.min(zoomMax(), pellizco.dist * pellizco.d / Math.max(20, d)));
+      /* v9.08: mientras pellizcas o giras, arrastrar los dos dedos también mueve el mapa */
+      var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, ddx = mx - pellizco.mx, ddy = my - pellizco.my; pellizco.mx = mx; pellizco.my = my;
+      if (Math.abs(ddx) + Math.abs(ddy) > 0.5 && Math.abs(ddx) + Math.abs(ddy) < 80) {
+        var kp2 = 2 * cam.dist * Math.tan(fovBase() * Math.PI / 360) / window.innerHeight, adl = new V3(-Math.cos(cam.az), 0, -Math.sin(cam.az)), der = new V3(-adl.z, 0, adl.x);
+        cam.meta.addScaledVector(der, -ddx * kp2).addScaledVector(adl, ddy * kp2 / Math.cos(cam.polar)); cam.vel.set(0, 0, 0);
+      }
       if (GIRO_LIBRE) {
         CAMV.giroMeta = pellizco.giro0 - dAng;
         var ahora = performance.now();
