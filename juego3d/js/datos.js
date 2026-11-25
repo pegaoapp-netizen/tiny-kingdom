@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.91';
+var VERSION_JUEGO = '8.92';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.91","2026-11-24","El nombre del juego queda Brother Kingdom.","The game's name is now Brother Kingdom."],
+var NOVEDADES_VER = [["8.92","2026-11-24","Portada nueva con el nombre Brother Kingdom.","New cover with the Brother Kingdom name."],
+  ["8.91","2026-11-24","El nombre del juego queda Brother Kingdom.","The game's name is now Brother Kingdom."],
   ["8.90","2026-11-24","El juego ahora se llama Brother Kingdom. Tu reino, tus tropas y todo lo tuyo siguen igual.","The game is now called Brother Kingdom. Your kingdom, troops and everything you own stay the same."],
   ["8.89","2026-11-24","El castillo es más grande y llena su plaza.","The castle is bigger and fills its square."],
   ["8.88","2026-11-24","Torre del homenaje › Promociones: el número son las que ya puedes aceptar, cada pestaña dice las suyas y se ven todas las pestañas.","Keep › Promotions: the number is what you can accept now, each tab shows its own and all tabs are visible."],
