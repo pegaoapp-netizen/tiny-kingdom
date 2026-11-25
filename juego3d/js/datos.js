@@ -4,10 +4,10 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.13';
+var VERSION_JUEGO = '9.14';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.13","2026-11-25","Cada edificio de la ciudad tiene ahora su propio color de tejado y de piedra: Academia azul, Almacén marrón, Cabaña terracota, Embajada púrpura, Enfermería verde, Establo granate, Galería de Tiro pizarra y Mercado dorado.","Each city building now has its own roof and stone colour: blue Academy, brown Warehouse, terracotta Cottage, purple Embassy, green Infirmary, crimson Stable, slate Shooting Gallery and golden Market."],["9.12","2026-11-25","Nuevo calendario de premios del mes («Conectarse», a la izquierda de la ciudad): cada día que entras se ilumina un premio más. El día 15 trae 80 botellas de campaña.","New monthly log-in calendar («Log-in», left side of the city): each day you play lights up one more reward. Day 15 gives 80 campaign flasks."],["9.11","2026-11-25","Tienda: elige cuántos objetos compras con gemas (con total y gemas que te quedan). Inventario: usa varios de golpe también la energía de héroe, el megáfono, la cosecha y las tropas. Calles de adoquines más realistas. Con dos dedos puedes mover el mapa mientras acercas o giras. El panel de abajo empieza recogido y los botones laterales ocupan menos.","Shop: choose how many items to buy with gems. Inventory: use several at once for more items. More realistic cobblestone streets. Two-finger pan while zooming or rotating. Bottom panel starts collapsed and side buttons take less space."],
+var NOVEDADES_VER = [["9.14","2026-11-25","Nueva banda sonora de guerra con orquesta: Preparación en el Mapa Mundial y la Campaña, Marcha cuando tus tropas van en camino, Batalla, Asedio en las oleadas, Situación crítica con poca vida, y melodías de Victoria y Derrota. Cambia de una a otra con fundidos suaves. Nuevo control de volumen de efectos en Ajustes.","New orchestral war soundtrack: Preparation on the World Map and Campaign, March while your troops travel, Battle, Siege during waves, Critical when health is low, plus Victory and Defeat themes, with smooth crossfades. New sound-effects volume control in Settings."],["9.13","2026-11-25","Cada edificio de la ciudad tiene ahora su propio color de tejado y de piedra: Academia azul, Almacén marrón, Cabaña terracota, Embajada púrpura, Enfermería verde, Establo granate, Galería de Tiro pizarra y Mercado dorado.","Each city building now has its own roof and stone colour: blue Academy, brown Warehouse, terracotta Cottage, purple Embassy, green Infirmary, crimson Stable, slate Shooting Gallery and golden Market."],["9.12","2026-11-25","Nuevo calendario de premios del mes («Conectarse», a la izquierda de la ciudad): cada día que entras se ilumina un premio más. El día 15 trae 80 botellas de campaña.","New monthly log-in calendar («Log-in», left side of the city): each day you play lights up one more reward. Day 15 gives 80 campaign flasks."],["9.11","2026-11-25","Tienda: elige cuántos objetos compras con gemas (con total y gemas que te quedan). Inventario: usa varios de golpe también la energía de héroe, el megáfono, la cosecha y las tropas. Calles de adoquines más realistas. Con dos dedos puedes mover el mapa mientras acercas o giras. El panel de abajo empieza recogido y los botones laterales ocupan menos.","Shop: choose how many items to buy with gems. Inventory: use several at once for more items. More realistic cobblestone streets. Two-finger pan while zooming or rotating. Bottom panel starts collapsed and side buttons take less space."],
   ["9.10","2026-11-25","Perfil del jugador desde el chat: ahora tiene ✕ arriba, y al tocar fuera se cierra solo la tarjeta y sigues en el chat.","Player profile from the chat now has a ✕, and tapping outside closes only the card so you stay in the chat."],
   ["8.99","2026-11-25","Marcha: ahora ves cuántas tropas tienes y cuántas mandas. El cofre diario se cierra con la ✕. «Jugar sin cuenta» entra con un toque. Ajustes más limpio y el botón Actualizar ya no tapa nada.","March shows the troops you have and the ones you send. The daily chest closes with ✕. Play without account works with one tap. Cleaner Settings."],
   ["8.98","2026-11-25","Pantalla de entrar nueva: la portada de Brother Kingdom de fondo, el escudo del sol y botones más claros. También puedes ver la contraseña con el ojo.","New sign-in screen with the Brother Kingdom cover, the sun shield and clearer buttons. You can also show your password with the eye."],
@@ -777,6 +777,18 @@ var COFRE_DIARIO = [
   { oro: 250, comida: 200 }, { tropas: { espadachin: 2 } }, { gemas: 10, piedra: 120, objeto: 'libro_gra' }, { gemas: 20, objeto: 'cofre_oro' }
 ];
 // Objetos de la mochila
+// v9.14: PISTAS DE LA MÚSICA DE GUERRA (js/tk-musica-guerra.js). Para añadir una melodía nueva: sube el archivo .m4a a musica/
+// y ponlo aquí. archivo vacío = se usa la música hecha con código (respaldo). inicioBucle = segundo donde empieza a repetirse.
+// Situaciones: preparacion, marcha, batalla, asedio, critica (en bucle) · victoria, derrota (suenan una vez)
+var PISTAS_GUERRA = {
+  preparacion: { archivo: 'musica/guerra_preparacion.m4a', vol: 1, inicioBucle: 0 },
+  marcha:      { archivo: 'musica/guerra_marcha.m4a', vol: 1, inicioBucle: 0 },
+  batalla:     { archivo: 'musica/guerra_batalla.m4a', vol: 1, inicioBucle: 0 },
+  asedio:      { archivo: 'musica/guerra_asedio.m4a', vol: 1, inicioBucle: 0 },
+  critica:     { archivo: 'musica/guerra_critica.m4a', vol: 1, inicioBucle: 0 },
+  victoria:    { archivo: 'musica/guerra_victoria.m4a', vol: 1, unaVez: true },
+  derrota:     { archivo: 'musica/guerra_derrota.m4a', vol: 1, unaVez: true }
+};
 var OBJETOS = {
   cofre_madera: { icono: '📦', cofre: { oro: [80, 150], comida: [60, 120], madera: [60, 120] } },
   cofre_plata:  { icono: '🎁', cofre: { oro: [150, 300], madera: [100, 200], piedra: [60, 120] } },

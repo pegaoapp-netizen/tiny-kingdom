@@ -4403,7 +4403,9 @@
   // ------------------------------------------------------------------
   //  SONIDO (sintetizado, original)
   // ------------------------------------------------------------------
-  var audio = null, ultimoSonido = {}, salida = null, ecoEnvio = null, bufRuido = null;
+  var audio = null, ultimoSonido = {}, salida = null, ecoEnvio = null, bufRuido = null, efectosBus = null;
+  var VOL_EFECTOS = { bajo: 0.35, medio: 0.7, alto: 1 }; // v9.14: volumen de los efectos, aparte de la música
+  function volEfectos() { var v = leerPref().efectosVol; return VOL_EFECTOS[v] !== undefined ? VOL_EFECTOS[v] : VOL_EFECTOS.alto; }
   var musicaOn = leerPref().musica !== false;
   // Prepara el audio: volumen general con compresor (suena lleno sin saturar) y un eco suave de sala de castillo
   function prepararAudio() {
@@ -4413,6 +4415,7 @@
     comp.threshold.value = -16; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
     salida = audio.createGain(); salida.gain.value = 0.9;
     salida.connect(comp); comp.connect(audio.destination);
+    efectosBus = audio.createGain(); efectosBus.gain.value = volEfectos(); efectosBus.connect(salida); // v9.14
     // eco: respuesta de una sala grande hecha con ruido que se apaga
     var largo = Math.floor(audio.sampleRate * 2.2), imp = audio.createBuffer(2, largo, audio.sampleRate);
     for (var c = 0; c < 2; c++) { var d = imp.getChannelData(c); for (var i = 0; i < largo; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / largo, 3.2); }
@@ -4437,7 +4440,7 @@
     g.gain.setValueAtTime(0.0001, t0);
     g.gain.exponentialRampToValueAtTime(vol, t0 + at);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    ultimo.connect(g); g.connect(o.destino || salida);
+    ultimo.connect(g); g.connect(o.destino || efectosBus || salida);
     if (o.eco) { var ge = audio.createGain(); ge.gain.value = o.eco; g.connect(ge); ge.connect(ecoEnvio); }
     osc.start(t0); osc.stop(t0 + dur + 0.05);
   }
@@ -4451,7 +4454,7 @@
     fi.Q.value = o.q || 1;
     var g = audio.createGain(), vol = o.vol || 0.1;
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + (o.ataque || 0.003)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    s.connect(fi); fi.connect(g); g.connect(o.destino || salida);
+    s.connect(fi); fi.connect(g); g.connect(o.destino || efectosBus || salida);
     if (o.eco) { var ge = audio.createGain(); ge.gain.value = o.eco; g.connect(ge); ge.connect(ecoEnvio); }
     s.start(t0, Math.random() * 0.5); s.stop(t0 + dur + 0.05);
   }
@@ -4475,6 +4478,7 @@
   }
   function sonar(cual) {
     if (!estado.sonido) return;
+    if (cual === 'victoria' || cual === 'derrota') try { if (!(window.TKMusica && TKMusica.final(cual === 'victoria'))) musicaFinal(cual === 'victoria'); } catch (e) {} // v9.14
     try {
       prepararAudio();
       if (audio.state === 'suspended') audio.resume();
@@ -4511,7 +4515,7 @@
   }
   // ---------- v8.50: MÚSICA DE GUERRA (hecha con código, original) ----------
   // Re menor, lenta y grave: timbales, metales graves sostenidos, un motivo de trompas y, en la batalla, redoble militar y más tempo.
-  var musica = { on: false, gan: null, sig: 0, paso: 0, timer: null };
+  var musica = { on: false, gan: null, sig: 0, paso: 0, timer: null, fase: '', pausaHasta: 0 };
   var VOL_MUSICA = { bajo: 0.25, medio: 0.5, alto: 0.8 };
   function volMusica() { var v = leerPref().musicaVol; return VOL_MUSICA[v] !== undefined ? VOL_MUSICA[v] : VOL_MUSICA.medio; }
   // Dm, Sib, Solm, La, Dm, Fa, Do, La (graves)
@@ -4537,8 +4541,12 @@
   function trompa(fr, cuando, dur, vol, dest) { [-5, 5].forEach(function (dt) { nota(fr, cuando, dur, { tipo: 'sawtooth', vol: vol, ataque: 0.08, filtro: 900, filtroHasta: 1800, detune: dt, destino: dest, eco: 0.45, vibrato: true }); }); }
   function programarMusica() {
     if (!musica.on || !audio) return;
-    var batalla = oleadaActiva, negra = 60 / (batalla ? 104 : 72), corchea = negra / 2, dest = musica.gan;
+    var fase = faseMusica(), batalla = oleadaActiva, negra = 60 / (fase === 'combate' ? 132 : fase === 'tension' ? 84 : batalla ? 104 : 72), corchea = negra / 2, dest = musica.gan; // v9.14: banda sonora por fases
+    if (fase !== musica.fase) { musica.fase = fase; musica.paso = 0; }
     while (musica.sig < audio.currentTime + 0.5) {
+      if ((musica.pausaHasta && musica.sig < musica.pausaHasta) || fase === 'archivo') { musica.sig += corchea; continue; } // suena la melodía de victoria o derrota, o una pista de guerra
+      if (fase === 'combate') { programarGuerra(musica.paso, musica.sig - audio.currentTime, corchea, negra, dest); musica.sig += corchea; musica.paso++; continue; }
+      if (fase === 'tension') { programarTension(musica.paso, musica.sig - audio.currentTime, corchea, negra, dest); musica.sig += corchea; musica.paso++; continue; }
       var p = musica.paso, compas = Math.floor(p / 8) % ACORDES.length, tiempoC = p % 8, ac = ACORDES[compas], cu = musica.sig - audio.currentTime;
       if (tiempoC === 0) { // acorde grave de metales, sostenido todo el compás
         ac.forEach(function (fr, k) { metalGrave(fr * (k ? 2 : 1), cu, negra * 4.2, k ? 0.018 : 0.028, dest); });
@@ -4555,6 +4563,83 @@
       musica.sig += corchea; musica.paso++;
     }
   }
+  // v9.14: BANDA SONORA POR FASES (idea del dueño): 1) PREPARACIÓN = tensión (Mapa Mundial, mapa de Campaña y elegir héroes),
+  // 2) COMBATE = épica intensa (batalla de Campaña y oleadas), 3) FINAL = melodía de victoria o de derrota. En la ciudad sigue la música de siempre.
+  function faseMusica() {
+    if (window.TKMusica) return TKMusica.faseRespaldo(); // v9.14: js/tk-musica-guerra.js decide (si su pista suena, aquí 'archivo' = silencio)
+    var rets = document.getElementById('tkc-rets'), finC = document.querySelector('#tkc .tkc-fin');
+    if ((rets && !finC) || oleadaActiva) return 'combate';
+    if (enMundo || window.__tkCampanaAbierta) return 'tension';
+    return 'ciudad';
+  }
+  // PREPARACIÓN: Re menor lento, cuerdas graves que laten, timbal como un corazón, acordes oscuros y una trompa lejana
+  var ACORDES_T = [[73.4, 87.3, 110], [73.4, 87.3, 110], [69.3, 87.3, 110], [69.3, 82.4, 110], [58.3, 73.4, 87.3], [58.3, 73.4, 87.3], [55, 69.3, 82.4], [55, 65.4, 82.4]];
+  function programarTension(p, cu, corchea, negra, dest) {
+    var compas = Math.floor(p / 8) % ACORDES_T.length, tc = p % 8, ac = ACORDES_T[compas];
+    if (tc === 0) { ac.forEach(function (fr, k) { metalGrave(fr * (k ? 2 : 1), cu, negra * 4.3, k ? 0.012 : 0.02, dest); }); nota(ac[0] / 2, cu, negra * 4.3, { tipo: 'sine', vol: 0.06, ataque: 0.8, destino: dest }); }
+    nota(ac[0], cu, corchea * 0.8, { tipo: 'sawtooth', vol: tc % 2 ? 0.014 : 0.026, ataque: 0.01, filtro: 220 + compas * 25, destino: dest }); // ostinato que late
+    if (tc === 0) timbal(cu, 0.12, dest, ac[0] * 0.9); if (tc === 1) timbal(cu, 0.06, dest, ac[0] * 0.9); // latido: bum-bum
+    if (compas === 7 && tc >= 4) timbal(cu, 0.03 + (tc - 4) * 0.02, dest, ac[0] * 0.9); // crece al final de la vuelta
+    if ((compas === 1 || compas === 5) && tc === 2) trompa(compas === 1 ? 220 : 233.1, cu, negra * 2.6, 0.016, dest); // llamada lejana
+    if ((compas === 1 || compas === 5) && tc === 7) trompa(compas === 1 ? 293.7 : 277.2, cu, negra * 2, 0.014, dest);
+    if (tc === 4 && compas % 2 === 1) sruido(cu, negra * 2, { tipo: 'bandpass', fr: 700, hasta: 1400, q: 2, vol: 0.012, eco: 0.6, destino: dest }); // viento
+  }
+  // FINAL: melodía larga después del toque de victoria o derrota; la música se calla mientras suena y luego vuelve sola
+  function musicaFinal(gano) {
+    if (!musica.on || !musica.gan || !audio) return;
+    var d = musica.gan, t = gano ? 1.7 : 1.9, n = 60 / 96;
+    musica.pausaHasta = audio.currentTime + t + (gano ? 6.2 : 6.6);
+    if (gano) { // Re mayor, sube como un himno
+      [[293.7, 0, 1], [370, 1, 0.5], [440, 1.5, 0.5], [587.3, 2, 2], [554.4, 4, 1], [493.9, 5, 1], [440, 6, 1.5], [587.3, 7.5, 0.5], [659.3, 8, 1], [740, 9, 3]].forEach(function (m) { trompeta(m[0], t + m[1] * n, m[2] * n * 1.05, 0.016, d); });
+      [[146.8, 185, 220], [196, 246.9, 293.7], [220, 277.2, 329.6], [146.8, 185, 220]].forEach(function (ac, i) { ac.forEach(function (fr) { metalGrave(fr, t + i * 3 * n, n * 3.2, 0.016, d); }); timbal(t + i * 3 * n, 0.14, d, ac[0] / 2); });
+      for (var r = 0; r < 10; r++) timbal(t + 8 * n + r * 0.07, 0.03 + r * 0.008, d, 73.4);
+      sruido(t + 9 * n, 2.4, { tipo: 'highpass', fr: 5000, vol: 0.06, eco: 0.8, destino: d });
+    } else { // Re menor, baja lenta como un lamento
+      [[440, 0, 2], [415.3, 2, 1], [392, 3, 1], [349.2, 4, 2], [329.6, 6, 1], [293.7, 7, 1], [277.2, 8, 2], [293.7, 10, 3]].forEach(function (m) { trompa(m[0], t + m[1] * n, m[2] * n * 1.1, 0.02, d); });
+      [[73.4, 87.3, 110], [58.3, 73.4, 87.3], [55, 69.3, 82.4], [73.4, 87.3, 110]].forEach(function (ac, i) { ac.forEach(function (fr, k) { metalGrave(fr * (k ? 2 : 1), t + i * 3 * n, n * 3.3, k ? 0.012 : 0.02, d); }); timbal(t + i * 3 * n, 0.1, d, ac[0] * 0.9); });
+    }
+  }
+  // COMBATE: MARCHA DE GUERRA (original, hecha con código).
+  // Re menor a 132: caja militar con redobles, bombo, metales graves que empujan y una fanfarria de trompetas heroica.
+  var ACORDES_G = [[73.4, 87.3, 110], [73.4, 87.3, 110], [58.3, 73.4, 87.3], [65.4, 82.4, 98], [73.4, 87.3, 110], [49, 58.3, 73.4], [55, 69.3, 82.4], [55, 69.3, 82.4]]; // Rem Rem Sib Do Rem Solm La La
+  var FANFARRIA = [ // 2 frases de 2 compases: [frecuencia, corchea (0-15), largo en corcheas]
+    [[293.7, 0, 1], [293.7, 1, 1], [440, 2, 3], [392, 5, 1], [349.2, 6, 1], [392, 7, 1], [440, 8, 4], [523.3, 12, 2], [466.2, 14, 2]],
+    [[440, 0, 2], [392, 2, 1], [349.2, 3, 1], [329.6, 4, 2], [293.7, 6, 2], [349.2, 8, 1], [329.6, 9, 1], [293.7, 10, 6]],
+    [[293.7, 0, 1], [349.2, 1, 1], [440, 2, 2], [587.3, 4, 4], [523.3, 8, 2], [466.2, 10, 1], [440, 11, 1], [392, 12, 4]],
+    [[440, 0, 3], [466.2, 3, 1], [440, 4, 2], [392, 6, 2], [329.6, 8, 2], [277.2, 10, 2], [293.7, 12, 4]]
+  ];
+  function trompeta(fr, cuando, dur, vol, dest) { [-7, 0, 7].forEach(function (dt) { nota(fr, cuando, dur, { tipo: 'sawtooth', vol: vol, ataque: 0.03, filtro: 1300, filtroHasta: 2800, detune: dt, destino: dest, eco: 0.5, vibrato: dur > 0.4 }); }); }
+  function caja(cuando, vol, dest) { sruido(cuando, 0.09, { tipo: 'bandpass', fr: 2400, q: 0.8, vol: vol, destino: dest }); nota(190, cuando, 0.06, { tipo: 'triangle', hasta: 150, vol: vol * 0.6, destino: dest }); }
+  function programarGuerra(p, cu, corchea, negra, dest) {
+    var compas = Math.floor(p / 8) % ACORDES_G.length, tc = p % 8, ac = ACORDES_G[compas], frase = Math.floor(p / 16) % 8, enFrase = p % 16;
+    if (tc === 0) { // acorde sostenido de metales graves + cuerda grave
+      ac.forEach(function (fr, k) { metalGrave(fr * (k ? 2 : 1), cu, negra * 4.1, k ? 0.016 : 0.024, dest); });
+      nota(ac[0] / 2, cu, negra * 4.1, { tipo: 'sine', vol: 0.055, ataque: 0.2, destino: dest });
+    }
+    // bajo que empuja: ta-ta-ta corto (como cascos de caballería)
+    if (tc === 0 || tc === 2 || tc === 3 || tc === 4 || tc === 6) nota(ac[0], cu, corchea * 0.7, { tipo: 'sawtooth', vol: 0.03, ataque: 0.01, filtro: 260, destino: dest });
+    // bombo y timbal: 1 y 3 fuertes, y «bum-bum» al final del compás
+    if (tc === 0) timbal(cu, 0.17, dest, ac[0] * 0.9); if (tc === 4) timbal(cu, 0.12, dest, ac[0] * 1.35);
+    if (tc === 7) { bombo(cu, 0.08, dest); bombo(cu + corchea / 2, 0.1, dest); }
+    // caja militar: acentos en 2 y 4, golpes suaves y un redoble antes de cada frase
+    if (enFrase >= 14) { for (var r = 0; r < 4; r++) caja(cu + r * corchea / 4, 0.02 + r * 0.008, dest); }
+    else { caja(cu, (tc === 2 || tc === 6) ? 0.07 : 0.022, dest); if (tc === 2 || tc === 6) caja(Math.max(0, cu - 0.03), 0.03, dest); if (tc === 5) caja(cu + corchea / 2, 0.025, dest); }
+    // fanfarria: suena 3 de cada 4 frases (la cuarta deja respirar con solo tambores y metales)
+    if (frase % 4 !== 3) { var fz = FANFARRIA[frase % FANFARRIA.length]; fz.forEach(function (m) { if (m[1] === enFrase) trompeta(m[0], cu, corchea * m[2] * 1.05, 0.014, dest); }); }
+    // platillo al empezar cada 8 compases
+    if (p % 64 === 0) sruido(cu, 1.4, { tipo: 'highpass', fr: 5000, vol: 0.05, eco: 0.7, destino: dest });
+  }
+  // v9.14: puente del sistema de MÚSICA DE GUERRA (js/tk-musica-guerra.js). Solo lee la partida; no cambia nada del juego
+  window.__tkMus = {
+    contexto: function () { return audio; }, salida: function () { return salida; },
+    puede: function () { return !!(audio && salida && estado && estado.sonido && musicaOn && !enMenu); },
+    volumen: function () { return volMusica(); },
+    enMundo: function () { return !!enMundo; },
+    oleada: function () { return !!oleadaActiva; },
+    vidaCastillo: function () { var m = vidaMaxCastillo(); return m > 0 ? Math.max(0, estado.vidaCastillo || 0) / m : 1; },
+    marchas: function () { var t = Date.now(); return marchas.filter(function (m) { return !m.resuelto && m.llega > t; }).length; },
+    campana: function () { return !!window.__tkCampanaAbierta; }
+  };
   document.addEventListener('visibilitychange', function () { if (document.hidden) pararMusica(); else if (audio) arrancarMusica(); });
   // el navegador solo deja sonar después del primer toque
   window.addEventListener('pointerdown', function () { if (estado.sonido && musicaOn && !enMenu) { try { prepararAudio(); if (audio.state === 'suspended') audio.resume(); arrancarMusica(); } catch (e) {} } }, true);
@@ -12577,7 +12662,8 @@
       '<button class="comprar' + (estado.idioma === 'en' ? '' : ' morado') + '" data-accion="idioma" data-valor="en">English</button></div></div>' +
       (hayCuenta() ? '<div class="carta"><h3>♻️ ' + L('Copia de seguridad', 'Backup') + '</h3><p class="nota">' + (respaldo ? L('Última copia: ', 'Last backup: ') + new Date(respaldo.actualizado).toLocaleString() : L('Se hace sola cada 30 minutos mientras juegas.', 'It is made automatically every 30 minutes while you play.')) + '</p>' + (respaldo ? '<button class="comprar" data-accion="recuperar-reino">♻️ ' + L('Recuperar mi reino', 'Restore my kingdom') + '</button>' : '') + '</div>' : '') +
       '<div class="carta"><h3>' + T('sonido') + '</h3><button class="comprar" data-accion="sonido">' + (estado.sonido ? '🔊 ON' : '🔇 OFF') + '</button></div>' +
-      '<div class="carta"><h3>' + T('musica') + '</h3><button class="comprar" data-accion="musica">' + (musicaOn ? '🎵 ON' : '🔇 OFF') + '</button><div class="mus-vol">' + [['bajo', '🔈', L('Bajo', 'Low')], ['medio', '🔉', L('Medio', 'Medium')], ['alto', '🔊', L('Alto', 'High')]].map(function (q) { return '<button class="comprar mini' + ((leerPref().musicaVol || 'medio') === q[0] ? ' verde' : '') + '" data-accion="musica-vol" data-v="' + q[0] + '">' + q[1] + ' ' + q[2] + '</button>'; }).join('') + '</div></div>' +
+      '<div class="carta"><h3>' + T('musica') + '</h3><button class="comprar" data-accion="musica">' + (musicaOn ? '🎵 ON' : '🔇 OFF') + '</button><div class="mus-vol">' + [['bajo', '🔈', L('Bajo', 'Low')], ['medio', '🔉', L('Medio', 'Medium')], ['alto', '🔊', L('Alto', 'High')]].map(function (q) { return '<button class="comprar mini' + ((leerPref().musicaVol || 'medio') === q[0] ? ' verde' : '') + '" data-accion="musica-vol" data-v="' + q[0] + '">' + q[1] + ' ' + q[2] + '</button>'; }).join('') + '</div>' +
+        '<p class="nota" style="margin:8px 0 4px"><b>' + L('Efectos de sonido', 'Sound effects') + '</b></p><div class="mus-vol">' + [['bajo', '🔈', L('Bajo', 'Low')], ['medio', '🔉', L('Medio', 'Medium')], ['alto', '🔊', L('Alto', 'High')]].map(function (q) { return '<button class="comprar mini' + ((leerPref().efectosVol || 'alto') === q[0] ? ' verde' : '') + '" data-accion="efectos-vol" data-v="' + q[0] + '">' + q[1] + ' ' + q[2] + '</button>'; }).join('') + '</div></div>' + /* v9.14 */
       '<div class="carta"><h3>' + T('velocidad') + '</h3><button class="comprar" data-accion="velocidad">x' + velocidad + '</button></div>' +
       '<div class="carta"><h3>' + T('calidad') + '</h3><div class="stats"><button class="comprar' + (calidad === 'alta' ? '' : ' morado') + '" data-accion="calidad" data-valor="alta">' + T('calidad_alta') + '</button><button class="comprar' + (calidad === 'baja' ? '' : ' morado') + '" data-accion="calidad" data-valor="baja">' + T('calidad_baja') + '</button></div><p class="nota">' + T('calidad_txt') + '</p></div>' +
       '</div>';
@@ -12913,6 +12999,7 @@
     else if (a === 'heroe') invocarHeroe();
     else if (a === 'idioma') { estado.idioma = b.getAttribute('data-valor'); aplicarIdioma(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'sonido') { cambiarSonido(); reabrirPanel(); }
+    else if (a === 'efectos-vol') { try { var pe = leerPref(); pe.efectosVol = b.getAttribute('data-v'); localStorage.setItem(CLAVE_PREF, JSON.stringify(pe)); } catch (e) {} if (efectosBus && audio) efectosBus.gain.setTargetAtTime(volEfectos(), audio.currentTime, 0.05); sonar('click'); reabrirPanel(); } /* v9.14 */
     else if (a === 'musica-vol') { sonar('click'); try { var pv = leerPref(); pv.musicaVol = b.getAttribute('data-v'); localStorage.setItem(CLAVE_PREF, JSON.stringify(pv)); } catch (e) {} volumenMusica(); reabrirPanel(); } /* v8.50 */
     else if (a === 'musica') { musicaOn = !musicaOn; if (musicaOn) { sonar('click'); arrancarMusica(); } else pararMusica(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'velocidad') { cambiarVelocidad(); reabrirPanel(); }
@@ -13253,7 +13340,7 @@
   }
   function guardarPreferencias(sinPartida) {
     try {
-      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad, musicaVol: leerPref().musicaVol || 'medio' })); /* v8.50 */
+      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad, musicaVol: leerPref().musicaVol || 'medio', efectosVol: leerPref().efectosVol || 'alto' })); /* v8.50 · v9.14: efectosVol */
     } catch (e) {}
     if (!enMenu && !sinPartida) guardar();
   }
