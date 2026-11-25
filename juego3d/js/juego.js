@@ -10960,6 +10960,27 @@
     perder: function (m) { var tot = 0; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (q > 0) { quitarDeCasa(k, q); tot += q; } }); if (tot) { guardar(true); actualizarHUD(); } return tot; },
     num: formatoNumero,
     abierta: function (v) { window.__tkCampanaAbierta = !!v; if (!v) { actualizarHUD(); } },
+    /* v9.00: MAPA DE CAMPAÑA (js/tk-campana-mapa.js): progreso, recursos y premios reales del juego (sin gemas) */
+    datos: function () { var d = estado.campMapa; if (!d || typeof d !== 'object') d = estado.campMapa = {}; ['m', 'logros', 'cofres', 'visto'].forEach(function (k) { if (!d[k] || typeof d[k] !== 'object') d[k] = {}; }); if (!d.dif) d.dif = 'normal'; return d; },
+    guardar: function () { guardar(true); actualizarHUD(); },
+    cerrarPanel: function () { if (panelActual) cerrarPanel(); },
+    recursos: function () { return { oro: estado.monedas || 0, madera: estado.madera || 0, piedra: estado.piedra || 0, hierro: estado.hierro || 0 }; },
+    imgObjeto: function (k) { return ICONOS_IMG[k] ? 'iconos/ui/' + ICONOS_IMG[k] + '.webp' : ''; },
+    nombreObjeto: function (k) { return OBJETOS[k] ? N(k) : String(k); },
+    nombreRareza: function (r) { return ({ comun: L('Pieza común', 'Common piece'), raro: L('Pieza rara', 'Rare piece'), legendario: L('Pieza legendaria', 'Legendary piece'), mitico: L('Pieza mítica', 'Mythic piece') })[r] || L('Pieza', 'Piece'); },
+    darMision: function (p, ids) {
+      var items = [], NR = { oro: L('Oro', 'Gold'), madera: L('Madera', 'Wood'), piedra: L('Piedra', 'Stone'), hierro: L('Hierro', 'Iron') };
+      ids = (ids || []).filter(function (id) { return estado.heroes && estado.heroes[id]; });
+      ['oro', 'madera', 'piedra', 'hierro'].forEach(function (r) { var n = Math.round(p[r] || 0); if (n <= 0) return; if (r === 'hierro') estado.hierro = (estado.hierro || 0) + n; else sumarRecurso(r, n); items.push({ img: 'iconos/ui/r_' + r + '.webp', ico: ICONO_RECURSO[r], nom: NR[r], n: '+' + formatoNumero(n) }); });
+      if (p.expH && ids.length) { ids.forEach(function (id) { darExp(id, p.expH); }); items.push({ ico: '🦸', nom: L('EXP de cada héroe', 'EXP per hero'), n: '+' + formatoNumero(p.expH) }); }
+      if (p.expR) { sumarXP(p.expR); items.push({ ico: '⭐', nom: L('EXP del reino', 'Kingdom EXP'), n: '+' + formatoNumero(p.expR) }); }
+      var hf = ids[Math.floor(Math.random() * ids.length)];
+      if (p.frag && hf) { estado.heroes[hf].frag = (estado.heroes[hf].frag || 0) + p.frag; items.push({ img: RETRATOS_IMG['h_' + hf] ? 'iconos/ui/' + RETRATOS_IMG['h_' + hf] + '.webp' : '', ico: '🧩', nom: L('Fragmentos de ', 'Shards of ') + NH(hf), n: '×' + p.frag }); }
+      (p.obj || []).forEach(function (q) { if (!OBJETOS[q[0]] || !(q[1] > 0)) return; estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + q[1]; items.push({ img: ICONOS_IMG[q[0]] ? 'iconos/ui/' + ICONOS_IMG[q[0]] + '.webp' : '', ico: OBJETOS[q[0]].icono, nom: N(q[0]), n: '×' + q[1] }); });
+      if (p.pieza && RAREZAS[p.pieza]) { var pz = darPieza(null, p.pieza); if (pz) items.push({ img: 'iconos/ui/q_' + pz.t + '.webp', ico: '🛡️', nom: nombrePieza(pz), n: '×1' }); }
+      guardar(true); actualizarHUD();
+      return items;
+    },
     // premios de la etapa (sin gemas: las gemas no se regalan)
     ganar: function (n, ids) {
       var items = [], expH = 30 + 12 * n, expR = 15 + 5 * n;
@@ -12939,7 +12960,7 @@
       if (panelActual && tipos.indexOf(panelActual.tipo) >= 0) cerrarPanel(); else abrir();
     });
   }
-  botonMenu('btn-conquista', ['conquista'], function () { abrirPanelConquista(); });
+  botonMenu('btn-conquista', ['conquista'], function () { if (window.TKMapa && !oleadaActiva && TKMapa.abrir()) return; abrirPanelConquista(); }); // v9.00: el botón Campaña abre el mapa (las Etapas siguen dentro)
   botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); });
   botonMenu('btn-mochila', ['mochila'], function () { abrirPanelMochila(); });
   botonMenu('btn-tienda', ['tienda'], function () { abrirPanelTienda(); });
