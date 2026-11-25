@@ -12022,7 +12022,7 @@
     var cuerpo = '';
     if (t === 'detalles') cuerpo = banner + (nc >= CASTILLO_MAX && !oc ? '<div class="ve-max">' + L('Has alcanzado el máximo nivel', 'You have reached the max level') + '</div>' : '<div class="cs-det">' + mej + '</div>') +
       '<div class="cs-stats"><span>❤ ' + T('vida') + ' ' + Math.ceil(estado.vidaCastillo) + ' / ' + vidaMaxCastillo() + '</span><span>⚔ ' + T('dano') + ' ' + danoCastillo() + '</span><span>🎯 ' + T('alcance') + ' ' + CASTILLO.alcance + '</span></div>' +
-      '<div class="lista" style="margin-top:10px">' + htmlMuralla() + '</div>';
+      '<div class="lista cs-lista" style="margin-top:10px">' + htmlMuralla() + '</div>'; /* v8.75: en el teléfono una sola columna */
     if (t === 'general') {
       var imp = impuestoPct(), oroH = Math.round(IMPUESTO.oro * (imp / 30) * (1 + bono('impuestos')) * 3600 / IMPUESTO.cada);
       cuerpo = '<div class="cs-caja"><h4>' + L('Impuestos', 'Taxes') + '</h4><p class="cs-txt">' + L('Mueve la barra: más impuesto da más oro cada hora, pero la gente trabaja más despacio en las obras. Con más de 30% la gente se pone triste y los campos producen menos.', 'Move the bar: higher tax gives more gold per hour, but people build more slowly. Above 30% people get unhappy and fields produce less.') + '</p>' +
