@@ -1643,3 +1643,7 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
   #panel .dv-fila .cs-switch { flex: 0 0 96px !important; width: 96px; }
   html body #panel .dv-caja .dv-heroes { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 6px !important; }
 }
+
+/* v8.88: las pestañas de la Torre caben todas (ninguna se esconde a la derecha) */
+#panel .tr-subs { display: flex !important; flex-wrap: wrap !important; overflow: visible !important; gap: 6px; }
+#panel .tr-subs button { flex: 1 1 28%; }

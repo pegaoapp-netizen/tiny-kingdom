@@ -8493,7 +8493,7 @@
     evento: { es: 'Evento', en: 'Event', l: [['cuerno_guerra', 60], ['cofre_tesoro', 120]] }
   };
   var torreSub = { artefactos: 'equipo', promos: 'misiones' };
-  function promosTorreN() { var n = 0; for (var k in TORRE_PROMOS) n += TORRE_PROMOS[k].l.filter(function (q) { return OBJETOS[q[0]]; }).length; return n; }
+  function promosTorreN() { var n = 0; for (var k in TORRE_PROMOS) n += TORRE_PROMOS[k].l.filter(function (q) { return OBJETOS[q[0]] && blasones() >= q[1]; }).length; return n; } /* v8.88: el número son las que YA puedes aceptar con tus blasones */
   function blasones() { return estado.blasones || 0; }
   function darBlasones(n) { if (!(n > 0)) return; estado.blasones = blasones() + n; consejoTemporal('🛡️ +' + n + ' ' + L('blasones (guárdalos en la Torre del homenaje)', 'crests (kept in the Keep)')); }
   function finPromosTorre() { return ((semanaActual() + 1) * 7 - 3) * 86400000; }
@@ -8502,7 +8502,7 @@
     var tabs = pestanasVentana(i, 'torre').replace('class="activo" data-accion="cafe-det"', 'class="" data-accion="cafe-det"').replace('class="" data-accion="torre-pest" data-p="' + p + '"', 'class="activo" data-accion="torre-pest" data-p="' + p + '"');
     var tabla = p === 'promos' ? TORRE_PROMOS : TORRE_ARTEFACTOS, sub = torreSub[p] in tabla ? torreSub[p] : Object.keys(tabla)[0];
     var h = '<div class="tr-caja"><div class="tr-blasones"><span class="tr-escudo">🛡️</span>' + L('Tus blasones: ', 'Your crests: ') + '<b>' + formatoNumero(blasones()) + '</b><small>' + L('Se ganan venciendo campamentos y aldeas bárbaras', 'Earned by beating camps and barbarian villages') + '</small></div>';
-    h += '<div class="tr-subs">' + Object.keys(tabla).map(function (k) { return '<button class="' + (k === sub ? 'activo' : '') + '" data-accion="torre-sub" data-p="' + p + '" data-s="' + k + '" data-slot="' + i + '">' + (estado.idioma === 'en' ? tabla[k].en : tabla[k].es) + '</button>'; }).join('') + '</div>';
+    h += '<div class="tr-subs">' + Object.keys(tabla).map(function (k) { return '<button class="' + (k === sub ? 'activo' : '') + '" data-accion="torre-sub" data-p="' + p + '" data-s="' + k + '" data-slot="' + i + '">' + (estado.idioma === 'en' ? tabla[k].en : tabla[k].es) + (p === 'promos' ? (function () { var nk = tabla[k].l.filter(function (q) { return OBJETOS[q[0]] && blasones() >= q[1]; }).length; return nk ? ' <span class="mail-n">' + nk + '</span>' : ''; })() : '') + '</button>'; }).join('') + '</div>'; /* v8.88: cada pestaña dice cuántas puedes aceptar */
     var fin = (finPromosTorre() - Date.now()) / 1000;
     h += '<div class="tr-lista">' + tabla[sub].l.filter(function (q) { return OBJETOS[q[0]]; }).map(function (q) {
       var o = OBJETOS[q[0]], ok = blasones() >= q[1];
@@ -8545,7 +8545,7 @@
     else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
     else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); if (hayCuenta() && estado.alianza) t.push(['reunion-pest" data-p="guarnicion', '🏳️ ' + L('Guarnición', 'Garrison')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
-    else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + ' <span class="mail-n">' + promosTorreN() + '</span>']); }
+    else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + (promosTorreN() ? ' <span class="mail-n">' + promosTorreN() + '</span>' : '')]); }
     else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
     return '<div class="cafe-tabs ve-tabs">' + t.map(function (q) { return '<button class="' + (q[2] ? 'activo' : '') + '" data-accion="' + q[0] + '" data-slot="' + i + '">' + q[1] + '</button>'; }).join('') + '</div>';
   }
