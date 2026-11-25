@@ -1615,3 +1615,11 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .ev-desl .ev-pista input[type=range] { flex: 1 1 auto; width: 100%; min-width: 0; margin: 0; }
 .ev-desl .ev-marca { position: absolute; top: 0; transform: translateX(-50%); font: 800 9px/1 system-ui, sans-serif; font-style: normal; color: #9fd0ff; pointer-events: none; white-space: nowrap; }
 .ev-desl .ev-marca::after { content: ''; position: absolute; left: 50%; top: 11px; width: 1px; height: 8px; background: #9fd0ff; opacity: .8; }
+
+/* v8.66: carretas para el botín en la ventana de Marcha */
+.mc-carros { margin: 8px 0 4px; padding: 8px; border-radius: 10px; background: rgba(0,0,0,.3); border: 1px solid #6b4a1a; }
+.mc-carros > b { display: block; color: #ffe08a; font-size: 13px; } .mc-carros > small { display: block; font-size: 11px; opacity: .85; margin-bottom: 4px; }
+.mc-carro-f { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+.mc-carro-f span { flex: 1; min-width: 0; font-size: 12px; } .mc-carro-f span small { display: block; font-size: 10.5px; opacity: .8; }
+.mc-carro { width: 72px; height: 28px; border-radius: 6px; border: 1px solid #8a6a2a; background: #120a03; color: #ffe08a; text-align: right; padding: 0 4px; font-weight: 800; }
+.mc-carga { margin: 4px 0 0; font-size: 12.5px; }

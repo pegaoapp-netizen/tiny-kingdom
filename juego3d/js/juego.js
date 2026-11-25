@@ -9650,6 +9650,8 @@
     return { oro: Math.min(5000, 60 + 30 * n), comida: Math.min(5000, 50 + 25 * n), madera: Math.min(5000, 50 + 25 * n), piedra: Math.min(5000, 20 + 12 * n) };
   }
   var REPARTO_BOTIN = { oro: 0.3, comida: 0.3, madera: 0.25, piedra: 0.15 };
+  function carrosElegidos() { var lib = libresVillaT(), c = estado.carrosAtaque || {}, o = {}; SUMINISTRO_ORDEN.forEach(function (t) { o[t] = Math.max(0, Math.min(Math.floor(c[t] || 0), lib[t] || 0)); }); return o; }
+  function capCarros(c) { var cap = 0; SUMINISTRO_ORDEN.forEach(function (t) { cap += (c[t] || 0) * (CARGA_VILLA[t] || 0); }); return cap; }
   function botinAtaque(nivel, nCarretas) {
     var base = botinMaximo(nivel), b = {}, cap = (nCarretas || 0) * capCarreta();
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (r) { b[r] = Math.min(50000, Math.round(base[r] * 0.4 + cap * REPARTO_BOTIN[r])); });
@@ -9864,6 +9866,7 @@
         h += '<div class="mc-esc"><div class="mc-foto chica">' + fotoHTML(k, TROPAS[k].icono) + '</div><div class="mc-ed"><b>' + N(k) + '</b><small>' + L('Libres ', 'Free ') + formatoNumero(max) + (fuera ? ' · 🏇 ' + formatoNumero(fuera) + L(' en marcha', ' marching') : '') + '</small>' +
           '<input type="range" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div><input class="mc-num" type="number" min="0" max="' + max + '" value="' + n + '" data-k="' + k + '"></div>';
       });
+      if (!a.pve && !a.bot && !ali) h += '</div>' + htmlCarrosAtaque() + '<div>'; /* v8.66: carretas para el botín */
       var am = totalMarchando();
       h += '</div><p class="nota mc1-info">🚩 ' + L('Punto de reunión nv ', 'Rally point lv ') + nivelRelevo() + ' · ' + L('marchas: ', 'marches: ') + am + ' / ' + maxMarchas() + (buffActivo('capMarcha') ? ' · 🚩 +25 %' : '') + '</p>';
       return h + '<p id="mc-aviso" class="mc-rojo"></p><div class="mc-botones"><button class="comprar azul" data-mc="guardar">💾 ' + L('Guardar formación', 'Save formation') + '</button><button class="comprar naranja" data-mc="marchar"' + (tt <= 0 ? ' disabled' : '') + '>⚔️ ' + L('Marchar', 'March') + '</button></div>';
@@ -9930,6 +9933,14 @@
           : '<p class="nota">' + L('Guarda aquí los lugares a los que vas seguido.', 'Save the places you visit often here.') + '</p>') + '</div>' +
         '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
     }
+    /* v8.66 (dueño): EL BOTÍN LO CARGAN LAS CARRETAS. Los soldados no cargan nada: eliges cuántas carretas de cada tipo van y
+       solo te puedes llevar lo que quepa en ellas (Ligera 5.000, Suministro 25.000, Real 100.000 cada una). */
+    function htmlCarrosAtaque() {
+      var lib = libresVillaT(), c = carrosElegidos(), cap = capCarros(c);
+      return '<div class="mc-carros"><b>' + iconoCarreta() + ' ' + L('Carretas para el botín', 'Carts for the loot') + '</b><small>' + L('Los soldados no cargan nada: sin carretas no te llevas recursos.', 'Soldiers carry nothing: without carts you take no resources.') + '</small>' +
+        SUMINISTRO_ORDEN.map(function (t) { var su = SUMINISTRO[t]; return '<div class="mc-carro-f"><span>' + su.icono + ' ' + L(su.es, su.en) + '<small>' + formatoNumero(CARGA_VILLA[t]) + ' ' + L('c/u', 'each') + ' · ' + L('libres ', 'free ') + formatoNumero(lib[t] || 0) + '</small></span><input class="mc-carro" type="number" inputmode="numeric" min="0" max="' + (lib[t] || 0) + '" value="' + (c[t] || 0) + '" data-t="' + t + '"' + (lib[t] ? '' : ' disabled') + '><button class="comprar mini" data-mc="carro-max" data-t="' + t + '"' + (lib[t] ? '' : ' disabled') + '>' + L('Máx', 'Max') + '</button></div>'; }).join('') +
+        '<p class="mc-carga" id="mc-carga">📦 ' + L('Te puedes llevar hasta ', 'You can take up to ') + '<b>' + formatoNumero(cap) + '</b></p></div>';
+    }
     function htmlRecursos() {
       var bm = botinMaximo(a.nivel || 1), lc = carretasLibres();
       return '<div class="mc-cab"><b>' + L('4. Recursos', '4. Resources') + '</b><button class="mc-x" data-mc="cerrar">✕</button></div>' +
@@ -9939,6 +9950,7 @@
         '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
     }
     function pintar() {
+      setTimeout(function () { d.querySelectorAll('.mc-carro').forEach(function (inp) { inp.addEventListener('input', function () { estado.carrosAtaque = estado.carrosAtaque || {}; estado.carrosAtaque[inp.dataset.t] = Math.max(0, Math.min(+inp.max || 0, Math.floor(+inp.value || 0))); var cg = $('mc-carga'); if (cg) cg.innerHTML = '📦 ' + L('Te puedes llevar hasta ', 'You can take up to ') + '<b>' + formatoNumero(capCarros(carrosElegidos())) + '</b>'; }); inp.addEventListener('change', function () { inp.value = (estado.carrosAtaque || {})[inp.dataset.t] || 0; }); }); }, 0); /* v8.66 */
       d.innerHTML = '<div class="mc-caja">' + (vista === 'unica' ? htmlUnica() : vista === 'heroes' ? htmlHeroes() : htmlPasos() + (vista === 'objetivo' ? htmlObjetivo() : vista === 'favoritos' ? htmlFavoritos() : vista === 'recursos' ? htmlRecursos() : vista === 'escoger' ? htmlEscoger() : vista === 'heroes' ? htmlHeroes() : htmlMarcha())) + '</div>';
       var hs = d.querySelector('#mc-heroe'); if (hs) hs.addEventListener('change', function () { sel.heroe = this.value || null; pintar(); });
       if (vista === 'escoger' || vista === 'unica') {
@@ -9977,6 +9989,7 @@
       else if (q === 'guardar') { guardarFormacion(); return; }
       else if (q === 'siguiente') { if (total() <= 0) { $('mc-aviso').textContent = L('Elige al menos una tropa.', 'Choose at least one troop.'); sonar('error'); return; } vista = 'recursos'; }
       else if (q === 'pot') usarPotenciador(b.dataset.k); // v8.18
+      else if (q === 'carro-max') { var libM = libresVillaT(); estado.carrosAtaque = estado.carrosAtaque || {}; estado.carrosAtaque[b.dataset.t] = libM[b.dataset.t] || 0; }
       else if (q === 'marchar') {
         if (total() <= 0) { consejoTemporal(L('Elige al menos una tropa.', 'Choose at least one troop.')); sonar('error'); return; }
         var f = fuerza(); b.disabled = true;
@@ -9984,7 +9997,7 @@
         if (totalMarchando() >= maxMarchas()) { b.disabled = false; consejoTemporal(avisoMarchasLlenas()); sonar('error'); return; }
         if (total() > tamanoMarcha(sel.heroe)) { b.disabled = false; consejoTemporal(L('Te pasaste del límite de la marcha.', 'Over the march limit.')); sonar('error'); return; }
         estado.ultimaMarcha = { heroe: sel.heroe, tropas: JSON.parse(JSON.stringify(sel.tropas)) };
-        cerrar(); realizarAtaque(a, f, Math.min(2, carretasLibres())); return;
+        cerrar(); realizarAtaque(a, f, carrosElegidos()); guardar(); return; /* v8.66: las carretas que elegiste */
       }
       pintar();
     });
@@ -10103,12 +10116,14 @@
     if (a && a.bot) { atacarVilla(a, false, fuerzaElegida); return; } // v7.02: a una villa: marcha por el mapa y batalla con las tropas elegidas
     var no = puedeAtacar(a);
     if (no) { consejoTemporal(no); sonar('error'); return; }
+    var usoC = null; if (nCarretas && typeof nCarretas === 'object') { usoC = nCarretas; nCarretas = Math.ceil((usoC.carretilla || 0) * SUMINISTRO.carretilla.carga + (usoC.carreta || 0) + (usoC.convoy || 0) * SUMINISTRO.convoy.carga - 1e-6); } else if (nCarretas) usoC = { carretilla: 0, carreta: Math.floor(nCarretas), convoy: 0 }; /* v8.66 */
     nCarretas = Math.max(0, Math.min(nCarretas || 0, carretasLibres()));
     var f = Math.round(fuerzaElegida || fuerzaEjercito()), viaje = tiempoMarcha(a), bm = botinAtaque(a.nivel, nCarretas);
     var hS = estado.ultimaMarcha && estado.ultimaMarcha.heroe, sq = hS && estado.heroes && estado.heroes[hS] ? multiplicadoresHeroe(hS).saqueo : 0;
     if (sq) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { bm[k] = Math.min(65000, Math.round(bm[k] * (1 + sq / 100))); }); // v7.84: Sello del Trono de Fuego
     /* v8.65 (dueño): si lo dejas en cero te llevas TODO lo que tiene; si no, nada. El botín pedido es todo lo que el defensor tiene. */
-    var recD = (a.espia && a.espia.rec) || null; ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { var v = recD && recD[k] != null ? recD[k] : 1e12; bm[k] = Math.max(0, Math.min(1e15, Math.floor(+v || 0))); });
+    var recD = (a.espia && a.espia.rec) || null, capT = usoC && nCarretas ? capCarros(usoC) : 0, quiere = {}, sumQ = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { quiere[k] = recD && recD[k] != null ? Math.max(0, Math.floor(+recD[k] || 0)) : capT; sumQ += quiere[k]; });
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { bm[k] = Math.max(0, Math.min(1e15, sumQ <= capT ? quiere[k] : Math.floor(quiere[k] * capT / Math.max(1, sumQ)))); }); /* v8.66: solo lo que cabe en las carretas */
     var doc = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
       gano: false, botin: { oro: bm.oro, comida: bm.comida, madera: bm.madera, piedra: bm.piedra }, fuerza: f, defensa: Math.round(a.defensa || 1),
       fecha: Date.now(), llega: Date.now() + viaje, visto: false, resuelto: false, cobrado: false, bajas: 0 };
@@ -10124,7 +10139,7 @@
       doc.id = ref.id; marchas.push(doc);
       estado.marchaTropas = estado.marchaTropas || {}; estado.marchaTropas[ref.id] = JSON.parse(JSON.stringify(estado.ultimaMarcha || { tropas: miComposicion(), heroe: liderActual() })); estado.marchaTropas[ref.id].dur = viaje; // v7.51: duración base del viaje (los aceleradores de la ida no acortan la vuelta)
       estado.destinos = estado.destinos || {}; estado.destinos[ref.id] = { x: a.x, y: a.y };
-      if (nCarretas) { var cv = carretas(), ahoraC = Date.now(); cv.viajes.push({ id: 'va' + ref.id, tipo: 'ataque', de: miLugar(), a: { x: a.x, y: a.y }, sale: ahoraC, llega: ahoraC + viaje, vuelve: ahoraC + 2 * viaje, recursos: null, n: nCarretas, nombre: String(a.nombre || '') }); }
+      if (nCarretas) { var cv = carretas(), ahoraC = Date.now(); cv.viajes.push({ usoT: usoC || undefined, id: 'va' + ref.id, tipo: 'ataque', de: miLugar(), a: { x: a.x, y: a.y }, sale: ahoraC, llega: ahoraC + viaje, vuelve: ahoraC + 2 * viaje, recursos: null, n: nCarretas, nombre: String(a.nombre || '') }); }
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now(); /* v8.55: sin espera: se puede atacar seguido */ // v7.14: 1 min entre ataques al mismo reino (antes 10)
       guardar(true); publicarAldea(true); actualizarEscudo();
