@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.75';
+var VERSION_JUEGO = '8.76';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.75","2026-11-24","Castillo › Detalles más ordenado en el teléfono.","Castle › Details tidier on phones."],
+var NOVEDADES_VER = [["8.76","2026-11-24","El que expulsan de una alianza ya no sale como miembro ni como aliado.","A player removed from an alliance no longer shows as member or ally."],
+  ["8.75","2026-11-24","Castillo › Detalles más ordenado en el teléfono.","Castle › Details tidier on phones."],
   ["8.74","2026-11-24","Castillo › Defensa: la lista de defensores cuenta todas tus tropas de casa, igual que la batalla.","Castle › Defense: the defenders list counts all your troops at home, same as the battle."],
   ["8.73","2026-11-24","Tienda más llena: paquetes de tropas, libros de héroe, amatista, cofres de equipo y de madera.","Fuller Shop: troop packs, hero books, amethyst, gear and wooden chests."],
   ["8.72","2026-11-24","Inventario: carretas, VIP, fichas, amatista y potenciadores se pueden usar de uno en uno o todos.","Inventory: wagons, VIP, tokens, amethyst and boosts can be used one at a time or all."],

@@ -4189,6 +4189,14 @@
     }).catch(function () { b.disabled = false; sonar('error'); });
   }
   // v8.04: se sale con la ventana del juego (la del navegador a veces no aparece en el iPhone)
+  /* v8.76: el expulsado sale de la alianza en cuanto abre el juego (antes solo al abrir la ventana de Alianza) */
+  function revisarExpulsion() {
+    if (!hayCuenta() || !estado.alianza || !Cuentas.alianza) return; var tag = estado.alianza;
+    Cuentas.alianza(tag).then(function (al) { if (estado.alianza !== tag) return; if (!al || meExpulsaron(al)) { estado.alianza = null; alCache = null; try { localStorage.removeItem(alCacheClave()); } catch (e) {} guardar(true); publicarAldea(true); consejoTemporal(al ? '🚪 ' + L('Te expulsaron de la alianza ', 'You were removed from the alliance ') + escaparHTML(al.nombre || tag) + '.' : T('al_borrada')); } }).catch(function () {});
+  }
+  setTimeout(revisarExpulsion, 9000); setInterval(revisarExpulsion, 300000);
+  /* los demás: alguien expulsado de MI alianza ya no cuenta como aliado, aunque su ficha aún no se haya actualizado */
+  function expulsadoDeMiAlianza(a) { return !!(a && a.alianza && alCache && alCache.al && alCache.al.tag === a.alianza && (alCache.al.expulsados || {})[a.uid] && (alCache.al.expulsados[a.uid] > (a.actualizado || 0))); }
   function meExpulsaron(al) { var u = hayCuenta() ? Cuentas.usuario().uid : ''; var t = (al && al.expulsados || {})[u]; return !!t && t > (estado.alUnion || 0); }
   function salirAlianza(b) {
     var lider = b.getAttribute('data-lider') === '1';
@@ -9690,6 +9698,7 @@
   function cerrarFicha() { var f = $('ficha-ciudad'); if (f) f.remove(); if (M3 && M3.verde) M3.verde.visible = false; }
   function abrirFichaCiudad(a, esMio) {
     cerrarFicha();
+    if (!esMio && expulsadoDeMiAlianza(a)) { a = JSON.parse(JSON.stringify(a)); a.alianza = null; } /* v8.76 */
     var c = celdaDe(a.x, a.y); if (M3 && M3.verde) { var pv = posCelda(c.x, c.y); M3.verde.position.set(pv.x, 0.09, pv.z); M3.verde.visible = true; }
     var dp = diplomacia(a), nv = (a.espia && a.espia.nivelJ) || a.nivel || 1, mio = Math.round(calcularPoder()), prot = (a.escudo || 0) > Date.now();
     var mucho = (a.poder || 0) > mio * 1.5;
@@ -9711,7 +9720,7 @@
     var fe = $('fc-entrar'); if (fe) fe.addEventListener('click', function () { sonar('click'); cerrarFicha(); entrarCiudad(); });
     $('fc-x').addEventListener('click', function () { sonar('click'); cerrarFicha(); });
     // v6.54: si tiene alianza, se muestra su nombre completo (no solo la etiqueta)
-    if (a.alianza && hayCuenta()) Cuentas.alianza(a.alianza).then(function (al) { var e = $('fc-alianza'); if (e && al && al.nombre) e.textContent = al.nombre; }).catch(function () {});
+    if (a.alianza && hayCuenta()) Cuentas.alianza(a.alianza).then(function (al) { var e = $('fc-alianza'); if (!e) return; if (!al || ((al.expulsados || {})[a.uid] && al.expulsados[a.uid] > (a.actualizado || 0))) { e.textContent = L('Ninguna', 'None'); return; } if (al.nombre) e.textContent = al.nombre; }).catch(function () {}); /* v8.76: si lo expulsaron, «Ninguna» */
     d.addEventListener('click', function (ev) { if (ev.target === d) cerrarFicha(); });
     var fsp = $('fc-espiar'); if (fsp) fsp.addEventListener('click', function () { espiarCiudad(a, this); });
     var at = $('fc-atacar'); if (at) at.addEventListener('click', function () { sonar('click'); cerrarFicha(); abrirMarcha(a); }); // v7.02: también a las villas se les ataca con la ventana de Marcha
