@@ -1,0 +1,10 @@
+BROTHER KINGDOM — MASTER ASSET PACK v1
+Paquete aditivo para v9.17. No contiene el juego completo.
+1. Leer CLAUDE.md y AGENTS.md del repositorio actual; actualizar rama según sus reglas.
+2. Copiar el contenido de BrotherKingdom/ a la raíz del repositorio, sin sobrescribir archivos existentes.
+3. Servir juego3d por HTTP y abrir bk-master-v1.html. Usa las bibliotecas Three.js y GLTFLoader del juego.
+4. Revisar todos los modelos y clips; son prototipos. El cargador BKAssets.list() y BKAssets.load(grupo,id) devuelve el catálogo y el GLTF, respectivamente. No conecta automáticamente la campaña.
+5. Integrar por separado y con aprobación del responsable de cada área. Probar escalas, orientación, animaciones, colisiones, rendimiento móvil y liberar recursos. No cambiar estadísticas ni economía sin autorización.
+6. Ejecutar node juego3d/pruebas/revisar.js y seguir las reglas de publicación del repositorio. No publicar automáticamente.
+Los documentos de paquetes anteriores se conservan en documentacion/.
+Validación realizada: integridad ZIP, cabeceras y JSON GLB, ausencia de colisiones con v9.17. No se ha ejecutado el visor ni el juego en navegador.

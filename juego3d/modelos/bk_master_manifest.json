@@ -184,7 +184,7 @@
   "id": "ligera",
   "grupo": "bk_cavalry_v1",
   "url": "modelos/bk_cavalry_v1/ligera.glb",
-  "bytes": 1488032,
+  "bytes": 1297656,
   "animaciones": [
    "Reposo",
    "Caminar",
@@ -199,7 +199,7 @@
   "id": "caballo",
   "grupo": "bk_cavalry_v1",
   "url": "modelos/bk_cavalry_v1/caballo.glb",
-  "bytes": 834268,
+  "bytes": 811872,
   "animaciones": [
    "Reposo",
    "Caminar",
@@ -214,7 +214,7 @@
   "id": "pesada",
   "grupo": "bk_cavalry_v1",
   "url": "modelos/bk_cavalry_v1/pesada.glb",
-  "bytes": 1618692,
+  "bytes": 1424176,
   "animaciones": [
    "Reposo",
    "Caminar",
@@ -229,7 +229,7 @@
   "id": "arquero_montado",
   "grupo": "bk_cavalry_v1",
   "url": "modelos/bk_cavalry_v1/arquero_montado.glb",
-  "bytes": 1510936,
+  "bytes": 1315080,
   "animaciones": [
    "Reposo",
    "Caminar",

@@ -1,0 +1,10 @@
+BROTHER KINGDOM — Combat Effects Pack v1
+Ampliación visual independiente. No sustituir combate ni modificar daño, economía o campaña.
+Importar createCombatEffects desde combat-effects.mjs y pasar el THREE y scene existentes.
+const fx = createCombatEffects(THREE, scene, {quality:'low'});
+En el bucle existente: fx.update(deltaSeconds); no crear otro bucle.
+En eventos visuales: fx.play('fire',{from:origen,to:destino,duration:0.6});
+Tipos: fire, lightning, arrow, sword, shield, heal, dragon, dust.
+from y to son coordenadas mundiales {x,y,z}. Para impactos llamar sword/dust en el punto de impacto confirmado por el juego. No sincronizar daño con el efecto. Los proyectiles son representaciones visuales, no entidades físicas.
+Al cambiar de escena llamar fx.dispose(). setQuality('low'|'medium'|'high') ajusta el máximo de elementos activos a 48/120/240.
+Prototipo geométrico sin texturas, sonido ni colisiones. Verificar escala, aspecto y rendimiento en navegador antes de integrar. No se ha probado en el motor real. Mantener una opción para desactivar efectos.

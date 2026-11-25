@@ -1,0 +1,9 @@
+BROTHER KINGDOM — ULTIMATE PACK v1
+Ampliación para el juego existente v9.17; no es un juego nuevo.
+1. Leer AGENTS.md y CLAUDE.md de la versión ACTUAL. Crear copia de seguridad y rama de prueba. No publicar automáticamente.
+2. Comparar rutas de BrotherKingdom/ con el repositorio actual. Copiar únicamente archivos nuevos; nunca sobrescribir automáticamente. Las bibliotecas existentes del motor deben conservarse. Las dependencias retiradas están en documentacion/dependencias/ solo como referencia.
+3. Abrir juego3d/bk-graphics-v1.html y bk-master-v1.html por HTTP en el proyecto. Comparar modelos actuales con los prototipos. Los 23 modelos bk_anim_v2 son alternativas, no unidades nuevas.
+4. Leer documentacion/fases/ para instrucciones específicas. Materiales requieren UV y nombres compatibles. Probar animaciones con mixers independientes. combat-effects.mjs y weather.mjs están en juego3d/js/; integrar únicamente en el bucle existente. Coordinar iluminación, sombras y calidad con los sistemas actuales; un único propietario por ajuste. No cambiar daño, economía, campaña, multijugador ni Firebase.
+5. Activar mejoras individualmente, con opción de desactivación. Medir FPS, draw calls, triángulos y memoria en escenas equivalentes, móvil y escritorio. LOD, instancing avanzado, IK y texturas detalladas de personajes siguen pendientes.
+6. Ejecutar las pruebas existentes, incluido node juego3d/pruebas/revisar.js si sigue disponible. Verificar combate, economía, campaña, interfaz y guardado. No publicar sin aprobación.
+Validación de esta entrega: integridad de ZIP de origen, cabeceras y JSON GLB, comparación de rutas con v9.17. No se ha ejecutado el juego ni Blender. Consultar VALIDACION_ULTIMATE.json. Los recursos son prototipos, no mejoras visuales garantizadas.

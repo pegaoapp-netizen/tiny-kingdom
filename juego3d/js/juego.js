@@ -12671,6 +12671,7 @@
         '<p class="nota" style="margin:8px 0 4px"><b>' + L('Efectos de sonido', 'Sound effects') + '</b></p><div class="mus-vol">' + [['bajo', '🔈', L('Bajo', 'Low')], ['medio', '🔉', L('Medio', 'Medium')], ['alto', '🔊', L('Alto', 'High')]].map(function (q) { return '<button class="comprar mini' + ((leerPref().efectosVol || 'alto') === q[0] ? ' verde' : '') + '" data-accion="efectos-vol" data-v="' + q[0] + '">' + q[1] + ' ' + q[2] + '</button>'; }).join('') + '</div></div>' + /* v9.14 */
       '<div class="carta"><h3>' + T('velocidad') + '</h3><button class="comprar" data-accion="velocidad">x' + velocidad + '</button></div>' +
       '<div class="carta"><h3>' + T('calidad') + '</h3><div class="stats"><button class="comprar' + (calidad === 'alta' ? '' : ' morado') + '" data-accion="calidad" data-valor="alta">' + T('calidad_alta') + '</button><button class="comprar' + (calidad === 'baja' ? '' : ' morado') + '" data-accion="calidad" data-valor="baja">' + T('calidad_baja') + '</button></div><p class="nota">' + T('calidad_txt') + '</p></div>' +
+      (window.TKClima ? '<div class="carta"><h3>🌦️ ' + L('Clima', 'Weather') + '</h3><div class="stats">' + [['apagado', L('Apagado', 'Off')], ['lluvia', '🌧️ ' + L('Lluvia', 'Rain')], ['nieve', '❄️ ' + L('Nieve', 'Snow')], ['auto', '🔄 ' + L('Cambia solo', 'Changes')]].map(function (q) { return '<button class="comprar' + (TKClima.modo() === q[0] ? '' : ' morado') + '" data-accion="clima" data-valor="' + q[0] + '">' + q[1] + '</button>'; }).join('') + '</div><p class="nota">' + L('Solo se ve en la ciudad. En calidad Baja caen menos gotas.', 'Only in the city. Fewer drops on Low quality.') + '</p></div>' : '') + /* v9.19 */
       '</div>';
     // Cuenta
     html += '<div class="carta" style="margin-top:10px"><h3>' + T('cuenta') + '</h3>';
@@ -13008,7 +13009,8 @@
     else if (a === 'musica-vol') { sonar('click'); try { var pv = leerPref(); pv.musicaVol = b.getAttribute('data-v'); localStorage.setItem(CLAVE_PREF, JSON.stringify(pv)); } catch (e) {} volumenMusica(); reabrirPanel(); } /* v8.50 */
     else if (a === 'musica') { musicaOn = !musicaOn; if (musicaOn) { sonar('click'); arrancarMusica(); } else pararMusica(); guardarPreferencias(); reabrirPanel(); }
     else if (a === 'velocidad') { cambiarVelocidad(); reabrirPanel(); }
-    else if (a === 'calidad') { calidad = b.getAttribute('data-valor'); aplicarCalidad(); guardarPreferencias(); reabrirPanel(); }
+    else if (a === 'calidad') { calidad = b.getAttribute('data-valor'); aplicarCalidad(); guardarPreferencias(); try { var pc = leerPref(); pc.calidadElegida = 1; localStorage.setItem(CLAVE_PREF, JSON.stringify(pc)); } catch (e) {} reabrirPanel(); } /* v9.19: si la eliges tú, la calidad automática no la cambia */
+    else if (a === 'clima') { if (window.TKClima) TKClima.poner(b.getAttribute('data-valor')); sonar('click'); reabrirPanel(); } /* v9.19 */
     else if (a === 'cerrar-sesion') { guardar(true); cerrarPanel(); Cuentas.salir(); }
     else if (a === 'ver-borrar-cuenta') { $('caja-borrar').style.display = 'block'; $('palabra-borrar').focus(); }
     else if (a === 'borrar-cuenta') {
@@ -13345,7 +13347,7 @@
   }
   function guardarPreferencias(sinPartida) {
     try {
-      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad, musicaVol: leerPref().musicaVol || 'medio', efectosVol: leerPref().efectosVol || 'alto' })); /* v8.50 · v9.14: efectosVol */
+      localStorage.setItem(CLAVE_PREF, JSON.stringify({ idioma: estado.idioma, sonido: estado.sonido, musica: musicaOn, invitado: !!modoInvitado, velocidad: velocidad === 2 ? 2 : 1, calidad: calidad, musicaVol: leerPref().musicaVol || 'medio', efectosVol: leerPref().efectosVol || 'alto', calidadElegida: leerPref().calidadElegida || 0, clima: leerPref().clima || 'apagado' })); /* v8.50 · v9.14: efectosVol · v9.19: calidadElegida y clima */
     } catch (e) {}
     if (!enMenu && !sinPartida) guardar();
   }
@@ -14586,6 +14588,7 @@
     actualizarCamara(dtReal);
     actualizarCielo(performance.now() / 1000);
     if (window.NOCHE) NOCHE.moverBruma(brumaCiudad, dtReal);
+    if (window.TKExtras) try { TKExtras.cadaFotograma(dtReal); } catch (eX) {} // v9.19: clima y calidad automática (js/tk-clima.js, js/tk-auto-calidad.js)
     // nubes
     nubes.forEach(function (n) { var a = Math.atan2(n.position.z, n.position.x) + n.userData.v * dtReal / n.userData.r, r = n.userData.r; n.position.x = Math.cos(a) * r; n.position.z = Math.sin(a) * r; });
     // brillo de terrenos libres
@@ -14633,6 +14636,16 @@
   document.addEventListener('visibilitychange', function () { if (document.hidden && !enMenu) guardar(true); });
 
   // Para pruebas desde la consola del navegador
+  // v9.19: puente para los añadidos visuales (clima y calidad automática). Solo lee y usa lo que ya existe.
+  window.__tkExtras = {
+    escena: escena, camara: camara, render: render,
+    objetivo: function () { return cam.objetivo; }, distancia: function () { return cam.dist; },
+    activo: function () { return !enMenu && !enMundo && !pausado && !document.hidden; },
+    calidad: function () { return calidad; },
+    ponerCalidad: function (q) { if (q !== 'alta' && q !== 'baja') return; calidad = q; aplicarCalidad(); guardarPreferencias(); },
+    pref: function () { return leerPref(); }, guardarPref: function (k, v) { try { var p = leerPref(); p[k] = v; localStorage.setItem(CLAVE_PREF, JSON.stringify(p)); } catch (e) {} },
+    consejo: function (t) { consejoTemporal(t); }, L: L
+  };
   window.__juego = { mundoPrueba: function () { if (!enMundo) abrirMundo(); return M3 && M3.columnas ? Object.keys(M3.columnas).map(function (k) { var g = M3.columnas[k]; return k + ' ' + (g.userData.txt || '') + ' @' + g.position.x.toFixed(1) + ',' + g.position.z.toFixed(1); }) : null; }, irCeldaPrueba: function (x, y) { var c = celdaDe(x, y); irACeldaMundo(c.x, c.y); }, fichaTropa: function (t) { var c = edificiosDe('cuartel')[0]; if (!c) return 'sin cuartel'; pestCuartel = 'entrenar'; tropaDetalle = t || null; abrirPanelEdificio(c.i); return faltaTropa(t || 'espadachin'); }, rankingT: function (t) { abrirPanelRanking(t); }, faltaObraP: function (q, n) { return faltaObra(q, n); }, alPrueba: function (c, tab, sec, sub) { alCache = c; estado.alianza = c.al.tag; alTab = tab || 'info'; alSeccion = sec || ''; alSubMuro = sub || 'muro'; abrirPanel(T('p_alianza'), '', { tipo: 'alianza' }); pintarHubAlianza(); }, alInfPrueba: function (d) { alInf.datos = d; alInf.t = Date.now(); }, ayudaPrueba: function (p) { abrirAyudaAlianza(p, true); }, tarjetasPrueba: function (peds) { peds.forEach(function (q) { pedidosChat[q.id] = q; }); var m = { nombre: 'Ana' }; return '<div id="chat-lista" style="position:fixed;left:10px;top:60px;width:340px;z-index:9999;background:#2a1c10;padding:8px">' + htmlTarjetaPedido(peds[0].id, m) + htmlTarjetaRefuerzo(peds[1].id, m) + htmlTarjetaMarcha(/^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec('⚔️[MAR:120,88,atacar] Todos a las 21h'), m) + '</div>'; }, pruebaAcademia: function (id, lv) { var s = slots.filter(function (x) { return !x.edificio && !x.obra; })[0]; if (!academiaLista() && s) { s.obra = { tipo: 'academia', nivel: 1, t: 0, total: 1 }; terminarObra(s, true); } var ac = academiaLista(); if (ac) ac.edificio.nivel = 12; estado.invest[id] = lv; ramaArbol = 'militar'; nodoArbol = id; abrirArbolTalentos(); return !!academiaLista(); }, empezarInv: function (id) { empezarInvestigacion(id); return estado.investigando; }, colaCuartel: function () { var c = edificiosDe('cuartel')[0]; if (!c) return false; abrirPanelEdificio(c.i); pestCuartel = 'cola'; tropaDetalle = null; abrirPanelEdificio(c.i); return true; }, cofreBienvenida: mostrarCofreBienvenida, reclamarBienvenida: reclamarCofreBienvenida, estado: function () { return estado; }, pruebaPedido: function (p) { pedidosChat[p.id] = p; return htmlTarjetaPedido(p.id, { nombre: p.nombre }); }, pruebaTransp: function () { abrirTransportar('x', 'Aliado'); }, salon: function () { abrirSalonCaballeros(); }, abrirInvocar: function () { abrirPanelInvocar(); }, abrirCargos: function () { abrirCargos(); }, elegirCargo: function (c) { elegirCargo(c); }, abrirTropasTiro: function () { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; vistaTropa.modo = 'lista'; abrirPanelTropas(); }, abrirDestacar: abrirDestacar, abrirPortalElegir: abrirPortalElegir, mochila: function (t) { abrirPanelMochila(t); }, misObjetos: function () { pestTiendaArriba = 'mios'; abrirPanelTienda(); }, darPiezaDragon: darPiezaDragon, multHeroe: multiplicadoresHeroe, verHeroeEquipo: function (id) { pestanaHeroe = 'equipo'; abrirPanelHeroe(id); }, tamanoMarcha: tamanoMarcha, abrirCofreDragon: abrirCofreDragon, fundarVilla: fundarVilla, cambiarVilla: cambiarVilla, abrirMisVillas: abrirMisVillas, abrirEnvioVillas: abrirEnvioVillas, llanuraLibre: function () { var l = miLugar(); for (var r = 2; r < 12; r++) for (var dx = -r; dx <= r; dx++) for (var dy = -r; dy <= r; dy++) { var x = l.x + dx, y = l.y + dy; if (celdaLibre(x, y) && casillaMundo(x, y).tipo === 'llanura') return [x, y]; } return null; }, abrirReunion: function (i, p) { abrirReunion(i, p); }, htmlMuralla: function () { return htmlMuralla(); }, empezarOleada: empezarOleada, construir: construir, mejorar: mejorar, entrenar: entrenar, capacidad: capacidad, invocarHeroe: invocarHeroe,
     hora: function (f) { horaForzada = (f === undefined || f === null) ? null : f; }, noche: function () { return nocheActual; },
     tropas: function () { return tropas; }, camara: camara, escena: escena, ponerMuralla: function (n) { ponerMuralla(n); }, nueva: function () { empezarPartida(null); }, construirMuralla: construirMuralla, sha256: function (s) { return sha256(s); }, enemigos: function () { return enemigos; }, slots: slots, cam: cam, velocidad: function (v) { velocidad = v; },

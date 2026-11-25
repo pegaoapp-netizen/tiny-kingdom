@@ -1,0 +1,10 @@
+BROTHER KINGDOM — Weather & Environment FX v1
+Módulo opcional Three.js. No sustituir el motor, ni modificar reglas de juego.
+Importar createWeather desde weather.mjs y pasar el namespace THREE ya utilizado por el proyecto, la escena y luces existentes (sun, ambient). No activar si otro sistema controla iluminación o fondo sin coordinarlo.
+Ejemplo:
+const fx = createWeather(THREE, scene, {sun: directionalLight, ambient: ambientLight, quality:'low'});
+fx.setHour(17.5); fx.setWeather('rain');
+En el bucle existente: fx.update(deltaSeconds, camera.position);
+Opcional: fx.registerWater(mesh) si tiene normalMap y material exclusivo. No modifica geometría ni crea agua.
+Al salir de la escena: fx.dispose();
+Modos: clear, rain, snow, fog, storm. Hora manual 0–24; para ciclo automático usar reloj existente y llamar setHour. Lluvia/nieve son partículas puntuales. No incluye sonidos, antorchas, luces urbanas ni reflejos físicos. Probar en escena aislada antes de integrar. No se ha probado visualmente.
