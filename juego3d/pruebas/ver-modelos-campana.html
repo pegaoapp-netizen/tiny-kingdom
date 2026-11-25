@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelos de la Campaña</title>
+<style>
+  body { margin: 0; background: #1b140d; color: #f3e6c8; font: 13px system-ui, sans-serif; }
+  #rejilla { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; padding: 8px; }
+  .caja { background: #2a1d11; border: 1px solid #6b4a22; border-radius: 10px; overflow: hidden; text-align: center; }
+  .caja canvas { width: 100%; height: 190px; display: block; }
+  .caja b { display: block; padding: 4px 4px 0; color: #ffd86a; }
+  .caja small { display: block; padding: 0 4px 6px; color: #cbb58a; }
+</style>
+</head>
+<body>
+<div id="rejilla"></div>
+<!-- Prueba (no se publica): muestra los modelos de modelos/campana/ con el mismo motor del juego, caminando. -->
+<script src="../js/three.min.js"></script>
+<script src="../js/GLTFLoader.js"></script>
+<script>
+var LISTA = ['01_bandido', '02_arquero_bandido', '03_lobo', '04_trasgo', '05_chaman_trasgo', '06_ogro', '07_trol_de_piedra', '08_esqueleto', '09_nigromante', '11_capitan_rojo', '12_garra_negra', '13_colmillo', '14_zarza', '15_brusco', '16_gorlak', '17_caballero_negro', '18_ignaroth'];
+var vistas = [], reloj = new THREE.Clock(), rend = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+rend.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+window.__estado = {};
+LISTA.forEach(function (n) {
+  var caja = document.createElement('div'); caja.className = 'caja';
+  var cv = document.createElement('canvas'); caja.appendChild(cv);
+  caja.insertAdjacentHTML('beforeend', '<b>' + n.replace(/_/g, ' ') + '</b><small id="i-' + n + '">cargando…</small>');
+  document.getElementById('rejilla').appendChild(caja);
+  var esc = new THREE.Scene(); esc.add(new THREE.HemisphereLight(0xffffff, 0x554433, 1.1)); var dl = new THREE.DirectionalLight(0xffffff, 0.8); dl.position.set(2, 4, 3); esc.add(dl);
+  var cam = new THREE.PerspectiveCamera(35, 170 / 190, 0.01, 100);
+  var v = { cv: cv, esc: esc, cam: cam, mix: null }; vistas.push(v);
+  new THREE.GLTFLoader().load('../modelos/campana/' + n + '.glb', function (gl) {
+    var m = gl.scene; m.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; o.material = new THREE.MeshLambertMaterial({ map: mp || null, skinning: !!o.isSkinnedMesh }); } });
+    /* los modelos de Mixamo miden diminutos antes de posar: se mide con los huesos ya colocados */
+    m.updateMatrixWorld(true); var bx = new THREE.Box3(), pv = new THREE.Vector3(), hayHueso = false;
+    m.traverse(function (o) { if (o.isBone) { hayHueso = true; bx.expandByPoint(o.getWorldPosition(pv)); } });
+    if (!hayHueso || bx.isEmpty()) bx.setFromObject(m); else bx.expandByScalar(0.08 * Math.max(0.001, bx.max.y - bx.min.y));
+    var tam = new THREE.Vector3(), cen = new THREE.Vector3(); bx.getSize(tam); bx.getCenter(cen);
+    var s = 1.6 / Math.max(tam.x, tam.y, tam.z); m.scale.setScalar(s); m.position.sub(cen.multiplyScalar(s)); esc.add(m);
+    cam.position.set(0, 0.2, 3.2); cam.lookAt(0, 0, 0);
+    var nombres = gl.animations.map(function (a) { return a.name; });
+    if (gl.animations.length) { v.mix = new THREE.AnimationMixer(m); var cl = gl.animations.filter(function (a) { return /walk/i.test(a.name); })[0] || gl.animations[0]; v.mix.clipAction(cl).play(); }
+    document.getElementById('i-' + n).textContent = (nombres.length ? 'anima: ' + nombres.join(', ') : 'SIN animaciones') + ' · ' + Math.round(tam.y / Math.max(tam.x, tam.z) * 10) / 10 + ' alto/ancho';
+    __estado[n] = { ok: true, anim: nombres };
+  }, undefined, function (e) { document.getElementById('i-' + n).textContent = 'ERROR al cargar'; __estado[n] = { ok: false }; });
+});
+function bucle() {
+  var dt = reloj.getDelta();
+  vistas.forEach(function (v) {
+    if (v.mix) v.mix.update(dt);
+    var w = v.cv.clientWidth, h = v.cv.clientHeight; if (!w) return;
+    rend.setSize(w, h, false); v.cam.aspect = w / h; v.cam.updateProjectionMatrix(); rend.render(v.esc, v.cam);
+    var c = v.cv.getContext('2d'); if (v.cv.width !== rend.domElement.width) { v.cv.width = rend.domElement.width; v.cv.height = rend.domElement.height; } c.clearRect(0, 0, v.cv.width, v.cv.height); c.drawImage(rend.domElement, 0, 0);
+  });
+  requestAnimationFrame(bucle);
+}
+bucle();
+</script>
+</body>
+</html>
