@@ -13836,7 +13836,7 @@
   }
   $('pill-entreno').addEventListener('click', function () { if (enMenu) return; sonar('click'); abrirPanelTropas(); });
   // ---------- v6.86: PANEL DE PROCESOS abajo a la derecha (pestañas Territorios / Marchar / Tropas / Procesos, se pliega con la flecha) ----------
-  var dockPest = 'tropas', dockAbierto = true;
+  var dockPest = 'tropas', dockAbierto = false; /* v9.10: empieza recogido (solo pestañas); se abre al tocar una */
   try { var dp = JSON.parse(localStorage.getItem('tinykingdom_dock') || '{}'); if (dp.p) dockPest = dp.p; if (dp.a === false) dockAbierto = false; } catch (e) {}
   /* v8.53: la barra de marchas no tapa el mapa: se recoge sola 5 s después de abrirse por una marcha y al arrastrar el mapa */
   function recogerDock() { if (!dockAbierto) return; dockAbierto = false; dockAuto = 0; try { guardarDock(); actualizarDock(); } catch (e) {} }

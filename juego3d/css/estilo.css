@@ -2477,3 +2477,8 @@ body.en-batalla #villa-volver { display: none !important; }
 .candado-nivel p { margin: 8px 0 6px; font-size: 15px; line-height: 1.4; }
 .candado-nivel small { display: inline-block; padding: 3px 10px; border-radius: 10px; background: rgba(0,0,0,.35); font-weight: 700; }
 .req-ir { margin-left: 6px; padding: 2px 9px; border-radius: 6px; border: 1.5px solid #6b4206; background: linear-gradient(#ffd54a, #d48a10); color: #3a2400; font: 800 12px system-ui, sans-serif; cursor: pointer; vertical-align: middle; }
+/* v9.10: interfaz más limpia: botones laterales un poco más pequeños y pestañas del panel de abajo más finas */
+html body #lateral .redondo:has(.rd-img), html body.tema-oscuro #lateral .redondo:has(.rd-img) { width: 46px !important; height: 46px !important; }
+html body #lateral { gap: 4px !important; }
+html body #dock-procesos .dk-tabs button { padding: 4px 2px !important; min-height: 30px !important; font-size: 12.5px !important; }
+html body #dock-procesos .dk-tabs .dk-flecha { min-height: 30px !important; }
