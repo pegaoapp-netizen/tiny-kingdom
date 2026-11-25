@@ -1,3 +1,4 @@
+// AVISO PARA QUIEN SUBA CAMBIOS (personas o IA): lee CLAUDE.md en la raíz del repositorio. Puedes AÑADIR, pero no borres ni cambies lo que hicieron otros; trabaja solo en tu parte (p. ej. la Campaña).
 // =====================================================================
 //  DATOS DEL JUEGO: nombre, textos (español / inglés), precios y fuerzas.
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.

@@ -1,3 +1,4 @@
+// AVISO PARA QUIEN SUBA CAMBIOS (personas o IA): lee CLAUDE.md en la raíz del repositorio. Puedes AÑADIR, pero no borres ni cambies lo que hicieron otros; trabaja solo en tu parte (p. ej. la Campaña).
 // =====================================================================
 //  JUEGO PRINCIPAL: escena, cámara, reglas, oleadas, interfaz.
 // =====================================================================

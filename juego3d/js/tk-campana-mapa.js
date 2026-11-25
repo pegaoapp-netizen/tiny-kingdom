@@ -1,3 +1,4 @@
+// AVISO PARA QUIEN SUBA CAMBIOS (personas o IA): lee CLAUDE.md en la raíz del repositorio. Puedes AÑADIR, pero no borres ni cambies lo que hicieron otros; trabaja solo en tu parte (p. ej. la Campaña).
 /* Tiny Kingdom · MAPA DE CAMPAÑA (v9.00)
  * Mundo medieval dibujado en Canvas 2D (se pinta UNA vez en un lienzo aparte; cada fotograma solo copia el trozo visible),
  * con regiones por capítulo, caminos, misiones, niebla de guerra, jefes, estrellas, dificultades y logros.
