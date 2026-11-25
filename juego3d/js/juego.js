@@ -3506,10 +3506,11 @@
       if (!lista) { h += '<p class="iv-vacio">' + T('cargando') + '</p>'; Cuentas.alianzas().then(function (l) { alListaTodas = l || []; if (panelActual && panelActual.tipo === 'alianza' && alTab === 'alianzas') pintarHubAlianza(); }).catch(function () { alListaTodas = []; }); }
       else {
         var lf = lista.filter(function (x) { return !q || String(x.nombre).toLowerCase().indexOf(q) >= 0 || String(x.tag).toLowerCase() === q; });
+        lf = lf.slice().sort(function (a1, b1) { var pa = alPoderN[a1.tag], pb = alPoderN[b1.tag]; return (pb === undefined ? -1 : pb) - (pa === undefined ? -1 : pa); }); /* v8.79: primero la de más poder */
         contarMiembrosAl(lf.slice(0, 25)); // v7.99: miembros y nivel de cada alianza
         h += '<div class="al-tabla al-lista5"><div class="al-th al-th5"><span>' + L('Puesto', 'Rank') + '</span><span>' + L('Escudo', 'Banner') + '</span><span>' + L('Nombre / Líder', 'Name / Leader') + '</span><span>' + L('Miembros', 'Members') + '</span><span>' + L('Nivel', 'Level') + '</span></div>' + (lf.length ? lf.map(function (x, i) {
           var nm = alMiembrosN[x.tag];
-          return '<div class="al-tr al-th5 al-toca" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '"><span class="al-pos">' + (i + 1) + '</span><span><b class="al-ban">' + escaparHTML(x.tag) + '</b></span><span class="al-al"><span>' + escaparHTML(x.nombre) + '<small>👑 ' + escaparHTML(x.liderNombre || '') + '</small></span></span><span>' + (nm === undefined ? '…' : nm) + '</span><span>' + nivelAlianza(x.xp || 0).n + '</span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
+          return '<div class="al-tr al-th5 al-toca" data-accion="al-ver" data-tag="' + escaparHTML(x.tag) + '"><span class="al-pos">' + (i + 1) + '</span><span><b class="al-ban">' + escaparHTML(x.tag) + '</b></span><span class="al-al"><span>' + escaparHTML(x.nombre) + '<small>👑 ' + escaparHTML(x.liderNombre || '') + (alPoderN[x.tag] !== undefined ? ' · 💪 ' + corto(alPoderN[x.tag]) : '') + '</small></span></span><span>' + (nm === undefined ? '…' : nm) + '</span><span>' + nivelAlianza(x.xp || 0).n + '</span></div>' + (puedeDiploAl(al, yoU) && x.tag !== al.tag ? (function () { var v = (al.diplo || {})[x.tag] || 'neutral'; return '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': ' + [['hostil', '🔴', L('Hostil', 'Hostile')], ['neutral', '⚪', L('Neutral', 'Neutral')], ['amiga', '🔵', L('Amiga', 'Friendly')]].map(function (o) { return '<button class="al-dp' + (v === o[0] ? ' activo ' + o[0] : '') + '" data-accion="al-diplo" data-tag="' + escaparHTML(x.tag) + '" data-v="' + o[0] + '">' + o[1] + ' ' + o[2] + '</button>'; }).join('') + '</div>'; })() : (((al.diplo || {})[x.tag] || 'neutral') !== 'neutral' ? '<div class="al-diplo">' + L('Diplomacia', 'Diplomacy') + ': <b class="al-dp activo ' + al.diplo[x.tag] + '">' + (al.diplo[x.tag] === 'hostil' ? '🔴 ' + L('Hostil', 'Hostile') : '🔵 ' + L('Amiga', 'Friendly')) + '</b></div>' : ''));
         }).join('') : '<p class="iv-vacio">' + L('No hay alianzas con ese nombre.', 'No alliances with that name.') + '</p>') + '</div>';
       }
     }
@@ -4104,11 +4105,11 @@
 
   function htmlTabsAlianza() { return '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall'], ['ranking', 'Ranking', 'Ranking']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>'; }
   // v7.21: ficha de cualquier alianza (como KoC): escudo, líder, miembros, poder y liquidación totales, descripción, unirse o ver miembros
-  var alMiembrosN = {}, alMiembrosPend = {};
+  var alMiembrosN = {}, alMiembrosPend = {}, alPoderN = {}; /* v8.79: poder total de cada alianza */
   function contarMiembrosAl(l) {
     l.forEach(function (x) { if (alMiembrosN[x.tag] !== undefined || alMiembrosPend[x.tag]) return; alMiembrosPend[x.tag] = 1;
-      Cuentas.miembros(x.tag).then(function (m) { alMiembrosN[x.tag] = (m || []).length; delete alMiembrosPend[x.tag];
-        clearTimeout(contarMiembrosAl.t); contarMiembrosAl.t = setTimeout(function () { if (panelActual && panelActual.tipo === 'alianza' && alTab === 'alianzas' && !alSeccion && $('al-buscar') && document.activeElement !== $('al-buscar')) pintarHubAlianza(); }, 400); })
+      Cuentas.miembros(x.tag).then(function (m) { m = (m || []).filter(function (mm) { var ex = (x.expulsados || {})[mm.uid]; return !(ex && ex > (mm.actualizado || 0)); }); /* v8.79: sin los expulsados */ alMiembrosN[x.tag] = m.length; alPoderN[x.tag] = m.reduce(function (t, mm) { return t + (+mm.poder || 0); }, 0); delete alMiembrosPend[x.tag];
+        clearTimeout(contarMiembrosAl.t); contarMiembrosAl.t = setTimeout(function () { if (panelActual && panelActual.tipo === 'alianza' && document.activeElement !== $('al-buscar')) { if (estado.alianza && alCache) { if (alTab === 'alianzas' && !alSeccion && $('al-buscar')) pintarHubAlianza(); } else if (pintarListaAlianzas.ultima && !pintarListaAlianzas.pintando) { pintarListaAlianzas.pintando = true; try { pintarListaAlianzas(pintarListaAlianzas.ultima); } finally { pintarListaAlianzas.pintando = false; } } } }, 400); })
         .catch(function () { alMiembrosN[x.tag] = '—'; delete alMiembrosPend[x.tag]; }); });
   }
   function abrirPerfilAlianza(tag, verMiembros) {
@@ -4139,7 +4140,7 @@
     }).catch(function () { cuerpo.innerHTML = '<div class="carta"><button class="comprar mini" data-accion="al-perfil-volver">◀ ' + L('Volver', 'Back') + '</button><p class="nota aviso-rojo">' + T('mundo_error') + '</p></div>'; });
   }
   function pintarListaAlianzas(lista) {
-    pintarListaAlianzas.ultima = lista;
+    pintarListaAlianzas.ultima = lista; lista = lista || []; contarMiembrosAl(lista.slice(0, 25)); lista = lista.slice().sort(function (a1, b1) { var pa = alPoderN[a1.tag], pb = alPoderN[b1.tag]; return (pb === undefined ? -1 : pb) - (pa === undefined ? -1 : pa); }); /* v8.79: por poder */
     var h = '<div class="carta"><h3>🛡️ ' + T('al_crear') + '</h3>' +
       '<input class="campo" id="al-nombre" maxlength="24" placeholder="' + T('al_nombre') + '" style="margin-top:6px">' +
       '<input class="campo" id="al-tag" maxlength="4" placeholder="' + T('al_tag') + '" style="margin-top:6px;text-transform:uppercase">' +
