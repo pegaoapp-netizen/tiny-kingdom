@@ -13,6 +13,8 @@
   function num(n) { n = Math.round(n); return n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? (n / 1e3).toFixed(1) + 'k' : n.toLocaleString('es'); }
 
   var CSS_TR = '.tkc-trs{display:flex;flex-direction:column;gap:5px;max-height:30vh;overflow-y:auto;margin:4px 0}.tkc-tr{display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:9px;background:#0006;border:1px solid #6b4a1a}.tkc-tr.sel{border-color:#ffd23a;background:rgba(80,60,10,.5)}.tkc-ti{font-size:22px;width:30px;text-align:center}.tkc-td{flex:1;min-width:0;display:flex;flex-direction:column}.tkc-td b{font-size:12px;color:#ffe08a}.tkc-td small{font-size:11px;color:#fff}.tkc-tb{min-width:34px;height:28px;border-radius:7px;border:1px solid #8a6a2a;background:#3a2610;color:#ffe08a;font:800 12px system-ui;cursor:pointer}.tkc-tb.on{background:#c98a1a;color:#fff}.tkc-tn{font-size:11px;opacity:.85;margin:4px 2px}.tkc-perd{color:#ffb0a0;font-weight:800}';
+  /* v8.67: el panel de abajo no tapa la ✕ y siempre hay un botón Salir */
+  var CSS_SALIR = '.tkc-x{z-index:20}.tkc-abajo{max-height:calc(100vh - 110px);max-height:calc(100dvh - 110px);overflow-y:auto}.tkc-grid{max-height:24vh}.tkc-trs{max-height:22vh}.tkc-b.gris{background:linear-gradient(#6b5a44,#3f3426);color:#fff}';
   var CSS = '' +
     '#tkc{position:fixed;inset:0;z-index:9000;background:#1c2a14;color:#fff;font:600 13px system-ui,sans-serif;touch-action:manipulation;-webkit-user-select:none;user-select:none}' +
     '#tkc canvas{position:absolute;inset:0;width:100%;height:100%;display:block}' +
@@ -276,7 +278,7 @@
       '<div class="tkc-abajo"><div class="tkc-tit"><span>🦸 ' + L('Elige hasta 5 héroes', 'Choose up to 5 heroes') + '</span><span>' + sel.length + ' / 5</span></div>' +
       (lista.length ? '<div class="tkc-grid">' + lista.map(function (h) { var k = sel.indexOf(h.id); return '<button class="tkc-h' + (k >= 0 ? ' sel' : '') + '" data-c="heroe" data-id="' + esc(h.id) + '" data-n="' + (k + 1) + '">' + (h.foto ? '<img src="' + esc(h.foto) + '" alt="">' : '🦸') + '<i>' + L('Nv ', 'Lv ') + h.nivel + '</i><small>' + esc(h.nombre) + '</small></button>'; }).join('') + '</div>' : '<p>' + L('Todavía no tienes héroes. Recluta uno en Tropas › Héroes.', 'You have no heroes yet. Recruit one in Troops › Heroes.') + '</p>') +
       htmlTropas() +
-      '<div class="tkc-bts"><button class="tkc-b azul" data-c="rapido">⚡ ' + L('Despliegue rápido', 'Quick deploy') + '</button><button class="tkc-b naranja" data-c="luchar">⚔️ ' + L('Luchar', 'Fight') + '</button></div></div>';
+      '<div class="tkc-bts"><button class="tkc-b gris" data-c="cerrar">✕ ' + L('Salir', 'Exit') + '</button><button class="tkc-b azul" data-c="rapido">⚡ ' + L('Rápido', 'Quick') + '</button><button class="tkc-b naranja" data-c="luchar">⚔️ ' + L('Luchar', 'Fight') + '</button></div></div>';
   }
   function pantallaPelea() {
     modo = 'pelea'; terminado = false; efectos = []; medir(); armarLados();
@@ -334,7 +336,7 @@
   function alCambiar() { if (raiz) medir(); }
   function abrir() {
     G = window.__tkCamp; if (!G) return false;
-    if (!$('tkc-css')) { var st = document.createElement('style'); st.id = 'tkc-css'; st.textContent = CSS + CSS_TR; document.head.appendChild(st); }
+    if (!$('tkc-css')) { var st = document.createElement('style'); st.id = 'tkc-css'; st.textContent = CSS + CSS_TR + CSS_SALIR; document.head.appendChild(st); }
     if (raiz) cerrar();
     heroes = G.heroes(); etapa = G.etapa(); auto = G.auto(); vel = 1;
     sel = G.equipo().filter(function (id) { return heroes.some(function (h) { return h.id === id; }); });
