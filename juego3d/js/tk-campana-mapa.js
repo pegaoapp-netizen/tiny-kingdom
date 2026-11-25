@@ -203,7 +203,7 @@
   function hex(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
   var CO = { pasto1: hex('#6f9a3c'), pasto2: hex('#a7b552'), bosque1: hex('#2f5524'), bosque2: hex('#4c7330'), monteV: hex('#5a7438'), roca1: hex('#7c7a70'), roca2: hex('#a39f92'), nieve: hex('#eef3f6'), ceniza1: hex('#3a2820'), ceniza2: hex('#6e4c3a'), lava: hex('#ff6a1a'), arena: hex('#d8c28a'), mar1: hex('#1a4a6e'), mar2: hex('#3fa7ae'), tierra: hex('#8a7044') };
 
-  var terreno = null, nieblas = {}, RES = 1, banderas = [], barcos = [], brillos = [];
+  var terreno = null, nieblas = {}, RES = 1, banderas = [], barcos = [], brillos = [], molinos = [], humos = [];
   function pintarMundo() {
     ocupado = {}; banderas = []; brillos = [];
     var R = rnd0(11), i, k, x, y;
@@ -300,6 +300,11 @@
       cosas.push([x, y, tipo, 0.75 + R() * 0.55, hb]);
     }
     for (k = 0; k < 900; k++) { x = 160 + R() * 840; y = 40 + R() * 1260; if (x < costa(y) + 20 || dCam(x, y) < 18 || !libre(x, y, 8)) continue; var pr = pendiente(x, y); if (pr > 0.08 && R() < 0.5) cosas.push([x, y, 'roca', 0.7 + R() * 0.8, alt(x, y)]); }
+    molinos = []; humos = [];
+    [[230, 2230], [880, 2120], [300, 1990]].forEach(function (q) { if (libre(q[0], q[1], 16)) { marcar(q[0], q[1], 16); cosas.push([q[0], q[1], 'molino', 1, 0]); } });
+    [[880, 1010], [330, 1190], [760, 900]].forEach(function (q) { if (libre(q[0], q[1], 18)) { marcar(q[0], q[1], 18); cosas.push([q[0], q[1], 'mina', 1, 0]); } });
+    [[300, 600], [700, 300], [460, 260], [860, 400]].forEach(function (q) { if (libre(q[0], q[1], 18)) { marcar(q[0], q[1], 18); cosas.push([q[0], q[1], 'ruina', 1, 0]); } });
+    [[470, 2100], [760, 1880], [560, 1330], [330, 820]].forEach(function (q) { if (libre(q[0], q[1], 14)) { marcar(q[0], q[1], 14); cosas.push([q[0], q[1], 'atalaya', 1, 0]); } });
     cosas.push([INICIO[0], INICIO[1] - 6, 'reino', 1.25, 0]);
     CAPS.forEach(function (cap, ci) { cap.pos.forEach(function (p, mi) { var jj = cap.mis[mi]; if (mi === 5) cosas.push([p[0] + 2, p[1] - 32, 'fortaleza', 1, ci]); else if (jj[4]) cosas.push([p[0] + 32, p[1] - 16, 'torre', 1, ci]); else cosas.push([p[0] + 30, p[1] - 10, 'campo', 1, ci]); }); });
     cosas.sort(function (a, b) { return a[1] - b[1]; }).forEach(function (o) { dibujarCosa(g, o, R); });
@@ -346,7 +351,33 @@
       g.fillStyle = tj[1]; g.beginPath(); g.moveTo(x - 1 * s, y - 15 * s); g.lineTo(x + 9 * s, y - 8 * s); g.lineTo(x + 3 * s, y - 8 * s); g.fill();
       g.fillStyle = '#3a2210'; g.fillRect(x - 3 * s, y - 4 * s, 2.5 * s, 5 * s); g.fillStyle = '#ffd27a'; g.fillRect(x + 4.5 * s, y - 5 * s, 2 * s, 2 * s);
     }
-    else if (t === 'campo') { var en = o[4]; g.beginPath(); g.ellipse(x + 4, y + 3, 18, 5, 0, 0, 7); g.fill(); [[-8, 0], [7, 3]].forEach(function (q) { var cl = en >= 3 ? ['#5a4436', '#3a2a20'] : en === 2 ? ['#6a6a4a', '#46462e'] : ['#d8c49a', '#a8925e']; g.fillStyle = cl[0]; g.beginPath(); g.moveTo(x + q[0] - 9, y + q[1]); g.lineTo(x + q[0], y + q[1] - 13); g.lineTo(x + q[0] + 1, y + q[1]); g.fill(); g.fillStyle = cl[1]; g.beginPath(); g.moveTo(x + q[0], y + q[1] - 13); g.lineTo(x + q[0] + 9, y + q[1]); g.lineTo(x + q[0] + 1, y + q[1]); g.fill(); g.strokeStyle = '#3a2410'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + q[0], y + q[1] - 13); g.lineTo(x + q[0], y + q[1] - 17); g.stroke(); }); g.fillStyle = 'rgba(255,170,60,0.9)'; g.beginPath(); g.arc(x - 1, y + 8, 2.6, 0, 7); g.fill(); g.fillStyle = 'rgba(255,230,120,0.9)'; g.beginPath(); g.arc(x - 1, y + 7.5, 1.2, 0, 7); g.fill(); banderas.push([x + 7, y - 14, en >= 2 ? '#7a1a12' : '#c0281e']); }
+    else if (t === 'molino') {
+      g.beginPath(); g.ellipse(x + 7, y + 2, 13, 4, 0.2, 0, 7); g.fill();
+      var gmo = g.createLinearGradient(x - 8, 0, x + 8, 0); gmo.addColorStop(0, '#f4ecd8'); gmo.addColorStop(1, '#b8a88a'); g.fillStyle = gmo; g.beginPath(); g.moveTo(x - 8, y); g.lineTo(x - 5, y - 26); g.lineTo(x + 5, y - 26); g.lineTo(x + 8, y); g.fill();
+      g.fillStyle = '#8a3418'; g.beginPath(); g.moveTo(x - 7, y - 26); g.lineTo(x, y - 36); g.lineTo(x + 7, y - 26); g.fill(); g.fillStyle = '#3a2210'; g.fillRect(x - 2, y - 7, 4, 7); g.fillRect(x - 1.5, y - 18, 3, 3);
+      molinos.push([x, y - 26]);
+    }
+    else if (t === 'mina') {
+      g.beginPath(); g.ellipse(x + 6, y + 3, 18, 5, 0.1, 0, 7); g.fill();
+      g.fillStyle = '#5a554e'; g.beginPath(); g.moveTo(x - 18, y + 2); g.quadraticCurveTo(x, y - 30, x + 18, y + 2); g.fill(); g.fillStyle = '#7a756c'; g.beginPath(); g.moveTo(x - 18, y + 2); g.quadraticCurveTo(x - 6, y - 26, x + 2, y - 14); g.lineTo(x - 6, y + 2); g.fill();
+      g.fillStyle = '#120a06'; g.beginPath(); g.moveTo(x - 7, y + 2); g.lineTo(x - 7, y - 8); g.arc(x, y - 8, 7, Math.PI, 0); g.lineTo(x + 7, y + 2); g.fill();
+      var gmi = g.createRadialGradient(x, y - 4, 1, x, y - 4, 9); gmi.addColorStop(0, 'rgba(255,170,60,0.85)'); gmi.addColorStop(1, 'rgba(255,120,20,0)'); g.fillStyle = gmi; g.beginPath(); g.arc(x, y - 4, 9, 0, 7); g.fill();
+      g.strokeStyle = '#6a4a2a'; g.lineWidth = 2.2; g.beginPath(); g.moveTo(x - 8, y + 2); g.lineTo(x - 8, y - 9); g.lineTo(x + 8, y - 9); g.lineTo(x + 8, y + 2); g.stroke();
+      g.strokeStyle = '#3a3632'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(x - 2, y + 2); g.lineTo(x - 6, y + 16); g.moveTo(x + 2, y + 2); g.lineTo(x + 6, y + 16); g.stroke();
+      g.fillStyle = '#4a3420'; g.fillRect(x - 4, y + 9, 8, 5); g.fillStyle = '#8a8a8a'; g.fillRect(x - 3, y + 8, 6, 2);
+    }
+    else if (t === 'ruina') {
+      g.beginPath(); g.ellipse(x + 6, y + 3, 18, 5, 0.1, 0, 7); g.fill();
+      [[-12, 18], [-3, 26], [7, 14], [15, 22]].forEach(function (q) { var gr3 = g.createLinearGradient(x + q[0] - 3, 0, x + q[0] + 3, 0); gr3.addColorStop(0, '#5a4a40'); gr3.addColorStop(1, '#2a201a'); g.fillStyle = gr3; g.fillRect(x + q[0] - 3, y - q[1], 6, q[1]); g.fillStyle = '#6a5a50'; g.fillRect(x + q[0] - 3.5, y - q[1] - 2, 7, 2.5); });
+      g.fillStyle = '#3a2e26'; g.fillRect(x - 13, y - 21, 22, 3); g.fillStyle = 'rgba(255,90,20,0.35)'; g.beginPath(); g.arc(x, y - 4, 6, 0, 7); g.fill();
+    }
+    else if (t === 'atalaya') {
+      g.beginPath(); g.ellipse(x + 5, y + 2, 10, 3.5, 0.2, 0, 7); g.fill();
+      g.strokeStyle = '#5a3a1a'; g.lineWidth = 2; g.beginPath(); g.moveTo(x - 6, y); g.lineTo(x - 4, y - 22); g.moveTo(x + 6, y); g.lineTo(x + 4, y - 22); g.moveTo(x - 6, y - 4); g.lineTo(x + 5, y - 16); g.moveTo(x + 6, y - 4); g.lineTo(x - 5, y - 16); g.stroke();
+      g.fillStyle = '#7a5030'; g.fillRect(x - 7, y - 27, 14, 6); g.fillStyle = '#4a3018'; g.beginPath(); g.moveTo(x - 9, y - 27); g.lineTo(x, y - 36); g.lineTo(x + 9, y - 27); g.fill();
+      banderas.push([x + 1, y - 36, '#2f6fc4']);
+    }
+    else if (t === 'campo') { var en = o[4]; humos.push([x - 1, y + 4]); g.beginPath(); g.ellipse(x + 4, y + 3, 18, 5, 0, 0, 7); g.fill(); [[-8, 0], [7, 3]].forEach(function (q) { var cl = en >= 3 ? ['#5a4436', '#3a2a20'] : en === 2 ? ['#6a6a4a', '#46462e'] : ['#d8c49a', '#a8925e']; g.fillStyle = cl[0]; g.beginPath(); g.moveTo(x + q[0] - 9, y + q[1]); g.lineTo(x + q[0], y + q[1] - 13); g.lineTo(x + q[0] + 1, y + q[1]); g.fill(); g.fillStyle = cl[1]; g.beginPath(); g.moveTo(x + q[0], y + q[1] - 13); g.lineTo(x + q[0] + 9, y + q[1]); g.lineTo(x + q[0] + 1, y + q[1]); g.fill(); g.strokeStyle = '#3a2410'; g.lineWidth = 1; g.beginPath(); g.moveTo(x + q[0], y + q[1] - 13); g.lineTo(x + q[0], y + q[1] - 17); g.stroke(); }); g.fillStyle = 'rgba(255,170,60,0.9)'; g.beginPath(); g.arc(x - 1, y + 8, 2.6, 0, 7); g.fill(); g.fillStyle = 'rgba(255,230,120,0.9)'; g.beginPath(); g.arc(x - 1, y + 7.5, 1.2, 0, 7); g.fill(); banderas.push([x + 7, y - 14, en >= 2 ? '#7a1a12' : '#c0281e']); }
     else if (t === 'torre') {
       g.beginPath(); g.ellipse(x + 6, y + 3, 14, 5, 0.2, 0, 7); g.fill();
       var gt = g.createLinearGradient(x - 9, 0, x + 9, 0); gt.addColorStop(0, '#8a857c'); gt.addColorStop(0.5, '#6a655e'); gt.addColorStop(1, '#3e3a35'); g.fillStyle = gt; g.fillRect(x - 9, y - 30, 18, 31);
@@ -502,6 +533,12 @@
     barcos.forEach(function (b, k) { var bx = b[0] + Math.sin(t * 0.2 + k) * 14, by = b[1] + Math.sin(t * 1.3 + k) * 2; cx.fillStyle = '#5a3a1a'; cx.beginPath(); cx.moveTo(bx - 14, by); cx.lineTo(bx + 14, by); cx.lineTo(bx + 9, by + 7); cx.lineTo(bx - 9, by + 7); cx.fill(); cx.fillStyle = '#f3ead2'; cx.beginPath(); cx.moveTo(bx, by - 22); cx.lineTo(bx + 11, by - 3); cx.lineTo(bx, by - 3); cx.fill(); cx.strokeStyle = '#3a2410'; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(bx, by); cx.lineTo(bx, by - 24); cx.stroke(); });
     banderas.forEach(function (b, k) { var on = Math.sin(t * 5 + k) * 2; cx.strokeStyle = '#2a1a0a'; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(b[0], b[1]); cx.lineTo(b[0], b[1] - 12); cx.stroke(); cx.fillStyle = b[2]; cx.beginPath(); cx.moveTo(b[0], b[1] - 12); cx.quadraticCurveTo(b[0] + 5, b[1] - 13 + on, b[0] + 10, b[1] - 10 + on); cx.lineTo(b[0], b[1] - 7); cx.fill(); });
     brillos.forEach(function (b2, k2) { var f2 = (Math.sin(t * 2.2 + k2 * 1.7) + 1) / 2; if (b2[2]) { cx.fillStyle = 'rgba(255,' + Math.round(120 + 80 * f2) + ',40,' + (0.5 * f2) + ')'; cx.beginPath(); cx.arc(b2[0] + Math.sin(t + k2) * 8, b2[1] - f2 * 20, 2.2, 0, 7); cx.fill(); } else if (f2 > 0.75) { cx.fillStyle = 'rgba(255,255,255,' + ((f2 - 0.75) * 3) + ')'; cx.fillRect(b2[0] - 2, b2[1] - 0.6, 4, 1.2); cx.fillRect(b2[0] - 0.6, b2[1] - 2, 1.2, 4); } });
+    // aspas de los molinos
+    molinos.forEach(function (m, k2) { var an0 = t * 1.2 + k2; cx.strokeStyle = '#4a3018'; cx.lineWidth = 1.4; cx.fillStyle = 'rgba(240,230,205,0.95)'; for (var a2 = 0; a2 < 4; a2++) { var an2 = an0 + a2 * Math.PI / 2, ex2 = m[0] + Math.cos(an2) * 15, ey2 = m[1] + Math.sin(an2) * 15; cx.beginPath(); cx.moveTo(m[0], m[1]); cx.lineTo(ex2, ey2); cx.stroke(); cx.save(); cx.translate(m[0], m[1]); cx.rotate(an2); cx.fillRect(5, 0, 10, 3.5); cx.restore(); } cx.fillStyle = '#3a2210'; cx.beginPath(); cx.arc(m[0], m[1], 2, 0, 7); cx.fill(); });
+    // humo de los campamentos
+    humos.forEach(function (h2, k2) { for (var j2 = 0; j2 < 3; j2++) { var f3 = (t * 0.35 + j2 / 3 + k2 * 0.17) % 1; cx.fillStyle = 'rgba(200,200,200,' + (0.4 * (1 - f3)) + ')'; cx.beginPath(); cx.arc(h2[0] + Math.sin(f3 * 4 + k2) * 4 + f3 * 8, h2[1] - f3 * 34, 2.5 + f3 * 6, 0, 7); cx.fill(); } });
+    // bandadas de pájaros con su sombra
+    for (var bd = 0; bd < 3; bd++) { var bxp = ((t * (18 + bd * 4) + bd * 330) % (WW + 300)) - 150, byp = 2200 - bd * 820 + Math.sin(t * 0.3 + bd) * 40; for (var pj = 0; pj < 5; pj++) { var ox = bxp - Math.abs(pj - 2) * 10, oy = byp + (pj - 2) * 8, al2 = Math.sin(t * 9 + pj) * 3; cx.strokeStyle = 'rgba(0,0,0,0.18)'; cx.lineWidth = 1.2; cx.beginPath(); cx.moveTo(ox + 26, oy + 40); cx.lineTo(ox + 30, oy + 42); cx.lineTo(ox + 34, oy + 40); cx.stroke(); cx.strokeStyle = '#2a2018'; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(ox - 5, oy - al2); cx.quadraticCurveTo(ox - 2, oy - 2, ox, oy); cx.quadraticCurveTo(ox + 2, oy - 2, ox + 5, oy - al2); cx.stroke(); } }
     // humo del volcán
     for (var k = 0; k < 6; k++) { var f = (t * 0.18 + k / 6) % 1; cx.fillStyle = 'rgba(60,50,48,' + (0.5 * (1 - f)) + ')'; cx.beginPath(); cx.arc(VOLCAN[0] + Math.sin(f * 5 + k) * 18 + f * 40, VOLCAN[1] - 10 - f * 110, 12 + f * 34, 0, 7); cx.fill(); }
     // caminos ya recorridos (dorados)
@@ -671,6 +708,7 @@
       '<h3>🎁 ' + (primera ? L('Premios de la primera victoria', 'First victory rewards') : L('Premios al repetir', 'Replay rewards')) + '</h3>' + (sinPremio ? '<p>' + L('Ya usaste las ' + REP_DIA + ' repeticiones con premio de hoy. Puedes jugarla igual, pero sin premios.', 'You used today\'s ' + REP_DIA + ' rewarded replays. You can still play it, without rewards.') + '</p>' : htmlPremios(p)) +
       (best < 3 ? '<h3>👑 ' + L('Extra por 3 estrellas (una vez)', '3-star bonus (once)') + '</h3>' + htmlPremios(premioTres(M)) : '') +
       (!primera ? '<p class="tkm-nota">🔁 ' + L('Repeticiones con premio hoy: ', 'Rewarded replays today: ') + rep + ' / ' + REP_DIA + '</p>' : '') +
+      (!primera && best >= 3 ? '<h3>⚡ ' + L('Barrido (3 ★)', 'Sweep (3 ★)') + '</h3><p class="tkm-nota" style="margin:0 0 4px">' + L('Ya la dominas: pásala automáticamente y recibe los premios al instante, sin batalla y sin perder tropas.', 'You mastered it: pass it automatically and get the rewards instantly, with no battle and no troop losses.') + '</p><div class="tkm-bts" style="margin-top:4px"><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="1"' + (sinPremio ? ' disabled' : '') + '>⚡ ×1</button><button class="tkm-b verde" data-c="barrido" data-cap="' + c + '" data-i="' + i + '" data-n="' + Math.max(1, Math.min(5, REP_DIA - rep)) + '"' + (sinPremio ? ' disabled' : '') + '>⚡ ×' + Math.max(1, Math.min(5, REP_DIA - rep)) + '</button></div>' : (!primera ? '<p class="tkm-nota">⚡ ' + L('Consigue 3 ★ para poder pasarla automáticamente (Barrido).', 'Get 3 ★ to pass it automatically (Sweep).') + '</p>' : '')) +
       '<div class="tkm-bts"><button class="tkm-b gris" data-c="x">' + L('Cerrar', 'Close') + '</button><button class="tkm-b rojo" data-c="atacar" data-cap="' + c + '" data-i="' + i + '">⚔️ ' + L('Atacar', 'Attack') + '</button></div>';
     ventana(html);
   }
@@ -699,6 +737,18 @@
   // dar premios (con la pieza al azar si toca)
   function dar(p, ids) { var q = {}; Object.keys(p).forEach(function (k) { q[k] = p[k]; }); if (!q.pieza && q.piezaProb && Math.random() < q.piezaProb) q.pieza = q.piezaR; return G.darMision(q, ids || []); }
 
+  // ---- barrido: pasar una misión de 3 ★ automáticamente ----
+  function barrido(c, i, n) {
+    var d = st().dif, M = mision(c, i, d), base = premiosBase(M), rp = st().rep || {}, todo = [], hechas2 = 0;
+    if (estrellas(d, c, i) < 3) return;
+    if (rp.d !== hoy()) rp = { d: hoy(), n: 0 };
+    for (var k = 0; k < n && rp.n < REP_DIA; k++) { rp.n++; hechas2++; st().nRep = (st().nRep || 0) + 1; var r = st().m[clave(d, c, i)]; r.n = (r.n || 0) + 1; todo = todo.concat(dar(premiosRepetir(base), G.equipo())); }
+    st().rep = rp; G.guardar();
+    if (!hechas2) { G.consejo(L('Ya usaste las repeticiones con premio de hoy.', 'Today\'s rewarded replays are used.')); return; }
+    var junto = {}, orden = []; todo.forEach(function (x) { var m = /^([+×]?)([\d.,]+)/.exec(x.n || ''), v = m ? +m[2].replace(/[.,]/g, '') : 0; if (!junto[x.nom]) { junto[x.nom] = { img: x.img, ico: x.ico, nom: x.nom, pre: m ? m[1] : '', v: 0, txt: x.n }; orden.push(x.nom); } junto[x.nom].v += v; });
+    G.sonar('moneda'); pintarUI();
+    ventanaPremio('⚡ ' + L('Barrido ×', 'Sweep ×') + hechas2 + ' · ' + esc(M.titulo), orden.map(function (k2) { var j = junto[k2]; return { img: j.img, ico: j.ico, nom: j.nom, n: j.v ? j.pre + num(j.v) : j.txt }; }));
+  }
   // ---- empezar una misión ----
   function atacar(c, i) {
     var d = st().dif, M = mision(c, i, d), dk = d;
@@ -727,6 +777,7 @@
     if (c === 'x') cerrarVentana();
     else if (c === 'salir') cerrar();
     else if (c === 'atacar') atacar(+b.getAttribute('data-cap'), +b.getAttribute('data-i'));
+    else if (c === 'barrido') { if (b.disabled) return; cerrarVentana(); barrido(+b.getAttribute('data-cap'), +b.getAttribute('data-i'), +b.getAttribute('data-n')); }
     else if (c === 'dif') { var k = b.getAttribute('data-k'); if (!difAbierta(k)) { G.consejo('🔒 ' + L('Completa el Capítulo 1 en ' + (k === 'elite' ? 'Normal' : 'Élite') + ' para abrir esta dificultad.', 'Complete Chapter 1 on ' + (k === 'elite' ? 'Normal' : 'Elite') + ' to unlock this difficulty.')); return; } st().dif = k; G.guardar(); claros = {}; abiertosAntes = { d: k, l: [1, 2, 3, 4].filter(function (c2) { return capAbierto(k, c2); }) }; pintarUI(); centrar(); }
     else if (c === 'caps') ventanaCapitulos();
     else if (c === 'logros') ventanaLogros();
