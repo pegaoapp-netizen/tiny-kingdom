@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.72';
+var VERSION_JUEGO = '8.73';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.72","2026-11-24","Inventario: carretas, VIP, fichas, amatista y potenciadores se pueden usar de uno en uno o todos.","Inventory: wagons, VIP, tokens, amethyst and boosts can be used one at a time or all."],
+var NOVEDADES_VER = [["8.73","2026-11-24","Tienda más llena: paquetes de tropas, libros de héroe, amatista, cofres de equipo y de madera.","Fuller Shop: troop packs, hero books, amethyst, gear and wooden chests."],
+  ["8.72","2026-11-24","Inventario: carretas, VIP, fichas, amatista y potenciadores se pueden usar de uno en uno o todos.","Inventory: wagons, VIP, tokens, amethyst and boosts can be used one at a time or all."],
   ["8.71","2026-11-24","Inventario › Recursos: aviso de que eso ya es tuyo (no hay que cobrarlo) y nombres con mayúscula.","Inventory › Resources: note that it is already yours (nothing to collect) and capitalized names."],
   ["8.70","2026-11-24","Cada actualización manda su propio correo, solo con lo nuevo de esa versión.","Each update sends its own mail with only what is new in that version."],
   ["8.69","2026-11-24","Ventana «Recibiste»: las fotos caben en su casilla y el botón Recoger siempre se ve.","«You got» window: pictures fit their box and the Collect button is always visible."],
@@ -418,6 +419,15 @@ var NOMBRES = {
   inv_15h: { es: 'Arcano 15 horas', en: 'Arcane 15 hours', des_es: 'Quita 15 horas solo a una investigación.', des_en: 'Takes 15 hours off a research only.' },
   inv_24h: { es: 'Arcano 24 horas', en: 'Arcane 24 hours', des_es: 'Quita 24 horas solo a una investigación.', des_en: 'Takes 24 hours off a research only.' },
   inv_3d: { es: 'Arcano 3 días', en: 'Arcane 3 days', des_es: 'Quita 3 días solo a una investigación.', des_en: 'Takes 3 days off a research only.' },
+  /* v8.73: paquetes de tropas para la Tienda (van directo a tus tropas de casa) */
+  tropas_mil: { es: 'Leva de milicianos', en: 'Militia levy', des_es: '1.000 milicianos listos al momento.', des_en: '1,000 militia ready at once.' },
+  tropas_esp: { es: 'Compañía de espadachines', en: 'Swordsman company', des_es: '500 espadachines listos al momento.', des_en: '500 swordsmen ready at once.' },
+  tropas_arq: { es: 'Compañía de arqueros', en: 'Archer company', des_es: '500 arqueros listos al momento.', des_en: '500 archers ready at once.' },
+  tropas_gua: { es: 'Muro de guardianes', en: 'Guardian wall', des_es: '300 guardianes listos al momento.', des_en: '300 guardians ready at once.' },
+  tropas_cab: { es: 'Escuadrón de caballería', en: 'Cavalry squadron', des_es: '200 caballeros a caballo listos al momento.', des_en: '200 cavalry ready at once.' },
+  tropas_bal: { es: 'Batería de balistas', en: 'Ballista battery', des_es: '50 balistas listas al momento.', des_en: '50 ballistas ready at once.' },
+  tropas_ari: { es: 'Arietes de asalto', en: 'Assault rams', des_es: '50 arietes listos al momento.', des_en: '50 rams ready at once.' },
+  tropas_cat: { es: 'Batería de catapultas', en: 'Catapult battery', des_es: '50 catapultas listas al momento.', des_en: '50 catapults ready at once.' },
   reclutas: { es: 'Reclutas del rey', en: 'King’s recruits', des_es: '10 espadachines listos al momento, sin entrenar.', des_en: '10 swordsmen ready at once, no training.' },
   cristal_mistico: { es: 'Cristal místico', en: 'Mystic crystal', des_es: 'Para la Ascensión de ★1 a ★4. Se gana en campamentos, bestias y aldeas bárbaras de nivel 5 o más.', des_en: 'For Ascension ★1 to ★4. Won at camps, beasts and barbarian villages level 5+.' },
   cristal_encantado: { es: 'Cristal encantado', en: 'Enchanted crystal', des_es: 'Para la Ascensión de ★5 a ★10. Se gana en campamentos, bestias y aldeas de nivel 9 o más.', des_en: 'For Ascension ★5 to ★10. Won at level 9+ camps, beasts and villages.' },
@@ -775,6 +785,9 @@ var OBJETOS = {
   inv_24h:      { icono: '🔮', segundos: 86400, soloInv: true },
   inv_3d:       { icono: '🔮', segundos: 259200, soloInv: true },
   reclutas:     { icono: '📯', tropas: { espadachin: 10 } },
+  tropas_mil: { icono: '🪓', inv: 'tropas', tropas: { miliciano: 1000 } }, tropas_esp: { icono: '⚔️', inv: 'tropas', tropas: { espadachin: 500 } }, tropas_arq: { icono: '🏹', inv: 'tropas', tropas: { arquero: 500 } },
+  tropas_gua: { icono: '🛡️', inv: 'tropas', tropas: { guardian: 300 } }, tropas_cab: { icono: '🐎', inv: 'tropas', tropas: { caballeria: 200 } }, tropas_bal: { icono: '🎯', inv: 'tropas', tropas: { balista: 50 } },
+  tropas_ari: { icono: '🪵', inv: 'tropas', tropas: { ariete: 50 } }, tropas_cat: { icono: '☄️', inv: 'tropas', tropas: { catapulta: 50 } }, // v8.73
   // v7.14: tienda nueva (Combate, Potenciador, Recursos, Reliquia, Intercambia). inv = pestaña del Inventario.
   cristal_mistico:   { icono: '🔷', inv: 'reliquia', especial: true },
   cristal_encantado: { icono: '💠', inv: 'reliquia', especial: true },
@@ -862,6 +875,12 @@ var TIENDA = [
   { id: 'comida_2m', gemas: 25, cat: 'recursos' }, { id: 'madera_2m', gemas: 25, cat: 'recursos' }, { id: 'piedra_2m', gemas: 25, cat: 'recursos' }, { id: 'oro_1m', gemas: 30, cat: 'recursos' }, { id: 'mixto_1m', gemas: 45, cat: 'recursos' },
   { id: 'ficha_x1', gemas: 15, cat: 'varios' }, { id: 'ficha_x5', gemas: 65, cat: 'varios' }, { id: 'energia_heroe', gemas: 10, cat: 'varios' }, { id: 'llave_bronce', gemas: 20, cat: 'varios' }, { id: 'llave_plata', gemas: 20, cat: 'varios' },
   { id: 'cristal_mistico', gemas: 20, cat: 'varios' }, { id: 'cristal_encantado', gemas: 40, cat: 'varios' }, { id: 'cristal_arcano', gemas: 80, cat: 'varios' },
+  // v8.73 (dueño): la Tienda más llena. NUNCA héroes ni las armaduras buenas que se lanzan (juegos de héroe, Dragón, Galeón).
+  { id: 'tropas_mil', gemas: 30, cat: 'combate' }, { id: 'tropas_esp', gemas: 40, cat: 'combate' }, { id: 'tropas_arq', gemas: 40, cat: 'combate' }, { id: 'tropas_gua', gemas: 50, cat: 'combate' },
+  { id: 'tropas_cab', gemas: 55, cat: 'combate' }, { id: 'tropas_bal', gemas: 55, cat: 'combate' }, { id: 'tropas_ari', gemas: 45, cat: 'combate' }, { id: 'tropas_cat', gemas: 65, cat: 'combate' },
+  { id: 'libro_peq', gemas: 8, cat: 'varios' }, { id: 'libro_gra', gemas: 35, cat: 'varios' }, { id: 'pergamino', gemas: 15, cat: 'varios' },
+  { id: 'amatista_100', gemas: 15, cat: 'recursos' }, { id: 'amatista_500', gemas: 60, cat: 'recursos' },
+  { id: 'cofre_madera', gemas: 2, cat: 'cofres' }, { id: 'cofre_equipo', gemas: 25, cat: 'cofres' },
   { id: 'reinicio_tal', gemas: 30, cat: 'varios' }, { id: 'cambio_nombre', gemas: 50, cat: 'varios' }, { id: 'megafono', gemas: 10, cat: 'varios' }
 ];
 // Investigación: 3 ramas. 'cada' = cuánto mejora cada nivel.
