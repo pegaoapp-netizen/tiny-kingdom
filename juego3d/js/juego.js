@@ -13745,7 +13745,7 @@
     if (falta < 2) { consejoTemporal(L('Ya casi llegan.', 'Almost there.')); return; } // v8.09
     var lista = ['marcha_rapida'].concat(ACELERADORES.filter(function (k) { return !OBJETOS[k].soloInv; }).sort(function (a, b) { return OBJETOS[a].segundos - OBJETOS[b].segundos; }));
     var tengo = lista.filter(function (k) { return (moch[k] || 0) > 0; });
-    var filas = (tengo.length ? tengo : lista).map(function (k) {
+    var filas = lista.map(function (k) { /* v8.78: siempre todos (desde 1 minuto): los que tienes con Usar, los demás con Compra y usa */
       var n = moch[k] || 0, o = OBJETOS[k] || {}, it = TIENDA.filter(function (x) { return x.id === k; })[0], mitad = k === 'marcha_rapida', cubre = !mitad && o.segundos >= falta;
       return '<div class="ac-fila' + (cubre ? ' ac-cubre' : '') + '"><span class="ac-ico">' + (o.icono || '🏇') + '</span><div class="ac-txt"><b>' + N(k) + '</b><span>' + L('Tienes ', 'Owned ') + '×' + formatoNumero(n) + ' · ' + (mitad ? '−50 %' : '−' + fmtTiempo(o.segundos)) + (cubre ? ' · <em>' + L('¡llegan ya!', 'arrive now!') + '</em>' : '') + '</span></div><div class="ac-bts">' +
         (n > 0 ? '<button class="comprar mini naranja" data-acm="' + k + '">' + L('Usar', 'Use') + '</button>' : it ? '<button class="comprar mini verde ac-cyu" data-acm-cyu="' + k + '"' + (gem >= it.gemas ? '' : ' disabled') + '><small>' + L('Compra y usa', 'Buy & use') + '</small><span><span class="ico gema"></span>' + it.gemas + '</span></button>' : '') + '</div></div>';
@@ -13754,7 +13754,7 @@
     d.innerHTML = '<div class="ac-caja"><div class="ac-cab"><h3>⚡ ' + L('Acelerar marcha', 'Speed up march') + '</h3><button class="cerrar" id="ac-cerrar">✕</button></div>' +
       '<p class="ac-nom">🏇 → ' + escaparHTML(m.defensorNombre || '') + '</p><div class="ac-reloj" id="ac-reloj">⏱ ' + fmtTiempo(falta) + '</div>' + (resultado ? '<p class="ac-res">' + resultado + '</p>' : '') +
       '<div class="ac-gemas">' + L('Tus gemas: ', 'Your gems: ') + '<span class="ico gema"></span><b>' + formatoNumero(gem) + '</b></div>' +
-      '<p class="ac-sub">' + (tengo.length ? L('Tus aceleradores', 'Your speed-ups') : L('No tienes aceleradores: cómpralos con gemas', 'No speed-ups: buy them with gems')) + '</p><div class="ac-lista">' + filas + '</div></div>';
+      '<p class="ac-sub">' + L('Aceleradores: usa los tuyos o cómpralos con gemas', 'Speed-ups: use yours or buy them with gems') + '</p><div class="ac-lista">' + filas + '</div></div>';
     document.body.appendChild(d);
     var reloj = setInterval(function () { if (!document.body.contains(d) || m.resuelto) { clearInterval(reloj); if (m.resuelto) d.remove(); return; } var r = $('ac-reloj'); if (r) r.textContent = '⏱ ' + fmtTiempo(Math.max(0, (m.llega - Date.now()) / 1000)); }, 500);
     $('ac-cerrar').addEventListener('click', function () { sonar('click'); clearInterval(reloj); d.remove(); });

@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.77';
+var VERSION_JUEGO = '8.78';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.77","2026-11-24","Mis tropas también muestra tus carretas (Ligeras, de Suministro y Reales).","My troops also shows your carts (Light, Supply and Royal)."],
+var NOVEDADES_VER = [["8.78","2026-11-24","Acelerar marcha muestra todos los aceleradores, desde el de 1 minuto, para usar o comprar.","Speed up march shows all speed-ups, from 1 minute, to use or buy."],
+  ["8.77","2026-11-24","Mis tropas también muestra tus carretas (Ligeras, de Suministro y Reales).","My troops also shows your carts (Light, Supply and Royal)."],
   ["8.76","2026-11-24","El que expulsan de una alianza ya no sale como miembro ni como aliado.","A player removed from an alliance no longer shows as member or ally."],
   ["8.75","2026-11-24","Castillo › Detalles más ordenado en el teléfono.","Castle › Details tidier on phones."],
   ["8.74","2026-11-24","Castillo › Defensa: la lista de defensores cuenta todas tus tropas de casa, igual que la batalla.","Castle › Defense: the defenders list counts all your troops at home, same as the battle."],
