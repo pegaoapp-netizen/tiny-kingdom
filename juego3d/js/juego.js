@@ -10961,7 +10961,33 @@
   }
   // v9.03: CLASIFICACIÓN DE CAMPAÑA. Usa las mismas tablas de la nube que los torneos (torneos/{id}/puntos, mismas reglas):
   // '900000' = avance de siempre (misiones × 1000 + estrellas) · '91' + semana = puntos de Campaña de esta semana
-  function idRankCamp(t) { return t === 'semana' ? '91' + ('000' + (semanaActual() % 10000)).slice(-4) : '900000'; }
+  function idRankCamp(t, sem) { return t === 'semana' ? '91' + ('000' + ((sem || semanaActual()) % 10000)).slice(-4) : '900000'; }
+  // v9.04: premios del lunes para el podio de la Campaña semanal (sin gemas: las gemas no se regalan)
+  var PREMIOS_CAMP = [
+    { pos: 1, oro: 150000, madera: 80000, piedra: 80000, hierro: 40000, pieza: 'mitico', obj: [['acel_24h', 1], ['libro_gra', 5]] },
+    { pos: 2, oro: 100000, madera: 50000, piedra: 50000, hierro: 25000, pieza: 'legendario', obj: [['acel_8h', 2], ['libro_gra', 3]] },
+    { pos: 3, oro: 70000, madera: 35000, piedra: 35000, hierro: 15000, pieza: 'legendario', obj: [['acel_8h', 1], ['libro_gra', 2]] }
+  ];
+  function revisarCampSemana() {
+    var dc = estado.campMapa, sem = semanaActual(); if (!dc || !hayCuenta() || revisarCampSemana.va) return;
+    var w = [dc.semAnt, dc.sem].filter(function (x) { return x && x.s !== sem && x.p > 0 && !x.cobrada; })[0];
+    if (!w) return;
+    revisarCampSemana.va = true;
+    Cuentas.topTorneo(idRankCamp('semana', w.s), 100).then(function (lista) {
+      revisarCampSemana.va = false; if (w.cobrada) return;
+      lista = lista.filter(function (a) { return (a.puntos || 0) > 0; });
+      var yo = Cuentas.usuario().uid, i = lista.map(function (x) { return x.uid; }).indexOf(yo), pos = i >= 0 ? i + 1 : 0, pr = PREMIOS_CAMP.filter(function (q) { return q.pos === pos; })[0], hechos = w.p;
+      w.cobrada = true; if (dc.sem === w) dc.sem = { s: sem, p: 0 }; if (dc.semAnt === w) dc.semAnt = null; guardar(true);
+      var tit = '🗺️ ' + L('Campaña semanal: ', 'Weekly Campaign: ') + (pos ? L('puesto ', 'place ') + pos : L('sin puesto', 'no place'));
+      nuevoCorreo('sistema', tit, L('Campaña', 'Campaign'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos ? '#' + pos : '100+']]));
+      if (!pr) return;
+      var vista = [], NR = { oro: T('r_oro'), madera: L('Madera', 'Wood'), piedra: L('Piedra', 'Stone'), hierro: L('Hierro', 'Iron') };
+      ['oro', 'madera', 'piedra', 'hierro'].forEach(function (r) { if (pr[r]) vista.push({ ico: ICONO_RECURSO[r], n: pr[r], nom: NR[r] }); });
+      vista.push({ ico: '🛡️', n: 1, nom: window.__tkCamp.nombreRareza(pr.pieza) }); pr.obj.forEach(function (o) { if (OBJETOS[o[0]]) vista.push({ ico: OBJETOS[o[0]].icono, n: o[1], nom: N(o[0]) }); });
+      mostrarRecompensas(['🥇', '🥈', '🥉'][pos - 1] + ' ' + L('Campaña semanal · puesto ', 'Weekly Campaign · place ') + pos, vista, function () { window.__tkCamp.darMision(pr, (estado.campEquipo || []).slice()); });
+    }).catch(function () { revisarCampSemana.va = false; });
+  }
+  setTimeout(revisarCampSemana, 9000); setInterval(revisarCampSemana, 600000);
   // v8.27: puente con la Campaña en batalla (js/tk-campana.js)
   window.__tkCamp = {
     L: L, sonar: sonar, consejo: consejoTemporal,
@@ -10986,6 +11012,8 @@
     alianza: function () { return estado.alianza || null; },
     rankPublicar: function (tipo, puntos) { if (!hayCuenta() || !Cuentas.puntosTorneo) return Promise.resolve(); return Cuentas.puntosTorneo(idRankCamp(tipo), { nombre: Cuentas.nombrePublico(), puntos: Math.max(0, Math.min(100000000, Math.round(puntos || 0))), alianza: estado.alianza || null, actualizado: Date.now() }).catch(function () {}); },
     rankTop: function (tipo) { if (!hayCuenta() || !Cuentas.topTorneo) return Promise.reject(new Error('sin cuenta')); return Cuentas.topTorneo(idRankCamp(tipo), 100); },
+    premiosSemana: function () { return PREMIOS_CAMP; },
+    revisarSemana: function () { revisarCampSemana(); },
     irCuenta: function () { if (window.TKMapa) TKMapa.cerrar(); var b = document.querySelector('[data-accion="ir-cuenta"]'); if (b) b.click(); else abrirPanelRanking('poder'); },
     recursos: function () { return { oro: estado.monedas || 0, madera: estado.madera || 0, piedra: estado.piedra || 0, hierro: estado.hierro || 0 }; },
     imgObjeto: function (k) { return ICONOS_IMG[k] ? 'iconos/ui/' + ICONOS_IMG[k] + '.webp' : ''; },

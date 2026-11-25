@@ -126,7 +126,7 @@
   // v9.03: CLASIFICACIÓN. Avance = misiones completadas (todas las dificultades) × 1000 + estrellas;
   // semana = puntos por cada victoria o barrido de esta semana (jefe ×3; Élite ×2, Pesadilla ×3)
   function puntosAvance() { return totalGanadas() * 1000 + Math.min(999, totalEstrellas()); }
-  function semanaDatos() { var w = st().sem; if (!w || w.s !== G.semana()) w = st().sem = { s: G.semana(), p: 0 }; return w; }
+  function semanaDatos() { var w = st().sem; if (!w || w.s !== G.semana()) { if (w && w.p > 0 && !w.cobrada) { st().semAnt = w; if (G.revisarSemana) setTimeout(G.revisarSemana, 500); } w = st().sem = { s: G.semana(), p: 0 }; } return w; } // la semana pasada se guarda hasta cobrar su premio
   function sumarSemana(M, veces) { semanaDatos().p += (M.esJefe ? 3 : 1) * (M.dif === 'pesadilla' ? 3 : M.dif === 'elite' ? 2 : 1) * (veces || 1); }
   function publicar() { if (!G || !G.cuenta || !G.cuenta()) return; if (totalGanadas()) G.rankPublicar('avance', puntosAvance()); var w = semanaDatos(); if (w.p > 0) G.rankPublicar('semana', w.p); }
   function logrosListos() { var l = st().logros; return LOGROS.filter(function (g) { return !l[g.id] && g.ok(); }).length; }
@@ -510,6 +510,7 @@
     '#tkm .tkm-rkf{display:flex;align-items:center;gap:8px;padding:7px 8px;margin:4px 0;border-radius:6px;background:linear-gradient(#3a2414,#22140a);color:#f3e6c8;border:1px solid #6a5030}#tkm .tkm-rkf .p{flex:none;width:34px;text-align:center;font:900 15px Georgia,serif;color:#e8c060}#tkm .tkm-rkf.top .p{font-size:22px}' +
     '#tkm .tkm-rkf .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font:700 13px Georgia,serif}#tkm .tkm-rkf .n i{font-style:normal;font:800 10px system-ui;color:#3a2410;background:#e8c060;border-radius:4px;padding:1px 4px;margin-right:5px}#tkm .tkm-rkf b{flex:none;color:#ffe08a;font:800 12px system-ui}' +
     '#tkm .tkm-rkf.top{border-color:#c9a14a;background:linear-gradient(#5a3a18,#2a180a)}#tkm .tkm-rkf.yo{border-color:#9cc4ec;box-shadow:0 0 0 1px #2f6ab8,0 0 10px #2f6ab866}' +
+    '#tkm .tkm-rkp div{display:flex;align-items:center;flex-wrap:wrap;gap:3px;padding:5px 7px;margin:3px 0;border-radius:6px;background:rgba(90,50,10,.12);border:1px solid #a8803a;font:700 11px system-ui}#tkm .tkm-rkp span{font-size:20px;margin-right:2px}#tkm .tkm-rkp img{width:16px;height:16px}' +
     '#tkm .tkm-hist{font:italic 600 14px Georgia,serif !important;color:#4a2a0a;text-align:center;padding:4px 6px}' +
     '#tkm .tkm-sello{display:block;margin:6px auto;width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e0402a,#6a0e08);font-size:38px;line-height:76px;text-align:center;box-shadow:0 0 0 3px #3a0a04,0 0 0 5px #d8a640,0 4px 10px #0008}';
 
@@ -737,13 +738,15 @@
       return '<div class="tkm-lg' + (ya ? ' ya' : '') + '"><span class="i">' + (ya ? '✅' : ok ? '🏆' : '🎖️') + '</span><div><b>' + esc(L(g.es, g.en)) + '</b><small>' + esc(L(g.des[0], g.des[1])) + pr + '</small></div><button data-c="logro" data-id="' + g.id + '"' + (ya || !ok ? ' disabled' : '') + '>' + (ya ? L('Hecho', 'Done') : L('Reclamar', 'Claim')) + '</button></div>';
     }).join(''));
   }
+  function tiempoHasta(ms) { var s2 = Math.max(0, (ms - Date.now()) / 1000), d = Math.floor(s2 / 86400), h = Math.floor(s2 % 86400 / 3600), m = Math.floor(s2 % 3600 / 60); return d ? d + 'd ' + h + 'h' : h ? h + 'h ' + m + 'm' : m + 'm'; }
   var rkTab = 'avance';
   function ventanaClasificacion(tab) {
     rkTab = tab = tab || rkTab;
     var w = semanaDatos(), tabs = '<div class="tkm-rkt"><button class="' + (tab === 'avance' ? 'on' : '') + '" data-c="rk" data-t="avance">🏰 ' + L('Avance', 'Progress') + '</button><button class="' + (tab === 'semana' ? 'on' : '') + '" data-c="rk" data-t="semana">⚔️ ' + L('Esta semana', 'This week') + '</button></div>';
     var mio = tab === 'avance' ? '<b>' + totalGanadas() + '</b> ' + L('misiones', 'missions') + ' · ★ <b>' + totalEstrellas() + '</b>' : '<b>' + num(w.p) + '</b> ' + L('puntos', 'points');
     var ayuda = tab === 'avance' ? L('Gana quien completa más misiones en todas las dificultades. Si empatan, el que tiene más estrellas.', 'Whoever completes the most missions on every difficulty wins. Ties go to the most stars.') : L('Cada victoria o barrido de esta semana da 1 punto (jefe 3). En Élite valen el doble y en Pesadilla el triple. Se reinicia el lunes.', 'Each win or sweep this week gives 1 point (boss 3). Elite doubles them and Nightmare triples them. Resets on Monday.');
-    var f = ventana('<h2>🏆 ' + L('Clasificación', 'Leaderboard') + '</h2><div class="tkm-sub">' + L('Campaña', 'Campaign') + '</div>' + tabs + '<p class="tkm-nota">' + esc(ayuda) + '</p><div class="tkm-rkyo">' + L('Tú: ', 'You: ') + mio + '</div><div class="tkm-rkl">' + (G.cuenta() ? '<p class="tkm-nota">' + L('Cargando…', 'Loading…') + '</p>' : '<p>' + L('Crea una cuenta o entra en la tuya para aparecer en la clasificación.', 'Create an account or sign in to appear on the leaderboard.') + '</p><div class="tkm-bts"><button class="tkm-b azul" data-c="cuenta">' + L('Entrar o crear cuenta', 'Sign in or create account') + '</button></div>') + '</div>');
+    var prs = tab === 'semana' && G.premiosSemana ? '<h3>🎁 ' + L('Premios del lunes', 'Monday prizes') + (G.finSemana ? ' · ' + L('faltan ', 'in ') + tiempoHasta(G.finSemana()) : '') + '</h3><div class="tkm-rkp">' + G.premiosSemana().map(function (q) { return '<div><span>' + ['🥇', '🥈', '🥉'][q.pos - 1] + '</span><img src="iconos/ui/r_oro.webp" alt="">' + num(q.oro) + ' <img src="iconos/ui/r_hierro.webp" alt="">' + num(q.hierro) + ' · 🛡️ ' + esc(G.nombreRareza(q.pieza)) + ' · ' + q.obj.map(function (o) { return esc(G.nombreObjeto(o[0])) + ' ×' + o[1]; }).join(' · ') + '</div>'; }).join('') + '</div>' : '';
+    var f = ventana('<h2>🏆 ' + L('Clasificación', 'Leaderboard') + '</h2><div class="tkm-sub">' + L('Campaña', 'Campaign') + '</div>' + tabs + '<p class="tkm-nota">' + esc(ayuda) + '</p>' + prs + '<div class="tkm-rkyo">' + L('Tú: ', 'You: ') + mio + '</div><div class="tkm-rkl">' + (G.cuenta() ? '<p class="tkm-nota">' + L('Cargando…', 'Loading…') + '</p>' : '<p>' + L('Crea una cuenta o entra en la tuya para aparecer en la clasificación.', 'Create an account or sign in to appear on the leaderboard.') + '</p><div class="tkm-bts"><button class="tkm-b azul" data-c="cuenta">' + L('Entrar o crear cuenta', 'Sign in or create account') + '</button></div>') + '</div>');
     if (!G.cuenta()) return;
     publicar();
     G.rankTop(tab).then(function (l) {
