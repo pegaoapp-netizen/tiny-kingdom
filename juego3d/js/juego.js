@@ -11663,6 +11663,7 @@
     if (!(estado.mochila[k] > 0)) return;
     var o = OBJETOS[k], premio = null;
     if (esCofre(k) && !confirmado) { abrirUsoMasa(k); return; }
+    if (!confirmado && masaEfecto(k) && estado.mochila[k] > 1) { abrirUsoMasa(k); return; } /* v8.72 */
     if (o.fichasPack) { estado.mochila[k]--; darFichasPack(o.fichasPack); sonar('moneda'); consejoTemporal(o.icono + ' ' + textoFichasPack(o.fichasPack)); guardar(true); reabrirPanel(); return; } // v8.19: si te llegan por regalo, se usan desde el Inventario
     if (false) {
       confirmarJuego(o.icono + ' ' + L('¿Abrir ', 'Open ') + N(k) + '?', '<b>' + L('Qué trae:', 'What is inside:') + '</b>' + htmlContenido(k) + '<small>' + L('Tienes ', 'You have ') + estado.mochila[k] + '</small>', L('Abrir', 'Open'), function () { usarObjeto(k, true); });
@@ -11723,7 +11724,7 @@
     var d = document.createElement('div'); d.id = 'uso-masa';
     d.innerHTML = '<div class="um-caja"><button class="um-x" id="um-x">✕</button><h3>' + L('Uso en masa', 'Bulk use') + '</h3>' +
       '<div class="um-cab"><span class="um-ico">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(max) + '</small></div></div>' +
-      '<div class="um-trae"><b>' + L('Qué trae (cada uno):', 'What is inside (each):') + '</b>' + htmlContenido(k) + '</div>' +
+      '<div class="um-trae"><b>' + L('Qué trae (cada uno):', 'What is inside (each):') + '</b>' + (htmlContenido(k) || '<p>' + escaparHTML(D(k)) + '</p>') + '</div>' +
       '<div class="um-cant"><button class="um-menos" id="um-menos">−</button><input id="um-n" type="number" inputmode="numeric" min="1" max="' + max + '" value="1"><button class="um-mas" id="um-mas">+</button></div>' +
       '<div class="um-desl"><span>1</span><input id="um-r" type="range" min="1" max="' + max + '" value="1"><button class="um-todos" id="um-todos">' + L('Todos', 'All') + '</button></div>' +
       '<button class="um-usa" id="um-usa">' + L('Usa', 'Use') + ' <b id="um-cuenta">1</b></button></div>';
@@ -11738,7 +11739,7 @@
     $('um-todos').addEventListener('click', function () { poner(max); sonar('click'); });
     $('um-x').addEventListener('click', function () { sonar('click'); d.remove(); });
     d.addEventListener('click', function (ev) { if (ev.target === d) d.remove(); });
-    $('um-usa').addEventListener('click', function () { var n = +inp.value; d.remove(); usarEnMasa(k, n); });
+    $('um-usa').addEventListener('click', function () { var n = +inp.value; d.remove(); if (!esCofre(k) && masaEfecto(k)) usarEfectoEnMasa(k, n); else usarEnMasa(k, n); });
   }
   function usarEnMasa(k, n) {
     var o = OBJETOS[k]; n = Math.max(1, Math.min(estado.mochila[k] || 0, Math.floor(+n || 1)));
@@ -11790,6 +11791,21 @@
     if (o.pergamino) l.push(['📜', L('Sube habilidades de héroe', 'Levels up hero skills'), '×1']);
     if (o.portal) l.push(['🌀', o.portal === 'elegir' ? L('Mueve tu reino al lugar que elijas', 'Moves your kingdom where you choose') : L('Mueve tu reino a un lugar al azar', 'Moves your kingdom to a random place'), '']);
     return l;
+  }
+  /* v8.72: objetos que se pueden usar MUCHOS de golpe (además de los cofres): carretas, VIP, fichas, amatista, paquetes de fichas y potenciadores por horas */
+  var EFECTOS_MASA = { carreta: 1, vip: 1, fichas: 1, amatista: 1 };
+  function masaEfecto(k) { var o = OBJETOS[k] || {}; if (o.fichasPack) return true; if (!o.efecto) return false; if (EFECTOS_MASA[o.efecto]) return true; return !!(o.horas && o.efecto !== 'cosecha' && NOM_BUFF[o.efecto]); }
+  function usarEfectoEnMasa(k, n) {
+    var o = OBJETOS[k]; n = Math.max(1, Math.min(estado.mochila[k] || 0, Math.floor(+n || 1))); if (!(estado.mochila[k] > 0)) return;
+    var msg = '';
+    if (o.fichasPack) { for (var i = 0; i < n; i++) darFichasPack(o.fichasPack); msg = o.icono + ' ' + textoFichasPack(o.fichasPack) + ' ×' + formatoNumero(n); }
+    else if (o.efecto === 'carreta') { sumin().n += o.n * n; msg = '🐴 +' + formatoNumero(o.n * n) + ' ' + L('Carretas de Suministro', 'Supply Wagons') + ' · ' + L('libres: ', 'free: ') + formatoNumero(carretasLibres()); }
+    else if (o.efecto === 'vip') { vipSumar(o.n * n); msg = '👑 VIP +' + formatoNumero(o.n * n) + ' ' + L('puntos', 'points') + ' · VIP ' + vipNivel(); }
+    else if (o.efecto === 'fichas') { estado.fichas = (estado.fichas || 0) + o.n * n; msg = '🪙 +' + formatoNumero(o.n * n) + ' ' + L('fichas', 'tokens'); }
+    else if (o.efecto === 'amatista') { sumarAmatista(o.n * n); msg = '🔮 +' + formatoNumero(o.n * n) + ' ' + L('Amatista rúnica', 'Runic amethyst'); }
+    else if (o.horas && NOM_BUFF[o.efecto]) { var b = buffs(); b[o.efecto] = Math.max(Date.now(), b[o.efecto] || 0) + o.horas * 3600000 * n; msg = L(NOM_BUFF[o.efecto][0], NOM_BUFF[o.efecto][1]) + ' — ' + fmtTiempo((b[o.efecto] - Date.now()) / 1000); }
+    else return;
+    estado.mochila[k] -= n; sonar('magia'); consejoTemporal(msg); guardar(true); actualizarHUD(); reabrirPanel();
   }
   function esCofre(k) { var o = OBJETOS[k] || {}; return !!(o.cofre || o.paquete || o.mejora || o.equipo || o.da || o.galeon); } // v7.06: bolsas y sacos de recursos también se abren en masa
   // v6.89: los cofres no traen solo recursos: también armaduras/armas para los héroes, aceleradores, libros y escudos (con su probabilidad)
