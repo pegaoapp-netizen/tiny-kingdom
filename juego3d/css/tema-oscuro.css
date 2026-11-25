@@ -1701,3 +1701,10 @@ html body #pantalla.bk-login.oculto, html body #pantalla.oculto { display: none 
 
 /* v9.10 (dueño): la tarjeta del jugador lleva su ✕ arriba (además de cerrarse tocando fuera) */
 html body #perfil-jugador .pj-x { display: grid !important; place-items: center; z-index: 2; font: 700 18px/1 system-ui, sans-serif; padding: 0; cursor: pointer; }
+
+/* Etiquetas compactas, sin alterar la altura ni los iconos de la barra. */
+html body.barra-oro #abajo > button .txt, html body.barra-oro #abajo > button small {
+  white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important;
+  letter-spacing: -0.25px !important; font-size: clamp(7px, 2.05vw, 10px) !important;
+  line-height: 1.1 !important;
+}

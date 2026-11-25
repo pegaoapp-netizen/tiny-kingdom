@@ -305,6 +305,7 @@
   [[0, 9, 0, 22], [-9, 3, -6, 12]].forEach(function (q) { var l = new THREE.PointLight(0xff9a3c, 0, q[3], 1.6); l.position.set(q[0], q[1], q[2]); escena.add(l); lucesNoche.push(l); });
   var dirLuna = new V3();
   var brumaCiudad = window.NOCHE ? NOCHE.bruma(escena, 170, 22, 0.8) : null;
+  var luciernagasCiudad = null;
   var cTmp = new THREE.Color();
   function mezcla(lista, k, d) { return cTmp.copy(lista[0]).lerp(lista[1], k).lerp(lista[2], d * (1 - k * 0.5)); }
   var nocheActual = 0;
@@ -322,6 +323,7 @@
       camara.getWorldDirection(dirLuna); dirLuna.y = 0; dirLuna.normalize(); dirLuna.y = 0.32; domo.lunaDir.value.copy(dirLuna.normalize());
     }
     if (brumaCiudad) brumaCiudad.visible = k > 0.05;
+    if (luciernagasCiudad) { luciernagasCiudad.visible = k > 0.05 && !/[?&]sinLuciernagas=1(?:&|$)/.test(location.search); luciernagasCiudad.material.opacity = k * 0.9; }
     sol.color.copy(mezcla(CIELO.sol, k, d));
     sol.intensity = (1.12 - k * 0.6 - d * 0.14) * (1 + (VISTA.luz - 1) * (1 - k)); // v7.67: de día más claro
     hemi.color.copy(mezcla(CIELO.hemiCielo, k, d));
@@ -951,6 +953,24 @@
     }
     arboles.forEach(function (a) { a.y = altura(a.x, a.z); });
     escena.add(M.bosque(arboles));
+    // Luciérnagas: semilla independiente; no altera la distribución de otros objetos.
+    if (window.NOCHE) {
+      var puntos = [], sem = 927;
+      function azarL() { sem = (Math.imul(1664525, sem) + 1013904223) >>> 0; return sem / 4294967296; }
+      function puntoL(x, z, y) { if (Math.hypot(x, z) > COLINA.foso1 + 3) puntos.push([x, y + 0.8 + azarL() * 1.8, z]); }
+      BARRIOS.lista.forEach(function (r) {
+        [-1, 1].forEach(function (a) { [-1, 1].forEach(function (b) {
+          var x = -(r.b + b * (r.hb - 1.6)), z = r.a + a * (r.ha - 1.6);
+          for (var j = 0; j < 7; j++) puntoL(x + azarL()*2-1, z + azarL()*2-1, alturaCiudad(x,z));
+        }); });
+      });
+      arboles.forEach(function (a) { if (Math.hypot(a.x,a.z) < 95 && azarL() < 0.55) puntoL(a.x+2, a.z+2, a.y); });
+      for (var j = 0; j < 150; j++) { var p = RIO.curva.getPointAt(0.25 + azarL()*0.5); puntoL(p.x, p.z, altura(p.x,p.z)+0.16); }
+      // PointsMaterial de Three r149 ya multiplica size por pixelRatio y atenúa por profundidad.
+      luciernagasCiudad = NOCHE.puntosLuz(puntos, 0xd6ff8a, 1.15, 0);
+      luciernagasCiudad.visible = false; escena.add(luciernagasCiudad);
+    }
+
     // v7.71 prototipo: los detalles chicos solo se dibujan de cerca (niveles de detalle)
     // v7.69: CASAS MEDIEVALES de relleno en los huecos de la villa (como un reino de verdad): no se tocan ni tapan parcelas
     (function rellenarVilla() {

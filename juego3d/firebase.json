@@ -9,7 +9,13 @@
       "LEEME.txt",
       "**/node_modules/**",
       "nube/**",
-      "pruebas/**"
+      "pruebas/**",
+      "bk-*.html",
+      "rig.html",
+      "esqueleto.html",
+      "guardia-real-v2.html",
+      "modelos/bk_master_manifest.json",
+      "js/tk-bk-assets.js"
     ],
     "headers": [
       {
