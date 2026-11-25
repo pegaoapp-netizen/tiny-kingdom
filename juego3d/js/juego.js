@@ -10268,12 +10268,13 @@
     if (no) { consejoTemporal(no); sonar('error'); return; }
     var usoC = null; if (nCarretas && typeof nCarretas === 'object') { usoC = nCarretas; nCarretas = Math.ceil((usoC.carretilla || 0) * SUMINISTRO.carretilla.carga + (usoC.carreta || 0) + (usoC.convoy || 0) * SUMINISTRO.convoy.carga - 1e-6); } else if (nCarretas) usoC = { carretilla: 0, carreta: Math.floor(nCarretas), convoy: 0 }; /* v8.66 */
     nCarretas = Math.max(0, Math.min(nCarretas || 0, carretasLibres()));
-    var f = Math.round(fuerzaElegida || fuerzaEjercito()), viaje = tiempoMarcha(a), bm = botinAtaque(a.nivel, nCarretas);
+    var f = Math.round(fuerzaElegida || fuerzaEjercito()), viaje = Math.min(tiempoMarcha(a), 880000), bm = botinAtaque(a.nivel, nCarretas); /* v9.15: la nube no acepta marchas de más de 15 min: las muy lejanas llegan en 14:40 */
     var hS = estado.ultimaMarcha && estado.ultimaMarcha.heroe, sq = hS && estado.heroes && estado.heroes[hS] ? multiplicadoresHeroe(hS).saqueo : 0;
     if (sq) ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { bm[k] = Math.min(65000, Math.round(bm[k] * (1 + sq / 100))); }); // v7.84: Sello del Trono de Fuego
     /* v8.65 (dueño): si lo dejas en cero te llevas TODO lo que tiene; si no, nada. El botín pedido es todo lo que el defensor tiene. */
     var recD = (a.espia && a.espia.rec) || null, capT = usoC && nCarretas ? capCarros(usoC) : 0, quiere = {}, sumQ = 0; ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { quiere[k] = recD && recD[k] != null ? Math.max(0, Math.floor(+recD[k] || 0)) : capT; sumQ += quiere[k]; });
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { bm[k] = Math.max(0, Math.min(1e15, sumQ <= capT ? quiere[k] : Math.floor(quiere[k] * capT / Math.max(1, sumQ)))); }); /* v8.66: solo lo que cabe en las carretas */
+    if (!(f >= 1)) f = 1; if (f > 9007199254740000) f = 9007199254740000; /* v9.15: siempre un número entero válido */
     var doc = { atacante: Cuentas.usuario().uid, atacanteNombre: Cuentas.nombrePublico(), defensor: a.uid, defensorNombre: String(a.nombre).slice(0, 30),
       gano: false, botin: { oro: bm.oro, comida: bm.comida, madera: bm.madera, piedra: bm.piedra }, fuerza: f, defensa: Math.round(a.defensa || 1),
       fecha: Date.now(), llega: Date.now() + viaje, visto: false, resuelto: false, cobrado: false, bajas: 0 };
@@ -10296,7 +10297,7 @@
       // v7.18: como en KoC 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
       $('mundo-info').innerHTML = ''; abrirDockAuto(); try { guardarDock(); actualizarDock(); } catch (e) {} sonar('cuerno'); // v7.19: la marcha se ve en la barra de abajo con Acelerar y Retirar, sin cartel encima
       actualizarAlertas();
-    }).catch(function () { $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); });
+    }).catch(function (e) { try { console.warn('No se pudo crear el ataque:', e && (e.code || e.message), JSON.stringify(doc)); } catch (x) {} consejoTemporal('⚠️ ' + T('mar_error')); $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); }); /* v9.15: el aviso se ve aunque el panel del mapa esté cerrado */
   }
   // decide la batalla (la misma cuenta para el defensor y para el atacante)
   function decidirAtaque(r, defensa, op) {
@@ -10304,7 +10305,11 @@
     var ladoD = (res.sim && (res.sim.defReal && Object.keys(res.sim.defReal).length ? res.sim.defReal : res.sim.def)) || {};
     var limpio = !!res.gano && Object.keys(ladoD).every(function (k) { return k === 'defensas' || !(ladoD[k].quedan > 0); }); /* v8.65: lo dejaste en cero */
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { b[k] = limpio ? Math.floor(r.botin[k] || 0) : 0; });
-    return { gano: res.gano, botin: b, bajas: Math.round(res.bajas * 100) / 100, defensa: Math.round(defensa), resuelto: true };
+    /* v9.15: los números siempre válidos para la nube (un NaN o un número gigante hacía que el ataque nunca se resolviera y no llegaba informe) */
+    var bj = Math.round((+res.bajas || 0) * 100) / 100; if (!(bj >= 0)) bj = 0; if (bj > 1) bj = 1;
+    var dfI = Math.round(+defensa || 0); if (!(dfI >= 0)) dfI = 0; if (dfI > 9007199254740000) dfI = 9007199254740000;
+    ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { var v = Math.floor(+b[k] || 0), mx = Math.floor(+((r.botin || {})[k]) || 0); b[k] = v > 0 ? Math.min(v, mx) : 0; });
+    return { gano: !!res.gano, botin: b, bajas: bj, defensa: dfI, resuelto: true };
   }
   // el atacante: al llegar, si nadie la resolvió, la resuelve con la defensa que el defensor tenía publicada; luego cobra
   function llegarMarcha(m) {
@@ -10323,7 +10328,7 @@
         if (sdf.defensas) reg.fdP = (reg.fdP == null ? 1 : reg.fdP) * Math.max(0, sdf.defensas.quedan / 100); // v8.35
         for (var kd in sdf) { if (kd === 'defensas') continue; var pp = sdf[kd].perdidos || 0; if (pp > 0) { reg.perd[kd] = (reg.perd[kd] || 0) + pp; reg.valor += pp * valorUnidadTipo(kd); } } estado.bajasDe[m.defensor] = reg; } } catch (e) {}
       return Cuentas.resolverAtaque(m.id, datos).then(function () { for (var k in datos) m[k] = datos[k]; return m; })
-        .catch(function () { return Cuentas.leerAtaque(m.id); });
+        .catch(function (e) { try { console.warn('No se pudo resolver el ataque ' + m.id + ':', e && (e.code || e.message), JSON.stringify(datos)); } catch (x) {} return Cuentas.leerAtaque(m.id); }); /* v9.15: deja rastro si la nube lo rechaza */
     });
     paso.then(function (r) {
       if (!r || !r.resuelto) { resolviendo[m.id] = false; return; }

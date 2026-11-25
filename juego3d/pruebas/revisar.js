@@ -14,6 +14,7 @@
 //  7. Que los archivos que carga index.html existan.
 // 10. Que ninguna función que se llama falte (v8.99).
 // 11. Que ninguna ventana quede encima sin poder esconderse (v8.99).
+// 12. FRENO (v9.15): si cambia una parte importante (ataque, marchas, correo, poder, campaña…) que no se estaba arreglando, no se publica.
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const RAIZ = path.join(__dirname, '..');
@@ -166,6 +167,13 @@ try {
     if (fuerza && !esconde) err('#' + id + ' tiene un estilo con «display ... !important» y nada lo esconde con .oculto: esa ventana no se podría cerrar.');
   }
 } catch (e) { avi('No se pudo revisar las ventanas escondidas: ' + e.message); }
+
+// 12) v9.15 FRENO (dueño): un cambio en una parte no puede joder otra. Ver pruebas/freno.js.
+try {
+  const acepta = []; process.argv.forEach((x, i) => { if (x === '--acepto' && process.argv[i + 1]) acepta.push(...process.argv[i + 1].split(',')); });
+  const fr = require('./freno.js').revisarFreno(acepta);
+  fr.errores.forEach(err); if (fr.nota) console.log('  ' + fr.nota);
+} catch (e) { avi('No se pudo revisar el freno: ' + e.message); }
 
 // resultado
 for (const a of avisos) console.log('  aviso: ' + a);

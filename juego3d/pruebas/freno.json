@@ -1,0 +1,61 @@
+{
+ "ataque": {
+  "realizarAtaque": "cc5815778cb78f25",
+  "llegarMarcha": "26cdaf405a6fda05",
+  "decidirAtaque": "edb706aeb7c5fd8d",
+  "resolverBatalla": "d60219d11f6eb575",
+  "aplicarPerdidasRondas": "2d1ca42dcaba2d0f",
+  "fraccionHeridos": "2591fc7ecaba9b40",
+  "puedeAtacar": "8c34672ffdb0be43",
+  "botinAtaque": "7a0c1e52a402e185"
+ },
+ "defensa": {
+  "heroeDefensor": "cf9fd823495dea8c",
+  "capacidadEnfermeria": "ce683baf67f33a30",
+  "curarHeridos": "f47212689c4104a1"
+ },
+ "marchas": {
+  "abrirMarcha": "8ba783f6b65b8484",
+  "tamanoMarcha": "5863229d48c7519d",
+  "maxMarchas": "d286f48a2d43df26",
+  "enMarcha": "3aabebf14388695c",
+  "libresParaMarcha": "160204c27295a76d",
+  "tiempoMarcha": "ea0357d2e5f88317",
+  "acelerarMarcha": "1cedc9c8ba23273d",
+  "abrirDestacar": "dbe3871c6773dc37"
+ },
+ "correo": {
+  "nuevoCorreo": "69993e5805ad5a3a",
+  "avisoResultado": "010b1d09b32bf55d",
+  "correoLista": "18b80949aaaa2994"
+ },
+ "poder": {
+  "desglosePoder": "12b22cd95508ca03",
+  "calcularPoder": "118c5b488d5812fc",
+  "cuentaTipo": "1564d40e8fd18a12",
+  "reserva": "71c10d22b200cadf"
+ },
+ "edificios": {
+  "js/modelos.js": "d25ab73a755feae9"
+ },
+ "campana": {
+  "js/tk-campana.js": "798a6d8578dbc732",
+  "js/tk-campana-mapa.js": "d0af2af24968d843"
+ },
+ "entrar": {
+  "mostrarPantalla": "3956ce9179c5540a",
+  "ocultarPantalla": "310aece57d11d814",
+  "pantallaCuenta": "fcd406660e837aa9",
+  "pantallaInicio": "59ace55ed19ada35",
+  "js/tk-portada.js": "4b4e0311158cd463",
+  "js/cuentas.js": "63fc34a16a9cabaa"
+ },
+ "chat": {
+  "perfilJugador": "8413bfe3f1c5f06c",
+  "opcionesChat": "b8c5fbfd4163c6cc",
+  "abrirPanelChat": "85474d17205892e5"
+ },
+ "reglas": {
+  "nube/firestore.rules": "67e4a738716b737b"
+ }
+}

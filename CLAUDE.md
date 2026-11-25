@@ -19,6 +19,13 @@ Por ejemplo, Chris trabaja en la **Campaña** y Maikel (el dueño) en todo lo de
 - Funciones nuevas van en archivos nuevos `js/tk-*.js` o como datos en `js/datos.js`. No rehagas `juego.js` entero.
 - Antes de borrar o cambiar una línea, busca (grep) en todo `js/` y `css/` dónde más se usa lo que esa línea define.
 
+## FRENO: arreglar una cosa no puede romper otra
+Palabras del dueño: «si estoy cambiando el color de las cabañas, que no se joda el ataque; si estás arreglando el ataque, que no se jodan las cabañas».
+- **Un cambio = una sola parte del juego.** Si arreglas las cabañas, no toques el ataque, las marchas, el correo, el poder ni nada más.
+- `node juego3d/pruebas/revisar.js` tiene un **freno** (`juego3d/pruebas/freno.js`). Si cambió una parte importante (ataque, defensa, marchas, correo, poder, edificios, campaña, pantalla de entrar, chat o reglas de la nube), **no deja publicar** y dice cuál.
+- Si de verdad estabas arreglando esa parte: pruébala en el juego (el freno dice cómo) y después acéptala **solo esa**, con `node juego3d/pruebas/revisar.js --acepto ataque` (o la parte que sea). Sube también `juego3d/pruebas/freno.json`.
+- **Nunca** aceptes una parte que no estabas arreglando, ni uses `--acepto todo` para que el freno se calle.
+
 ## 3. Antes de publicar
 1. `node juego3d/pruebas/revisar.js` tiene que decir «todo bien». Si encuentra un error, se arregla; nunca se salta el revisor.
 2. Sube `VERSION_JUEGO` en `js/datos.js` y pon **una línea nueva** arriba de `NOVEDADES_VER`, con solo lo de esta versión. No borres las líneas viejas.
