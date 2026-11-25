@@ -1698,3 +1698,6 @@ html body:has(#panel:not(.oculto)) #aviso-version { display: none !important; }
 
 /* v8.99: la pantalla de entrar se cierra de verdad al jugar (antes el diseño nuevo la dejaba encima) */
 html body #pantalla.bk-login.oculto, html body #pantalla.oculto { display: none !important; }
+
+/* v9.10 (dueño): la tarjeta del jugador lleva su ✕ arriba (además de cerrarse tocando fuera) */
+html body #perfil-jugador .pj-x { display: grid !important; place-items: center; z-index: 2; font: 700 18px/1 system-ui, sans-serif; padding: 0; cursor: pointer; }
