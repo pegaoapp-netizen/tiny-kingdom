@@ -592,13 +592,10 @@ var M = (function () {
   // v7.71 PROTOTIPO 3D (?proto3d=1): todos los edificios con modelo 3D real, tejado azul y piedra clara como el castillo
   // v7.73: el 3D pasa a ser la vista normal (edificios con volumen de verdad y cámara que gira 360°). Con ?clasico=1 se ven los dibujos 2D de antes.
   var PROTO3D = !/[?&](clasico|proto3d=0)\b/.test(location.search); window.__proto3d = PROTO3D; if (PROTO3D) window.__sin2D = true;
-  /* v8.84 (dueño): cada edificio con su PROPIO color de techo, para reconocerlo de un vistazo:
-     Cuartel rojo · Establo naranja · Campo de tiro verde · Herrería morado · Academia azul · Embajada turquesa ·
-     Mercado dorado · Almacén marrón · Enfermería rosa · Cabaña paja · Punto de reunión granate · Vigía y torres verde mar */
-  var TEJADO = { cuartel: [2, 0.72], establo: [26, 0.8], galeria: [118, 0.55], herreria: [272, 0.5], academia: [212, 0.65], embajada: [182, 0.6], mercado: [46, 0.88], almacen: [30, 0.45], enfermeria: [330, 0.62], cabana: [22, 0.58], relevo: [350, 0.75], vigia: [160, 0.5], torre: [160, 0.5] };
-  if (PROTO3D) ['establo', 'galeria', 'academia', 'embajada', 'mercado', 'almacen', 'enfermeria', 'cabana', 'relevo', 'vigia'].forEach(function (k) { TEJADO[k] = [212, 0.72]; });
-  function hsl2rgb(h, s2, l) { var C = (1 - Math.abs(2 * l - 1)) * s2, X = C * (1 - Math.abs((h / 60) % 2 - 1)), m = l - C / 2, r = 0, g = 0, b = 0, k = Math.floor(h / 60) % 6;
-    if (k === 0) { r = C; g = X; } else if (k === 1) { r = X; g = C; } else if (k === 2) { g = C; b = X; } else if (k === 3) { g = X; b = C; } else if (k === 4) { r = X; b = C; } else { r = C; b = X; } return [(r + m) * 255, (g + m) * 255, (b + m) * 255]; }
+  /* v8.86 (dueño): TODOS con techo azul, y solo algunos con su color para encontrarlos rápido:
+     Cuartel rojo · Enfermería verde · Almacén carmelita (marrón). Para cambiar uno: [tono 0-360, saturación] */
+  var AZUL_T = [212, 0.65];
+  var TEJADO = { cuartel: [2, 0.75], enfermeria: [140, 0.6], almacen: [28, 0.55], establo: AZUL_T, galeria: AZUL_T, herreria: AZUL_T, academia: AZUL_T, embajada: AZUL_T, mercado: AZUL_T, cabana: AZUL_T, relevo: AZUL_T, vigia: AZUL_T, torre: AZUL_T };
   function recolorTejado(tex, tipo) {
     var tj = TEJADO[tipo]; if (!tj || !tex || !tex.image || !tex.image.width) return tex;
     var im = tex.image, w = im.width, h = im.height, c = document.createElement('canvas'); c.width = w; c.height = h;

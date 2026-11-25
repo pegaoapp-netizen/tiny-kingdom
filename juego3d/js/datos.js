@@ -3,10 +3,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '8.85';
+var VERSION_JUEGO = '8.86';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["8.85","2026-11-24","Se pueden construir hasta 5 Enfermerías por villa para tener más camas.","You can build up to 5 Infirmaries per village for more beds."],
+var NOVEDADES_VER = [["8.86","2026-11-24","Techos: todos azules, menos el Cuartel (rojo), la Enfermería (verde) y el Almacén (carmelita).","Roofs: all blue except Barracks (red), Infirmary (green) and Storehouse (brown)."],
+  ["8.85","2026-11-24","Se pueden construir hasta 5 Enfermerías por villa para tener más camas.","You can build up to 5 Infirmaries per village for more beds."],
   ["8.84","2026-11-24","Cada edificio tiene su propio color de techo para reconocerlo de un vistazo.","Each building has its own roof color so you can spot it at a glance."],
   ["8.83","2026-11-24","Enfermería: muchas más camas; los heridos se quedan hasta que tú los cures y al curarlos sube tu poder (cuenta en el Torneo de Poder).","Infirmary: many more beds; wounded stay until you heal them, and healing raises your power (counts in the Power Tournament)."],
   ["8.82","2026-11-24","Fortaleza › Explorar da premios que se notan (recursos según tu castillo, aceleradores, libros, cofres) y los enseña en una ventana.","Fortress › Explore gives real rewards (resources by castle level, speed-ups, books, chests) and shows them."],
