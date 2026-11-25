@@ -1057,6 +1057,8 @@
     var nvC = estado.castillo || 1;
     castillo = M.castilloEtapa(nvC);
     castillo.userData.castillo = true;
+    /* v8.95 (dueño): el castillo nunca sobresale de su plaza: se mide su esquina más lejana del centro antes de girarlo */
+    castillo.updateMatrixWorld(true); var rEsq = 0, vC = new THREE.Vector3(); castillo.traverse(function (m) { var pa = m.geometry && m.geometry.attributes && m.geometry.attributes.position; if (!pa) return; for (var i = 0; i < pa.count; i++) { vC.fromBufferAttribute(pa, i).applyMatrix4(m.matrixWorld); var rr = Math.hypot(vC.x, vC.z); if (rr > rEsq) rEsq = rr; } });
     castillo.rotation.y = Math.atan2(EJE_U.x, EJE_U.z) - GIRO_DIAG; // v6.49: la puerta mira de frente a la cámara en diagonal
     // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
     castillo.updateMatrixWorld(true);
@@ -1064,7 +1066,7 @@
     // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
     var metaC = TAM_CASTILLO * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
     if (nvC >= 16) metaC *= 1.3; /* v8.89: los castillos grandes llenan su plaza */
-    if (anC > 0.01) castillo.scale.multiplyScalar(metaC / anC);
+    if (anC > 0.01) { var escC = metaC / anC, LIM_PLAZA = COLINA.r - 0.5; if (rEsq > 0.01 && rEsq * escC > LIM_PLAZA) escC = LIM_PLAZA / rEsq; castillo.scale.multiplyScalar(escC); }
     castillo.position.y = COLINA.alto; // v7.55: arriba de su colina
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
