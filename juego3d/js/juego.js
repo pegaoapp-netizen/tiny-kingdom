@@ -11443,7 +11443,7 @@
     return l;
   }
   // v7.95: COFRE REAL DE BIENVENIDA: sale una sola vez al empezar un reino nuevo (bandera regaloBienvenidaReclamado)
-  var COFRE_BIENVENIDA = { gemas: 500, heroe: 'luna', recursos: 250000, oro: 50000, objetos: { acel_5m: 10, acel_15m: 5, portal_elegir: 1 }, fichas: 3, escudoHoras: 72 };
+  var COFRE_BIENVENIDA = { gemas: 0, /* v9.85 (dueño y Felix): sin gemas de regalo, así nadie abre cuentas falsas para sacar gemas */ heroe: 'luna', recursos: 250000, oro: 50000, objetos: { acel_5m: 10, acel_15m: 5, portal_elegir: 1 }, fichas: 3, escudoHoras: 72 };
   var SVG_COFRE_BIENV = '<svg viewBox="0 0 200 150" class="cb-svg" aria-hidden="true">' +
     '<defs><radialGradient id="cbBrillo" cx="50%" cy="45%" r="55%"><stop offset="0" stop-color="#ffe9a0" stop-opacity=".95"/><stop offset="1" stop-color="#ffb300" stop-opacity="0"/></radialGradient>' +
     '<linearGradient id="cbMadera" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a5a2b"/><stop offset="1" stop-color="#5b3016"/></linearGradient></defs>' +
@@ -11458,7 +11458,7 @@
   function itemsCofreBienvenida() {
     var c = COFRE_BIENVENIDA, R = ICONO_RECURSO;
     return [
-      { ico: '💎', n: c.gemas, nom: L('Gemas', 'Gems') },
+      c.gemas ? { ico: '💎', n: c.gemas, nom: L('Gemas', 'Gems') } : null, /* v9.85 */
       { ico: '🦸', n: 1, nom: L('Héroe ', 'Hero ') + NH(c.heroe) },
       { ico: R.comida, n: c.recursos, nom: L('Comida', 'Food') }, { ico: R.madera, n: c.recursos, nom: L('Madera', 'Wood') },
       { ico: R.piedra, n: c.recursos, nom: L('Piedra', 'Stone') }, { ico: R.hierro || '⛓️', n: c.recursos, nom: L('Hierro', 'Iron') },
@@ -11467,7 +11467,7 @@
       { ico: '🪙', n: c.fichas, nom: L('Fichas de la Ruleta', 'Wheel tokens') },
       { ico: '✨', n: c.objetos.portal_elegir, nom: N('portal_elegir') },
       { ico: '🛡️', n: c.escudoHoras, nom: L('horas de Escudo de Paz', 'hours of Peace Shield') }
-    ];
+    ].filter(Boolean);
   }
   function mostrarCofreBienvenida() {
     if (estado.regaloBienvenidaReclamado || $('cofre-bienvenida')) return;
@@ -11484,7 +11484,7 @@
     if (estado.regaloBienvenidaReclamado) return false;
     estado.regaloBienvenidaReclamado = true; // primero la bandera: nunca se entrega dos veces
     var c = COFRE_BIENVENIDA;
-    estado.gemas = (estado.gemas || 0) + c.gemas;
+    if (c.gemas) estado.gemas = (estado.gemas || 0) + c.gemas;
     estado.heroes = estado.heroes || {};
     if (!estado.heroes[c.heroe]) { estado.heroes[c.heroe] = { nivel: 1, estrellas: 1, frag: 0 }; try { cargarModelosHeroes(); } catch (e) {} }
     else estado.heroes[c.heroe].frag = (estado.heroes[c.heroe].frag || 0) + 30;
