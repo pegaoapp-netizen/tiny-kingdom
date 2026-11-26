@@ -11671,8 +11671,9 @@
   // v8.00: CANDADOS por nivel (Azar Premium, Torneo de Temporada, Equipo de héroe)
   function bloqueo(k) { var q = DESBLOQUEO[k]; if (!q || estado.dueno) return null; if (q.jugador && nivelJugador() < q.jugador) return { que: 'jugador', n: q.jugador }; if (q.castillo && (estado.castillo || 1) < q.castillo) return { que: 'castillo', n: q.castillo }; return null; }
   function htmlCandado(k, texto) { var b = bloqueo(k); return '<div class="candado-nivel"><div class="cn-ico">🔒</div><p>' + texto + '</p><small>' + (b.que === 'jugador' ? L('Tu nivel: ', 'Your level: ') + nivelJugador() + ' / ' + b.n : L('Tu castillo: Nv ', 'Your castle: Lv ') + (estado.castillo || 1) + ' / ' + b.n) + '</small></div>'; }
+  var azarAvisoVisto = false; /* v9.86 (dueño): el cartel «¡Toca el cofre…!» solo al abrir el Azar; al primer cofre se quita hasta que lo vuelvas a abrir */
   function abrirAzar(modo) {
-    if (modo) { modoAzar = modo; azarGrid = null; }
+    if (modo) { modoAzar = modo; azarGrid = null; azarAvisoVisto = false; }
     var evP = eventoActivo('premium'); if (modoAzar === 'premium' && !evP) { modoAzar = 'normal'; azarGrid = null; }
     var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 6 : 1; // v8.19: el Premium cuesta 6 fichas
     if (!azarGrid) azarGrid = [null, null, null, null, null, null, null, null, null];
@@ -11686,7 +11687,7 @@
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
         return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
-      (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta az-cinta-aviso">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
+      (azarGrid.every(function (x) { return !x; }) && !azarAvisoVisto ? '<div class="az-cinta az-cinta-aviso">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
         L('¡Toca el cofre que quieras abrir! Cada uno cuesta ' + costo + ' ficha' + (costo > 1 ? 's' : '') + '.', 'Tap the chest you want to open! Each costs ' + costo + ' token' + (costo > 1 ? 's' : '') + '.') + '</div>' /* v9.81: la cuenta de fichas sale una sola vez, encima de los botones */ : '') + '</div>' +
       '<p class="az-tienes">' + /* v9.81: «Tienes: X fichas» ya sale grande encima de los botones */ (estado.gemasInfinitas ? '' : '🎁 ' + L('Gratis hoy: ', 'Free today: ') + fichasGratisHoy() + ' / ' + gratisPorNivel() + ' · ') + L('Nv 1-9: 1 gratis al día · Nv 10-19: 2 · Nv 20+: 3. Las gratis se pierden si no las usas hoy.', 'Lv 1-9: 1 free a day · Lv 10-19: 2 · Lv 20+: 3. Free ones expire at the end of the day.') + '</p>' +
       '<p class="az-elige">👆 ' + L('Tú eliges: toca un cofre cerrado para abrirlo.', 'You choose: tap a closed chest to open it.') + '</p>' + /* v8.44 */
@@ -11701,6 +11702,7 @@
     $('panel').classList.add('iv-panel', 'az-panel');
   }
   function sacarAzar(cuantos, celda) {
+    azarAvisoVisto = true;
     /* v8.44: el jugador escoge el cofre. Con celda abre ESE; sin celda (Abrir todos) abre todos los que quedan cerrados */
     if (!azarGrid || azarGrid.every(function (x) { return x; })) azarGrid = [null, null, null, null, null, null, null, null, null];
     var cerrados = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(function (c) { return !azarGrid[c]; });
@@ -11723,6 +11725,7 @@
   var tmCerrarAzar = null;
   function cerrarCofresLuego(ms) { clearTimeout(tmCerrarAzar); tmCerrarAzar = setTimeout(function () { azarGrid = [null, null, null, null, null, null, null, null, null]; if (panelActual && panelActual.tipo === 'azar' && !$('panel').classList.contains('oculto')) abrirAzar(); }, ms || 1400); }
   function sacarAzarVarios(cant) {
+    azarAvisoVisto = true;
     cant = Math.max(1, Math.min(10, Math.floor(+cant || 1)));
     var prem = modoAzar === 'premium', costo = (prem ? 6 : 1) * cant;
     if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
