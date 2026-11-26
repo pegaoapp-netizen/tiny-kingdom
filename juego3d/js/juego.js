@@ -2838,8 +2838,9 @@
     var ICONO_MENU = { 'btn-mochila': 'inventario', 'btn-misiones': 'misiones', 'btn-alianza': 'alianza', 'btn-buzon': 'correo', 'mg-azar': 'azar', 'btn-conquista': 'campana', 'mg-reliquia': 'reliquia', 'mg-entrenar': 'entrenar', 'mg-investigar': 'investigar', 'btn-ranking': 'ranking', 'btn-ajustes': 'ajustes', 'mg-publicar': 'publicar', 'mg-equipo': 'equipo' };
     // v6.48: el menú con sus 13 botones fijos, en cuadrícula
     var items = [];
-    [['btn-mochila', 'img:b_inventario', L('Inventario', 'Inventory')], ['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-alianza', 'img:b_alianza', L('Alianza', 'Alliance')], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
-      ['mg-azar', '🎲', L('Azar', 'Lucky')], ['btn-conquista', 'img:b_campana', L('Campaña', 'Campaign'), 'badge-conquista'], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')], ['mg-entrenar', '⚔️', L('Entrenar', 'Train')],
+    /* v9.57 (dueño: «está regado todo»): el menú ▲ ya no repite lo que está en el menú de abajo (Inventario, Alianza, Campaña) ni Entrenar (= Tropas) */
+    [['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
+      ['mg-azar', '🎲', L('Azar', 'Lucky')], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')],
       ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Lanzar héroes y armaduras', 'Release heroes & armor')]] : [])
       .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
@@ -13383,7 +13384,7 @@
   }
   botonMenu('btn-conquista', ['conquista'], function () { if (window.TKMapa && !oleadaActiva && TKMapa.abrir()) return; abrirPanelConquista(); }); // v9.00: el botón Campaña abre el mapa (las Etapas siguen dentro)
   botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); });
-  botonMenu('btn-mochila', ['mochila'], function () { abrirPanelMochila(); });
+  botonMenu('btn-mochila', ['mochila'], function () { if (panelActual && panelActual.tipo === 'tienda' && pestTiendaArriba === 'mios' && !$('panel').classList.contains('oculto')) { cerrarPanel(); return; } pestTiendaArriba = 'mios'; abrirMisObjetos(); }); /* v9.57 (dueño): un solo inventario: el mismo de Tienda › Mis objetos */
   botonMenu('btn-tienda', ['tienda'], function () { abrirPanelTienda(); });
   $('btn-ajustes').addEventListener('click', function () { sonar('click'); abrirPanelAjustes(); });
   $('btn-mundo').addEventListener('click', function () { if (enMenu) return; sonar('click'); salirModoColocar(); cerrarPanel(); if (enMundo) entrarCiudad(); else irAlMundo(); });
@@ -13404,7 +13405,7 @@
     if (id === 'mg-soporte') { sonar('click'); abrirSoporte('escribir'); return; }
     if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
     if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
-    if (id === 'mg-equipo') { sonar('click'); var hq = (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || 'sol'; pestanaHeroe = 'equipo'; abrirPanelHeroe(hq); return; }
+    if (id === 'mg-equipo') { sonar('click'); pestHerreria = 'equipo'; abrirPanelHerreria(); return; } /* v9.57 (dueño): Equipo abre la Herrería › Equipo (todas tus piezas por tipo) */
     if (id === 'mg-publicar') { sonar('click'); var urlJ = 'https://tinykingdom-pegao.web.app', txtJ = L('¡Juega conmigo a Brother Kingdom!', 'Play Brother Kingdom with me!'); if (navigator.share) navigator.share({ title: 'Brother Kingdom', text: txtJ, url: urlJ }).catch(function () {}); else { try { navigator.clipboard.writeText(txtJ + ' ' + urlJ); } catch (e) {} consejoTemporal(L('Enlace copiado: compártelo con tus amigos.', 'Link copied: share it with your friends.')); } return; }
     if (id === 'mg-ciudad') irAVista('ciudad'); else if (id === 'mg-campos') irAVista('campos'); else if (id === 'mg-investigar') { sonar('click'); abrirPanelInvestigacion(ramaInv); } else if (id === 'mg-procesos') { sonar('click'); abrirPanelVigia(); } else if ($(id)) $(id).click();
   });
@@ -14168,7 +14169,7 @@
   function crearDock() {
     if ($('dock-procesos')) return $('dock-procesos');
     var d = document.createElement('div'); d.id = 'dock-procesos';
-    d.innerHTML = '<div class="dk-tabs">' + [['territorios', L('Territorios', 'Territories')], ['marchar', L('Marchar', 'March')], ['tropas', L('Tropas', 'Troops')], ['procesos', L('Procesos', 'Activity')]].map(function (t) {
+    d.innerHTML = '<div class="dk-tabs">' + [['territorios', L('Territorios', 'Territories')], ['marchar', L('Marchar', 'March')], ['procesos', L('Procesos', 'Activity')]].map(function (t) { /* v9.57 (dueño): sin «Tropas», ya está abajo */
       return '<button data-dk="' + t[0] + '">' + t[1] + '<span class="dk-punto"></span></button>';
     }).join('') + '<button class="dk-flecha" data-dk="flecha" title="' + L('Mostrar / ocultar', 'Show / hide') + '"></button></div>' +
       '<div class="dk-fila"><span class="dk-txt" id="dk-txt"></span><button class="dk-accion" id="dk-accion"></button><button class="dk-accion dk-rojo" id="dk-retirar" style="display:none">↩ ' + L('Retirar', 'Recall') + '</button></div>';
