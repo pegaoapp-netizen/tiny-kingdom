@@ -38,10 +38,10 @@
   "reserva": "71c10d22b200cadf"
  },
  "edificios": {
-  "js/modelos.js": "d25ab73a755feae9"
+  "js/modelos.js": "4dffc66896e7203a"
  },
  "campana": {
-  "js/tk-campana.js": "798a6d8578dbc732",
+  "js/tk-campana.js": "cd4e598cf20f3caf",
   "js/tk-campana-mapa.js": "d0af2af24968d843"
  },
  "entrar": {

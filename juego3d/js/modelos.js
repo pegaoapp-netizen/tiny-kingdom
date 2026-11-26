@@ -1133,8 +1133,8 @@ var M = (function () {
   function castilloTripo(n, e) {
     var asp = aspectoCastillo(n);
     if (asp && !CAST_T[asp] && !CAST_T_CARG[asp] && THREE.GLTFLoader) {
-      CAST_T_CARG[asp] = true;
-      new THREE.GLTFLoader().load('modelos/' + asp + '.glb?v=' + (typeof VERSION_JUEGO !== 'undefined' ? VERSION_JUEGO : ''), function (gl) {
+      CAST_T_CARG[asp] = Date.now(); /* v9.30: cuándo empezó a bajar (para no enseñar el castillo viejo mientras tanto) */
+      new THREE.GLTFLoader().load('modelos/' + asp + '.glb?v=c1' /* v9.30: versión propia del castillo: ya no se vuelve a bajar en cada actualización (súbela solo si cambia el modelo) */, function (gl) {
         gl.scene.traverse(function (o) { if (o.isMesh && o.material) { var mp = o.material.map; if (mp) { mp.encoding = THREE.LinearEncoding; mp.anisotropy = 4; mp.needsUpdate = true; } o.material = new THREE.MeshLambertMaterial({ map: mp || null, emissive: 0x1c1c1c, emissiveMap: mp || null }); } });
         CAST_T[asp] = gl.scene; window.dispatchEvent(new Event('castillo-glb'));
       }, undefined, function () { CAST_T_CARG[asp] = false; });
@@ -1196,7 +1196,10 @@ var M = (function () {
   }
   function castilloEtapa(n) {
     var e = etapaCastillo(n), g = new THREE.Group(), banderas = [];
-    var tpC = castilloTripo(n, e); if (tpC) return tpC; if (e >= 2) return castilloArena(n, e); // v6.43: el castillo de Tripo desde el nivel 1 (el fuerte de madera solo mientras carga) // v6.35 prueba: castillo de Tripo (o el dibujado mientras carga)
+    var tpC = castilloTripo(n, e); if (tpC) return tpC;
+    /* v9.30 (dueño): al entrar se veía un momento el castillo viejo y luego el nuevo. Mientras baja el nuevo (hasta 10 s) no se enseña nada; si tarda más o falla, sale el de antes */
+    var aspE = aspectoCastillo(n), cargE = aspE && CAST_T_CARG[aspE]; if (cargE && Date.now() - cargE < 10000) { var vacio = new THREE.Group(); vacio.userData.esperandoModelo = true; setTimeout(function () { if (!CAST_T[aspE]) window.dispatchEvent(new Event('castillo-glb')); }, 10500); return vacio; }
+    if (e >= 2) return castilloArena(n, e); // v6.43: el castillo de Tripo desde el nivel 1 (el fuerte de madera solo mientras carga) // v6.35 prueba: castillo de Tripo (o el dibujado mientras carga)
     var GR = 0x9b9da3, GR2 = 0x77797f, GR3 = 0x5d5f66, AZUL = 0x2f5fae, AZUL2 = 0x1e3f7a, ORO = 0xe8b84a, MAD = 0x8f5c32, MAD2 = 0x6a4224;
     function flag(x, y, z, alto) { var b = bandera(AZUL, alto || 1.6); b.position.set(x, y, z); b.userData.noFusionar = true; g.add(b); banderas.push(b.userData.tela); }
     function almenas(cx, cz, w, d, y, col) {

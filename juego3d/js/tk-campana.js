@@ -190,7 +190,8 @@
     var dir = az ? 1 : -1, t = performance.now() / 1000;
     // v9.02: soldados dibujados (casco, escudo y lanza) detrás del héroe
     var tun = az ? ['#2f6be0', '#1a3f8a'] : ['#c0281e', '#6a0e08'];
-    for (var k = 0; k < vivos; k++) {
+    var conFig = !az && window.TKSprites && TKSprites.foto(u.ico, u.jefe, false, 0); /* v9.30: con muñeco 3D no hacen falta los soldaditos */
+    for (var k = 0; k < (conFig ? 0 : vivos); k++) {
       var sx = u.x - dir * (15 + (k % 2) * 11), sy = u.y + (k < 2 ? -10 : 10) + (k % 2) * 4, salto = u.anda ? Math.abs(Math.sin(t * 9 + k)) * 2 : 0, gol = u.cd > u.ritmo - 0.15 ? 3 : 0;
       cx.fillStyle = 'rgba(0,0,0,0.3)'; cx.beginPath(); cx.ellipse(sx + 2, sy + 6, 7, 2.6, 0, 0, 7); cx.fill();
       cx.strokeStyle = '#6a4a2a'; cx.lineWidth = 1.6; cx.beginPath(); cx.moveTo(sx - dir * 2, sy + 4 - salto); cx.lineTo(sx + dir * (10 + gol), sy - 12 - salto); cx.stroke();
@@ -202,7 +203,11 @@
     }
     if (!u.vivo) { cx.globalAlpha = 0.35; }
     var r = u.jefe ? (mis ? 24 : 19) : 16, sal = u.anda ? Math.abs(Math.sin(t * 8)) * 2 : 0;
-    cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, u.y + r * 0.8, r, r * 0.35, 0, 0, 7); cx.fill();
+    /* v9.30 (dueño): los enemigos son los muñecos 3D que hizo él (fotos sacadas de sus modelos, ver tk-campana-sprites.js); mientras cargan, el círculo de antes */
+    var fig = !az && window.TKSprites ? TKSprites.foto(u.ico, u.jefe, u.anda && u.vivo, t) : null, hFig = fig ? r * (u.jefe ? 5.2 : 4.2) : 0, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
+    cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, u.y + r * 0.8, fig ? wFig * 0.32 : r, r * 0.35, 0, 0, 7); cx.fill();
+    if (fig) { cx.drawImage(fig, u.x - wFig / 2, pie - hFig, wFig, hFig); if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.ellipse(u.x, pie - hFig / 2, wFig * 0.45, hFig * 0.55, 0, 0, 7); cx.stroke(); } }
+    else {
     cx.save(); cx.beginPath(); cx.arc(u.x, u.y - sal, r, 0, 7); cx.closePath(); cx.fillStyle = az ? '#1b3f8a' : '#7a1a12'; cx.fill(); cx.clip();
     if (u.im && u.im.complete && u.im.naturalWidth) cx.drawImage(u.im, u.x - r, u.y - r - sal, r * 2, r * 2);
     else { cx.font = (r * 1.2) + 'px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillStyle = '#fff'; cx.fillText(u.ico || (u.h ? u.h.nombre.charAt(0) : '?'), u.x, u.y - sal + 1); }
@@ -211,11 +216,13 @@
     var gm = cx.createLinearGradient(u.x - r, u.y - r - sal, u.x + r, u.y + r - sal); gm.addColorStop(0, az ? '#fff2b0' : '#ff9a7a'); gm.addColorStop(0.5, az ? '#c98a1a' : '#8a1a0e'); gm.addColorStop(1, az ? '#7a4a08' : '#3a0604');
     cx.lineWidth = 2.6; cx.strokeStyle = u.escudo > 0 ? '#7fd3ff' : (u.buff > 0 ? '#ffd23a' : gm); cx.beginPath(); cx.arc(u.x, u.y - sal, r, 0, 7); cx.stroke();
     if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.arc(u.x, u.y - sal, r + 6, 0, 7); cx.stroke(); }
-    if (u.jefe && mis && u.vivo) { cx.font = '16px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('👑', u.x, u.y - r - 20 - sal); }
-    if (u.aturdido > 0) { cx.font = '12px system-ui'; cx.textAlign = 'center'; cx.fillText('💫', u.x, u.y - r - 16); }
+    }
+    var arriba = fig ? pie - hFig + 4 : u.y - r - sal; /* v9.30: la barra, la corona y el mareo van encima del muñeco */
+    if (u.jefe && mis && u.vivo) { cx.font = '16px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('👑', u.x, arriba - 20); }
+    if (u.aturdido > 0) { cx.font = '12px system-ui'; cx.textAlign = 'center'; cx.fillText('💫', u.x, arriba - 16 + sal); }
     cx.globalAlpha = 1;
     if (u.vivo) { // barra de vida
-      var bw = 38, bx = u.x - bw / 2, by = u.y - r - 10 - sal;
+      var bw = 38, bx = u.x - bw / 2, by = arriba - 10;
       cx.fillStyle = '#000b'; cx.fillRect(bx - 1, by - 1, bw + 2, 6); cx.fillStyle = az ? '#4fd06a' : '#ff5a4a'; cx.fillRect(bx, by, bw * Math.max(0, u.hp / u.max), 4);
     }
   }
@@ -334,13 +341,14 @@
       else if (!lado.az.some(function (u) { return u.vivo; }) || tPelea > 120) fin(false);
     }
   }
+  var errBucle = 0;
   function bucle(t) {
     if (!corriendo) return;
+    requestAnimationFrame(bucle); /* v9.30 (dueño: «se para»): el siguiente fotograma se pide ANTES, así un fallo al dibujar ya no congela la batalla */
     var dt = Math.min(0.05, (t - ultimo) / 1000 || 0); ultimo = t;
-    if (modo === 'pelea' && !terminado) paso(dt * vel);
-    dibujar(dt * vel);
-    if (modo === 'pelea') pintarRetratos();
-    requestAnimationFrame(bucle);
+    try { if (modo === 'pelea' && !terminado) paso(dt * vel); } catch (e) { if (errBucle++ < 5) console.warn('Campaña · paso:', e); }
+    try { dibujar(dt * vel); } catch (e) { if (errBucle++ < 5) console.warn('Campaña · dibujar:', e); }
+    try { if (modo === 'pelea') pintarRetratos(); } catch (e) { if (errBucle++ < 5) console.warn('Campaña · retratos:', e); }
   }
 
   // ---------------- pantallas (HTML encima del dibujo) ----------------

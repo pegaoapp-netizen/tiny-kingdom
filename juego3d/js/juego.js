@@ -1107,7 +1107,7 @@
     if (anC > 0.01) { var escC = metaC / anC, LIM_PLAZA = COLINA.r - 0.5; if (rEsq > 0.01 && rEsq * escC > LIM_PLAZA) escC = LIM_PLAZA / rEsq; castillo.scale.multiplyScalar(escC); }
     castillo.position.y = COLINA.alto; // v7.55: arriba de su colina
     escena.add(castillo);
-    castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y;
+    castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y; if (!isFinite(altoC)) altoC = COLINA.alto + 12; /* v9.30: mientras baja el castillo nuevo no hay nada que medir */
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
     altoC += 0.5; altoCastillo = altoC;
     if (insigniaCastillo) escena.remove(insigniaCastillo);
