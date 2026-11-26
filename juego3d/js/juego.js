@@ -12123,6 +12123,7 @@
     if (o.paquete) Object.keys(o.paquete).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.paquete[q]]); });
     if (o.mejora) o.mejora.forEach(function (r) { l.push(['🧰', L('Pieza de equipo ', 'Equipment piece ') + T('eq_r_' + r), '×1']); });
     if (o.extra) Object.keys(o.extra).forEach(function (q) { l.push([OBJETOS[q].icono, N(q), '×' + o.extra[q]]); });
+    if (o.fichasPack) { if (o.fichasPack.azar) l.push([window.ICONO_FICHA || '🪙', L('Fichas de Azar', 'Lucky tokens'), '×' + o.fichasPack.azar]); if (o.fichasPack.ruleta) l.push(['🎡', L('Fichas de Ruleta', 'Wheel tokens'), '×' + o.fichasPack.ruleta]); } /* v9.48: los cofres de fichas también dicen qué traen */
     if (o.equipo) l.push(['🧰', L('30 %: pieza de equipo rara (a veces legendaria) · 70 %: 20.000 de oro', '30%: rare gear piece (sometimes legendary) · 70%: 20,000 gold'), '×1']);
     if (TROPAS_COFRE[k]) l.push(['⚔️', L('Tropas: ', 'Troops: ') + TROPAS_COFRE[k].map(function (x) { return x[1] + ' ' + N(x[0]); }).join(L(' o ', ' or ')), L('siempre una', 'always one')]);
     (EXTRA_COFRE[k] || []).forEach(function (e) { var pr = Math.round(e[2] * 100) + '%'; if (e[0] === 'pieza') l.push([EQ.pechera.icono, L('Armadura o arma ', 'Armor or weapon ') + nomRarezaEq(e[1]), L('a veces ', 'sometimes ') + pr]); else if (OBJETOS[e[0]]) l.push([OBJETOS[e[0]].icono, N(e[0]) + (e[1] > 1 ? ' ×' + e[1] : ''), L('a veces ', 'sometimes ') + pr]); });
@@ -12221,7 +12222,7 @@
     TIENDA.forEach(function (it, i) {
       if ((it.cat || 'varios') !== pestTienda) return;
       var o = OBJETOS[it.id], tiene = (estado.mochila && estado.mochila[it.id]) || 0;
-      html += '<div class="fila-tienda"><span class="ft-ico' + (o.soloInv ? ' arcano' : '') + '" data-accion="obj-info" data-k="' + it.id + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(it.id) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + tiene + '</small><small>' + D(it.id) + '</small>' +
+      html += '<div class="fila-tienda"><span class="ft-ico' + (o.soloInv ? ' arcano' : '') + '" data-accion="obj-info" data-k="' + it.id + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(it.id) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + (o.fichasPack ? (estado.gemasInfinitas ? '∞' : formatoNumero(estado.fichas || 0)) + ' 🪙 · ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.fichasRul || 0)) + ' 🎡' : tiene) /* v9.48: en los cofres de fichas se ven tus fichas */ + '</small><small>' + D(it.id) + '</small>' +
         '<span class="ft-precio">' + (it.antes ? '<s>' + it.antes + '</s> ' : '') + '<span class="ico gema"></span>' + it.gemas + (it.antes ? ' <i class="oferta">⏳ ' + L('Oferta', 'Offer') + '</i>' : '') + '</span></span>' +
         '<button class="comprar verde" data-accion="comprar" data-i="' + i + '" data-gemas="' + it.gemas + '">' + L('Comprar', 'Buy') + '</button></div>';
     });
@@ -12323,7 +12324,8 @@
     var ok; gemasOk = true; try { ok = pagar(0, it.gemas * n); } finally { gemasOk = false; }
     if (!ok) return;
     var fp = (OBJETOS[it.id] || {}).fichasPack; // v8.19
-    if (fp) { for (var q = 0; q < n; q++) darFichasPack(fp); sonar('moneda'); consejoTemporal('✅ ' + N(it.id) + (n > 1 ? ' ×' + n : '') + ': ' + textoFichasPack(fp) + (n > 1 ? ' ×' + n : '')); guardar(true); reabrirPanel(); return; }
+    if (fp) { for (var q = 0; q < n; q++) darFichasPack(fp); sonar('moneda'); guardar(true); reabrirPanel(); /* v9.48 (dueño: «no me deja comprarlo»): las fichas van directo a Azar y Ruleta, así que ahora sale la ventana de premios para que se vea que llegaron */
+      mostrarRecompensas(N(it.id) + (n > 1 ? ' ×' + n : ''), [fp.azar ? { ico: window.ICONO_FICHA || '🪙', n: fp.azar * n, nom: L('fichas de Azar', 'Lucky tokens') } : null, fp.ruleta ? { ico: '🎡', n: fp.ruleta * n, nom: L('fichas de Ruleta', 'Wheel tokens') } : null].filter(Boolean)); return; }
     estado.mochila[it.id] = (estado.mochila[it.id] || 0) + n;
     sonar('moneda');
     consejoTemporal(T('comprado', { n: N(it.id) + (n > 1 ? ' ×' + formatoNumero(n) : '') }));
