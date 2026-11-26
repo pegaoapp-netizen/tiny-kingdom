@@ -63,6 +63,7 @@
   function materiales() {
     if (MAT.solido) return;
     MAT.solido = new T3.MeshLambertMaterial({ vertexColors: true });
+    MAT.rocaPBR = parcharPBR(new T3.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.4 }), false);
     MAT.palma = new T3.MeshLambertMaterial({ vertexColors: true, side: T3.DoubleSide });
     MAT.palma.onBeforeCompile = function (sh) { sh.uniforms.uT = U.t; sh.uniforms.uV = U.viento; sh.vertexShader = 'uniform float uT; uniform float uV;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n vec4 kI = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n#else\n vec4 kI = vec4(0.0);\n#endif\n float kA = max(0.0, position.y - 1.0) * 0.045 * uV; transformed.x += sin(uT * 1.3 + kI.x * 0.3 + kI.z * 0.2) * kA; transformed.z += cos(uT * 1.1 + kI.z * 0.25) * kA * 0.7;'); };
     MAT.palma.customProgramCacheKey = function () { return 'tkcPalma'; };
@@ -104,132 +105,260 @@
   }
 
   // ======================================================================
-  //  ISLA: forma, alturas, colores (playa, selva, caminos, roca) y acantilados
+  //  ISLA v2 (según la imagen del dueño): meseta de la villa, terraza al pie de la montaña, bahía semicircular con playa,
+  //  promontorios rocosos y acantilados verticales. Tres niveles: playa (-4,5), villa (0) y terraza (+5). Mar a -6.
   // ======================================================================
-  var ISLA = null; // { ac, ha, hb, R, alt(a,b), ... }
+  var ISLA = null;
   function ruido2(x, y) { var s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453; return s - Math.floor(s); }
   function vruido(x, y) { var i = Math.floor(x), j = Math.floor(y), f = x - i, g = y - j; f = f * f * (3 - 2 * f); g = g * g * (3 - 2 * g); var a = ruido2(i, j), b = ruido2(i + 1, j), c = ruido2(i, j + 1), d = ruido2(i + 1, j + 1); return a + (b - a) * f + (c - a) * g + (a - b - c + d) * f * g; }
   function fbm(x, y) { return vruido(x, y) * 0.55 + vruido(x * 2.1 + 3, y * 2.1 - 1) * 0.3 + vruido(x * 4.3 - 7, y * 4.3 + 5) * 0.15; }
-  function prepararIsla(c) {
-    var R = c.R, cr = c.campos, atras = cr.a - cr.ha - 26, frente = R + 10;
-    ISLA = { R: R, ac: (frente + atras) / 2, ha: (frente - atras) / 2, hb: R + 17, frente: frente, atras: atras, campos: cr, agua: -0.35 };
-    // lugar de la fortaleza: el centro de la colina del castillo (siempre el origen de las coordenadas locales)
-    ISLA.fort = { a: 0, b: 0 };
-  }
-  function elipse(a, b) { var u = (a - ISLA.ac) / ISLA.ha, v = b / ISLA.hb; return Math.pow(Math.pow(Math.abs(u), 4) + Math.pow(Math.abs(v), 4), 0.25) + (fbm(a * 0.05, b * 0.05) - 0.5) * 0.08; }
-  function zonaAcantilado(a, b) {
-    // laterales del fondo (al lado de los campos) y el fondo de la isla
-    var lado = smooth(ISLA.R + 5, ISLA.R + 12, Math.abs(b)) * smooth(ISLA.R * 0.5, ISLA.R * 0.2, a); // acantilados a los lados de la villa (se ven desde la ciudad)
-    var fondo = smooth(ISLA.atras + 30, ISLA.atras + 12, a);
-    return Math.max(lado, fondo);
-  }
   function smooth(e0, e1, x) { var t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
-  function altura(a, b) {
-    var e = elipse(a, b), z = zonaAcantilado(a, b);
-    var base = e < 0.9 ? 0 : e < 1.0 ? -1.4 * smooth(0.9, 1.0, e) : -1.4 - (e - 1) * 30;
-    if (e < 0.92) { // colinas suaves fuera de la villa y de los campos
-      var enVilla = Math.abs(a) < ISLA.R + 3 && Math.abs(b) < ISLA.R + 3, cr = ISLA.campos, enCampos = Math.abs(a - cr.a) < cr.ha + 3 && Math.abs(b - cr.b) < cr.hb + 3;
-      if (!enVilla && !enCampos) base += fbm(a * 0.06, b * 0.06) * 3.2 * smooth(0.0, 6.0, Math.min(Math.abs(Math.abs(a) - ISLA.R - 3), Math.abs(Math.abs(b) - ISLA.R - 3)) + (Math.abs(a) > ISLA.R + 3 || Math.abs(b) > ISLA.R + 3 ? 6 : 0));
-    }
-    if (z > 0) { var pico = 16 + fbm(a * 0.04 + 9, b * 0.04) * 16 + vruido(a * 0.25, b * 0.25) * 2.5; var cae = 1 - smooth(0.95, 1.04, e); base = base * (1 - z) + (pico * cae + base * (1 - cae)) * z; }
-    return base;
+  function h3(x, y, z) { var s = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return s - Math.floor(s); }
+  function vr3(x, y, z) { var i = Math.floor(x), j = Math.floor(y), k = Math.floor(z), f = x - i, g = y - j, h = z - k; f = f * f * (3 - 2 * f); g = g * g * (3 - 2 * g); h = h * h * (3 - 2 * h);
+    function L(a, b, t) { return a + (b - a) * t; }
+    return L(L(L(h3(i, j, k), h3(i + 1, j, k), f), L(h3(i, j + 1, k), h3(i + 1, j + 1, k), f), g), L(L(h3(i, j, k + 1), h3(i + 1, j, k + 1), f), L(h3(i, j + 1, k + 1), h3(i + 1, j + 1, k + 1), f), g), h); }
+  function fbm3(x, y, z) { return vr3(x, y, z) * 0.55 + vr3(x * 2.03 + 5, y * 2.03, z * 2.03 - 3) * 0.3 + vr3(x * 4.1, y * 4.1 + 7, z * 4.1) * 0.15; }
+  function prepararIsla(c) {
+    var R = c.R;
+    ISLA = { R: R, agua: -6, playa: -4.5, terraza: 5,
+      plat: { a0: c.campos.a - c.campos.ha - 8, a1: 46.5, hb: 48.5 },   // meseta de la villa y los campos
+      terr: { a0: -60, a1: -42.5, hb: 56 },                              // terraza alta al pie de la montaña
+      bahia: { a: 82, b: 0, r: 30 },                                     // bahía semicircular delante
+      cabo: { a0: 46, a1: 102, hb: 58 },                                 // promontorios a los dos lados de la bahía
+      monte: { a: -62 },                                                 // la montaña empieza detrás de la terraza
+      frente: 46.5, atras: c.campos.a - c.campos.ha - 8, hb: 58 };
   }
-  // caminos de arena: siguen las calles entre parcelas (las mismas por donde andan los aldeanos)
+  function sdCaja(a, b, ca, cb, ha, hb, r) { var qa = Math.abs(a - ca) - ha + r, qb = Math.abs(b - cb) - hb + r; return Math.hypot(Math.max(qa, 0), Math.max(qb, 0)) + Math.min(Math.max(qa, qb), 0) - r; }
+  function tierra(a, b) { // distancia con signo al borde de la isla (negativo = tierra)
+    var P = ISLA.plat, K = ISLA.cabo, B = ISLA.bahia, ru = (fbm(a * 0.06, b * 0.06) - 0.5) * 5 + (vruido(a * 0.3, b * 0.3) - 0.5) * 1.2;
+    var dP = sdCaja(a, b, (P.a0 + P.a1) / 2, 0, (P.a1 - P.a0) / 2, P.hb, 6);
+    var dT = sdCaja(a, b, (ISLA.terr.a0 - 46) / 2, 0, (-46 - ISLA.terr.a0 + 30) / 2, ISLA.terr.hb, 6);
+    var dK = Math.max(sdCaja(a, b, (K.a0 + K.a1) / 2, 0, (K.a1 - K.a0) / 2, K.hb, 10), B.r - Math.hypot(a - B.a, b - B.b));
+    return Math.min(dP, dT, dK) + ru * (Math.abs(a) < 44 && Math.abs(b) < 44 ? 0 : 1);
+  }
+  function enBahia(a, b) { return Math.hypot(a - ISLA.bahia.a, b - ISLA.bahia.b) - ISLA.bahia.r; } // negativo = agua de la bahía
+  function alturaTope(a, b) { // altura de la tierra firme (sin contar el corte de los acantilados)
+    var R = ISLA.R, h = 0;
+    // terraza alta (+5) detrás de la villa, con su escalón vertical
+    if (a < -40) h = ISLA.terraza * smooth(-40.5, -42.8, a) * (a > ISLA.terr.a0 - 4 ? 1 : 1);
+    if (a < ISLA.terr.a0) { var cr = ISLA.plat.a0; h = ISLA.terraza * (1 - smooth(ISLA.terr.a0, ISLA.terr.a0 - 6, a)); } // detrás bajan los campos (los tapa la montaña en la vista de la villa)
+    // delante: la playa de la bahía (-4,5) y los promontorios rocosos más altos
+    if (a > 45.5) {
+      var hp = ISLA.playa * smooth(45.5, 48.5, a);
+      var dB = enBahia(a, b), cabo = smooth(4, 12, dB) * smooth(16, 26, Math.abs(b));
+      var roca = 1.5 + fbm(a * 0.09, b * 0.09) * 6 + Math.pow(vruido(a * 0.22, b * 0.22), 3) * 4;
+      h = hp * (1 - cabo) + roca * cabo;
+    }
+    // huecos en la ladera para las escaleras (rampa justo debajo de los escalones)
+    var rampa = function (a0, a1, y0, y1, b0, ancho) { if (Math.abs(b - b0) < ancho / 2 + 0.6 && (a - a0) * (a - a1) <= 0) { var t = (a - a0) / (a1 - a0); h = Math.min(h, y0 + (y1 - y0) * t - 0.15); } };
+    rampa(-46.6, -40.2, ISLA.terraza, 0, 0, 9.6); rampa(-43.8, -39.8, ISLA.terraza, 0, 34, 4.8); rampa(-43.8, -39.8, ISLA.terraza, 0, -34, 4.8); rampa(45.0, 49.8, 0, ISLA.playa, 0, 9.4);
+    // colinas de los laterales (fuera de las parcelas)
+    if (Math.abs(b) > 43 && a < 45 && a > -40) h += smooth(43, 47, Math.abs(b)) * (1 + fbm(a * 0.08, b * 0.05) * 3);
+    return h;
+  }
+  function altura(a, b) {
+    var d = tierra(a, b), top = alturaTope(a, b);
+    var dB = enBahia(a, b);
+    if (a > 47 && dB < 0 && Math.abs(b) < 34) return Math.max(ISLA.agua - 7, ISLA.playa + dB * 0.42); // dentro de la bahía: la arena baja suave hasta el agua
+    if (d < -2.5) return top;
+    var cae = smooth(-2.5, 1.8, d), fondo = ISLA.agua - 1.5 - Math.max(0, d) * 0.45;
+    var grietas = (vruido(a * 0.7, b * 0.7) - 0.5) * 1.2 * (1 - Math.abs(cae - 0.5) * 2);
+    return Math.max(ISLA.agua - 10, top * (1 - Math.pow(cae, 0.6)) + fondo * Math.pow(cae, 0.6) + grietas);
+  }
+  // caminos de piedra: siguen las calles entre parcelas + avenida central + plaza
   var SEGS = [];
   function prepararCaminos(c) {
     SEGS = []; var es = c.esquinas() || [];
-    es.forEach(function (p, i) { es.forEach(function (q, j) { if (j <= i) return; var dx = Math.abs(p.x - q.x), dz = Math.abs(p.z - q.z); var l1 = c.aLocal(p.x, p.z), l2 = c.aLocal(q.x, q.z); var da = Math.abs(l1.a - l2.a), db = Math.abs(l1.b - l2.b); if ((da < 0.8 && db < 14 && db > 1) || (db < 0.8 && da < 14 && da > 1)) SEGS.push([l1.a, l1.b, l2.a, l2.b]); }); });
-    // camino grande: de la playa a la fortaleza
-    SEGS.push([ISLA.frente - 4, 0, 20, 0]);
+    es.forEach(function (p, i) { es.forEach(function (q, j) { if (j <= i) return; var l1 = c.aLocal(p.x, p.z), l2 = c.aLocal(q.x, q.z); var da = Math.abs(l1.a - l2.a), db = Math.abs(l1.b - l2.b); if ((da < 0.8 && db < 15 && db > 1) || (db < 0.8 && da < 15 && da > 1)) SEGS.push([l1.a, l1.b, l2.a, l2.b, 1.5]); }); });
+    SEGS.push([46, 0, 13, 0, 2.6]); SEGS.push([-13, 0, -40, 0, 2.6]); SEGS.push([0, 13, 0, 44, 2.0]); SEGS.push([0, -13, 0, -44, 2.0]);
+    SEGS.push([-44, -50, -44, 50, 2.0]); // paseo de la terraza
   }
-  function distCamino(a, b) { var m = 1e9; for (var i = 0; i < SEGS.length; i++) { var s = SEGS[i], ax = s[2] - s[0], ay = s[3] - s[1], l = ax * ax + ay * ay, t = l ? Math.max(0, Math.min(1, ((a - s[0]) * ax + (b - s[1]) * ay) / l)) : 0, dx = a - s[0] - ax * t, dy = b - s[1] - ay * t, d = dx * dx + dy * dy; if (d < m) m = d; } return Math.sqrt(m); }
-  var cArena = new T3.Color(0xe8d4a0), cArenaH = new T3.Color(0xc9a86a), cSelva = new T3.Color(0x4f9a3a), cSelva2 = new T3.Color(0x2f7a32), cRoca = new T3.Color(0x7a6a5a), cRoca2 = new T3.Color(0x5a4c40), cCamino = new T3.Color(0xd8b878), cTmp = new T3.Color();
+  function distCamino(a, b) { var m = 1e9, w = 1.5; for (var i = 0; i < SEGS.length; i++) { var s = SEGS[i], ax = s[2] - s[0], ay = s[3] - s[1], l = ax * ax + ay * ay, t = l ? Math.max(0, Math.min(1, ((a - s[0]) * ax + (b - s[1]) * ay) / l)) : 0, dx = a - s[0] - ax * t, dy = b - s[1] - ay * t, d = Math.sqrt(dx * dx + dy * dy) - s[4]; if (d < m) m = d; } return m; }
+
+  // ======================================================================
+  //  MATERIALES PBR con detalle en el shader: roca con estratos, grietas y musgo; arena; hierba; empedrado (sin texturas planas)
+  // ======================================================================
+  var GLSL_N3 = [
+    'float tkH3(vec3 p){ p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }',
+    'float tkN3(vec3 x){ vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(tkH3(i), tkH3(i + vec3(1,0,0)), f.x), mix(tkH3(i + vec3(0,1,0)), tkH3(i + vec3(1,1,0)), f.x), f.y), mix(mix(tkH3(i + vec3(0,0,1)), tkH3(i + vec3(1,0,1)), f.x), mix(tkH3(i + vec3(0,1,1)), tkH3(i + vec3(1,1,1)), f.x), f.y), f.z); }',
+    'float tkF3(vec3 p){ return tkN3(p) * 0.5 + tkN3(p * 2.1 + 3.1) * 0.3 + tkN3(p * 4.7 - 1.3) * 0.2; }',
+    'vec2 tkVor(vec2 p){ vec2 i = floor(p), f = fract(p); float d1 = 8.0, d2 = 8.0; float id = 0.0; for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec2 g = vec2(float(x), float(y)); vec2 o = vec2(tkH3(vec3(i + g, 1.0)), tkH3(vec3(i + g, 2.0))) * 0.8 + 0.1; float d = length(g + o - f); if (d < d1) { d2 = d1; d1 = d; id = tkH3(vec3(i + g, 3.0)); } else if (d < d2) d2 = d; } return vec2(d2 - d1, id); }'
+  ].join('\n');
+  // tipo de superficie: rojo = roca/hierba según pendiente, color del vértice = base; atributo «piso»: 0 suelo, 1 camino empedrado, 2 arena
+  var U_DET = { value: 1 }, U_FILL = { dir: { value: new T3.Vector3(0, 1, 0) }, col: { value: new T3.Color(0.5, 0.42, 0.32) } };
+  function parcharPBR(m, terreno) {
+    m.onBeforeCompile = function (sh) {
+      sh.uniforms.uTkcDet = U_DET; sh.uniforms.uTkFillDir = U_FILL.dir; sh.uniforms.uTkFillCol = U_FILL.col;
+      sh.vertexShader = 'varying vec3 vTkW; varying vec3 vTkN;' + (terreno ? ' attribute float piso; varying float vTkPiso;' : '') + '\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vec4 tkP = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\n tkP = instanceMatrix * tkP;\n#endif\n vTkW = (modelMatrix * tkP).xyz; vTkN = normalize(mat3(modelMatrix) * objectNormal);' + (terreno ? ' vTkPiso = piso;' : ''));
+      sh.fragmentShader = 'uniform float uTkcDet; uniform vec3 uTkFillDir; uniform vec3 uTkFillCol; varying vec3 vTkW; varying vec3 vTkN;' + (terreno ? ' varying float vTkPiso;' : '') + '\n' + GLSL_N3 + '\n' + sh.fragmentShader
+        .replace('#include <color_fragment>', [
+          '#include <color_fragment>',
+          ' vec3 tkn = normalize(vTkN); float tkPend = 1.0 - clamp(tkn.y, 0.0, 1.0);',
+          ' float tkE = tkF3(vec3(vTkW.x * 0.35, vTkW.y * 1.6, vTkW.z * 0.35));',                   // estratos de la roca
+          ' float tkG = tkF3(vTkW * 1.3);',
+          ' float tkGr = 1.0 - (1.0 - smoothstep(0.0, 0.028, abs(tkF3(vTkW * vec3(0.32, 0.5, 0.32)) - 0.5))) * smoothstep(0.35, 0.6, tkN3(vTkW * 0.21 + 4.0)) * (0.4 + 0.6 * tkPend);', // grietas finas e irregulares
+          ' vec3 tkRoca = mix(vec3(0.42, 0.38, 0.33), vec3(0.66, 0.60, 0.52), tkE) * (0.85 + 0.3 * tkG);',
+          ' tkRoca = mix(tkRoca, tkRoca * 0.45, (1.0 - tkGr) * 0.7);',
+          ' float tkMusgo = smoothstep(0.55, 0.85, tkn.y) * smoothstep(0.45, 0.65, tkF3(vTkW * 0.45 + 7.0));',
+          ' vec3 tkMus = mix(vec3(0.22, 0.38, 0.14), vec3(0.36, 0.52, 0.2), tkG);',
+          ' float tkEsRoca = smoothstep(0.35, 0.6, tkPend);',
+          terreno ? ' vec3 tkSuelo = diffuseColor.rgb * (0.86 + 0.28 * tkF3(vTkW * 2.2)); float tkMat = vTkPiso;' : ' vec3 tkSuelo = diffuseColor.rgb; float tkMat = 0.0;',
+          // empedrado envejecido (celdas irregulares con juntas oscuras y piedras de varios tonos)
+          ' vec2 tkV = tkVor(vTkW.xz * 1.25); vec3 tkPied = mix(vec3(0.52, 0.48, 0.42), vec3(0.72, 0.67, 0.58), tkV.y) * (0.85 + 0.25 * tkG); tkPied = mix(vec3(0.2, 0.19, 0.17), tkPied, smoothstep(0.03, 0.12, tkV.x)); tkPied = mix(tkPied, tkMus * 0.8, smoothstep(0.7, 0.95, tkF3(vTkW * 0.8)) * 0.35);',
+          ' vec3 tkArena = mix(vec3(0.86, 0.76, 0.56), vec3(0.94, 0.86, 0.68), tkG) * (0.92 + 0.12 * tkN3(vTkW * 9.0));',
+          ' vec3 tkFin = tkSuelo; if (tkMat > 0.5 && tkMat < 1.5) tkFin = mix(tkSuelo, tkPied, smoothstep(0.5, 0.9, tkMat)); if (tkMat > 1.5) tkFin = tkArena;',
+          terreno ? ' tkFin = mix(tkFin, mix(tkRoca, tkMus, tkMusgo * 0.6), tkEsRoca);' : ' tkFin = tkSuelo * (0.7 + 0.5 * tkE) * (0.82 + 0.3 * tkG) * mix(0.35, 1.0, tkGr); tkFin = mix(tkFin, tkMus, tkMusgo * 0.4);',
+          ' diffuseColor.rgb = mix(diffuseColor.rgb, tkFin, uTkcDet);'
+        ].join('\n'))
+        .replace('#include <normal_fragment_maps>', [
+          '#include <normal_fragment_maps>',
+          // relieve (mapa normal calculado): la roca y el empedrado tienen bultos de verdad con la luz
+          ' { float e = 0.12; vec3 pw = vTkW; float b0 = tkF3(pw * 1.8); float bx = tkF3((pw + vec3(e, 0.0, 0.0)) * 1.8), bz = tkF3((pw + vec3(0.0, 0.0, e)) * 1.8), by = tkF3((pw + vec3(0.0, e, 0.0)) * 1.8);',
+          '   vec3 g = vec3(bx - b0, by - b0, bz - b0) / e; float kb = (0.25 + 0.55 * smoothstep(0.3, 0.6, 1.0 - clamp(normalize(vTkN).y, 0.0, 1.0))) * uTkcDet;',
+          '   normal = normalize(normal - (viewMatrix * vec4(g * kb, 0.0)).xyz * 0.35); }'
+        ].join('\n'))
+        .replace('#include <lights_fragment_end>', '#include <lights_fragment_end>\n reflectedLight.indirectDiffuse += diffuseColor.rgb * uTkFillCol * (0.35 + 0.65 * max(dot(normalize(vTkN), uTkFillDir), 0.0));'); // luz de relleno (rebote del mar y del cielo de delante)
+    };
+    m.customProgramCacheKey = function () { return 'tkcPBR' + (terreno ? 'T' : 'R'); }; m.needsUpdate = true; m.userData.tkpSinVentanas = true;
+    return m;
+  }
   function crearTerreno(c) {
-    var N = 150, ext = { a0: ISLA.atras - 40, a1: ISLA.frente + 45, b0: -ISLA.hb - 40, b1: ISLA.hb + 40 };
-    var g = new T3.PlaneGeometry(1, 1, N, N), P = g.attributes.position, col = new Float32Array(P.count * 3);
+    var NA = 230, NB = 160, ext = { a0: ISLA.atras - 30, a1: 128, b0: -96, b1: 96 };
+    var g = new T3.PlaneGeometry(1, 1, NA, NB), P = g.attributes.position, col = new Float32Array(P.count * 3), piso = new Float32Array(P.count);
+    var cH = new T3.Color(0x3f7a28), cH2 = new T3.Color(0x2a5a1c), cH3 = new T3.Color(0x6a9a34), cT = new T3.Color();
     for (var i = 0; i < P.count; i++) {
       var u = P.getX(i) + 0.5, v = P.getY(i) + 0.5, a = ext.a0 + (ext.a1 - ext.a0) * u, b = ext.b0 + (ext.b1 - ext.b0) * v;
       var h = altura(a, b), w = c.aMundo(a, b); P.setXYZ(i, w[0], h, w[1]);
-      var e = elipse(a, b), z = zonaAcantilado(a, b), n = fbm(a * 0.15, b * 0.15);
-      if (e > 0.9 && z < 0.5) cTmp.copy(cArena).lerp(cArenaH, smooth(0.95, 1.02, e));
-      else { cTmp.copy(cSelva).lerp(cSelva2, n); cTmp.lerp(cArena, (1 - smooth(0.8, 0.9, e)) * 0); }
-      if (z > 0.2 || h > 6) cTmp.lerp(n > 0.5 ? cRoca : cRoca2, Math.min(1, Math.max(z * 1.3, smooth(5, 10, h))) * (h > 12 && n > 0.62 ? 0.55 : 1));
-      if (e < 0.92 && h < 1.5) { var dc = distCamino(a, b); if (dc < 1.9) cTmp.lerp(cCamino, smooth(1.9, 0.9, dc)); }
-      var j = 0.94 + vruido(a * 0.9, b * 0.9) * 0.12; col[i * 3] = cTmp.r * j; col[i * 3 + 1] = cTmp.g * j; col[i * 3 + 2] = cTmp.b * j;
+      cT.copy(cH).lerp(cH2, smooth(0.35, 0.7, fbm(a * 0.09, b * 0.09))).lerp(cH3, smooth(0.6, 0.85, fbm(a * 0.2 + 7, b * 0.2)) * 0.6);
+      var p = 0, dB = enBahia(a, b);
+      if (h < ISLA.playa + 0.6 && h > ISLA.agua - 3) p = 2;                // arena de la playa y la orilla
+      if (h > -1 && h < 6.5) { var dc = distCamino(a, b); if (dc < 0.6) p = Math.max(p, dc < 0 ? 1 : 1 - smooth(0, 0.6, dc) * 0.6); }
+      if (Math.hypot(a, b) < 12.5) p = 1;                                   // plaza
+      col[i * 3] = cT.r; col[i * 3 + 1] = cT.g; col[i * 3 + 2] = cT.b; piso[i] = p;
     }
-    // la cuadrícula se generó en el plano XY: los triángulos quedan mirando hacia abajo; se dan la vuelta
     var idx = g.index.array; for (var k = 0; k < idx.length; k += 3) { var t = idx[k]; idx[k] = idx[k + 1]; idx[k + 1] = t; }
-    g.setAttribute('color', new T3.BufferAttribute(col, 3)); g.computeVertexNormals(); g.computeBoundingSphere();
-    var m = new T3.Mesh(g, new T3.MeshLambertMaterial({ vertexColors: true })); m.receiveShadow = true; m.raycast = NOOP; m.userData.tkcTerreno = true;
+    g.setAttribute('color', new T3.BufferAttribute(col, 3)); g.setAttribute('piso', new T3.BufferAttribute(piso, 1)); g.computeVertexNormals(); g.computeBoundingSphere();
+    var m = new T3.Mesh(g, parcharPBR(new T3.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, envMapIntensity: 0.4 }), true)); m.receiveShadow = true; m.castShadow = true; m.raycast = NOOP;
     return m;
   }
-  // altura de la isla en una posición del mundo (para poner cosas encima)
   function yEn(c, x, z) { var l = c.aLocal(x, z); return altura(l.a, l.b); }
 
   // ======================================================================
-  //  OCÉANO turquesa: ondas, espuma en la orilla, destellos de sol/luna y reflejo de faroles
+  //  ESCULTOR DE VOLUMEN («surface nets»): convierte una función de distancia en una malla suave y detallada.
+  //  Con esto se esculpen la calavera, la montaña, el arco y los islotes (nada de figuras geométricas básicas).
+  // ======================================================================
+  function esculpir(sdf, min, max, paso, colorear) {
+    var nx = Math.ceil((max.x - min.x) / paso) + 1, ny = Math.ceil((max.y - min.y) / paso) + 1, nz = Math.ceil((max.z - min.z) / paso) + 1;
+    var V = new Float32Array(nx * ny * nz), id = function (x, y, z) { return x + nx * (y + ny * z); };
+    for (var z = 0; z < nz; z++) for (var y = 0; y < ny; y++) for (var x = 0; x < nx; x++) V[id(x, y, z)] = sdf(min.x + x * paso, min.y + y * paso, min.z + z * paso);
+    var vid = new Int32Array(nx * ny * nz).fill(-1), pos = [], idx = [];
+    var esq = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]], aris = [[0, 1], [2, 3], [4, 5], [6, 7], [0, 2], [1, 3], [4, 6], [5, 7], [0, 4], [1, 5], [2, 6], [3, 7]];
+    for (z = 0; z < nz - 1; z++) for (y = 0; y < ny - 1; y++) for (x = 0; x < nx - 1; x++) {
+      var vals = [], mask = 0; for (var e = 0; e < 8; e++) { var q = esq[e], vv = V[id(x + q[0], y + q[1], z + q[2])]; vals.push(vv); if (vv < 0) mask |= 1 << e; }
+      if (mask === 0 || mask === 255) continue;
+      var sx = 0, sy = 0, sz = 0, n = 0;
+      for (var k = 0; k < 12; k++) { var A = aris[k][0], B = aris[k][1]; if ((vals[A] < 0) === (vals[B] < 0)) continue; var t = vals[A] / (vals[A] - vals[B]), qa = esq[A], qb = esq[B]; sx += qa[0] + (qb[0] - qa[0]) * t; sy += qa[1] + (qb[1] - qa[1]) * t; sz += qa[2] + (qb[2] - qa[2]) * t; n++; }
+      vid[id(x, y, z)] = pos.length / 3; pos.push(min.x + (x + sx / n) * paso, min.y + (y + sy / n) * paso, min.z + (z + sz / n) * paso);
+    }
+    // caras: por cada arista de la rejilla que cruza la superficie, un cuadrado con los 4 vértices de alrededor
+    for (z = 1; z < nz - 1; z++) for (y = 1; y < ny - 1; y++) for (x = 1; x < nx - 1; x++) {
+      var v0 = V[id(x, y, z)] < 0;
+      [[1, 0, 0], [0, 1, 0], [0, 0, 1]].forEach(function (d, eje) {
+        var x1 = x + d[0], y1 = y + d[1], z1 = z + d[2]; if (x1 >= nx || y1 >= ny || z1 >= nz) return;
+        if (v0 === (V[id(x1, y1, z1)] < 0)) return;
+        var c;
+        if (eje === 0) c = [id(x, y - 1, z - 1), id(x, y, z - 1), id(x, y, z), id(x, y - 1, z)];
+        else if (eje === 1) c = [id(x - 1, y, z - 1), id(x - 1, y, z), id(x, y, z), id(x, y, z - 1)];
+        else c = [id(x - 1, y - 1, z), id(x, y - 1, z), id(x, y, z), id(x - 1, y, z)];
+        var a0 = vid[c[0]], a1 = vid[c[1]], a2 = vid[c[2]], a3 = vid[c[3]]; if (a0 < 0 || a1 < 0 || a2 < 0 || a3 < 0) return;
+        if (v0) idx.push(a0, a1, a2, a0, a2, a3); else idx.push(a0, a2, a1, a0, a3, a2);
+      });
+    }
+    var g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
+    // normales a partir de la función (más suaves que las de los triángulos) y color por vértice (con oclusión del propio volumen)
+    var nor = new Float32Array(pos.length), col = new Float32Array(pos.length), h = paso * 0.5, cc = new T3.Color();
+    for (var i = 0; i < pos.length; i += 3) {
+      var px = pos[i], py = pos[i + 1], pz = pos[i + 2];
+      var gx = sdf(px + h, py, pz) - sdf(px - h, py, pz), gy = sdf(px, py + h, pz) - sdf(px, py - h, pz), gz = sdf(px, py, pz + h) - sdf(px, py, pz - h), l = Math.hypot(gx, gy, gz) || 1;
+      gx /= l; gy /= l; gz /= l; nor[i] = gx; nor[i + 1] = gy; nor[i + 2] = gz;
+      var oc = Math.max(0, Math.min(1, sdf(px + gx * 1.6, py + gy * 1.6, pz + gz * 1.6) / 1.6)) * 0.5 + Math.max(0, Math.min(1, sdf(px + gx * 3.4, py + gy * 3.4, pz + gz * 3.4) / 3.4)) * 0.5; oc = Math.pow(oc, 1.6);
+      colorear(cc, px, py, pz, gx, gy, gz, oc); col[i] = cc.r; col[i + 1] = cc.g; col[i + 2] = cc.b;
+    }
+    g.setAttribute('normal', new T3.BufferAttribute(nor, 3)); g.setAttribute('color', new T3.BufferAttribute(col, 3)); g.computeBoundingSphere();
+    return g;
+  }
+  var cRoca1 = new T3.Color(0x8a8070), cRoca2 = new T3.Color(0xb8ab94), cRocaOsc = new T3.Color(0x3a332c), cMusgo = new T3.Color(0x4f7a30);
+  function colorRoca(cc, x, y, z, nx, ny, nz, oc) {
+    cc.copy(cRoca1).lerp(cRoca2, fbm3(x * 0.12, y * 0.35, z * 0.12));
+    if (ny > 0.55 && fbm3(x * 0.2 + 9, y * 0.2, z * 0.2) > 0.5) cc.lerp(cMusgo, 0.7);
+    cc.lerp(cRocaOsc, (1 - oc) * 0.75);
+  }
+  function rocaMalla(geo) { var m = new T3.Mesh(geo, MAT.rocaPBR); m.castShadow = true; m.receiveShadow = true; m.raycast = NOOP; return m; }
+  // operaciones de distancia
+  function sdElip(x, y, z, cx, cy, cz, rx, ry, rz) { var px = (x - cx) / rx, py = (y - cy) / ry, pz = (z - cz) / rz, k0 = Math.sqrt(px * px + py * py + pz * pz), k1 = Math.sqrt(px * px / (rx * rx) + py * py / (ry * ry) + pz * pz / (rz * rz)); return k1 > 1e-6 ? k0 * (k0 - 1) / k1 : -Math.min(rx, ry, rz); }
+  function sdCaja3(x, y, z, cx, cy, cz, hx, hy, hz, r) { var qx = Math.abs(x - cx) - hx + r, qy = Math.abs(y - cy) - hy + r, qz = Math.abs(z - cz) - hz + r; return Math.hypot(Math.max(qx, 0), Math.max(qy, 0), Math.max(qz, 0)) + Math.min(Math.max(qx, Math.max(qy, qz)), 0) - r; }
+  function uS(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / k)); return b + (a - b) * h - k * h * (1 - h); }   // unión suave
+  function rS(a, b, k) { var h = Math.max(0, Math.min(1, 0.5 - 0.5 * (a + b) / k)); return a + (-b - a) * h + k * h * (1 - h); } // resta suave: a menos b
+
+  // ======================================================================
+  //  OCÉANO v2: transparente en la orilla, turquesa → azul profundo, ondas que mueven la luz, espuma que sigue la costa real,
+  //  reflejo del cielo y de los faroles. Sin puntitos blancos.
   // ======================================================================
   function crearOceano(c) {
-    var N = 128, ext = 320, data = new Uint8Array(N * N * 4);
-    for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) { var a = ISLA.ac + (i / (N - 1) - 0.5) * 2 * ext, b = (j / (N - 1) - 0.5) * 2 * ext, h = altura(a, b), k = (j * N + i) * 4; var vv = Math.max(0, Math.min(255, Math.round((h + 12) / 16 * 255))); data[k] = vv; data[k + 1] = vv; data[k + 2] = vv; data[k + 3] = 255; }
+    var N = 160, ext = 220, data = new Uint8Array(N * N * 4), ac = (ISLA.atras + 128) / 2;
+    for (var j = 0; j < N; j++) for (var i = 0; i < N; i++) { var a = ac + (i / (N - 1) - 0.5) * 2 * ext, b = (j / (N - 1) - 0.5) * 2 * ext, h = altura(a, b), k = (j * N + i) * 4; var vv = Math.max(0, Math.min(255, Math.round((h + 18) / 24 * 255))); data[k] = vv; data[k + 1] = vv; data[k + 2] = vv; data[k + 3] = 255; }
     var tex = new T3.DataTexture(data, N, N, T3.RGBAFormat); tex.magFilter = T3.LinearFilter; tex.minFilter = T3.LinearFilter; tex.needsUpdate = true;
-    var m = new T3.MeshPhongMaterial({ color: 0x1a8fbf, specular: 0xd8f4ff, shininess: 90 });
+    var m = new T3.MeshPhongMaterial({ color: 0x1a8fbf, specular: 0xeaf6ff, shininess: 120, transparent: true });
     m.userData.tkpSinVentanas = true;
-    var uni = { uTkcT: U.t, uTkcAlt: { value: tex }, uTkcU: { value: new T3.Vector2(c.ejeU.x, c.ejeU.z) }, uTkcV: { value: new T3.Vector2(c.ejeV.x, c.ejeV.z) }, uTkcAc: { value: ISLA.ac }, uTkcExt: { value: ext }, uTkcN: U.noche };
+    var uni = { uTkcT: U.t, uTkcAlt: { value: tex }, uTkcU: { value: new T3.Vector2(c.ejeU.x, c.ejeU.z) }, uTkcV: { value: new T3.Vector2(c.ejeV.x, c.ejeV.z) }, uTkcAc: { value: ac }, uTkcExt: { value: ext }, uTkcN: U.noche, uTkcAgua: { value: ISLA.agua } };
     m.onBeforeCompile = function (sh) {
       Object.assign(sh.uniforms, uni);
       sh.vertexShader = 'varying vec3 vTkcW;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n vTkcW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-      sh.fragmentShader = 'uniform float uTkcT; uniform sampler2D uTkcAlt; uniform vec2 uTkcU; uniform vec2 uTkcV; uniform float uTkcAc; uniform float uTkcExt; uniform float uTkcN; varying vec3 vTkcW;\n' +
-        'float kO(vec2 p){ return sin(p.x) * sin(p.y * 1.3 + p.x * 0.4); }\n' +
+      sh.fragmentShader = 'uniform float uTkcT; uniform sampler2D uTkcAlt; uniform vec2 uTkcU; uniform vec2 uTkcV; uniform float uTkcAc; uniform float uTkcExt; uniform float uTkcN; uniform float uTkcAgua; varying vec3 vTkcW;\n' +
+        'vec2 kOla(vec2 p, vec2 d, float f, float v, float t){ float x = dot(p, d) * f + t * v; return vec2(sin(x), cos(x)); }\n' +
+        'float kH(vec2 kUv){ return texture2D(uTkcAlt, kUv).r * 24.0 - 18.0; }\n' +
         sh.fragmentShader.replace('#include <color_fragment>', [
           '#include <color_fragment>',
           ' vec2 kL = vec2(dot(vTkcW.xz, uTkcU), dot(vTkcW.xz, uTkcV));',
           ' vec2 kUv = vec2((kL.x - uTkcAc) / (2.0 * uTkcExt) + 0.5, kL.y / (2.0 * uTkcExt) + 0.5);',
-          ' float kH = texture2D(uTkcAlt, kUv).r * 16.0 - 12.0; float kP = clamp(-0.35 - kH, 0.0, 12.0);',
-          ' vec2 kw = vTkcW.xz;',
-          ' float o1 = kO(kw * 0.22 + vec2(uTkcT * 0.5, uTkcT * 0.3)), o2 = kO(kw * 0.6 - vec2(uTkcT * 0.4, -uTkcT * 0.6) + 2.0), o3 = kO(kw * 1.7 + vec2(-uTkcT * 1.0, uTkcT * 0.8) + 5.0);',
-          ' float ola = o1 * 0.5 + o2 * 0.33 + o3 * 0.17;',
-          ' vec3 kTurq = vec3(0.25, 0.86, 0.82), kMedio = vec3(0.06, 0.55, 0.72), kHondo = vec3(0.02, 0.22, 0.45);',
-          ' vec3 kAg = mix(kTurq, kMedio, smoothstep(0.2, 2.5, kP)); kAg = mix(kAg, kHondo, smoothstep(2.5, 10.0, kP));',
-          ' kAg *= 0.88 + 0.2 * smoothstep(-0.6, 0.8, ola);',
-          ' float kEsp = smoothstep(0.55, 0.0, kP) * (0.55 + 0.45 * sin(uTkcT * 1.6 + kP * 18.0 + o2 * 2.0)); kEsp += smoothstep(0.86, 0.98, o2 * 0.6 + o3 * 0.6) * 0.25;',
-          ' diffuseColor.rgb = mix(kAg, vec3(0.95, 0.98, 1.0), clamp(kEsp, 0.0, 0.85)) * mix(1.0, 0.42, uTkcN);'].join('\n'))
+          ' float kP = clamp(uTkcAgua - kH(kUv), 0.0, 14.0);',
+          // ondas que suman (dan la normal y el brillo)
+          ' vec2 p = vTkcW.xz; vec2 w1 = kOla(p, normalize(vec2(1.0, 0.3)), 0.35, 1.3, uTkcT), w2 = kOla(p, normalize(vec2(-0.4, 1.0)), 0.6, 1.7, uTkcT), w3 = kOla(p, normalize(vec2(0.7, -0.7)), 1.3, 2.4, uTkcT), w4 = kOla(p, normalize(vec2(-0.9, -0.2)), 2.6, 3.1, uTkcT);',
+          ' vec3 kNo = normalize(vec3(-(w1.y * 0.35 * 0.10 + w2.y * 0.6 * 0.07 + w3.y * 1.3 * 0.035 + w4.y * 2.6 * 0.015), 1.0, -(w1.y * 0.1 * 0.3 + w2.y * 0.6 * 0.07 + w3.y * 1.3 * 0.03 - w4.y * 2.6 * 0.012)));',
+          ' vec3 kTurq = vec3(0.22, 0.86, 0.80), kMedio = vec3(0.04, 0.55, 0.72), kHondo = vec3(0.01, 0.16, 0.38);',
+          ' vec3 kAg = mix(kTurq, kMedio, smoothstep(0.4, 3.5, kP)); kAg = mix(kAg, kHondo, smoothstep(3.5, 12.0, kP));',
+          // espuma: una línea que sigue la costa y se aleja/acerca con las olas (sin puntos sueltos)
+          ' float kBan = 0.35 + 0.25 * sin(uTkcT * 1.2 + kL.x * 0.08 + kL.y * 0.11);',
+          ' float kEsp = (1.0 - smoothstep(0.0, kBan, kP)) * (0.6 + 0.4 * sin(kP * 24.0 - uTkcT * 3.0));',
+          ' kEsp += (1.0 - smoothstep(kBan + 0.25, kBan + 0.7, kP)) * smoothstep(kBan, kBan + 0.25, kP) * 0.45;',
+          ' diffuseColor.rgb = mix(kAg, vec3(0.96, 0.99, 1.0), clamp(kEsp, 0.0, 0.9)) * mix(1.0, 0.4, uTkcN);',
+          ' diffuseColor.a = mix(0.55, 0.97, smoothstep(0.0, 4.0, kP)) + kEsp * 0.4;'].join('\n'))
+        .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n normal = normalize((viewMatrix * vec4(kNo, 0.0)).xyz);')
         .replace('#include <output_fragment>', [
-          ' vec3 kV = normalize(cameraPosition - vTkcW); vec3 kN = normalize(vec3(o1 * 0.18 + o3 * 0.08, 1.0, o2 * 0.16 - o3 * 0.06));',
-          ' float kF = 0.08 + 0.92 * pow(1.0 - max(dot(kV, kN), 0.0), 4.0);',
-          ' outgoingLight = mix(outgoingLight, mix(vec3(0.75, 0.88, 0.95), vec3(0.08, 0.12, 0.28), uTkcN), clamp(kF * 1.3, 0.0, 0.5));',
+          ' vec3 kV = normalize(cameraPosition - vTkcW);',
+          ' float kF = 0.04 + 0.96 * pow(1.0 - max(dot(kV, kNo), 0.0), 5.0); vec3 kR = reflect(-kV, kNo);',
+          ' vec3 kCielo = mix(mix(vec3(0.78, 0.9, 0.98), vec3(0.42, 0.66, 0.9), clamp(kR.y, 0.0, 1.0)), vec3(0.06, 0.1, 0.24), uTkcN);',
+          ' outgoingLight = mix(outgoingLight, kCielo, clamp(kF * 1.4, 0.0, 0.55));',
           '#if NUM_POINT_LIGHTS > 0',
           ' vec3 kPv = -vViewPosition; vec3 kRl = vec3(0.0);',
           ' #pragma unroll_loop_start',
-          ' for (int i = 0; i < NUM_POINT_LIGHTS; i ++) { { float kk = 1.0 - clamp(length(pointLights[ i ].position - kPv) / (max(pointLights[ i ].distance, 1.0) * 1.2), 0.0, 1.0); kRl += pointLights[ i ].color * kk * kk; } }',
+          ' for (int i = 0; i < NUM_POINT_LIGHTS; i ++) { { float kk = 1.0 - clamp(length(pointLights[ i ].position - kPv) / (max(pointLights[ i ].distance, 1.0) * 1.3), 0.0, 1.0); kRl += pointLights[ i ].color * kk * kk; } }',
           ' #pragma unroll_loop_end',
-          ' outgoingLight += kRl * (0.3 + 0.7 * smoothstep(-0.1, 0.9, o2 * 0.6 + o3 * 0.7)) * 0.6;',
+          ' outgoingLight += kRl * (0.35 + 0.65 * (0.5 + 0.5 * w3.x)) * 0.55;',
           '#endif',
           '#include <output_fragment>'].join('\n'));
     };
-    m.customProgramCacheKey = function () { return 'tkcOceano1'; };
+    m.customProgramCacheKey = function () { return 'tkcOceano2'; };
     var g = new T3.PlaneGeometry(1400, 1400, 1, 1); g.rotateX(-Math.PI / 2);
-    var me = new T3.Mesh(g, m); me.position.set(0, ISLA.agua, 0); me.receiveShadow = true; me.raycast = NOOP; me.renderOrder = -1;
+    var me = new T3.Mesh(g, m); me.position.set(0, ISLA.agua, 0); me.receiveShadow = true; me.raycast = NOOP; me.renderOrder = 2;
     return me;
   }
-
   // ======================================================================
   //  MODELOS: palmera, muelle, cañón, barril, farol, galeón
   // ======================================================================
   var COL = { madera: 0x7a5232, maderaOsc: 0x4a3020, maderaCl: 0xa8784a, cuerda: 0xc8b088, hueso: 0xe8dcc0, roca: 0x77695a, hierro: 0x3e3e44, oro: 0xe0b040, paja: 0xc8a25a, tejaR: 0xb5533a, blanco: 0xf2ece0, ventana: 0x1a120c };
   var PAREDES = [0x3fb7b0, 0xe8775a, 0xf2c84b, 0x7fc8e8, 0xe89ac0, 0x8fd18a, 0xf0e2c0, 0x5a8fd8];
   var CONTRA = [0x2a6fae, 0x1f8a6a, 0xc0392b, 0xf2f2f2, 0x7a3fa0, 0xe8a020];
-  function geoPalma() {
-    var k = new Cons(), r = azar(77), prev = new T3.Vector3(0, 0, 0), lean = 0.9;
-    for (var i = 0; i < 7; i++) { var y = (i + 1) * 0.85, nx = Math.sin(i / 6 * 1.2) * lean, p = new T3.Vector3(nx, y, 0); k.viga(prev, p, 0.42 - i * 0.03, i % 2 ? 0x8a6a48 : 0x7a5c3e, 7); prev = p; }
-    var top = prev.clone();
-    for (var f = 0; f < 9; f++) {
-      var ang = f / 9 * Math.PI * 2 + r() * 0.3, largo = 3.0 + r() * 0.8, p0 = top.clone();
-      for (var s = 0; s < 5; s++) { var u = (s + 1) / 5, p1 = new T3.Vector3(top.x + Math.cos(ang) * largo * u, top.y + 0.55 * u - 1.9 * u * u, Math.sin(ang) * largo * u); var dir = p1.clone().sub(p0), l = dir.length(); var m = new T3.Matrix4().lookAt(p0, p1, new T3.Vector3(0, 1, 0)); m.setPosition(p0.clone().add(p1).multiplyScalar(0.5)); m.scale(new T3.Vector3(1.0 * (1 - u * 0.6), 0.05, l)); k.add(gBox(), m, s % 2 ? 0x3f8f34 : 0x4fa83e, 0.12); p0 = p1; }
-    }
-    for (var c = 0; c < 3; c++) k.esf(0.22, 0x5a3a1e, top.x + Math.cos(c * 2.1) * 0.3, top.y - 0.25, Math.sin(c * 2.1) * 0.3, 1, 1, 1, 7);
-    var g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(k.p, 3)); g.setAttribute('normal', new T3.Float32BufferAttribute(k.n, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(k.c, 3)); return g;
-  }
   function barril(k, x, y, z, s) { s = s || 1; k.cil(0.32 * s, 0.8 * s, COL.maderaCl, x, y + 0.4 * s, z, 10); k.cil(0.335 * s, 0.06 * s, COL.hierro, x, y + 0.15 * s, z, 10); k.cil(0.335 * s, 0.06 * s, COL.hierro, x, y + 0.65 * s, z, 10); }
   function caja(k, x, y, z, s, ry) { s = s || 1; k.caja(0.7 * s, 0.7 * s, 0.7 * s, 0x9a7048, x, y + 0.35 * s, z, ry); k.caja(0.74 * s, 0.08 * s, 0.74 * s, COL.maderaOsc, x, y + 0.66 * s, z, ry); }
   function canon(k, x, y, z, ry, s) {
@@ -293,70 +422,212 @@
     g.scale.setScalar(escala || 1); return g;
   }
 
-  // ======================================================================
-  //  FORTALEZA: montaña con forma de calavera (crece con el nivel del castillo)
-  // ======================================================================
   function soldar(g) { // une los vértices repetidos (sombreado suave en vez de facetas)
     var P = g.attributes.position, mapa = {}, pos = [], idx = [];
     for (var i = 0; i < P.count; i++) { var k = Math.round(P.getX(i) * 1e4) + '_' + Math.round(P.getY(i) * 1e4) + '_' + Math.round(P.getZ(i) * 1e4); if (mapa[k] === undefined) { mapa[k] = pos.length / 3; pos.push(P.getX(i), P.getY(i), P.getZ(i)); } idx.push(mapa[k]); }
     var n = new T3.BufferGeometry(); n.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); n.setIndex(idx); g.dispose(); return n;
   }
-  function fortaleza(nv) {
-    var g = new T3.Group(), k = new Cons(), r = azar(31), esc = 1 + Math.min(0.35, (nv - 1) * 0.02), H = 21 * esc, R = 17.5 * esc;
-    // montaña de roca (icosaedro deformado), con matas verdes arriba
-    var mg = soldar(new T3.IcosahedronGeometry(1, 5)), P = mg.attributes.position, cs = new Float32Array(P.count * 3), cc = new T3.Color();
-    for (var i = 0; i < P.count; i++) {
-      var x = P.getX(i), y = P.getY(i), z = P.getZ(i), n = fbm(x * 2.2 + 5, z * 2.2 + y * 1.3);
-      var rr = 1 + (n - 0.5) * 0.35, yy = Math.max(-0.05, y);
-      var h = yy < 0 ? 0 : Math.min(1, yy * 1.15) * H * (0.85 + n * 0.3); if (yy > 0.78) h = H * (0.93 + (n - 0.5) * 0.06); // meseta arriba
-      var ex = yy < 0 ? 1.08 : 1 - Math.pow(Math.max(0, yy), 2.2) * 0.45;
-      P.setXYZ(i, x * R * rr * ex, h, z * R * rr * ex);
-      var vet = vruido(x * 9 + 3, y * 14) ; cc.set(0x8a7a66).lerp(new T3.Color(0x5a4a3e), n).lerp(new T3.Color(0xa8957a), Math.max(0, vet - 0.6) * 1.6);
-      cc.lerp(new T3.Color(n > 0.6 ? 0x3f8a34 : 0x5aa040), yy > 0.74 ? 0.8 : (vruido(x * 5, z * 5) > 0.62 && yy > 0.15 ? 0.65 : 0));
-      cs[i * 3] = cc.r; cs[i * 3 + 1] = cc.g; cs[i * 3 + 2] = cc.b;
+  // ======================================================================
+  //  MONTAÑA DE LA CALAVERA (al fondo, como en la imagen): calavera anatómica esculpida en la misma roca de la cordillera.
+  //  Boca = entrada monumental con escalinata; cuencas y entrada con luz naranja; estandartes a los lados.
+  //  Coordenadas de la calavera: x hacia la villa (+a), y arriba, z de lado (b). Origen: suelo de la boca (terraza, +5).
+  // ======================================================================
+  function sdCalavera(x, y, z) {
+    var d = sdElip(x, y, z, -2.5, 14.8, 0, 10.6, 10.4, 11.6);                       // cráneo
+    var base = Math.abs(d); if (base > 9 && d > 0) return d - 2;                       // lejos: no hace falta más detalle
+    d = uS(d, sdCaja3(x, y, z, 3.4, 8.6, 0, 5.3, 4.9, 7.7, 2.6), 3.0);                 // cara (maxilar)
+    d = uS(d, sdElip(x, y, z, 5.4, 9.3, 7.7, 3.1, 2.2, 2.7), 1.6);                     // pómulos
+    d = uS(d, sdElip(x, y, z, 5.4, 9.3, -7.7, 3.1, 2.2, 2.7), 1.6);
+    d = uS(d, sdElip(x, y, z, 6.7, 14.7, 0, 3.0, 1.9, 9.8), 1.8);                      // arco de las cejas
+    d = uS(d, sdElip(x, y, z, -1.0, 8.5, 10.6, 3.2, 3.6, 1.6), 1.2);                   // sienes
+    d = uS(d, sdElip(x, y, z, -1.0, 8.5, -10.6, 3.2, 3.6, 1.6), 1.2);
+    d = rS(d, sdElip(x, y, z, 9.0, 12.1, 4.4, 3.7, 3.3, 3.1), 1.0);                    // cuencas de los ojos
+    d = rS(d, sdElip(x, y, z, 9.0, 12.1, -4.4, 3.7, 3.3, 3.1), 1.0);
+    var az = Math.abs(z), nariz = Math.max(az * 1.25 - (10.3 - y) * 0.42 - 0.15, y - 10.4, 6.9 - y, 6.8 - x);
+    d = rS(d, nariz, 0.5);                                                              // nariz (triángulo hueco)
+    d = uS(d, sdCaja3(x, y, z, 3.2, 1.7, 0, 5.0, 2.0, 7.3, 1.6), 1.4);                 // mandíbula
+    d = rS(d, sdCaja3(x, y, z, 5.6, 3.15, 0, 6.6, 2.45, 5.0, 0.7), 0.5);               // la boca: entrada monumental
+    d = rS(d, sdCaja3(x, y, z, -5.0, 3.3, 0, 7.0, 2.8, 4.0, 1.2), 0.8);                // túnel hacia dentro
+    if (x > 5 && y < 7 && az < 6.6) for (var i = -4; i <= 4; i++) {                    // dientes de arriba y de abajo
+      var tx = 8.0 - 0.07 * i * i, tz = i * 1.12;
+      d = Math.min(d, sdCaja3(x, y, z, tx, 4.55, tz * 1.08, 0.75, 1.25, 0.48, 0.28), sdCaja3(x, y, z, tx - 0.3, 1.35, tz * 1.08, 0.68, 0.8, 0.45, 0.25));
     }
-    mg.setAttribute('color', new T3.BufferAttribute(cs, 3)); mg.computeVertexNormals();
-    k.addColor(mg, new T3.Matrix4());
-    // calavera tallada en la cara que mira al puerto (+X local)
-    var fx = R * 0.72, cy = H * 0.5;
-    k.esf(1, COL.hueso, fx, cy, 0, 5.2 * esc, 5.6 * esc, 6.4 * esc, 18);           // cráneo
-    k.esf(1, COL.hueso, fx + 0.8 * esc, cy - 4.2 * esc, 0, 4.0 * esc, 2.4 * esc, 4.6 * esc, 14); // mandíbula
-    for (var d = -4; d <= 4; d++) k.caja(0.9 * esc, 1.5 * esc, 0.8 * esc, 0xf4ecd8, fx + 4.0 * esc - Math.abs(d) * 0.18 * esc, cy - 3.0 * esc, d * 1.0 * esc); // dientes
-    k.caja(1.2 * esc, 2.6 * esc, 5.2 * esc, 0x120c08, fx + 3.8 * esc, cy - 5.6 * esc, 0);                     // boca = puerta de la cueva
-    for (var b = -2; b <= 2; b++) k.caja(0.14, 2.4 * esc, 0.14, COL.hierro, fx + 4.5 * esc, cy - 5.6 * esc, b * 0.95 * esc); // reja
-    var nariz = new T3.ConeGeometry(1, 1, 3); k.add(nariz, mat4(fx + 4.9 * esc, cy - 0.9 * esc, 0, 0, 0, Math.PI, 1.0 * esc, 1.8 * esc, 1.0 * esc), 0x1a120c);
-    // escaleras talladas desde la boca hasta la explanada
-    for (var s = 0; s < 8; s++) k.caja(1.3, 0.45, 5.0 * esc, 0x8a7a68, fx + 5.0 * esc + s * 1.1, Math.max(0.2, cy - 6.9 * esc - s * 0.55), 0);
-    // empalizada y torres en la meseta
-    var top = H * 0.93, rT = R * 0.5, torres = Math.min(6, 2 + Math.floor(nv / 4)), dorado = nv >= 12;
-    for (var p = 0; p < 40; p++) { var a = p / 40 * Math.PI * 2, px = Math.cos(a) * rT, pz = Math.sin(a) * rT; k.cil(0.32, 2.4 + r() * 0.5, p % 2 ? COL.madera : COL.maderaOsc, px, top + 1.1, pz, 6); k.cono(0.34, 0.6, COL.maderaOsc, px, top + 2.6, pz, 6); }
-    for (var t = 0; t < torres; t++) {
-      var at = t / torres * Math.PI * 2 + 0.4, tx = Math.cos(at) * rT, tz = Math.sin(at) * rT;
-      k.cil(1.3, 6.5, 0x8a7a68, tx, top + 3.2, tz, 10); k.cil(1.55, 0.6, COL.madera, tx, top + 6.6, tz, 10);
-      for (var m = 0; m < 8; m++) { var am = m / 8 * Math.PI * 2; k.caja(0.45, 0.6, 0.45, COL.madera, tx + Math.cos(am) * 1.4, top + 7.2, tz + Math.sin(am) * 1.4); }
-      k.cono(1.9, 2.6, dorado ? COL.oro : COL.paja, tx, top + 8.6, tz, 10);
-      canon(k, tx + Math.cos(at) * 1.6, top + 6.9, tz + Math.sin(at) * 1.6, -at, 0.8);
-      bandera(g, tx, top + 10.4, tz, 1.8, 1.2, -at, t % 3 === 2 ? 'roja' : 'negra');
-      k.cil(0.06, 2.0, COL.maderaOsc, tx, top + 10.0, tz, 5);
-      LUCES.push({ x: tx + Math.cos(at) * 1.7, y: top + 7.4, z: tz + Math.sin(at) * 1.7, local: true });
-    }
-    // casa del capitán en el centro y el gran mástil con la bandera de la calavera
-    k.caja(6, 3.2, 5, 0x5a3a22, 0, top + 1.6, 0); k.caja(6.6, 0.3, 5.6, COL.maderaOsc, 0, top + 3.3, 0);
-    k.add(new T3.ConeGeometry(1, 1, 4), mat4(0, top + 4.6, 0, 0, Math.PI / 4, 0, 5.4, 2.6, 4.6), dorado ? COL.oro : COL.tejaR);
-    for (var w = -1; w <= 1; w++) k.caja(0.06, 0.9, 0.8, COL.ventana, 3.02, top + 1.8, w * 1.4);
-    k.cil(0.22, 12, COL.maderaOsc, -1.5, top + 9, 0, 8); bandera(g, -1.5, top + 13.8, 0, 4.2, 2.8, 0, 'negra');
-    if (nv >= 9) for (var c2 = 0; c2 < 5; c2++) k.cono(0.5 * esc, 1.6 * esc, COL.oro, fx - 1.5 * esc, cy + 5.2 * esc, (c2 - 2) * 1.5 * esc, 5); // corona de oro
-    // cañones en la explanada delante de la calavera
-    [-6, -3, 3, 6].forEach(function (zz) { canon(k, fx + 9 * esc, 0.05, zz * esc, 0, 1.1); });
-    // antorchas en la boca y en las escaleras
-    [-3.2, 3.2].forEach(function (zz) { LUCES.push({ x: fx + 5.6 * esc, y: cy - 4.4 * esc, z: zz * esc, local: true }); LUCES.push({ x: fx + 12 * esc, y: 1.9, z: zz * 1.2 * esc, local: true }); k.cil(0.1, 1.8, COL.maderaOsc, fx + 12 * esc, 0.9, zz * 1.2 * esc, 5); });
-    g.add(k.malla());
-    // ojos de la calavera: se encienden de noche (material propio)
-    var ojoG = new T3.SphereGeometry(1, 14, 10);
-    [-2.2, 2.2].forEach(function (zz) { var o = new T3.Mesh(ojoG, MAT.ojos); o.position.set(fx + 3.6 * esc, cy + 0.6 * esc, zz * esc); o.scale.set(1.4 * esc, 1.6 * esc, 1.35 * esc); o.raycast = NOOP; g.add(o); });
-    g.userData.cumbre = top; return g;
+    return d;
   }
-
+  function sdMonte(x, y, z) { // calavera + roca que la rodea (se funden), con grietas y estratos
+    var s = sdCalavera(x, y, z);
+    var m = sdElip(x, y, z, -16, 6, 0, 15, 25, 27);
+    var d = uS(s, m, 4.5);
+    if (Math.abs(d) < 3.5) d += (fbm3(x * 0.2, y * 0.33, z * 0.2) - 0.5) * 1.5 + (Math.abs(vr3(x * 0.45, y * 0.9, z * 0.45) - 0.5) - 0.25) * 0.8 * (s > 1.5 ? 1 : 0.35);
+    return Math.max(d, -(y + 0.6));
+  }
+  var cHueso = new T3.Color(0xcdb894), cHueso2 = new T3.Color(0x9a8566);
+  function colorMonte(cc, x, y, z, nx, ny, nz, oc) {
+    var s = sdCalavera(x, y, z);
+    if (s < 1.2) { cc.copy(cHueso).lerp(cHueso2, smooth(0.3, 0.75, fbm3(x * 0.22, y * 0.3, z * 0.22))); cc.multiplyScalar(0.82 + 0.3 * smooth(2, 22, y)); if (ny > 0.6 && fbm3(x * 0.3 + 4, y * 0.3, z * 0.3) > 0.62) cc.lerp(cMusgo, 0.55); cc.lerp(new T3.Color(0x1e1610), (1 - oc) * 0.92); }
+    else colorRoca(cc, x, y, z, nx, ny, nz, oc);
+  }
+  // cordillera detrás (mapa de alturas): picos rocosos con barrancos para las cascadas
+  function crearCordillera(c) {
+    var NA = 70, NB = 150, a0 = -112, a1 = -55, b0 = -82, b1 = 82;
+    var g = new T3.PlaneGeometry(1, 1, NA, NB), P = g.attributes.position, col = new Float32Array(P.count * 3), cc = new T3.Color();
+    for (var i = 0; i < P.count; i++) {
+      var u = P.getX(i) + 0.5, v = P.getY(i) + 0.5, a = a0 + (a1 - a0) * u, b = b0 + (b1 - b0) * v;
+      var cae = smooth(-56, -66, a), pico = 12 + 26 * Math.pow(fbm(a * 0.045 + 3, b * 0.05), 1.4) + 8 * Math.abs(vruido(a * 0.12, b * 0.12) - 0.5);
+      var barr = 1 - 0.55 * Math.exp(-Math.pow((Math.abs(b) - 24) / 4, 2)) * smooth(-58, -70, a);      // barrancos a los dos lados de la calavera
+      var h = cae * pico * barr * (1 - 0.6 * Math.exp(-b * b / 320) * smooth(-75, -60, a)) + ISLA.terraza - 0.4;
+      if (Math.abs(b) > 66) h *= 1 - smooth(66, 80, Math.abs(b));
+      var hueco = Math.exp(-Math.pow(b / 15.5, 4)) * smooth(-90, -80, a); h = h * (1 - hueco) + (ISLA.terraza - 2) * hueco; // la calavera queda delante, sin roca encima de la cara
+      var w = c.aMundo(a, b); P.setXYZ(i, w[0], h, w[1]);
+      var n = fbm(a * 0.2, b * 0.2); cc.copy(cRoca1).lerp(cRoca2, n); col[i * 3] = cc.r; col[i * 3 + 1] = cc.g; col[i * 3 + 2] = cc.b;
+    }
+    var idx = g.index.array; for (var k = 0; k < idx.length; k += 3) { var t = idx[k]; idx[k] = idx[k + 1]; idx[k + 1] = t; }
+    g.setAttribute('color', new T3.BufferAttribute(col, 3)); g.computeVertexNormals();
+    var m = new T3.Mesh(g, MAT.rocaPBR); m.castShadow = true; m.receiveShadow = true; m.raycast = NOOP; return m;
+  }
+  // estandarte vertical con calavera (cuelga de una barra)
+  function texEstandarte(fondo) {
+    var cv = document.createElement('canvas'); cv.width = 64; cv.height = 160; var x = cv.getContext('2d');
+    x.fillStyle = fondo; x.fillRect(0, 0, 64, 160); x.fillStyle = '#d8b04a'; x.fillRect(0, 0, 64, 6); x.fillRect(0, 0, 4, 160); x.fillRect(60, 0, 4, 160);
+    x.globalCompositeOperation = 'destination-out'; x.beginPath(); x.moveTo(0, 160); x.lineTo(32, 134); x.lineTo(64, 160); x.fill(); x.globalCompositeOperation = 'source-over';
+    x.fillStyle = '#efe6d2'; x.beginPath(); x.ellipse(32, 58, 13, 14, 0, 0, 6.283); x.fill(); x.fillRect(24, 66, 16, 9);
+    x.fillStyle = fondo; x.beginPath(); x.ellipse(27, 58, 4, 5, 0, 0, 6.283); x.ellipse(37, 58, 4, 5, 0, 0, 6.283); x.fill();
+    x.strokeStyle = '#efe6d2'; x.lineWidth = 4; x.lineCap = 'round'; x.beginPath(); x.moveTo(12, 84); x.lineTo(52, 104); x.moveTo(52, 84); x.lineTo(12, 104); x.stroke();
+    var t = new T3.CanvasTexture(cv); t.anisotropy = 4; return t;
+  }
+  function estandarte(grupo, x, y, z, alto, ry, rojo) {
+    var k = rojo ? 'estR' : 'estN'; if (!TEX[k]) { TEX[k] = MAT.tela(texEstandarte(rojo ? '#7a1414' : '#17141a'), true); }
+    var an = alto * 0.42, g = new T3.PlaneGeometry(an, alto, 3, 8); g.translate(0, -alto / 2, 0); g.rotateY(Math.PI / 2);
+    var me = new T3.Mesh(g, TEX[k]); me.position.set(x, y, z); me.rotation.y = ry || 0; me.castShadow = true; me.raycast = NOOP; grupo.add(me);
+    return me;
+  }
+  function monte(nv) {
+    var g = new T3.Group(), t0 = performance.now();
+    var geo = esculpir(sdMonte, { x: -34, y: -1, z: -27 }, { x: 13.5, y: 31, z: 27 }, N_PASO(), colorMonte);
+    var sk = rocaMalla(geo); g.add(sk);
+    // luz naranja dentro de las cuencas y de la boca (siempre encendida, más fuerte de noche)
+    var brasa = new T3.SphereGeometry(1, 12, 8);
+    [[5.0, 11.8, 4.4, 2.0], [5.0, 11.8, -4.4, 2.0], [1.0, 3.0, 0, 3.0]].forEach(function (q, i) { var o = new T3.Mesh(brasa, MAT.ojos); o.position.set(q[0], q[1], q[2]); o.scale.set(q[3] * 0.7, q[3] * (i < 2 ? 0.95 : 0.75), q[3] * (i < 2 ? 0.95 : 1.5)); o.raycast = NOOP; g.add(o); });
+    // escalinata de piedra desde la boca hasta la villa (la terraza está a +5, la villa a 0)
+    var k = new Cons();
+    for (var s = 0; s < 6; s++) k.caja(1.0, 0.5, 9.6 - s * 0.2, 0x9a907e, 9.5 + s * 1.0, 0.25 - 0.0, 0);     // rellano delante de la boca
+    for (var e = 0; e < 11; e++) { var ex = 15.5 + e * 0.55, ey = -0.45 - e * 0.45; k.caja(0.62, 0.5, 9.0, e % 2 ? 0x8d8473 : 0x9a907e, ex, ey, 0); }  // bajada a la villa
+    [-1, 1].forEach(function (l) { for (var p2 = 0; p2 < 7; p2++) k.caja(0.9, 1.1, 0.7, 0x7a7262, 15.5 + p2 * 0.95, 0.3 - p2 * 0.8, l * 5.0); });
+    var me = k.malla(MAT.rocaPBR); g.add(me);
+    // estandartes piratas a los dos lados de la boca (más y con oro según el nivel del castillo)
+    var cuantos = nv >= 9 ? 3 : nv >= 4 ? 2 : 1;
+    for (var b = 0; b < cuantos; b++) [-1, 1].forEach(function (l) { estandarte(g, 9.6 - b * 1.4, 9.0 - b * 0.3, l * (7.4 + b * 2.4), 6.5 - b * 0.6, 0, b % 2 === 0); });
+    if (nv >= 12) for (var cg = 0; cg < 7; cg++) { var kc = new Cons(); kc.cono(0.9, 3.0, COL.oro, -2 + cg * 0.1, 25.3 + Math.sin(cg) * 0.2, (cg - 3) * 2.2, 6); g.add(kc.malla(MAT.solido)); }
+    // antorchas: boca, rellano y escalinata
+    LUCES.push({ x: 9.2, y: 6.6, z: 5.4, local: true }); LUCES.push({ x: 9.2, y: 6.6, z: -5.4, local: true }); LUCES.push({ x: 15.2, y: 1.6, z: 5.3, local: true }); LUCES.push({ x: 15.2, y: 1.6, z: -5.3, local: true }); LUCES.push({ x: 21.6, y: -2.6, z: 5.3, local: true }); LUCES.push({ x: 21.6, y: -2.6, z: -5.3, local: true });
+    var kt = new Cons(); [[9.2, 5.4], [9.2, -5.4], [15.2, 5.3], [15.2, -5.3], [21.6, 5.3], [21.6, -5.3]].forEach(function (q, i) { var y0 = i < 2 ? 0.2 : i < 4 ? 0.0 : -4.6; kt.cil(0.09, 1.6 + (i < 2 ? 4.6 : 0), COL.maderaOsc, q[0], y0 + (1.6 + (i < 2 ? 4.6 : 0)) / 2, q[1], 5); kt.cil(0.17, 0.2, COL.hierro, q[0], y0 + 1.6 + (i < 2 ? 4.6 : 0), q[1], 6); }); g.add(kt.malla(MAT.solido));
+    g.userData.ms = Math.round(performance.now() - t0);
+    return g;
+  }
+  function N_PASO() { var n = (window.TKPremium && TKPremium.nivel && TKPremium.nivel()) || 'alta'; return n === 'ultra' ? 0.4 : n === 'alta' ? 0.48 : n === 'media' ? 0.6 : 0.75; }
+  // rocas esculpidas pequeñas: arco natural e islote de la atalaya
+  function sdArco(x, y, z) { var q = Math.hypot(x, y) - 8.5, d = Math.hypot(q, z) - 2.6 - (fbm3(x * 0.3, y * 0.3, z * 0.3) - 0.5) * 1.8; return Math.max(d, -(y + 9)); }
+  function sdIslote(x, y, z) { var d = sdElip(x, y, z, 0, -3, 0, 7.5, 7.5, 7.0) + (fbm3(x * 0.25, y * 0.4, z * 0.25) - 0.5) * 3 + Math.max(0, y - 1.2) * 1.5; return Math.max(d, -(y + 9)); }
+  // ======================================================================
+  //  VEGETACIÓN TROPICAL (instanciada): palmeras con tronco curvo anillado y hojas con foliolos, helechos,
+  //  plantas de hoja grande, hibiscos en flor y rocas pequeñas. Se reparten en grupos naturales sin tocar parcelas ni caminos.
+  // ======================================================================
+  function lienzo(w, h, pintar) { var cv = document.createElement('canvas'); cv.width = w; cv.height = h; pintar(cv.getContext('2d'), w, h); var t = new T3.CanvasTexture(cv); t.anisotropy = 4; return t; }
+  function texFronda() { return lienzo(128, 512, function (x, w, h) {
+    for (var i = 0; i < 46; i++) { var t = i / 46, y = 20 + t * (h - 40), largo = (w / 2 - 6) * Math.pow(Math.sin(Math.PI * (0.08 + t * 0.9)), 0.7);
+      [-1, 1].forEach(function (s) { var gr = x.createLinearGradient(w / 2, y, w / 2 + s * largo, y + 34); gr.addColorStop(0, '#2f6a22'); gr.addColorStop(0.6, ['#4f9a34', '#5aa83a', '#47902e'][i % 3]); gr.addColorStop(1, '#7ab84a');
+        x.fillStyle = gr; x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(w / 2 + s * largo * 0.5, y + 4, w / 2 + s * largo, y + 30); x.quadraticCurveTo(w / 2 + s * largo * 0.5, y + 14, w / 2, y + 9); x.fill(); }); }
+    x.strokeStyle = '#8a7a3a'; x.lineWidth = 4; x.beginPath(); x.moveTo(w / 2, 0); x.lineTo(w / 2, h - 6); x.stroke(); }); }
+  function texHelecho() { return lienzo(96, 256, function (x, w, h) {
+    for (var i = 0; i < 30; i++) { var t = i / 30, y = 10 + t * (h - 20), l = (w / 2 - 4) * Math.sin(Math.PI * (0.1 + t * 0.85));
+      [-1, 1].forEach(function (s) { for (var j = 0; j < 5; j++) { x.fillStyle = ['#3f8a2a', '#4d9c34', '#367a24'][(i + j) % 3]; x.beginPath(); x.ellipse(w / 2 + s * l * (j + 0.5) / 5, y + j * 1.8, l / 9, 3.2, s * 0.5, 0, 6.283); x.fill(); } }); }
+    x.strokeStyle = '#4a6a24'; x.lineWidth = 2; x.beginPath(); x.moveTo(w / 2, 0); x.lineTo(w / 2, h); x.stroke(); }); }
+  function texHojaGrande(flor) { return lienzo(128, 256, function (x, w, h) {
+    var gr = x.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#2c6a22'); gr.addColorStop(0.5, '#5aa83c'); gr.addColorStop(1, '#2c6a22');
+    x.fillStyle = gr; x.beginPath(); x.moveTo(w / 2, h - 4); x.bezierCurveTo(-10, h * 0.6, 10, 20, w / 2, 6); x.bezierCurveTo(w - 10, 20, w + 10, h * 0.6, w / 2, h - 4); x.fill();
+    x.strokeStyle = 'rgba(200,230,150,.55)'; x.lineWidth = 2.5; x.beginPath(); x.moveTo(w / 2, 6); x.lineTo(w / 2, h - 4); x.stroke(); x.lineWidth = 1;
+    for (var i = 1; i < 9; i++) { var y = 20 + i * (h - 40) / 9; x.beginPath(); x.moveTo(w / 2, y); x.quadraticCurveTo(w / 2 + 25, y - 10, w / 2 + 46, y - 26); x.moveTo(w / 2, y); x.quadraticCurveTo(w / 2 - 25, y - 10, w / 2 - 46, y - 26); x.stroke(); }
+    if (flor) for (var f = 0; f < 6; f++) { var fx = 26 + (f * 37) % 76, fy = 30 + (f * 53) % 150, c = flor[f % flor.length]; for (var p = 0; p < 5; p++) { x.fillStyle = c; x.beginPath(); x.ellipse(fx + Math.cos(p * 1.256) * 7, fy + Math.sin(p * 1.256) * 7, 7, 4.5, p * 1.256, 0, 6.283); x.fill(); } x.fillStyle = '#ffd34a'; x.beginPath(); x.arc(fx, fy, 2.5, 0, 6.283); x.fill(); }
+  }); }
+  function matHoja(tex) {
+    var m = new T3.MeshStandardMaterial({ map: tex, alphaTest: 0.42, side: T3.DoubleSide, roughness: 0.7, metalness: 0 }); m.userData.tkpSinVentanas = true;
+    m.onBeforeCompile = function (sh) { sh.uniforms.uT = U.t; sh.uniforms.uV = U.viento; sh.vertexShader = 'uniform float uT; uniform float uV;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n vec4 kI = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n#else\n vec4 kI = vec4(0.0);\n#endif\n float kA = (0.04 + uv.y * uv.y * 0.12) * uV * clamp(position.y * 0.35, 0.2, 1.6); transformed.x += sin(uT * 1.7 + kI.x * 0.31 + kI.z * 0.23 + position.y) * kA; transformed.z += cos(uT * 1.3 + kI.z * 0.27) * kA * 0.7; transformed.y += sin(uT * 2.1 + kI.x) * kA * 0.3;'); };
+    m.customProgramCacheKey = function () { return 'tkcHoja'; }; return m;
+  }
+  // tira curva (una hoja/fronda): arranca en o, sale en la dirección ang, sube y cae; ancho según el largo
+  function tira(pos, uv, idx, o, ang, largo, ancho, sube, cae, seg, giro) {
+    var base = pos.length / 3, dx = Math.cos(ang), dz = Math.sin(ang), px = -dz, pz = dx;
+    for (var i = 0; i <= seg; i++) {
+      var t = i / seg, r = largo * t, y = o.y + sube * Math.sin(t * Math.PI * 0.6) - cae * t * t, w = ancho * (0.18 + Math.pow(Math.sin(Math.PI * Math.min(1, t * 1.05)), 0.55)) * 0.5, tw = (giro || 0) * t;
+      for (var s = -1; s <= 1; s += 2) { pos.push(o.x + dx * r + px * w * s * Math.cos(tw), y + w * s * Math.sin(tw), o.z + dz * r + pz * w * s * Math.cos(tw)); uv.push(s < 0 ? 0 : 1, 1 - t); }
+      if (i) { var q = base + i * 2; idx.push(q - 2, q - 1, q, q - 1, q + 1, q); }
+    }
+  }
+  function geoTiras(fn) { var pos = [], uv = [], idx = []; fn(pos, uv, idx); var g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+  function geoTronco(alto, inclina) {
+    var pos = [], col = [], idx = [], A = 14, S = 9, cc = new T3.Color(), top = null;
+    for (var i = 0; i <= A; i++) {
+      var t = i / A, cx = Math.sin(t * 1.25) * inclina, cy = t * alto, r = 0.32 * (1 - t * 0.38) * (1 + 0.08 * Math.abs(Math.sin(t * A * Math.PI)));
+      for (var j = 0; j <= S; j++) { var a = j / S * Math.PI * 2; pos.push(cx + Math.cos(a) * r, cy, Math.sin(a) * r); cc.set(i % 2 ? 0x8a6e4e : 0x6e563c).multiplyScalar(0.9 + 0.2 * Math.sin(a * 3 + i)); col.push(cc.r, cc.g, cc.b); }
+      if (i) for (var k = 0; k < S; k++) { var a0 = (i - 1) * (S + 1) + k, b0 = a0 + S + 1; idx.push(a0, b0, a0 + 1, a0 + 1, b0, b0 + 1); }
+      top = new T3.Vector3(cx, cy, 0);
+    }
+    var g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new T3.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals(); g.userData.top = top; return g;
+  }
+  var VEG = null;
+  function prepararVegetacion() {
+    if (VEG) return VEG;
+    var tronco = geoTronco(6.2, 1.3), top = tronco.userData.top, r = azar(91);
+    var fronda = geoTiras(function (pos, uv, idx) { for (var f = 0; f < 13; f++) { var ang = f / 13 * Math.PI * 2 + r() * 0.25, rise = f % 3 === 0 ? 1.0 : 0.55; tira(pos, uv, idx, top, ang, 3.4 + r() * 0.6, 1.25, rise, 2.3 + r() * 0.6, 9, (r() - 0.5) * 0.6); } });
+    var helecho = geoTiras(function (pos, uv, idx) { for (var f = 0; f < 9; f++) tira(pos, uv, idx, new T3.Vector3(0, 0.05, 0), f / 9 * Math.PI * 2 + r() * 0.3, 1.5 + r() * 0.4, 0.55, 0.65, 0.75, 6, 0.3); });
+    var hojas = geoTiras(function (pos, uv, idx) { for (var f = 0; f < 6; f++) tira(pos, uv, idx, new T3.Vector3(0, 0.1, 0), f / 6 * Math.PI * 2 + r() * 0.5, 1.6 + r() * 0.5, 0.95, 1.3, 0.8, 6, (r() - 0.5) * 0.8); });
+    var flores = geoTiras(function (pos, uv, idx) { for (var f = 0; f < 8; f++) tira(pos, uv, idx, new T3.Vector3(0, 0.15, 0), f / 8 * Math.PI * 2 + r() * 0.4, 1.1 + r() * 0.3, 0.9, 0.9, 0.5, 5, 0.4); });
+    var roca = soldar(new T3.IcosahedronGeometry(1, 2)), pr = roca.attributes.position; for (var i = 0; i < pr.count; i++) { var x = pr.getX(i), y = pr.getY(i), z = pr.getZ(i), n = 0.75 + fbm3(x * 1.6 + 3, y * 1.6, z * 1.6) * 0.5; pr.setXYZ(i, x * n, Math.max(-0.2, y) * n * 0.62, z * n); } roca.computeVertexNormals();
+    var cr = new Float32Array(pr.count * 3), cc = new T3.Color(); for (i = 0; i < pr.count; i++) { cc.copy(cRoca1).lerp(cRoca2, Math.random()); if (pr.getY(i) > 0.35 && Math.random() > 0.4) cc.lerp(cMusgo, 0.6); cr[i * 3] = cc.r; cr[i * 3 + 1] = cc.g; cr[i * 3 + 2] = cc.b; } roca.setAttribute('color', new T3.BufferAttribute(cr, 3));
+    var mt = new T3.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 }); mt.userData.tkpSinVentanas = true;
+    mt.onBeforeCompile = function (sh) { sh.uniforms.uT = U.t; sh.uniforms.uV = U.viento; sh.vertexShader = 'uniform float uT; uniform float uV;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n#ifdef USE_INSTANCING\n vec4 kI = instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);\n#else\n vec4 kI = vec4(0.0);\n#endif\n float kA = position.y * position.y * 0.004 * uV; transformed.x += sin(uT * 1.7 + kI.x * 0.31 + kI.z * 0.23) * kA; transformed.z += cos(uT * 1.3 + kI.z * 0.27) * kA * 0.7;'); };
+    mt.customProgramCacheKey = function () { return 'tkcTronco'; };
+    VEG = { tronco: tronco, fronda: fronda, helecho: helecho, hojas: hojas, flores: flores, roca: roca,
+      mTronco: mt, mFronda: matHoja(texFronda()), mHelecho: matHoja(texHelecho()), mHojas: matHoja(texHojaGrande(null)), mFlores: matHoja(texHojaGrande(['#e8344a', '#ff6a8a', '#ffb02a', '#d8285e'])) };
+    return VEG;
+  }
+  // reparte grupos naturales: cada grupo mezcla palmeras, helechos, hojas, flores y rocas
+  function repartirVegetacion(c, raizL, cantidad) {
+    var V = prepararVegetacion(), r = azar(5150), L = { palma: [], helecho: [], hojas: [], flores: [], roca: [] }, o = new T3.Object3D();
+    function libre(a, b) {
+      var h = altura(a, b); if (h < ISLA.playa + 0.2 || h > 9.5) return null;
+      var pend = Math.abs(altura(a + 1, b) - h) + Math.abs(altura(a, b + 1) - h); if (pend > 1.2) return null;
+      if (Math.hypot(a, b) < 15) return null;                                             // plaza
+      if (distCamino(a, b) < 0.9) return null;
+      if (a > -40 && a < 46 && Math.abs(b) < 47) { var w = c.aMundo(a, b); if (!c.libre(w[0], w[1])) return null; }
+      var cr = c.campos; if (Math.abs(a - cr.a) < cr.ha + 2 && Math.abs(b - cr.b) < cr.hb + 2) return null;
+      if (Math.abs(b) < 6.5 && a > 40 && a < 52) return null;                              // escalera de la playa
+      if (Math.abs(b) < 7 && a < -36 && a > -64) return null;                              // escalinata de la calavera
+      if (Math.abs(Math.abs(b) - 34) < 3.5 && a < -36 && a > -46) return null;             // escaleras laterales
+      return h;
+    }
+    var grupos = Math.round(110 * cantidad);
+    for (var g = 0, t = 0; g < grupos && t < grupos * 12; t++) {
+      var ca = ISLA.terr.a0 + r() * (120 - ISLA.terr.a0), cb = (r() - 0.5) * 2 * (ISLA.hb + 2); if (libre(ca, cb) === null) continue; g++;
+      var n = 4 + Math.floor(r() * 7), radio = 2.5 + r() * 3;
+      for (var i = 0; i < n; i++) {
+        var a = ca + (r() - 0.5) * 2 * radio, b = cb + (r() - 0.5) * 2 * radio, h = libre(a, b); if (h === null) continue;
+        var q = r(), tipo = q < 0.22 ? 'palma' : q < 0.48 ? 'helecho' : q < 0.68 ? 'hojas' : q < 0.84 ? 'flores' : 'roca';
+        if (tipo === 'palma' && L.palma.some(function (p) { return Math.hypot(p[0] - a, p[2] - b) < 3.2; })) tipo = 'helecho';
+        L[tipo].push([a, h, b, r()]);
+      }
+    }
+    var res = [];
+    function inst(geo, mat, lista, esc, sombra) {
+      if (!lista.length) return null; var im = new T3.InstancedMesh(geo, mat, lista.length); im.castShadow = sombra; im.receiveShadow = true; im.raycast = NOOP;
+      lista.forEach(function (p, i) { var s = esc[0] + p[3] * (esc[1] - esc[0]); o.position.set(p[0], p[1] - 0.05, p[2]); o.rotation.set(0, p[3] * 40, 0); o.scale.set(s, s * (0.9 + p[3] * 0.2), s); o.updateMatrix(); im.setMatrixAt(i, o.matrix); });
+      raizL.add(im); res.push(im); return im;
+    }
+    inst(V.tronco, V.mTronco, L.palma, [0.8, 1.3], true); inst(V.fronda, V.mFronda, L.palma, [0.8, 1.3], true);
+    inst(V.helecho, V.mHelecho, L.helecho, [0.8, 1.5], false); inst(V.hojas, V.mHojas, L.hojas, [0.8, 1.4], true);
+    inst(V.flores, V.mFlores, L.flores, [0.7, 1.2], false); inst(V.roca, MAT.rocaPBR, L.roca, [0.35, 1.0], true);
+    return { mallas: res, cuenta: { palmas: L.palma.length, helechos: L.helecho.length, hojas: L.hojas.length, flores: L.flores.length, rocas: L.roca.length } };
+  }
   // ======================================================================
   //  EDIFICIOS PIRATAS: arquitectura caribeña de madera (cambian con el tipo y crecen con el nivel)
   // ======================================================================
@@ -425,110 +696,137 @@
   }
 
   // ======================================================================
-  //  LA ISLA ENTERA: terreno, mar, puerto, barcos, cascadas, cuevas, puentes, astillero, palmeras
+  //  LA ISLA ENTERA v2 (composición de la imagen): meseta con plaza de la rosa de los vientos, terraza y montaña de la calavera al fondo,
+  //  tres cascadas, bahía con playa, islote con atalaya, islotes con puentes colgantes, arco de roca, escaleras y bordes de parcela.
   // ======================================================================
-  var ISL = null; // objetos construidos (se guardan para no rehacerlos al volver)
+  var ISL = null;
   function grupoLocal(c) { var g = new T3.Group(), u = new T3.Vector3(c.ejeU.x, 0, c.ejeU.z), v = new T3.Vector3(c.ejeV.x, 0, c.ejeV.z); g.matrixAutoUpdate = false; g.matrix.makeBasis(u, new T3.Vector3(0, 1, 0), v); g.updateMatrixWorld(true); return g; }
-  function pilar(k, a, b, alto, r0, sem) { var r = azar(sem), y = -2; for (var i = 0; y < alto; i++) { var rr = r0 * (1 - y / (alto + 4) * 0.45) * (0.85 + r() * 0.3), hh = 1.4 + r() * 0.8; k.cil(rr, hh, r() > 0.5 ? COL.roca : 0x6a5c4e, a + (r() - 0.5) * 0.6, y + hh / 2, b + (r() - 0.5) * 0.6, 9); y += hh * 0.85; } k.esf(r0 * 0.75, 0x4f8a3a, a, alto + 0.2, b, 1, 0.35, 1, 10); return alto; }
   function puente(k, p1, p2, ancho) {
-    var d = p2.clone().sub(p1), L = d.length(), n = Math.max(6, Math.round(L / 0.45)), lado = new T3.Vector3(-d.z, 0, d.x).normalize(), cae = L * 0.12, prev = null;
+    var d = p2.clone().sub(p1), L = d.length(), n = Math.max(6, Math.round(L / 0.45)), lado = new T3.Vector3(-d.z, 0, d.x).normalize(), cae = L * 0.1, prev = null;
     for (var i = 0; i <= n; i++) {
       var t = i / n, p = p1.clone().lerp(p2, t); p.y -= Math.sin(Math.PI * t) * cae;
-      if (i < n) { var ry = Math.atan2(-d.z, d.x); k.caja(0.3, 0.07, ancho, i % 3 ? COL.madera : COL.maderaCl, p.x, p.y, p.z, ry); }
+      if (i < n) k.caja(0.32, 0.07, ancho, i % 3 ? COL.madera : COL.maderaCl, p.x, p.y, p.z, Math.atan2(-d.z, d.x));
       if (prev) [-1, 1].forEach(function (l) { var a1 = prev.clone().addScaledVector(lado, l * ancho / 2), b1 = p.clone().addScaledVector(lado, l * ancho / 2); a1.y += 0.9; b1.y += 0.9; k.viga(a1, b1, 0.05, COL.cuerda, 4); if (i % 2 === 0) { var ab = b1.clone(); ab.y -= 0.9; k.viga(ab, b1, 0.035, COL.cuerda, 3); } });
       prev = p;
     }
     [p1, p2].forEach(function (q) { [-1, 1].forEach(function (l) { var b2 = q.clone().addScaledVector(lado, l * (ancho / 2 + 0.1)); k.cil(0.12, 1.6, COL.maderaOsc, b2.x, q.y + 0.4, b2.z, 6); }); });
   }
-  function cascada(raizL, a, lado) {
-    var bE = ISLA.R + 9; for (var b = ISLA.R + 9; b < ISLA.hb + 30; b += 0.5) { if (altura(a, lado * b) < 0) { bE = b; break; } }
-    var top = altura(a, lado * (bE - 6)); if (top < 6) return null;
-    var g = new T3.BufferGeometry(), y0 = top - 0.6, z0 = lado * (bE - 6.5), z1 = lado * (bE + 1.5), w = 2.6;
-    var pos = [a - w, y0, z0, a + w, y0, z0, a - w * 1.25, ISLA.agua + 0.1, z1, a + w * 1.25, ISLA.agua + 0.1, z1], uv = [0, 1, 1, 1, 0, 0, 1, 0];
-    // curva: varios tramos para que la caída se doble como el agua de verdad
-    var P = [], UVs = [], I = [], S = 8;
-    for (var i = 0; i <= S; i++) { var t = i / S, y = y0 + (ISLA.agua + 0.1 - y0) * t, z = z0 + (z1 - z0) * Math.pow(t, 0.55), ww = w * (1 + t * 0.3); P.push(a - ww, y, z, a + ww, y, z); UVs.push(0, 1 - t, 1, 1 - t); if (i) { var q = (i - 1) * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); } }
-    g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(UVs, 2)); g.setIndex(I); g.computeVertexNormals();
+  // cascada entre dos puntos (lámina curva con el agua bajando + charca y espuma abajo)
+  function cascada(raizL, top, bot, ancho, espuma) {
+    var P = [], UVs = [], I = [], S = 10, lado = new T3.Vector3(bot.z - top.z, 0, -(bot.x - top.x)).normalize();
+    if (lado.lengthSq() < 0.1) lado.set(0, 0, 1);
+    var perp = new T3.Vector3(-(bot.z - top.z), 0, bot.x - top.x).normalize();
+    for (var i = 0; i <= S; i++) { var t = i / S, y = top.y + (bot.y - top.y) * t, f = Math.pow(t, 0.5), x = top.x + (bot.x - top.x) * f, z = top.z + (bot.z - top.z) * f, w = ancho * (0.75 + t * 0.5);
+      P.push(x + perp.x * w, y, z + perp.z * w, x - perp.x * w, y, z - perp.z * w); UVs.push(0, 1 - t, 1, 1 - t); if (i) { var q = (i - 1) * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); } }
+    var g = new T3.BufferGeometry(); g.setAttribute('position', new T3.Float32BufferAttribute(P, 3)); g.setAttribute('uv', new T3.Float32BufferAttribute(UVs, 2)); g.setIndex(I); g.computeVertexNormals();
     var m = new T3.Mesh(g, MAT.cascada); m.raycast = NOOP; m.renderOrder = 5; raizL.add(m);
-    return { a: a, b: z1, y: ISLA.agua, top: y0, z0: z0 };
+    for (var j = 0; j < 46; j++) espuma.push([bot.x + (Math.random() - 0.5) * ancho * 2.4, bot.y + 0.1, bot.z + (Math.random() - 0.5) * ancho * 2.4, 0]);
+    return m;
   }
+  function texRosa() { return lienzo(1024, 1024, function (x, w) {
+    var c = w / 2, gr = x.createRadialGradient(c, c, 0, c, c, c); gr.addColorStop(0, '#cdbb98'); gr.addColorStop(0.85, '#b8a27a'); gr.addColorStop(1, '#8a7656'); x.fillStyle = gr; x.beginPath(); x.arc(c, c, c, 0, 6.283); x.fill();
+    for (var i = 0; i < 2600; i++) { x.fillStyle = 'rgba(' + (Math.random() > 0.5 ? '60,48,34' : '240,228,200') + ',' + (Math.random() * 0.12).toFixed(3) + ')'; x.fillRect(Math.random() * w, Math.random() * w, 2 + Math.random() * 6, 2 + Math.random() * 6); }
+    [[0.97, 10, '#5a4a36'], [0.86, 5, '#e8d6a8'], [0.62, 4, '#5a4a36']].forEach(function (q) { x.strokeStyle = q[2]; x.lineWidth = q[1]; x.beginPath(); x.arc(c, c, c * q[0], 0, 6.283); x.stroke(); });
+    for (var t = 0; t < 32; t++) { var a = t / 32 * 6.283; x.strokeStyle = '#5a4a36'; x.lineWidth = t % 4 ? 3 : 7; x.beginPath(); x.moveTo(c + Math.cos(a) * c * 0.86, c + Math.sin(a) * c * 0.86); x.lineTo(c + Math.cos(a) * c * (t % 4 ? 0.92 : 0.97), c + Math.sin(a) * c * (t % 4 ? 0.92 : 0.97)); x.stroke(); }
+    function punta(a, l, an, c1, c2) { var px = Math.cos(a), py = Math.sin(a), qx = -py, qy = px; x.fillStyle = c1; x.beginPath(); x.moveTo(c, c); x.lineTo(c + px * l, c + py * l); x.lineTo(c + qx * an, c + qy * an); x.fill(); x.fillStyle = c2; x.beginPath(); x.moveTo(c, c); x.lineTo(c + px * l, c + py * l); x.lineTo(c - qx * an, c - qy * an); x.fill(); }
+    for (var s = 0; s < 8; s++) punta(s / 8 * 6.283 + 6.283 / 16, c * 0.5, c * 0.08, '#7a5a34', '#a8824a');
+    for (var s2 = 0; s2 < 4; s2++) punta(s2 / 4 * 6.283, c * 0.82, c * 0.13, s2 === 3 ? '#8a2218' : '#3a2a1a', s2 === 3 ? '#c43a28' : '#e0c890');
+    x.fillStyle = '#d8b04a'; x.beginPath(); x.arc(c, c, c * 0.07, 0, 6.283); x.fill(); x.strokeStyle = '#5a4a36'; x.lineWidth = 4; x.stroke();
+  }); }
   function construirIsla(c, esc) {
     materiales(); prepararIsla(c); prepararCaminos(c); LUCES.length = 0;
-    var raizW = new T3.Group(), raizL = grupoLocal(c); raizW.name = 'tk-corsarios'; raizW.add(raizL);
+    var raizW = new T3.Group(), raizL = grupoLocal(c), fondo = new T3.Group(); raizW.name = 'tk-corsarios'; raizW.add(raizL); raizL.add(fondo);
     raizW.add(crearTerreno(c)); raizW.add(crearOceano(c));
-    var k = new Cons(), F = ISLA.frente, R = ISLA.R;
-    // puerto: dos muelles largos y uno transversal, cañones mirando al mar en la orilla
-    muelle(k, F - 6, -20, F + 22, -20, 3.2); muelle(k, F - 6, 25, F + 20, 25, 3.2); muelle(k, F + 22, -24, F + 22, 4, 2.8);
-    for (var bc = -44; bc <= 44; bc += 11) if (Math.abs(bc) > 6 && Math.abs(bc + 20) > 4 && Math.abs(bc - 25) > 4) { canon(k, F - 3, 0.05, bc, 0, 1.2); }
-    for (var fc = 0; fc < 5; fc++) [-3.2, 3.2].forEach(function (bb) { var aa = F - 4 - fc * 8; if (aa < 22) return; farol(k, aa, 0, bb, 2.4); LUCES.push({ x: aa + 0.42, y: 2.1, z: bb, local: true }); });
-    // astillero en la playa: un casco a medio hacer sobre la grada, con andamios
-    var cas = geoCasco(14, 4.4, 2.8); k.addColor(cas.g, mat4(F - 4, 2.3, 44, 0, 0, 0.06)); for (var an = -6; an <= 6; an += 2) [-1, 1].forEach(function (l) { k.cil(0.1, 4.2, COL.madera, F - 4 + an, 2.1, 44 + l * 2.8, 5); }); k.caja(14, 0.12, 0.6, COL.madera, F - 4, 3.6, 41.2); k.caja(14, 0.12, 0.6, COL.madera, F - 4, 3.6, 46.8); for (var cj = 0; cj < 4; cj++) caja(k, F - 12 + cj * 1.2, 0, 49, 0.9, cj * 0.4);
-    for (var cr = 0; cr < 9; cr++) k.caja(0.3, 0.2, 5.2, COL.maderaOsc, F - 10 + cr * 1.6, 0.1, 44);
-    // islotes de roca con puentes colgantes y atalayas
-    [[1, -1], [1, 1]].forEach(function (q, i) {
-      var s = q[1], a1 = F - 2, b1 = s * (ISLA.hb - 4), a2 = F + 12, b2 = s * (ISLA.hb + 2), h1 = pilar(k, a1, b1, 7, 3.2, 11 + i), h2 = pilar(k, a2, b2, 10, 2.8, 17 + i);
-      puente(k, new T3.Vector3(a1, h1 + 0.5, b1), new T3.Vector3(a2, h2 + 0.5, b2), 1.4);
-      k.cil(1.2, 2.4, COL.madera, a2, h2 + 1.6, b2, 8); k.cono(1.6, 1.6, COL.paja, a2, h2 + 3.6, b2, 8); bandera(raizL, a2, h2 + 5.0, b2, 1.4, 0.9, 0); k.cil(0.06, 1.8, COL.maderaOsc, a2, h2 + 4.4, b2, 5);
-      LUCES.push({ x: a2 + 1.3, y: h2 + 2.0, z: b2, local: true }); LUCES.push({ x: a1, y: h1 + 1.6, z: b1, local: true }); farol(k, a1 - 0.4, h1 + 0.4, b1, 1.4);
-    });
-    // cuevas del tesoro en los acantilados de los lados (cofres y montones de oro que brillan)
-    var tesoros = [];
-    [-1, 1].forEach(function (s, i) {
-      var a = -6 - i * 6, b = s * (ISLA.R + 8.0), y = Math.max(0, altura(a, s * (ISLA.R + 3.5)));
-      k.esf(1, 0x100a06, a, y + 1.6, b, 3.2, 2.6, 1.6, 12); k.esf(1, COL.roca, a, y + 4.4, b - s * 0.4, 4.4, 1.2, 2.4, 10);
-      for (var t = 0; t < 3; t++) { var ca = a - 1.5 + t * 1.5, cb = b - s * 2.2; k.caja(1.0, 0.6, 0.7, 0x6a3a1a, ca, y + 0.3, cb); k.caja(1.04, 0.3, 0.74, 0x7a4a22, ca, y + 0.75, cb); k.caja(1.06, 0.08, 0.76, COL.oro, ca, y + 0.92, cb); k.esf(0.5, COL.oro, ca + 0.6, y + 0.05, cb - s * 0.6, 1.2, 0.5, 1, 8); tesoros.push(new T3.Vector3(ca + 0.6, y + 0.3, cb - s * 0.6)); }
-      [-2.6, 2.6].forEach(function (d) { k.cil(0.08, 1.8, COL.maderaOsc, a + d, y + 0.9, b - s * 2.6, 5); LUCES.push({ x: a + d, y: y + 1.9, z: b - s * 2.6, local: true }); });
-    });
-    // caminos de tablas por la playa hasta los muelles
-    for (var tb = F - 10; tb < F - 3; tb += 0.45) { k.caja(0.36, 0.08, 2.6, COL.madera, tb, 0.08, -20); k.caja(0.36, 0.08, 2.6, COL.madera, tb, 0.08, 25); }
-    raizL.add(k.malla());
-    // cascadas
-    var cascadas = []; [-1, 1].forEach(function (s) { [4, -30].forEach(function (a) { var w = cascada(raizL, a, s); if (w) cascadas.push(w); }); });
-    // palmeras: una malla instanciada (en la playa, las colinas y los huecos libres de la villa)
-    var gp = geoPalma(), rp = azar(4242), lug = [];
-    for (var t2 = 0; t2 < 2600 && lug.length < 140; t2++) {
-      var a3 = ISLA.atras + rp() * (ISLA.frente - ISLA.atras), b3 = (rp() - 0.5) * 2 * ISLA.hb, e3 = elipse(a3, b3), h3 = altura(a3, b3);
-      if (e3 > 0.97 || h3 < -0.2 || h3 > 9 || zonaAcantilado(a3, b3) > 0.6) continue;
-      var w3 = c.aMundo(a3, b3), enV = Math.abs(a3) < R + 2 && Math.abs(b3) < R + 2, cr2 = c.campos, enC = Math.abs(a3 - cr2.a) < cr2.ha + 2 && Math.abs(b3 - cr2.b) < cr2.hb + 2;
-      if (enC) continue; if (enV && !c.libre(w3[0], w3[1])) continue; if (Math.hypot(a3, b3) < 30) continue;
-      if (Math.abs(b3 + 20) < 3 || Math.abs(b3 - 25) < 3 || (Math.abs(b3) < 5 && a3 > 18)) continue; // muelles y camino grande
-      lug.push([a3, h3, b3]);
-    }
-    var ip = new T3.InstancedMesh(gp, MAT.palma, lug.length); ip.castShadow = true; ip.receiveShadow = true; ip.raycast = NOOP;
-    lug.forEach(function (q, i) { o3.position.set(q[0], q[1] - 0.1, q[2]); o3.rotation.set(0, rp() * 6.28, 0); o3.scale.setScalar(0.85 + rp() * 0.5); o3.updateMatrix(); ip.setMatrixAt(i, o3.matrix); });
-    raizL.add(ip);
-    // galeones amarrados y navegando
-    var amarrados = [[F + 11, -14.6, 0], [F + 10, 30.6, 0]].map(function (q) { var s = galeon(0.85); s.position.set(q[0], ISLA.agua + 1.25, q[1]); s.rotation.y = q[2]; raizL.add(s); return s; });
-    var navegan = [0, 1].map(function (i) { var s = galeon(0.8); raizL.add(s); return { g: s, th: i * Math.PI, v: 0.045 + i * 0.01 }; });
-    // espuma y bruma al pie de las cascadas + destellos del tesoro (una sola llamada de dibujo)
-    var nE = cascadas.length * 40 + tesoros.length * 6, pe = new Float32Array(nE * 3), fe = new Float32Array(nE), te = new Float32Array(nE), ti = new Float32Array(nE), q2 = 0;
-    cascadas.forEach(function (w) { for (var j = 0; j < 40; j++) { pe[q2 * 3] = w.a + (Math.random() - 0.5) * 7; pe[q2 * 3 + 1] = w.y; pe[q2 * 3 + 2] = w.b + (Math.random() - 0.5) * 3; fe[q2] = Math.random() * 10; te[q2] = 0.9 + Math.random() * 1.2; ti[q2] = 0; q2++; } });
-    tesoros.forEach(function (p) { for (var j = 0; j < 6; j++) { pe[q2 * 3] = p.x + (Math.random() - 0.5) * 1.2; pe[q2 * 3 + 1] = p.y + Math.random() * 0.4; pe[q2 * 3 + 2] = p.z + (Math.random() - 0.5) * 1.2; fe[q2] = Math.random() * 10; te[q2] = 0.25; ti[q2] = 1; q2++; } });
+    var cord = crearCordillera(c); raizW.add(cord);
+    var k = new Cons(), kp = new Cons(), espuma = [];
+    // ---------- plaza central: rosa de los vientos en el suelo, bordillo de piedra, estandartes y antorchas ----------
+    var rosa = new T3.Mesh(new T3.CircleGeometry(12, 64), new T3.MeshStandardMaterial({ map: texRosa(), roughness: 0.85 })); rosa.rotation.x = -Math.PI / 2; rosa.position.y = 0.05; rosa.receiveShadow = true; rosa.raycast = NOOP; rosa.material.userData.tkpSinVentanas = true; raizL.add(rosa);
+    for (var i = 0; i < 56; i++) { var an = i / 56 * Math.PI * 2; kp.caja(1.3, 0.32, 0.55, i % 2 ? 0x8d8473 : 0x9a907e, Math.cos(an) * 12.4, 0.16, Math.sin(an) * 12.4, -an + Math.PI / 2); }
+    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { var a = q[0] * 10.2, b = q[1] * 10.2; k.cil(0.1, 4.2, COL.maderaOsc, a, 2.1, b, 6); k.caja(0.06, 0.06, 1.3, COL.maderaOsc, a, 4.1, b); estandarte(raizL, a, 4.05, b, 2.6, Math.PI / 4 * (q[0] * q[1]), (q[0] + q[1]) === 0); k.cil(0.08, 1.6, COL.maderaOsc, a + q[0] * 1.6, 0.8, b, 5); LUCES.push({ x: a + q[0] * 1.6, y: 1.75, z: b, local: true }); });
+    // ---------- bordes de piedra alrededor de cada parcela (instanciados) ----------
+    var piedras = [];
+    c.slots.forEach(function (s) { if (s.campo || !s.terreno) return; var l = c.aLocal(s.pos.x, s.pos.z), m = 3.6; for (var e = -m; e <= m + 0.01; e += 1.2) { piedras.push([l.a + e, l.b - m], [l.a + e, l.b + m]); if (Math.abs(e) < m - 0.1) piedras.push([l.a - m, l.b + e], [l.a + m, l.b + e]); } });
+    var V = prepararVegetacion(), imB = new T3.InstancedMesh(V.roca, MAT.rocaPBR, piedras.length), ob = new T3.Object3D(), rb = azar(3);
+    piedras.forEach(function (p, i) { ob.position.set(p[0], 0.02, p[1]); ob.rotation.set(0, rb() * 6.28, 0); ob.scale.set(0.42 + rb() * 0.12, 0.32, 0.38 + rb() * 0.1); ob.updateMatrix(); imB.setMatrixAt(i, ob.matrix); });
+    imB.receiveShadow = true; imB.castShadow = true; imB.raycast = NOOP; raizL.add(imB);
+    // ---------- escaleras de piedra entre niveles ----------
+    function escalera(a0, y0, a1, y1, b, ancho) { var n = Math.max(3, Math.round(Math.abs(y1 - y0) / 0.42)); for (var s = 0; s < n; s++) { var t = (s + 0.5) / n, y = y0 + (y1 - y0) * t; kp.caja(Math.abs(a1 - a0) / n + 0.08, Math.abs(y - Math.min(y0, y1)) + 0.45, ancho, s % 2 ? 0x8d8473 : 0x9a907e, a0 + (a1 - a0) * t, (y + Math.min(y0, y1)) / 2 - 0.2, b); } [-1, 1].forEach(function (l) { for (var s2 = 0; s2 <= n; s2 += 2) { var t2 = s2 / n; kp.caja(0.7, 0.9, 0.6, 0x7a7262, a0 + (a1 - a0) * t2, y0 + (y1 - y0) * t2 + 0.25, b + l * (ancho / 2 + 0.3)); } }); }
+    escalera(45.2, 0, 49.6, ISLA.playa, 0, 9);                            // villa → playa de la bahía
+    escalera(-40.0, 0, -43.6, ISLA.terraza, 34, 4.5); escalera(-40.0, 0, -43.6, ISLA.terraza, -34, 4.5); // villa → terraza
+    [[45.6, 5], [45.6, -5], [-40.4, 36.8], [-40.4, 31.2], [-40.4, -36.8], [-40.4, -31.2]].forEach(function (q) { k.cil(0.08, 1.6, COL.maderaOsc, q[0], 0.8, q[1], 5); LUCES.push({ x: q[0], y: 1.75, z: q[1], local: true }); });
+    // ---------- montaña de la calavera (al fondo) y cascadas ----------
+    var mon = null; // se pone en revisarFortaleza (depende del nivel del castillo)
+    var ridgeH = function (a, b) { var cae = smooth(-56, -66, a), pico = 12 + 26 * Math.pow(fbm(a * 0.045 + 3, b * 0.05), 1.4) + 8 * Math.abs(vruido(a * 0.12, b * 0.12) - 0.5), barr = 1 - 0.55 * Math.exp(-Math.pow((Math.abs(b) - 24) / 4, 2)) * smooth(-58, -70, a); return cae * pico * barr * (1 - 0.6 * Math.exp(-b * b / 320) * smooth(-75, -60, a)) + ISLA.terraza - 0.4; };
+    function bocaCascada(b, alto) { for (var a = -57; a > -95; a -= 0.5) if (ridgeH(a, b) > alto) return new T3.Vector3(a + 1.0, ridgeH(a, b) - 0.5, b); return new T3.Vector3(-70, alto, b); }
+    var charcas = [];
+    [[-24, 21, 2.4], [24.5, 14, 1.9]].forEach(function (q) { var t = bocaCascada(q[0], q[1]), bot = new T3.Vector3(-54.5, ISLA.terraza + 0.12, q[0]); cascada(fondo, t, bot, q[2], espuma); charcas.push(bot); });
+    cascada(raizL, new T3.Vector3(6, 0.2, -47.8), new T3.Vector3(6, ISLA.agua + 0.1, -54), 2.0, espuma);      // la tercera: del borde de la villa al mar
+    var mPoza = new T3.MeshStandardMaterial({ color: 0x3fb9c8, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.88 }); mPoza.userData.tkpSinVentanas = true;
+    charcas.forEach(function (p) { var po = new T3.Mesh(new T3.CircleGeometry(4.2, 28), mPoza); po.rotation.x = -Math.PI / 2; po.position.set(p.x - 0.6, ISLA.terraza + 0.08, p.z); po.raycast = NOOP; fondo.add(po); for (var r = 0; r < 14; r++) { var a = r / 14 * Math.PI * 2; ISL_ROCAS.push([p.x - 0.6 + Math.cos(a) * 4.4, ISLA.terraza, p.z + Math.sin(a) * 4.4, 0.5 + Math.random() * 0.5]); } });
+    // ---------- bahía: islote con atalaya, muelle corto en la playa ----------
+    var isl = rocaMalla(esculpir(sdIslote, { x: -10, y: -9, z: -10 }, { x: 10, y: 6, z: 10 }, 0.5, colorRoca)); isl.position.set(90, ISLA.agua + 2.2, 13); raizL.add(isl);
+    var topI = ISLA.agua + 2.2 + 3.6;
+    function atalaya(a, y, b, giro) { for (var p = 0; p < 4; p++) { var an2 = p / 4 * Math.PI * 2 + Math.PI / 4; k.viga(new T3.Vector3(a + Math.cos(an2) * 1.5, y, b + Math.sin(an2) * 1.5), new T3.Vector3(a + Math.cos(an2) * 1.0, y + 5, b + Math.sin(an2) * 1.0), 0.18, COL.maderaOsc, 6); } k.caja(2.8, 0.18, 2.8, COL.madera, a, y + 5, b); for (var rr = 0; rr < 4; rr++) { var an3 = rr / 4 * Math.PI * 2; k.caja(2.8, 0.7, 0.08, COL.maderaCl, a + Math.cos(an3) * 1.36, y + 5.4, b + Math.sin(an3) * 1.36, an3 + Math.PI / 2); } k.add(new T3.ConeGeometry(1, 1, 4), mat4(a, y + 6.6, b, 0, Math.PI / 4, 0, 2.6, 1.8, 2.6), COL.paja); k.cil(0.05, 2, COL.maderaOsc, a, y + 7.6, b, 5); bandera(raizL, a, y + 8.3, b, 1.5, 1.0, giro || 0); LUCES.push({ x: a, y: y + 5.6, z: b + 1.0, local: true }); }
+    atalaya(90, topI, 13, 0);
+    var nL = LUCES.length, mu = new Cons(); muelle(mu, 56, -12, 72, -12, 2.8); var mm = mu.malla(); mm.position.y = ISLA.agua + 1.25; raizL.add(mm);
+    for (var lq = nL; lq < LUCES.length; lq++) LUCES[lq].y += ISLA.agua + 1.25;
+    // ---------- izquierda: islotes con puentes colgantes y atalaya; derecha: arco de roca ----------
+    var st1 = rocaMalla(esculpir(function (x, y, z) { return Math.max(sdElip(x, y, z, 0, 0, 0, 3.8, 9, 3.8) + (fbm3(x * 0.3, y * 0.3, z * 0.3) - 0.5) * 2.4, -(y + 9)); }, { x: -6, y: -9, z: -6 }, { x: 6, y: 10, z: 6 }, 0.45, colorRoca));
+    st1.position.set(-4, ISLA.agua - 1.5, -61); raizL.add(st1);
+    var st2 = rocaMalla(esculpir(function (x, y, z) { return Math.max(sdElip(x, y, z, 0, 0, 0, 4.5, 11.5, 4.5) + (fbm3(x * 0.3 + 4, y * 0.3, z * 0.3) - 0.5) * 2.6, -(y + 11)); }, { x: -7, y: -11, z: -7 }, { x: 7, y: 12.5, z: 7 }, 0.45, colorRoca));
+    st2.position.set(15, ISLA.agua - 0.5, -66); raizL.add(st2);
+    var t1 = ISLA.agua - 1.5 + 8.2, t2 = ISLA.agua - 0.5 + 10.6;
+    puente(k, new T3.Vector3(-4, 0.4, -47.5), new T3.Vector3(-4, t1 + 0.1, -58.8), 1.4); puente(k, new T3.Vector3(-3, t1 + 0.1, -62.5), new T3.Vector3(13, t2 + 0.1, -64.5), 1.4);
+    atalaya(15, t2, -66, 0.6);
+    var arco = rocaMalla(esculpir(sdArco, { x: -12.5, y: -9, z: -5.5 }, { x: 12.5, y: 12, z: 5.5 }, 0.5, colorRoca)); arco.position.set(30, ISLA.agua, 65); raizL.add(arco);
+    // ---------- estandartes en la avenida y antorchas en los cruces ----------
+    [18, 30, -20, -30].forEach(function (a) { [-1, 1].forEach(function (l) { k.cil(0.08, 3.4, COL.maderaOsc, a, 1.7, l * 3.2, 5); k.caja(0.06, 0.06, 1.1, COL.maderaOsc, a, 3.3, l * 3.2); estandarte(raizL, a, 3.25, l * 3.2, 2.0, 0, (a + l) % 2 === 0); }); });
+    (c.esquinas() || []).forEach(function (q, i) { if (i % 3) return; var l = c.aLocal(q.x, q.z); if (Math.hypot(l.a, l.b) < 16) return; k.cil(0.08, 1.7, COL.maderaOsc, l.a + 1.0, 0.85, l.b + 1.0, 5); k.cil(0.16, 0.2, COL.hierro, l.a + 1.0, 1.75, l.b + 1.0, 6); LUCES.push({ x: l.a + 1.0, y: 1.95, z: l.b + 1.0, local: true }); });
+    raizL.add(k.malla(MAT.solido)); raizL.add(kp.malla(MAT.rocaPBR));
+    // ---------- vegetación y rocas ----------
+    var cant = { baja: 0.45, media: 0.7, alta: 1.0, ultra: 1.3 }[(window.TKPremium && TKPremium.nivel && TKPremium.nivel()) || 'alta'] || 1;
+    var veg = repartirVegetacion(c, raizL, cant);
+    if (ISL_ROCAS.length) { var imR = new T3.InstancedMesh(V.roca, MAT.rocaPBR, ISL_ROCAS.length), orr = new T3.Object3D(); ISL_ROCAS.forEach(function (p, i) { orr.position.set(p[0], p[1], p[2]); orr.rotation.set(0, i * 2.3, 0); orr.scale.setScalar(p[3]); orr.updateMatrix(); imR.setMatrixAt(i, orr.matrix); }); imR.castShadow = true; imR.raycast = NOOP; fondo.add(imR); }
+    // rocas grandes a lo largo de los acantilados de la costa (dan el borde rocoso de la imagen)
+    var costa = [], rc = azar(808);
+    for (var t = 0; t < 4000 && costa.length < 220 * cant; t++) { var a = ISLA.terr.a0 + rc() * (115 - ISLA.terr.a0), b = (rc() - 0.5) * 2 * (ISLA.hb + 10), d = tierra(a, b); if (d < -1.5 || d > 3.5) continue; if (a > 47 && enBahia(a, b) < 2 && Math.abs(b) < 30) continue; var h = altura(a, b); costa.push([a, Math.max(ISLA.agua - 1, h - 1.2), b, 1.4 + rc() * 2.8]); }
+    var imC = new T3.InstancedMesh(V.roca, MAT.rocaPBR, costa.length), oc = new T3.Object3D(); costa.forEach(function (p, i) { oc.position.set(p[0], p[1], p[2]); oc.rotation.set(rc() * 0.5, rc() * 6.28, rc() * 0.5); oc.scale.set(p[3], p[3] * (0.9 + rc() * 0.9), p[3]); oc.updateMatrix(); imC.setMatrixAt(i, oc.matrix); }); imC.castShadow = true; imC.receiveShadow = true; imC.raycast = NOOP; raizL.add(imC);
+    // ---------- galeones: uno fondeado en la bahía y dos navegando fuera ----------
+    var amarrados = [[78, -18, 0.25]].map(function (q) { var s = galeon(0.8); s.position.set(q[0], ISLA.agua + 1.25, q[1]); s.rotation.y = q[2]; raizL.add(s); return s; });
+    var navegan = [0, 1].map(function (i) { var s = galeon(0.75); raizL.add(s); return { g: s, th: i * Math.PI, v: 0.04 + i * 0.012 }; });
+    // ---------- espuma y bruma al pie de las cascadas (una sola llamada de dibujo) ----------
+    var nE = espuma.length, pe = new Float32Array(nE * 3), fe = new Float32Array(nE), te = new Float32Array(nE), ti = new Float32Array(nE);
+    espuma.forEach(function (p, j) { pe[j * 3] = p[0]; pe[j * 3 + 1] = p[1]; pe[j * 3 + 2] = p[2]; fe[j] = Math.random() * 10; te[j] = 0.9 + Math.random() * 1.3; ti[j] = 0; });
     var ge = new T3.BufferGeometry(); ge.setAttribute('position', new T3.BufferAttribute(pe, 3)); ge.setAttribute('fase', new T3.BufferAttribute(fe, 1)); ge.setAttribute('tam', new T3.BufferAttribute(te, 1)); ge.setAttribute('tipo', new T3.BufferAttribute(ti, 1));
-    var me = new T3.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uT: U.t, uEsc: { value: 400 } },
-      vertexShader: 'attribute float fase; attribute float tam; attribute float tipo; uniform float uT; uniform float uEsc; varying float vA; varying float vTi; void main(){ vec3 p = position; float c = fract(uT * 0.35 + fase * 0.1); if (tipo < 0.5) { p.y += c * 2.4; p.x += sin(fase + uT) * 0.4; vA = (1.0 - c) * 0.6; } else { vA = pow(max(0.0, sin(uT * 2.0 + fase * 3.0)), 12.0); } vTi = tipo; vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_PointSize = clamp(tam * (tipo < 0.5 ? 1.0 + c * 1.5 : 1.0) * uEsc / -mv.z, 0.0, 90.0); gl_Position = projectionMatrix * mv; }',
-      fragmentShader: 'varying float vA; varying float vTi; void main(){ vec2 q = gl_PointCoord - 0.5; float d = dot(q, q) * 4.0; if (vTi > 0.5) { float s = max(0.0, 1.0 - abs(q.x) * 14.0) + max(0.0, 1.0 - abs(q.y) * 14.0); float a = (exp(-d * 6.0) + s * 0.6) * vA; if (a < 0.02) discard; gl_FragColor = vec4(vec3(1.0, 0.85, 0.4) * a * 2.5, a); } else { float a = exp(-d * 2.0) * vA; if (a < 0.02) discard; gl_FragColor = vec4(vec3(0.95, 0.98, 1.0), a); } }' });
-    var espuma = new T3.Points(ge, me); espuma.frustumCulled = false; espuma.renderOrder = 6; raizL.add(espuma);
-    ISL = { raizW: raizW, raizL: raizL, navegan: navegan, amarrados: amarrados, espuma: espuma, lucesFijas: LUCES.slice(), fort: null, nvFort: 0 };
+    var me = new T3.ShaderMaterial({ transparent: true, depthWrite: false, uniforms: { uT: U.t, uEsc: { value: 400 }, uN: U.noche },
+      vertexShader: 'attribute float fase; attribute float tam; uniform float uT; uniform float uEsc; varying float vA; void main(){ vec3 p = position; float c = fract(uT * 0.35 + fase * 0.1); p.y += c * 2.6; p.x += sin(fase + uT) * 0.5; vA = (1.0 - c) * 0.55; vec4 mv = modelViewMatrix * vec4(p, 1.0); gl_PointSize = clamp(tam * (1.0 + c * 1.6) * uEsc / -mv.z, 0.0, 90.0); gl_Position = projectionMatrix * mv; }',
+      fragmentShader: 'uniform float uN; varying float vA; void main(){ vec2 q = gl_PointCoord - 0.5; float a = exp(-dot(q, q) * 8.0) * vA; if (a < 0.02) discard; gl_FragColor = vec4(vec3(0.95, 0.98, 1.0) * mix(1.0, 0.35, uN), a); }' });
+    var esp = new T3.Points(ge, me); esp.frustumCulled = false; esp.renderOrder = 6; raizL.add(esp);
+    ISL = { raizW: raizW, raizL: raizL, fondo: fondo, cordillera: cord, navegan: navegan, amarrados: amarrados, espuma: esp, lucesFijas: LUCES.slice(), fort: null, nvFort: 0, veg: veg.cuenta };
+    LUCES.length = 0;
     return ISL;
   }
-
+  var ISL_ROCAS = [];
   // ======================================================================
   //  ENCENDER / APAGAR: solo en la 2.ª villa. La ciudad medieval se esconde (no se borra) y vuelve intacta.
   // ======================================================================
-  function tomarFoto(esc) { foto = new Map(); esc.children.forEach(function (o) { foto.set(o, o.position.clone()); }); }
+  // registro de lo que hay en la escena: lo que lleva un rato quieto y no es del juego es decoración de la ciudad medieval
+  function tomarFoto(esc) { foto = new Map(); var t = -1e9; esc.children.forEach(function (o) { foto.set(o, { p: o.position.clone(), t: t, movio: false }); }); }
+  function registrar(esc) { var ahora = performance.now(); esc.children.forEach(function (o) { var r = foto.get(o); if (!r) foto.set(o, { p: o.position.clone(), t: ahora, movio: false }); else if (!r.movio && o.position.distanceToSquared(r.p) > 0.01) r.movio = true; }); }
   function esMedieval(o, c, esc) {
     if (o === ISL.raizW || o.isLight || o.isCamera || o === esc.userData.domo || o === esc.userData.estrellas) return false;
     if (o.name === 'luciernagas') return true;
     if (o === c.castillo() || o === c.muralla() || (c.torres() || []).some(function (t) { return t.grupo === o; })) return true;
-    if (!foto || !foto.has(o)) return false;                    // lo que nace durante el juego (tropas, humo, efectos) se queda
-    if (o.isSprite || o.userData.tkpNo || o.userData.barricada) return false;
+    var r = foto && foto.get(o); if (!r || r.movio) return false;           // aldeanos, tropas, humo y efectos se mueven: se quedan
+    if (performance.now() - r.t < 2500) return false;                         // recién nacido: se espera a ver si se mueve
+    if (o.isSprite || o.isPoints || o.userData.tkpNo || o.userData.barricada) return false;
+    if (o.material && o.material.isShaderMaterial) return false;              // cielo, cúpula de protección
     if (o.userData.v !== undefined && o.userData.r !== undefined) return false;   // nubes
     if (c.slots.some(function (s) { return s.grupo === o || s.terreno === o; })) return false;
-    if (o.position.distanceToSquared(foto.get(o)) > 0.01) return false;          // se movió: es un aldeano o un animal
     return true;
   }
   function ocultar(c, esc) {
+    registrar(esc);
     esc.children.forEach(function (o) { if (o.visible && esMedieval(o, c, esc)) { o.visible = false; ocultos.push(o); } });
     // lo que se escondió por error (un aldeano que estaba quieto) vuelve en cuanto se mueve
     for (var i = ocultos.length - 1; i >= 0; i--) { var o = ocultos[i]; if (!esMedieval(o, c, esc) && o.parent === esc) { o.visible = true; ocultos.splice(i, 1); } }
@@ -543,20 +841,21 @@
     activa = false; document.body.classList.remove('tkc-corsarios');
     if (ISL) esc.remove(ISL.raizW);
     ocultos.forEach(function (o) { o.visible = true; }); ocultos = [];
-    c.slots.forEach(function (s) { quitarPirata(s); });
+    c.slots.forEach(function (s) { quitarPirata(s); if (s.campo && s.grupo) s.grupo.visible = true; });
+    quitarProxy(c);
     piratas.forEach(function (p) { esc.remove(p.g); }); piratas = [];
     version++;
   }
   // ---------- cada parcela con edificio: su versión pirata (mismo sitio, mismo toque; la medieval queda escondida) ----------
   var yawCara = null, version = 0, lucesEdif = [];
-  function quitarPirata(s) { if (s.tkc) { s.grupo.remove(s.tkc); s.tkc.traverse(function (m) { if (m.isMesh && m.geometry && m.geometry !== GEO.box) m.geometry.dispose(); }); s.tkc = null; } if (s.modelo) s.modelo.visible = true; s.tkcClave = null; }
+  function quitarPirata(s) { if (s.tkc) { s.grupo.remove(s.tkc); s.tkc.traverse(function (m) { if (m.isMesh && m.geometry && m.geometry !== GEO.box) m.geometry.dispose(); }); s.tkc = null; } if (s.modelo) s.modelo.visible = true; if (s.adornos) s.adornos.visible = true; s.tkcClave = null; }
   var bbM = new T3.Box3(), bbP = new T3.Box3(), vT = new T3.Vector3(), vT2 = new T3.Vector3();
   function sincronizarParcelas(c) {
     var cambio = false;
     c.slots.forEach(function (s) {
-      var quiere = s.edificio && !s.campo && s.modelo && TIPOS_OK(s.edificio.tipo);
+      var quiere = s.edificio && !s.campo && s.modelo;
       var clave = quiere ? s.edificio.tipo + ':' + s.edificio.nivel + ':' + s.modelo.uuid : null;
-      if (clave === s.tkcClave) { if (s.tkc && s.modelo && s.modelo.visible) s.modelo.visible = false; return; }
+      if (clave === s.tkcClave) { if (s.tkc && s.modelo && s.modelo.visible) s.modelo.visible = false; if (s.tkc && s.adornos && s.adornos.visible) s.adornos.visible = false; return; }
       quitarPirata(s); cambio = true; if (!quiere) return;
       s.modelo.visible = true; s.modelo.updateMatrixWorld(true); bbM.setFromObject(s.modelo); if (bbM.isEmpty()) return;
       var p = edificioPirata(s.edificio.tipo, s.edificio.nivel); p.updateMatrixWorld(true); bbP.setFromObject(p);
@@ -565,7 +864,7 @@
       var cen = bbM.getCenter(new T3.Vector3()); cen.y = bbM.min.y;
       s.grupo.updateMatrixWorld(true); var loc = s.grupo.worldToLocal(cen.clone()); p.position.copy(loc);
       var gq = new T3.Quaternion(); s.grupo.getWorldQuaternion(gq); var gyaw = new T3.Euler().setFromQuaternion(gq, 'YXZ').y; p.rotation.y = yawCara - gyaw;
-      s.modelo.visible = false; s.grupo.add(p); s.tkc = p; s.tkcClave = clave;
+      s.modelo.visible = false; if (s.adornos) s.adornos.visible = false; s.grupo.add(p); s.tkc = p; s.tkcClave = clave;
       p.updateMatrixWorld(true); p.userData.lucesMundo = (p.userData.luces || []).map(function (q) { var w = p.localToWorld(new T3.Vector3(q.x, q.y, q.z)); return { x: w.x, y: w.y, z: w.z, faro: q.faro }; });
     });
     if (cambio) { lucesEdif = []; c.slots.forEach(function (s) { if (s.tkc) lucesEdif = lucesEdif.concat(s.tkc.userData.lucesMundo || []); }); version++; }
@@ -574,11 +873,27 @@
   // ---------- fortaleza: se rehace si sube el castillo ----------
   function revisarFortaleza(c) {
     var nv = (window.__juego && __juego.estado && __juego.estado().castillo) || 1;
-    if (ISL.fort && ISL.nvFort === nv) return;
-    if (ISL.fort) { ISL.raizL.remove(ISL.fort); }
-    LUCES.length = 0; ISL.fort = fortaleza(nv); ISL.nvFort = nv; ISL.lucesFort = LUCES.slice(); LUCES.length = 0;
-    var ca = c.castillo(), atras = 0; if (ca) { var b = new T3.Box3().setFromObject(ca); if (!b.isEmpty()) { var cc = b.getCenter(new T3.Vector3()), l = c.aLocal(cc.x, cc.z); ISL.fort.position.set(l.a, 0, l.b); } }
-    ISL.raizL.add(ISL.fort); version++;
+    if (!ISL.fort || ISL.nvFort !== nv) {
+      if (ISL.fort) ISL.fondo.remove(ISL.fort);
+      LUCES.length = 0; ISL.fort = monte(nv); ISL.nvFort = nv; ISL.lucesFort = LUCES.slice(); LUCES.length = 0;
+      ISL.fort.position.set(-62, ISLA.terraza, 0); ISL.fondo.add(ISL.fort); version++;
+    }
+    proxyCastillo(c);
+  }
+  // tocar la calavera abre el castillo (el castillo de verdad sigue en su sitio, invisible; su centro ya no se toca: ahí está la plaza)
+  var PROXY = null;
+  function proxyCastillo(c) {
+    var ca = c.castillo(); if (!ca || !ISL.fort) return;
+    if (PROXY && PROXY.parent === ca) return;
+    ca.traverse(function (m) { if (m.isMesh && m !== PROXY && !m.userData.tkcRay) { m.userData.tkcRay = m.raycast; m.raycast = NOOP; } });
+    ISL.fort.updateMatrixWorld(true); ca.updateMatrixWorld(true);
+    var centro = ISL.fort.localToWorld(new T3.Vector3(0, 12, 0)), esc = new T3.Vector3(); ca.getWorldScale(esc);
+    PROXY = new T3.Mesh(new T3.BoxGeometry(24 / esc.x, 26 / esc.y, 26 / esc.z), new T3.MeshBasicMaterial()); PROXY.visible = false; PROXY.userData.tkcProxy = true;
+    PROXY.position.copy(ca.worldToLocal(centro)); ca.add(PROXY);
+  }
+  function quitarProxy(c) {
+    var ca = c.castillo(); if (PROXY && PROXY.parent) PROXY.parent.remove(PROXY); PROXY = null;
+    if (ca) ca.traverse(function (m) { if (m.isMesh && m.userData.tkcRay) { m.raycast = m.userData.tkcRay; delete m.userData.tkcRay; } });
   }
   // ---------- piratas por los caminos (con su tricornio) ----------
   var piratas = [];
@@ -612,7 +927,7 @@
     m.onBeforeCompile = function (sh) { sh.uniforms.uT = U.t; sh.vertexShader = 'uniform float uT;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n float fa = float(gl_InstanceID) * 2.3; float al = sin(uT * 7.0 + fa); transformed.y += abs(position.x) * (al > 0.6 ? al : 0.15 * al) * 0.8;'); };
     m.customProgramCacheKey = function () { return 'tkcGaviota'; };
     var im = new T3.InstancedMesh(g, m, n); im.frustumCulled = false; im.raycast = NOOP;
-    var l = []; for (var i = 0; i < n; i++) l.push({ a: Math.random() * 6.28, r: 10 + Math.random() * 30, y: 7 + Math.random() * 9, v: (0.18 + Math.random() * 0.15) * (i % 2 ? 1 : -1), c: [ISLA.frente + 8 + Math.random() * 25, (Math.random() - 0.5) * 50] });
+    var l = []; for (var i = 0; i < n; i++) l.push({ a: Math.random() * 6.28, r: 10 + Math.random() * 30, y: 7 + Math.random() * 9, v: (0.18 + Math.random() * 0.15) * (i % 2 ? 1 : -1), c: [ISLA.bahia.a - 6 + Math.random() * 20, (Math.random() - 0.5) * 50] });
     gaviotas = { m: im, l: l }; ISL.raizL.add(im);
   }
   function moverGaviotas(dt) {
@@ -623,7 +938,7 @@
   // ---------- barcos navegando y meciéndose ----------
   function moverBarcos(dt) {
     ISL.navegan.forEach(function (n, i) {
-      n.th += n.v * dt; var ca = ISLA.frente + 40, ra = 14, rb = 75, x = ca + Math.cos(n.th) * ra, z = Math.sin(n.th) * rb, dx = -Math.sin(n.th) * ra, dz = Math.cos(n.th) * rb;
+      n.th += n.v * dt; var ca = 128, ra = 10, rb = 72, x = ca + Math.cos(n.th) * ra, z = Math.sin(n.th) * rb, dx = -Math.sin(n.th) * ra, dz = Math.cos(n.th) * rb;
       n.g.position.set(x, ISLA.agua + 1.2 + Math.sin(tiempo * 0.9 + i) * 0.12, z); n.g.rotation.set(Math.sin(tiempo * 0.7 + i) * 0.035, -Math.atan2(dz, dx), Math.sin(tiempo * 0.55 + i * 2) * 0.05);
     });
     ISL.amarrados.forEach(function (s, i) { s.rotation.x = Math.sin(tiempo * 0.6 + i * 1.7) * 0.02; s.position.y = ISLA.agua + 1.25 + Math.sin(tiempo * 0.8 + i) * 0.06; });
@@ -636,7 +951,7 @@
     lucesEdif.forEach(function (q) { l.push({ x: q.x, y: q.y, z: q.z, tipo: 'isla', base: 0, puerta: true }); });
     return l;
   }
-  var cOjo = new T3.Color(), cOjoDia = new T3.Color(0x1a0c06), cOjoNoche = new T3.Color(1.6, 0.55, 0.12), cFarolNoche = new T3.Color(1.5, 0.95, 0.4), cFarolDia = new T3.Color(0x3a2a14);
+  var cOjo = new T3.Color(), cOjoDia = new T3.Color(0.95, 0.34, 0.07), cOjoNoche = new T3.Color(1.9, 0.62, 0.12), cFarolNoche = new T3.Color(1.5, 0.95, 0.4), cFarolDia = new T3.Color(0x3a2a14);
   // ======================================================================
   //  BUCLE
   // ======================================================================
@@ -649,8 +964,13 @@
     if (quiere && !activa) { if (yawCara === null) { var cp = x.camara.position, ob = c.cam.objetivo; yawCara = Math.atan2(cp.x - ob.x, cp.z - ob.z); } activar(c, esc); }
     else if (!quiere && activa) desactivar(c, esc);
     if (!activa) return;
+    for (var oi = 0; oi < ocultos.length; oi++) ocultos[oi].visible = false; // el juego vuelve a encender algunos grupos en cada fotograma (detalles de cerca)
+    if (esc.fog) { esc.fog.near += 160; esc.fog.far += 260; } // aire limpio de isla: la niebla solo funde el mar lejano con el horizonte
+    U_FILL.dir.value.set(c.ejeU.x * 0.75, 0.55, c.ejeU.z * 0.75).normalize(); U_FILL.col.value.setRGB(0.42, 0.36, 0.28).multiplyScalar(1 - 0.7 * c.noche());
     var k = c.noche(); U.noche.value = k; U.viento.value = 1 + Math.sin(tiempo * 0.21) * 0.25;
     if (MAT.ojos) { MAT.ojos.color.copy(cOjoDia).lerp(cOjoNoche, Math.min(1, k * 1.2)); MAT.farol.color.copy(cFarolDia).lerp(cFarolNoche, Math.min(1, k * 1.2)); }
+    var enCampos = c.vista() === 'campos'; if (ISL.fondo) ISL.fondo.visible = !enCampos; if (ISL.cordillera) ISL.cordillera.visible = !enCampos;
+    c.slots.forEach(function (s) { if (s.campo && s.grupo) s.grupo.visible = enCampos; });
     sincronizarParcelas(c);
     var ahoraR = performance.now(); revisaT -= (ahoraR - (revisaUlt || ahoraR)) / 1000; revisaUlt = ahoraR;
     if (revisaT <= 0) { revisaT = 0.6; ocultar(c, esc); revisarFortaleza(c); crearPiratas(c, esc); if (!gaviotas) crearGaviotas(); }
@@ -666,6 +986,6 @@
   window.TKCorsarios = {
     activa: function () { return activa; }, version: function () { return version; }, antorchas: antorchas,
     forzar: function (v) { FORZAR = v === undefined ? true : v === null ? null : !!v; },
-    estado: function () { var c = C(); return { activa: activa, villa: c ? c.villa() : null, ocultos: ocultos.length, edificios: c ? c.slots.filter(function (s) { return s.tkc; }).length : 0, luces: activa ? antorchas().length : 0, piratas: piratas.length, barcos: ISL ? ISL.navegan.length + ISL.amarrados.length : 0, fortaleza: ISL ? ISL.nvFort : 0 }; }
+    estado: function () { var c = C(); return { veg: ISL && ISL.veg, monteMs: ISL && ISL.fort && ISL.fort.userData.ms, activa: activa, villa: c ? c.villa() : null, ocultos: ocultos.length, edificios: c ? c.slots.filter(function (s) { return s.tkc; }).length : 0, luces: activa ? antorchas().length : 0, piratas: piratas.length, barcos: ISL ? ISL.navegan.length + ISL.amarrados.length : 0, fortaleza: ISL ? ISL.nvFort : 0 }; }
   };
 })();

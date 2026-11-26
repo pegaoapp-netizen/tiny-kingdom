@@ -6722,7 +6722,7 @@
       var lc = aLocal(cam.meta.x, cam.meta.z), aMin, aMax, bMax;
       // v7.69: cuanto más cerca, más se puede recorrer la villa (de lejos se queda centrada para que no se vean los campos)
       // v7.70: a los lados y hacia delante se llega a TODA la villa (antes el lado de la ruleta quedaba fuera); hacia atrás el tope depende del zoom para que no se vean los campos
-      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz; aMax = R_CIUDAD * (window.TKCorsarios && TKCorsarios.activa() ? 1.45 : 0.95); bMax = R_CIUDAD * 0.92; } /* v9.93: en la Bahía de los Corsarios se puede bajar hasta el puerto */
+      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz - (window.TKCorsarios && TKCorsarios.activa() ? 38 : 0); aMax = R_CIUDAD * (window.TKCorsarios && TKCorsarios.activa() ? 1.45 : 0.95); bMax = R_CIUDAD * 0.92; } /* v9.93: en la Bahía de los Corsarios se puede bajar hasta el puerto */
       else { aMin = CAMPOS_RECT.a - 14; aMax = CAMPOS_RECT.a + 14; bMax = CAMPOS_RECT.hb - 20; }
       var na = Math.max(aMin, Math.min(aMax, lc.a)), nb = Math.max(-bMax, Math.min(bMax, lc.b));
       if (na !== lc.a || nb !== lc.b) {
