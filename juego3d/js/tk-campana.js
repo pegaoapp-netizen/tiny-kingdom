@@ -155,11 +155,11 @@
   function escuadronHeroe(h, i) {
     var p = punto(0.14 + (i % 2) * 0.05, -0.8 + i * 0.4);
     var vida = h.vida * 3, atk = h.dano * 2.2;
-    return { lado: 'az', h: h, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: h.distancia ? 0.30 : 0.07, ritmo: h.distancia ? 1.1 : 0.85, cd: 0.3 + i * 0.12, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: img(h.foto) };
+    return { lado: 'az', h: h, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: h.distancia ? 0.30 : 0.12, ritmo: h.distancia ? 1.1 : 0.85, cd: 0.3 + i * 0.12, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: img(h.foto) };
   }
   function escuadronTropa(t, n, i) {
     var p = punto(0.05, -0.75 + i * 0.5), fz = Math.cbrt(n) * 0.5, vida = t.vida * 3 * fz, atk = t.dano * 2.2 * fz;
-    return { lado: 'az', tropa: t.k, nT: n, h: { nombre: t.nombre, foto: '', hab: 'golpe', clase: t.distancia ? 'arquero' : 'infanteria', nivel: 1 }, ico: t.ico, i: 100 + i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: t.distancia ? 0.30 : 0.07, ritmo: t.distancia ? 1.1 : 0.9, cd: 0.5 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: null };
+    return { lado: 'az', tropa: t.k, nT: n, h: { nombre: t.nombre, foto: '', hab: 'golpe', clase: t.distancia ? 'arquero' : 'infanteria', nivel: 1 }, ico: t.ico, i: 100 + i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: t.distancia ? 0.30 : 0.12, ritmo: t.distancia ? 1.1 : 0.9, cd: 0.5 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, im: null };
   }
   // v8.29: los enemigos suben con la etapa Y con el nivel de tus héroes (crecen igual que un héroe al subir de nivel);
   // lo que te da ventaja es el equipo, las estrellas, la Maestría y los talentos
@@ -167,13 +167,13 @@
   function escuadronEnemigo(n, i) {
     var f = Math.pow(1.13, n - 1) * (1 + 0.06 * (nivelRival - 1)) * 1.4, e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4), jefe = i === 2 && n % 5 === 0;
     var vida = 1500 * f * (jefe ? 1.8 : 1), atk = 52 * f * (jefe ? 1.5 : 1);
-    return { lado: 'ro', ico: jefe ? '🐲' : e.ico, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.07, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: jefe, d: e.d };
+    return { lado: 'ro', ico: jefe ? '🐲' : e.ico, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: jefe, d: e.d };
   }
   /* v9.00: enemigos de una misión: e = { ico, nom, v (vida ×), a (ataque ×), d (a distancia), vel, jefe, habs, sana } */
   function escuadronMision(e, i, n, t0) {
     var f = mis.f * (1 + 0.06 * (nivelRival - 1)), carril = e.jefe ? 0 : (n > 1 ? -0.85 + i * 1.7 / (n - 1) : 0), p = punto(t0 || (e.jefe ? 0.9 : 0.86 - (i % 2) * 0.05), carril);
     var vida = 1500 * f * (e.v || 1), atk = 52 * f * (e.a || 1);
-    return { lado: 'ro', ico: e.ico, nom: e.nom, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.07, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: !!e.jefe, d: !!e.d, vel: e.vel || 1, habs: e.habs || null, nh: 0, sana: e.sana ? 4 : 0, invoca: e.invoca || null };
+    return { lado: 'ro', ico: e.ico, nom: e.nom, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: !!e.jefe, d: !!e.d, vel: e.vel || 1, habs: e.habs || null, nh: 0, sana: e.sana ? 4 : 0, invoca: e.invoca || null };
   }
   function armarLados() {
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
@@ -366,7 +366,7 @@
     });
     // que no se encimen
     var vs = lado.az.concat(lado.ro).filter(function (u) { return u.vivo; });
-    for (var i = 0; i < vs.length; i++) for (var j = i + 1; j < vs.length; j++) { var a = vs[i], b = vs[j], dd = dist(a, b); if (dd < 30 && dd > 0.01) { var e = (30 - dd) / 2, ux = (a.x - b.x) / dd, uy = (a.y - b.y) / dd; a.x += ux * e; a.y += uy * e; b.x -= ux * e; b.y -= uy * e; } }
+    for (var i = 0; i < vs.length; i++) for (var j = i + 1; j < vs.length; j++) { var a = vs[i], b = vs[j], dd = dist(a, b); if (dd < 46 && dd > 0.01) { var e = (46 - dd) / 2 /* v9.38 (dueño): que no se acerquen tanto */, ux = (a.x - b.x) / dd, uy = (a.y - b.y) / dd; a.x += ux * e; a.y += uy * e; b.x -= ux * e; b.y -= uy * e; } }
     if (mis) refuerzos.forEach(function (r) { if (!r.ya && tPelea >= r.t) { r.ya = true; var n0 = lado.ro.length; r.l.forEach(function (e, k) { var m = escuadronMision(e, n0 + k, r.l.length, 0.97); m.y = punto(0.97, r.l.length > 1 ? -0.85 + k * 1.7 / (r.l.length - 1) : 0).y; lado.ro.push(m); efectos.push({ tipo: 'boom', x: m.x, y: m.y, r: 28, t: 0, dur: 0.5 }); }); var av = $('tkc-aviso'); if (av) { av.textContent = '⚠️ ' + L('¡Llegan refuerzos enemigos!', 'Enemy reinforcements!'); av.classList.remove('on'); void av.offsetWidth; av.classList.add('on'); } if (G) G.sonar('cuerno'); } });
     if (!terminado && mis) { if (ganoMision()) fin(true); else if (perdioMision()) fin(false); }
     else if (!terminado) {

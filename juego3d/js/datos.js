@@ -4,10 +4,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.37';
+var VERSION_JUEGO = '9.38';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.37","2026-11-25","Campaña: los muñecos caminan rectos, tus héroes de espaldas hacia el frente y los enemigos de frente hacia ellos.","Campaign: figures walk straight: your heroes from behind, enemies facing them."],
+var NOVEDADES_VER = [["9.38","2026-11-25","Campaña: los muñecos pelean con más espacio, sin amontonarse.","Campaign: figures fight with more space, without piling up."],
+  ["9.37","2026-11-25","Campaña: los muñecos caminan rectos, tus héroes de espaldas hacia el frente y los enemigos de frente hacia ellos.","Campaign: figures walk straight: your heroes from behind, enemies facing them."],
   ["9.36","2026-11-25","Campaña: los dos grupos se miran (tus héroes de espaldas, caminando hacia los enemigos) y todos pisan el suelo, sin flotar.","Campaign: both sides face each other (your heroes walk toward the enemy) and everyone stands on the ground."],
   ["9.35","2026-11-25","Campaña: «Rápido» elige tus 5 mejores héroes y las tropas; escuadrones de soldaditos detrás de los héroes con lluvia de flechas; ondas doradas en las habilidades y temblor al golpear jefes. Bajas justas: solo cae lo que te hicieron de daño (todo si pierdes), y el 70 % va herido a la Enfermería. Máximo de tropas: 50 por tipo y capítulo.","Campaign: Quick picks your 5 best heroes and troops; soldier squads with arrow volleys; golden waves and boss hit shake. Fair losses: only the damage taken (all if you lose), 70% go wounded to the Infirmary. Troop limit: 50 per type and chapter."],
   ["9.34","2026-11-25","Campaña: los muñecos caminan pisando bien (el paso va al ritmo de lo que avanzan) y más suave.","Campaign: figures walk with proper footing and smoother steps."],
