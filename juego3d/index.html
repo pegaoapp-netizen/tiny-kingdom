@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<script>/* v8.94: en brotherkingdom.com la primera visita ve la página del juego (bienvenida.html); al tocar Jugar, entra directo las siguientes veces */ try { if (/(^|\.)brotherkingdom\.com$/.test(location.hostname) && location.pathname === "/" && !/[?&]jugar\b/.test(location.search) && !localStorage.getItem("bk_jugar") && !(window.matchMedia && matchMedia("(display-mode: standalone)").matches) && !navigator.standalone) location.replace("/bienvenida.html"); } catch (e) {}</script>
+<script>/* v8.94 · v9.88 (dueño): brotherkingdom.com abre SIEMPRE la página web (bienvenida.html); el botón Jugar entra al juego con ?jugar=1 */ try { if (/(^|\.)brotherkingdom\.com$/.test(location.hostname) && location.pathname === "/" && !/[?&]jugar\b/.test(location.search) && !(window.matchMedia && matchMedia("(display-mode: standalone)").matches) && !navigator.standalone) location.replace("/bienvenida.html"); } catch (e) {}</script>
 <script>/* Brother Kingdom se juega solo con internet: si se abre desde el disco, va a la página del juego */ if (location.protocol === "file:") location.replace("https://tinykingdom-pegao.web.app/");</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -286,7 +286,7 @@ window.addEventListener("error", function (e) {
 <script src="js/iconos-oro.js?v=663"></script>
 <script src="js/sistemas/torneoTemporada.js?v=905"></script>
 <script src="js/sistemas/pagos.js?v=947"></script>
-<script src="js/juego.js?v=987"></script>
+<script src="js/juego.js?v=988"></script>
 <script src="js/tk-musica-guerra.js?v=914"></script>
 <script src="js/tk-luciernagas.js?v=928"></script>
 <script src="js/tk-auto-calidad.js?v=928"></script>

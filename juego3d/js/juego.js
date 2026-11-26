@@ -15040,17 +15040,29 @@
     }).catch(function () {});
   }
   // v6.75: el juego se actualiza solo (sin aviso que tape): guarda y recarga cuando no estás en medio de una oleada ni con una ventana abierta
-  var actualizando = false;
-  function avisarVersionNueva(v) {
-    // v7.25: antes recargaba sola cada vez que salía una versión (hoy muchas) y en el teléfono parecía que el juego se reiniciaba.
-    // Ahora solo sale un botoncito; la versión nueva se carga cuando lo tocas o la próxima vez que abras el juego.
-    if (actualizando) return;
-    if ($('aviso-version')) return;
-    var d = document.createElement('button'); d.id = 'aviso-version';
-    d.textContent = '🔄 ' + L('Actualizar', 'Update');
-    d.addEventListener('click', function () { try { guardar(true); } catch (e) {} setTimeout(function () { location.reload(); }, 400); });
-    document.body.appendChild(d);
+  var actualizando = false, versionPendiente = false, ultimoToque = Date.now();
+  ['pointerdown', 'keydown', 'wheel'].forEach(function (ev) { document.addEventListener(ev, function () { ultimoToque = Date.now(); }, { capture: true, passive: true }); });
+  /* v9.88 (dueño: «la página se tiene que actualizar sola, sin botón»): cuando hay versión nueva, el juego guarda y se recarga SOLO
+     en un momento tranquilo: al volver a la app, o tras 20 s sin tocar nada, sin ventana abierta, sin batalla y sin escribir. Nunca a mitad de algo. */
+  function momentoTranquilo() {
+    var foco = document.activeElement, escribiendo = foco && /^(INPUT|TEXTAREA|SELECT)$/.test(foco.tagName);
+    return !escribiendo && !oleadaActiva && !enBatallaVista() && !panelActual && !document.getElementById('marcha') && !document.getElementById('confirmar-juego') && Date.now() - ultimoToque > 20000;
   }
+  function recargarYa() {
+    if (actualizando) return; actualizando = true;
+    try { guardar(true); } catch (e) {}
+    var ir = function () { location.reload(); };
+    try { if (window.Cuentas && Cuentas.usuario() && Cuentas.guardarYa) { Cuentas.guardarYa().then(ir, ir); setTimeout(ir, 3000); return; } } catch (e) {}
+    setTimeout(ir, 400);
+  }
+  function avisarVersionNueva(v) {
+    versionPendiente = true;
+    var b = $('aviso-version'); if (b) b.remove();
+    if (enMenu || document.hidden) { recargarYa(); return; }
+    if (momentoTranquilo()) recargarYa();
+  }
+  setInterval(function () { if (versionPendiente && !actualizando && momentoTranquilo()) recargarYa(); }, 5000);
+  document.addEventListener('visibilitychange', function () { if (versionPendiente && !actualizando && document.hidden) recargarYa(); }); /* al salir de la app se recarga y al volver ya está nueva */
   setTimeout(revisarVersion, 4000);
   setInterval(revisarVersion, 3 * 60 * 1000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) revisarVersion(); });
