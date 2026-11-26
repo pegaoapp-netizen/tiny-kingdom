@@ -8805,7 +8805,8 @@
     var h = HEROE[id], e = estado.heroes[id] || { nivel: 1, estrellas: 1 };
     var f = (1 + 0.06 * (e.nivel - 1)) * (1 + 0.2 * (e.estrellas - 1));
     var tal = TALENTOS[h.clase], tl = e.tal || 0, bq = bonosEquipo(id), gs = multSalidaHeroe(id); /* v8.45 */
-    return { vida: Math.round(h.vida * gs * f * (1 + (tal.vida || 0) * tl) + bq.vida), dano: Math.round((h.dano * gs * f * (1 + (tal.dano || 0) * tl) + bq.dano) * (1 + bq.danoP)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4 * (1 + bq.vel), ritmo: h.distancia ? 1.1 : 0.8, defensa: bq.def,
+    var rm = Math.max(0, Math.min(MAESTRIA_MAX, e.maes || 0)); /* v9.45 (dueño): cada rango de Maestría suma +35 de ataque y +350 de salud */
+    return { vida: Math.round(h.vida * gs * f * (1 + (tal.vida || 0) * tl) + bq.vida + 350 * rm), dano: Math.round((h.dano * gs * f * (1 + (tal.dano || 0) * tl) + bq.dano + 35 * rm) * (1 + bq.danoP)), alcance: Math.round((h.alcance + (tal.alcance || 0) * tl) * 10) / 10, vel: 3.4 * (1 + bq.vel), ritmo: h.distancia ? 1.1 : 0.8, defensa: bq.def,
       cura: Math.round(6 * f), distancia: !!h.distancia, icono: CLASES_HEROE[h.clase] };
   }
   // v7.14: con 5★ el héroe puede ASCENDER (5 veces, +10 niveles cada una, hasta el nivel 100) gastando una reliquia y cristales
@@ -8835,14 +8836,14 @@
     Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) ok = false; filas += fila(t >= c[k], OBJETOS[k].icono + ' ' + N(k) + ' ×' + c[k] + ' (' + L('tienes ', 'you have ') + t + ')'); });
     return '<div class="hi-hab kb-asc"><div class="hi-hab-c"><b>👑 ' + L('Maestría', 'Mastery') + ' ' + m + '/' + MAESTRIA_MAX + '</b></div>' +
       '<p>' + L('Ascensión completa. La Maestría sube su nivel máximo de ' + tope + ' a ' + (tope + 10) + ' (sin techo) y con cada nivel sigue ganando poder.', 'Ascension complete. Mastery raises the max level from ' + tope + ' to ' + (tope + 10) + ' (no limit 200); every level keeps adding power.') + '</p><ul class="kb-req">' + filas + '</ul>' +
-      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok || estado.dueno ? '' : ' disabled') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>';
+      '<button class="comprar dorado" data-accion="heroe-maestria" data-id="' + id + '"' + (ok ? '' : ' disabled style="filter:grayscale(1);opacity:.55;cursor:not-allowed"') + '>👑 ' + L('Subir Maestría', 'Raise Mastery') + '</button></div>'; /* v9.45 (dueño): bloqueado si falta nivel o materiales, también en la cuenta del dueño */
   }
   function maestriaHeroe(id) {
     var e = estado.heroes[id]; if (!e || (e.asc || 0) < ASC_HEROE.length) return;
     var m = e.maes || 0; if (m >= MAESTRIA_MAX) return;
     var c = costoMaestria(m);
     // v8.03: se gasta lo que marca, en todas las cuentas (también la del dueño); si falta algo, no sube y dice qué falta
-    if (estado.dueno) { e.maes = m + 1; sonar('magia'); consejoTemporal('👑 ' + NH(id) + ': ' + L('nivel máximo ', 'max level ') + topeNivel(id)); guardar(true); abrirPanelHeroe(id); return; } // v8.06: el dueño, todo a full
+    /* v9.45 (dueño): la Maestría ya no es gratis para el dueño: pide el nivel y gasta Estrellas de Mar y Caracolas como a todos */
     var faltaM = []; if (e.nivel < topeNivel(id)) faltaM.push(L('nivel ', 'level ') + topeNivel(id));
     Object.keys(c).forEach(function (k) { var t = estado.mochila[k] || 0; if (t < c[k]) faltaM.push(N(k) + ' ×' + (c[k] - t)); });
     if (faltaM.length) { consejoTemporal('🔒 ' + L('Falta: ', 'Missing: ') + faltaM.join(', ')); sonar('error'); return; }

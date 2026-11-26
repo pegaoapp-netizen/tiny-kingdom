@@ -4,10 +4,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.44';
+var VERSION_JUEGO = '9.45';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.44","2026-11-25","Campaña: siempre se puede ganar. Cada vez que pierdes una etapa, sus enemigos salen un 15 % más débiles (hasta la mitad), y los jefes son un 20 % más flojos.","Campaign: always winnable. Each loss on a stage makes its enemies 15% weaker (down to half), and bosses are 20% softer."],
+var NOVEDADES_VER = [["9.45","2026-11-25","Maestría de héroes: el botón gasta las Estrellas de Mar y Caracolas, se bloquea si falta nivel o materiales (también al dueño), y cada rango suma +35 de ataque y +350 de salud.","Hero Mastery: spends Starfish and Conches, locks when level or materials are missing, and each rank adds +35 attack and +350 health."],
+  ["9.44","2026-11-25","Campaña: siempre se puede ganar. Cada vez que pierdes una etapa, sus enemigos salen un 15 % más débiles (hasta la mitad), y los jefes son un 20 % más flojos.","Campaign: always winnable. Each loss on a stage makes its enemies 15% weaker (down to half), and bosses are 20% softer."],
   ["9.43","2026-11-25","Campaña: tus héroes van delante y las tropas detrás como refuerzo, y nadie se sale de la imagen.","Campaign: your heroes lead, troops stay behind as reinforcements, and nobody leaves the screen."],
   ["9.42","2026-11-25","El juego gasta menos memoria y va más ligero: la ciudad no se dibuja detrás del Mundo, se libera memoria al salir del Mundo y de la Campaña, nunca corren dos motores a la vez y los teléfonos dibujan a 1,5×. Nuevo en Ajustes: «Limpiar caché y recargar».","The game uses less memory: the city is not drawn behind the World, memory is freed when leaving the World and the Campaign, no duplicated loops, and phones render at 1.5x. New in Settings: Clear cache and reload."],
   ["9.41","2026-11-25","Campaña: todos avanzan en línea recta por el camino, mirando al enemigo, en filas estrechas que nunca pisan los bordes; los letreros de habilidades son más pequeños, rápidos y no se enciman.","Campaign: units advance straight along the road facing the enemy in narrow rows that never leave it; ability labels are smaller, quicker and never overlap."],
