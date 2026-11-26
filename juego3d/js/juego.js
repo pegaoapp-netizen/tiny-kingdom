@@ -8765,6 +8765,7 @@
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
     else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + (promosTorreN() ? ' <span class="mail-n">' + promosTorreN() + '</span>' : '')]); }
     else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
+    if (t.length === 1) return ''; /* v9.61 (dueño): si solo hay Detalles (Establo, Galería, Granja…) no se pinta la pestaña: la ventana va directa */
     return '<div class="cafe-tabs ve-tabs">' + t.map(function (q) { return '<button class="' + (q[2] ? 'activo' : '') + '" data-accion="' + q[0] + '" data-slot="' + i + '">' + q[1] + '</button>'; }).join('') + '</div>';
   }
   // ---------- VENTANA CAFÉ (v6.33): foto grande, descripción, siguiente nivel, Mejorando... con reloj, botones y tabla ----------
