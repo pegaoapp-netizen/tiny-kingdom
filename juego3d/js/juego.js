@@ -8731,6 +8731,27 @@
     evento: { es: 'Evento', en: 'Event', l: [['cuerno_guerra', 60], ['cofre_tesoro', 120]] }
   };
   var torreSub = { artefactos: 'equipo', promos: 'misiones' };
+  /* v9.72 (dueño): insignias de campaña. Lo que antes era una pieza de la Campaña ahora da insignias; en la Torre del homenaje se cambian por piezas */
+  var INSIGNIAS_PIEZA = { comun: 10, raro: 20, legendario: 40, mitico: 80 };
+  var TORRE_CAMPANA = [['comun', 100], ['raro', 200], ['legendario', 400], ['mitico', 800]];
+  function insignias() { return Math.floor((estado.mochila && estado.mochila.insignia_camp) || 0); }
+  function htmlTorreCampana(i) {
+    var tq = TIPOS_EQ.indexOf(torreTipoEq) >= 0 ? torreTipoEq : 'arma'; /* v9.72 (dueño): el jugador elige qué pieza quiere */
+    var h = '<div class="tr-caja"><div class="tr-blasones"><span class="tr-escudo">' + OBJETOS.insignia_camp.icono + '</span>' + L('Tus insignias de campaña: ', 'Your campaign badges: ') + '<b>' + formatoNumero(insignias()) + '</b><small>' + L('Se ganan en la Campaña (misiones, jefes, cofres y logros). Elige la pieza que quieres:', 'Earned in the Campaign (missions, bosses, chests and feats). Choose the piece you want:') + '</small></div>';
+    h += '<div class="tr-subs">' + TIPOS_EQ.map(function (t) { return '<button class="' + (t === tq ? 'activo' : '') + '" data-accion="torre-tipo" data-t="' + t + '" data-slot="' + i + '">' + T('eq_' + t) + '</button>'; }).join('') + '</div><div class="tr-lista">';
+    h += TORRE_CAMPANA.map(function (q) { var ok = insignias() >= q[1], nom = nombrePieza({ t: tq, r: q[0], n: 1 });
+      return '<div class="tr-obj"><span class="tr-ico"><img src="iconos/ui/q_' + tq + '.webp" alt="" style="width:100%;height:100%;object-fit:contain"></span><div class="tr-dat"><b>' + nom + '</b><small>' + window.__tkCamp.nombreRareza(q[0]) + '</small><span class="tr-costo">' + OBJETOS.insignia_camp.icono + ' ' + formatoNumero(q[1]) + '</span></div>' +
+        '<button class="comprar ' + (ok ? 'verde' : '') + ' tr-aceptar" data-accion="torre-insignia" data-r="' + q[0] + '" data-t="' + tq + '" data-slot="' + i + '"' + (ok ? '' : ' disabled') + '>' + L('Cambiar', 'Exchange') + '</button></div>'; }).join('');
+    return h + '</div></div>';
+  }
+  var torreTipoEq = 'arma';
+  function canjeInsignias(i, r, t) {
+    var q = TORRE_CAMPANA.filter(function (x) { return x[0] === r; })[0]; if (!q) return;
+    if (insignias() < q[1]) { consejoTemporal(L('Te faltan insignias: gánalas en la Campaña.', 'Not enough badges: earn them in the Campaign.')); sonar('error'); return; }
+    estado.mochila.insignia_camp = insignias() - q[1];
+    var pz = darPieza(TIPOS_EQ.indexOf(t) >= 0 ? t : null, r); sonar('moneda'); if (pz) consejoTemporal(OBJETOS.insignia_camp.icono + ' −' + q[1] + ' · +1 ' + nombrePieza(pz));
+    guardar(true); abrirTorre(i, 'campana');
+  }
   function promosTorreN() { var n = 0; for (var k in TORRE_PROMOS) n += TORRE_PROMOS[k].l.filter(function (q) { return OBJETOS[q[0]] && blasones() >= q[1]; }).length; return n; } /* v8.88: el número son las que YA puedes aceptar con tus blasones */
   function blasones() { return estado.blasones || 0; }
   function darBlasones(n) { if (!(n > 0)) return; estado.blasones = blasones() + n; consejoTemporal('🛡️ +' + n + ' ' + L('blasones (guárdalos en la Torre del homenaje)', 'crests (kept in the Keep)')); }
@@ -8738,6 +8759,7 @@
   function abrirTorre(i, p) {
     var s = slots[i]; if (!s || !s.edificio) return;
     var tabs = pestanasVentana(i, 'torre').replace('class="activo" data-accion="cafe-det"', 'class="" data-accion="cafe-det"').replace('class="" data-accion="torre-pest" data-p="' + p + '"', 'class="activo" data-accion="torre-pest" data-p="' + p + '"');
+    if (p === 'campana') { abrirPanel(N('torre') + ' (' + L('Nvl.', 'Lvl.') + s.edificio.nivel + ')', tabs + htmlTorreCampana(i), { tipo: 'edificio', slot: i, torre: p }); ponerCafe(); return; }
     var tabla = p === 'promos' ? TORRE_PROMOS : TORRE_ARTEFACTOS, sub = torreSub[p] in tabla ? torreSub[p] : Object.keys(tabla)[0];
     var h = '<div class="tr-caja"><div class="tr-blasones"><span class="tr-escudo">🛡️</span>' + L('Tus blasones: ', 'Your crests: ') + '<b>' + formatoNumero(blasones()) + '</b><small>' + L('Se ganan venciendo campamentos y aldeas bárbaras', 'Earned by beating camps and barbarian villages') + '</small></div>';
     h += '<div class="tr-subs">' + Object.keys(tabla).map(function (k) { return '<button class="' + (k === sub ? 'activo' : '') + '" data-accion="torre-sub" data-p="' + p + '" data-s="' + k + '" data-slot="' + i + '">' + (estado.idioma === 'en' ? tabla[k].en : tabla[k].es) + (p === 'promos' ? (function () { var nk = tabla[k].l.filter(function (q) { return OBJETOS[q[0]] && blasones() >= q[1]; }).length; return nk ? ' <span class="mail-n">' + nk + '</span>' : ''; })() : '') + '</button>'; }).join('') + '</div>'; /* v8.88: cada pestaña dice cuántas puedes aceptar */
@@ -8783,7 +8805,7 @@
     else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
     else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); if (hayCuenta() && estado.alianza) t.push(['reunion-pest" data-p="guarnicion', '🏳️ ' + L('Guarnición', 'Garrison')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
-    else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + (promosTorreN() ? ' <span class="mail-n">' + promosTorreN() + '</span>' : '')]); }
+    else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + (promosTorreN() ? ' <span class="mail-n">' + promosTorreN() + '</span>' : '')]); t.push(['torre-pest" data-p="campana', '🎖️ ' + L('Campaña', 'Campaign')]); }
     else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
     if (t.length === 1) return ''; /* v9.61 (dueño): si solo hay Detalles (Establo, Galería, Granja…) no se pinta la pestaña: la ventana va directa */
     return '<div class="cafe-tabs ve-tabs">' + t.map(function (q) { return '<button class="' + (q[2] ? 'activo' : '') + '" data-accion="' + q[0] + '" data-slot="' + i + '">' + q[1] + '</button>'; }).join('') + '</div>';
@@ -9124,7 +9146,7 @@
   }
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 200; // v8.03: antes 60 (al llenarse se borraban piezas subidas)
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
-  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ' + (rolSet(p.s) === 'defensa' ? '🛡️' : '⚔️'); return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
+  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ' + (rolSet(p.s) === 'defensa' ? '🛡️' : '⚔️'); if (p.r === 'mitico' && estado.idioma !== 'en') return T('eq_' + p.t) + ' ' + ({ casco: 'mítico', amuleto: 'mítico', guantes: 'míticos', botas: 'míticas' }[p.t] || 'mítica'); /* v9.73 (dueño): «Casco mítico», no «Casco mítica» */ return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
   function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)) * multSalidaArmadura(p.s); } /* v8.45 */
   function textoPieza(p) {
     if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) { var dp = {}, d0 = SET_DRAGON.piezas[p.t]; Object.keys(TXT_DRAGON).forEach(function (k) { if (d0[k]) dp[k] = d0[k]; }); return textoBonosDragon(dp); }
@@ -11330,6 +11352,7 @@
     recursos: function () { return { oro: estado.monedas || 0, madera: estado.madera || 0, piedra: estado.piedra || 0, hierro: estado.hierro || 0 }; },
     imgObjeto: function (k) { return ICONOS_IMG[k] ? 'iconos/ui/' + ICONOS_IMG[k] + '.webp' : ''; },
     nombreObjeto: function (k) { return OBJETOS[k] ? N(k) : String(k); },
+    insignias: function (r) { return INSIGNIAS_PIEZA[r] || 0; }, /* v9.72 */
     nombreRareza: function (r) { return ({ comun: L('Pieza común', 'Common piece'), raro: L('Pieza rara', 'Rare piece'), legendario: L('Pieza legendaria', 'Legendary piece'), mitico: L('Pieza mítica', 'Mythic piece') })[r] || L('Pieza', 'Piece'); },
     darMision: function (p, ids) {
       var items = [], NR = { oro: L('Oro', 'Gold'), madera: L('Madera', 'Wood'), piedra: L('Piedra', 'Stone'), hierro: L('Hierro', 'Iron') };
@@ -11340,7 +11363,7 @@
       var hf = ids[Math.floor(Math.random() * ids.length)];
       if (p.frag && hf) { estado.heroes[hf].frag = (estado.heroes[hf].frag || 0) + p.frag; items.push({ img: RETRATOS_IMG['h_' + hf] ? 'iconos/ui/' + RETRATOS_IMG['h_' + hf] + '.webp' : '', ico: '🧩', nom: L('Fragmentos de ', 'Shards of ') + NH(hf), n: '×' + p.frag }); }
       (p.obj || []).forEach(function (q) { if (!OBJETOS[q[0]] || !(q[1] > 0)) return; estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + q[1]; items.push({ img: ICONOS_IMG[q[0]] ? 'iconos/ui/' + ICONOS_IMG[q[0]] + '.webp' : '', ico: OBJETOS[q[0]].icono, nom: N(q[0]), n: '×' + q[1] }); });
-      if (p.pieza && RAREZAS[p.pieza]) { var pz = darPieza(null, p.pieza); if (pz) items.push({ img: 'iconos/ui/q_' + pz.t + '.webp', ico: '🛡️', nom: nombrePieza(pz), n: '×1' }); }
+      if (p.pieza && INSIGNIAS_PIEZA[p.pieza]) { var ni = INSIGNIAS_PIEZA[p.pieza]; estado.mochila.insignia_camp = (estado.mochila.insignia_camp || 0) + ni; items.push({ ico: OBJETOS.insignia_camp.icono, nom: N('insignia_camp'), n: '×' + ni }); } /* v9.72 (dueño): la Campaña ya no da piezas: da insignias que se cambian por piezas en la Torre del homenaje */
       guardar(true); actualizarHUD();
       return items;
     },
@@ -13195,6 +13218,8 @@
     else if (a === 'reunion-marchar') { sonar('click'); marcharDesdeReunion(); }
     else if (a === 'torre-pest') { sonar('click'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
     else if (a === 'torre-sub') { sonar('click'); torreSub[b.getAttribute('data-p')] = b.getAttribute('data-s'); abrirTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p')); }
+    else if (a === 'torre-insignia') canjeInsignias(+b.getAttribute('data-slot'), b.getAttribute('data-r'), b.getAttribute('data-t'));
+    else if (a === 'torre-tipo') { sonar('click'); torreTipoEq = b.getAttribute('data-t'); abrirTorre(+b.getAttribute('data-slot'), 'campana'); }
     else if (a === 'torre-canje') canjeTorre(+b.getAttribute('data-slot'), b.getAttribute('data-p'), b.getAttribute('data-id'));
     else if (a === 'emb-pest') { sonar('click'); abrirEmbajada(+b.getAttribute('data-slot')); }
     else if (a === 'reunion-ver') { sonar('click'); var rx = +b.getAttribute('data-x'), ry = +b.getAttribute('data-y'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(rx, ry)); elegirCelda(rx, ry); } }, 400); }
