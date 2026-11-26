@@ -21,8 +21,8 @@
   var cache = {}, cola = [], trabajando = false, rend = null;
 
   function ruta(clave) {
-    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -0.7 } /* v9.36 (dueño): los grupos se miran: tus héroes de espaldas, caminando hacia los enemigos (arriba a la derecha) */ : null; }
-    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.75 } /* v9.36: los enemigos miran hacia tus héroes (abajo a la izquierda) */ : null;
+    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -0.25 } /* v9.37 (dueño: «que caminen recto, no de lado»): tus héroes de espaldas, rectos hacia los enemigos */ : null; }
+    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.2 } /* v9.37: los enemigos de frente, rectos hacia tus héroes */ : null;
   }
   function renderer() {
     if (rend !== null) return rend;
