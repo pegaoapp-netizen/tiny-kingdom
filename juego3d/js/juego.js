@@ -11654,7 +11654,7 @@
   var CANT_AZAR = { botella: 5 }, CANT_AZAR_PREM = { botella: 15 }; /* cuántas da ese cofre (los demás premios dan 1) */
   var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4], ['botella', 10]];
   var RAROS_AZAR = ['cofre_oro', 'libro_gra', 'acel_8h'];
-  var modoAzar = 'normal', azarGrid = null;
+  var modoAzar = 'normal', azarGrid = null, azarFant = null, azarGanaC = -1, azarOcupado = false; /* v9.90: lo que podías haber ganado y el cofre ganador */
   // v8.19: fichas gratis de cada día según tu nivel (Nv 1-9: 1 · Nv 10-19: 2 · Nv 20+: 3). Las gratis NO se acumulan: si no las usas hoy, se pierden.
   // Las fichas compradas o ganadas (estado.fichas) sí se guardan.
   function gratisPorNivel() { var n = nivelJugador(); return n >= 20 ? 3 : n >= 10 ? 2 : 1; }
@@ -11686,7 +11686,9 @@
     var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button>' + (evP ? '<button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + ' ⏳' + fmtTiempo(Math.ceil((evP.fin - Date.now()) / 1000)) + '</button>' : '') + '</div>' +
       '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
-        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + (((prem ? CANT_AZAR_PREM : CANT_AZAR)[k] || 1) > 1 ? ' ×' + (prem ? CANT_AZAR_PREM : CANT_AZAR)[k] : '') + '</small>' : COFRE_SVG) + '</div>';
+        var fk = !k && azarFant && azarFant[i]; /* v9.90: cofre que no escogiste, enseña lo que traía */
+        if (fk) return '<div class="az-celda abierta az-fant" data-c="' + i + '"><span class="az-premio">' + OBJETOS[fk].icono + '</span><small>' + N(fk) + (((prem ? CANT_AZAR_PREM : CANT_AZAR)[fk] || 1) > 1 ? ' ×' + (prem ? CANT_AZAR_PREM : CANT_AZAR)[fk] : '') + '</small></div>';
+        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') + (i === azarGanaC ? ' az-gana' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + (((prem ? CANT_AZAR_PREM : CANT_AZAR)[k] || 1) > 1 ? ' ×' + (prem ? CANT_AZAR_PREM : CANT_AZAR)[k] : '') + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
       (azarGrid.every(function (x) { return !x; }) && !azarAvisoVisto ? '<div class="az-cinta az-cinta-aviso">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
         L('¡Toca el cofre que quieras abrir! Cada uno cuesta ' + costo + ' ficha' + (costo > 1 ? 's' : '') + '.', 'Tap the chest you want to open! Each costs ' + costo + ' token' + (costo > 1 ? 's' : '') + '.') + '</div>' /* v9.81: la cuenta de fichas sale una sola vez, encima de los botones */ : '') + '</div>' +
@@ -11696,14 +11698,25 @@
       (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : /* v9.49 (dueño): «de una ficha» y «de 10 fichas» (antes «Abrir los 9») */
         '<div class="az-saldo">' + ICONO_FICHA + ' ' + L('Tienes: ', 'You have: ') + '<b>' + txtFichas(fichasRealesAzar()) + '</b> ' + L(fichasRealesAzar() === 1 ? 'ficha' : 'fichas', fichasRealesAzar() === 1 ? 'token' : 'tokens') + '</div>' + /* v9.50 (dueño): que diga las fichas que tienes */
         '<button class="az-b azul" data-accion="azar-varios" data-n="1"' + (n >= 1 ? '' : ' disabled') + '>' + L('Abrir 1', 'Open 1') + ' · ' + ICONO_FICHA + ' 1</button>' +
-        '<button class="az-b azul" data-accion="azar-varios" data-n="10"' + (n >= 10 ? '' : ' disabled') + '>' + L('Abrir 10', 'Open 10') + ' · ' + ICONO_FICHA + ' 10</button>' +
+        '<button class="az-b azul" data-accion="azar-varios" data-n="9"' + (n >= 9 ? '' : ' disabled') + '>' + L('Abrir 9', 'Open 9') + ' · ' + ICONO_FICHA + ' 9</button>' + /* v9.90 (dueño): 9, un tablero entero */
+        '<button class="az-b azul" data-accion="azar-varios" data-n="50"' + (n >= 50 ? '' : ' disabled') + '>' + L('Abrir 50', 'Open 50') + ' · ' + ICONO_FICHA + ' 50</button>' +
         '<div class="az-compra"><button class="az-b verde" data-accion="azar-comprar" data-n="1"><small><span class="ico gema"></span> ' + PRECIO_FICHA + '</small>' + L('Comprar 1 ficha', 'Buy 1 token') + '</button>' + /* v9.50: comprar fichas con gemas aquí mismo */
         '<button class="az-b verde" data-accion="azar-comprar" data-n="10"><small><span class="ico gema"></span> ' + PRECIO_FICHA * 10 + '</small>' + L('Comprar 10 fichas', 'Buy 10 tokens') + '</button></div>') + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
     $('panel').classList.add('iv-panel', 'az-panel');
   }
   function sacarAzar(cuantos, celda) {
-    azarAvisoVisto = true;
+    /* v9.90 (vídeo del dueño): el cofre tiembla un momento y luego se abre; mientras, no se puede tocar otro */
+    if (azarOcupado) return;
+    if (celda !== undefined && celda !== null && !isNaN(celda) && azarGrid && !azarGrid[celda] && !(azarFant && azarFant[celda])) {
+      if (fichasAzar() < (modoAzar === 'premium' ? 6 : 1)) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
+      var elc = document.querySelector('.az-celda[data-c="' + celda + '"]');
+      if (elc) { azarOcupado = true; elc.classList.add('az-agita'); sonar('click'); setTimeout(function () { azarOcupado = false; sacarAzarYa(cuantos, celda); }, 380); return; }
+    }
+    sacarAzarYa(cuantos, celda);
+  }
+  function sacarAzarYa(cuantos, celda) {
+    azarAvisoVisto = true; azarFant = null; azarGanaC = -1;
     /* v8.44: el jugador escoge el cofre. Con celda abre ESE; sin celda (Abrir todos) abre todos los que quedan cerrados */
     if (!azarGrid || azarGrid.every(function (x) { return x; })) azarGrid = [null, null, null, null, null, null, null, null, null];
     var cerrados = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(function (c) { return !azarGrid[c]; });
@@ -11714,20 +11727,35 @@
     gastarFichasAzar(costo); // v8.19: primero se gastan las gratis de hoy
     var libres = cerrados, ganado = {};
     libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; var qk = (prem ? CANT_AZAR_PREM : CANT_AZAR)[k] || 1; estado.mochila[k] = (estado.mochila[k] || 0) + qk; ganado[k] = (ganado[k] || 0) + qk; });
+    var uno = libres.length === 1; if (uno) azarGanaC = libres[0];
     sonar('magia'); guardar(true); abrirAzar();
+    /* v9.90: con un solo cofre, los demás se destapan después (en gris) con lo que podías haber ganado. Es solo para mirar: no se guarda nada */
+    if (uno) setTimeout(function () {
+      if (!panelActual || panelActual.tipo !== 'azar' || !azarGrid) return;
+      azarFant = azarGrid.map(function (x) { return x ? null : sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); });
+      abrirAzar(); /* el ganador sigue brillando */
+      document.querySelectorAll('.az-celda.abierta:not(.az-fant)').forEach(function (el) { el.style.animation = 'none'; });
+      document.querySelectorAll('.az-celda.az-fant').forEach(function (el, i) { el.style.animationDelay = (i * 0.05) + 's'; });
+    }, 750);
     // los cofres se abren uno por uno
     document.querySelectorAll('.az-celda.abierta').forEach(function (c) { if (libres.indexOf(+c.getAttribute('data-c')) < 0) c.style.animation = 'none'; }); /* solo se anima lo que acabas de abrir */
     libres.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
     consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k) + (ganado[k] > 1 ? ' ×' + ganado[k] : ''); }).join(', '));
-    cerrarCofresLuego(1400); /* v9.79: el cofre vuelve a cerrarse */
+    cerrarCofresLuego(uno ? 2600 : 1400); /* v9.79: el cofre vuelve a cerrarse (v9.90: más tarde para ver los demás) */
   }
   /* v9.49 (dueño): abrir 1 o 10 cofres de una vez (1 ficha cada uno). Si el tablero se llena, sale uno nuevo y se sigue; al final, la ventana con todo lo ganado */
   /* v9.79 (dueño): el cofre se abre, enseña el premio un momento y SE VUELVE A CERRAR, para que el jugador siga escogiendo */
   var tmCerrarAzar = null;
-  function cerrarCofresLuego(ms) { clearTimeout(tmCerrarAzar); tmCerrarAzar = setTimeout(function () { azarGrid = [null, null, null, null, null, null, null, null, null]; if (panelActual && panelActual.tipo === 'azar' && !$('panel').classList.contains('oculto')) abrirAzar(); }, ms || 1400); }
+  function cerrarCofresLuego(ms) { clearTimeout(tmCerrarAzar); tmCerrarAzar = setTimeout(function () { azarGrid = [null, null, null, null, null, null, null, null, null]; azarFant = null; azarGanaC = -1; if (panelActual && panelActual.tipo === 'azar' && !$('panel').classList.contains('oculto')) abrirAzar(); }, ms || 1400); }
   function sacarAzarVarios(cant) {
-    azarAvisoVisto = true;
-    cant = Math.max(1, Math.min(10, Math.floor(+cant || 1)));
+    if (azarOcupado) return;
+    azarAvisoVisto = true; azarFant = null; azarGanaC = -1;
+    cant = Math.max(1, Math.min(50, Math.floor(+cant || 1))); /* v9.90: hasta 50 */
+    if (cant === 1) { /* v9.90: «Abrir 1» abre un cofre al azar con la misma animación que tocarlo */
+      if (!azarGrid || azarFant || azarGrid.every(function (x) { return x; })) { clearTimeout(tmCerrarAzar); azarFant = null; azarGanaC = -1; azarGrid = [null, null, null, null, null, null, null, null, null]; abrirAzar(); }
+      var cz = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(function (c) { return !azarGrid[c]; });
+      sacarAzar(1, cz[Math.floor(Math.random() * cz.length)]); return;
+    }
     var prem = modoAzar === 'premium', costo = (prem ? 6 : 1) * cant;
     if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
     gastarFichasAzar(costo);
@@ -11743,7 +11771,11 @@
     nuevos.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
     cerrarCofresLuego(cant === 1 ? 1400 : 1800); /* v9.79 */
     if (cant === 1) { consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k); }).join(', ')); return; }
-    setTimeout(function () { mostrarRecompensas(L('Azar', 'Lucky') + ' ×' + cant, Object.keys(ganado).map(function (k) { return { ico: OBJETOS[k].icono, n: ganado[k], nom: N(k) }; })); }, 700);
+    var lista = Object.keys(ganado).map(function (k) { return { ico: OBJETOS[k].icono, n: ganado[k], nom: N(k), rara: RAROS_AZAR.indexOf(k) >= 0 }; });
+    /* v9.90 (vídeo del dueño): cada premio sale grande en el centro y cae en su sitio; los raros al final, para la emoción */
+    lista.sort(function (a, b) { return (a.rara ? 1 : 0) - (b.rara ? 1 : 0); });
+    if (window.tkAzarRevelar) { setTimeout(function () { window.tkAzarRevelar(lista, { titulo: L('¡Has ganado!', 'You won!') + ' · ' + L('Azar', 'Lucky') + ' ×' + cant, vale: L('Vale', 'OK'), salta: L('Toca para verlo todo', 'Tap to see everything') }); }, 500); return; }
+    setTimeout(function () { mostrarRecompensas(L('Azar', 'Lucky') + ' ×' + cant, lista); }, 700);
   }
   var PRECIO_FICHA = 2; /* v9.50: 1 ficha de Azar = 2 gemas (igual que «10 fichas de Azar» de la Tienda: 20 gemas) */
   function comprarFichasAzar(cant) {
