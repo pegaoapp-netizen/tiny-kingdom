@@ -231,9 +231,9 @@
     /* v9.34 (dueño: «parece que van flotando»): el paso va según lo que avanza de verdad (un paso completo ≈ 0,9 de su altura) */
     if (u._px != null && u.vivo) u._camino = (u._camino || 0) + Math.hypot(u.x - u._px, u.y - u._py); u._px = u.x; u._py = u.y;
     var fig = claveFig ? TKSprites.foto(claveFig, estFig, t, estFig === 'anda' ? (u._camino || 0) / Math.max(10, hFig * 0.9) : null) : null, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
-    cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, u.y + r * 0.8, fig ? wFig * 0.32 : r, r * 0.35, 0, 0, 7); cx.fill();
+    cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, fig ? pie : u.y + r * 0.8, fig ? wFig * 0.26 : r, fig ? wFig * 0.08 : r * 0.35, 0, 0, 7); cx.fill();
     /* v9.32: el muñeco no se sale de la zona de batalla (ni por arriba, debajo de la barra, ni por los lados) */
-    var zF = fig ? zona() : null, topF = fig ? Math.max(zF.y0 + 2, pie - hFig) : 0, xF = fig ? Math.max(wFig / 2 + 2, Math.min(W - wFig / 2 - 2, u.x)) : u.x;
+    var zF = fig ? zona() : null, topF = fig ? Math.max(zF.y0 + 2, pie - hFig * TKSprites.pie(claveFig)) : 0, /* v9.36: los pies justo encima de la sombra */ xF = fig ? Math.max(wFig / 2 + 2, Math.min(W - wFig / 2 - 2, u.x)) : u.x;
     if (fig) { cx.drawImage(fig, xF - wFig / 2, topF, wFig, hFig); if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.ellipse(u.x, pie - hFig / 2, wFig * 0.45, hFig * 0.55, 0, 0, 7); cx.stroke(); } }
     else {
     cx.save(); cx.beginPath(); cx.arc(u.x, u.y - sal, r, 0, 7); cx.closePath(); cx.fillStyle = az ? '#1b3f8a' : '#7a1a12'; cx.fill(); cx.clip();

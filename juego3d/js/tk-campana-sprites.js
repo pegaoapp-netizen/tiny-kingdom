@@ -21,8 +21,8 @@
   var cache = {}, cola = [], trabajando = false, rend = null;
 
   function ruta(clave) {
-    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -2.85 } /* v9.33 (dueño: «están de lado»): casi de frente a la cámara, con un poco de giro hacia los enemigos (los héroes miran hacia -Z) */ : null; }
-    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.35 } : null;
+    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -0.7 } /* v9.36 (dueño): los grupos se miran: tus héroes de espaldas, caminando hacia los enemigos (arriba a la derecha) */ : null; }
+    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.75 } /* v9.36: los enemigos miran hacia tus héroes (abajo a la izquierda) */ : null;
   }
   function renderer() {
     if (rend !== null) return rend;
@@ -55,18 +55,22 @@
     [anda, ataca, quieto].forEach(function (cl) { if (!cl) return; for (var i = 0; i < 6; i++) { poner(cl, cl.duration * i / 6); if (medir()) hayHueso = true; } });
     if (!mix && medir()) hayHueso = true;
     if (!hayHueso || bx.isEmpty()) { esc.updateMatrixWorld(true); bx.setFromObject(m); }
-    else { var tb = new THREE.Vector3(); bx.getSize(tb); bx.expandByScalar(Math.max(tb.x, tb.y, tb.z) * 0.14); } /* los huesos no llegan a la punta del hocico ni de la cabeza */
+    var yPies = bx.min.y; /* v9.36: dónde pisan, para poner los pies justo sobre la sombra (si no, parece que flotan) */
+    if (hayHueso && !bx.isEmpty()) { var tb = new THREE.Vector3(); bx.getSize(tb); bx.expandByScalar(Math.max(tb.x, tb.y, tb.z) * 0.14); } /* los huesos no llegan a la punta del hocico ni de la cabeza */
+    else yPies = bx.min.y;
     poner(quieto || anda, 0);
     var tam = new THREE.Vector3(), cen = new THREE.Vector3(); bx.getSize(tam); bx.getCenter(cen);
     var FOV = 30, tv = Math.tan(FOV / 2 * Math.PI / 180), th = tv * AN / AL;
     var cam = new THREE.PerspectiveCamera(FOV, AN / AL, 0.001, 10000);
     var dist = Math.max(tam.y / 2 / tv, tam.x / 2 / th) * 1.08 + tam.z / 2;
-    cam.position.set(cen.x, cen.y + tam.y * 0.12, cen.z + dist); cam.lookAt(cen.x, cen.y, cen.z);
+    cam.position.set(cen.x, cen.y + tam.y * 0.12, cen.z + dist); cam.lookAt(cen.x, cen.y, cen.z); cam.updateMatrixWorld(true);
+    var pP = new THREE.Vector3(cen.x, yPies, cen.z).project(cam), pieFrac = Math.max(0.5, Math.min(1, (1 - pP.y) / 2));
     function foto() { R.render(esc, cam); var c = document.createElement('canvas'); c.width = AN; c.height = AL; c.getContext('2d').drawImage(R.domElement, 0, 0); return c; }
     function serie(clip, n) { var l = []; if (!clip) return l; for (var i = 0; i < n; i++) { poner(clip, clip.duration * i / n); l.push(foto()); } return l; }
     var res = { anda: mix ? serie(anda, N_FOTOS) : [foto()] };
     res.ataca = ataca ? serie(ataca, N_FOTOS) : res.anda;
     res.quieto = quieto ? serie(quieto, 1) : [res.anda[0]];
+    res.pie = pieFrac;
     m.traverse(function (o) { if (o.isMesh) { try { o.geometry.dispose(); if (o.material.map) o.material.map.dispose(); o.material.dispose(); } catch (e) {} } });
     return res;
   }
@@ -98,6 +102,8 @@
       var k = fase != null ? Math.floor((((fase % 1) + 1) % 1) * l.length) : Math.floor(((t || 0) * (estado === 'ataca' ? 14 : 10)) % l.length);
       return l[Math.min(l.length - 1, k)];
     },
+    /* v9.36: a qué altura de la foto (0 arriba, 1 abajo) están los pies */
+    pie: function (clave) { var e = cache[clave]; return e && e.fotos && e.fotos.pie ? e.fotos.pie : 0.95; },
     info: function () { var o = {}; for (var k in cache) o[k] = cache[k].fotos ? 'listo' : (cache[k].falla ? 'falla' : 'cargando'); return o; }
   };
 })();
