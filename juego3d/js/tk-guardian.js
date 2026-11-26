@@ -3,7 +3,7 @@
 // en el teléfono del DUEÑO sale una cajita roja arriba diciendo qué falló y en qué archivo.
 // Los jugadores normales no la ven. Se carga antes que todo lo demás.
 (function () {
-  var lista = [], caja = null, IGNORAR = /ResizeObserver loop|setPointerCapture|Script error\.?$|Failed to fetch|network|offline|Load failed/i;
+  var lista = [], caja = null, IGNORAR = /ResizeObserver loop|setPointerCapture|Script error\.?$|Failed to fetch|network|offline|Load failed|without an in-progress transaction|IndexedDB|IDBDatabase/i; /* v9.47: fallo conocido de Safari con la memoria del navegador (Firebase lo repite solo): no es del juego */
   function esDueno() { try { return localStorage.getItem('tk_dueno') === '1'; } catch (e) { return false; } }
   function pintar() {
     if (!esDueno() || !document.body || !lista.length) return;

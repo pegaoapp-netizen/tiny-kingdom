@@ -22,11 +22,10 @@ const STRIPE_WEBHOOK_SECRET = defineSecret('STRIPE_WEBHOOK_SECRET');
 
 // el mismo catálogo que js/sistemas/pagos.js (lo que se entrega lo decide el servidor, nunca el teléfono)
 const CATALOGO = {
-  tk_gemas_100: { gemas: 100 }, tk_gemas_550: { gemas: 550 }, tk_gemas_1200: { gemas: 1200 },
-  tk_gemas_2600: { gemas: 2600 }, tk_gemas_7000: { gemas: 7000 }, tk_gemas_15000: { gemas: 15000 },
-  tk_pack_constructor: { gemas: 600, objetos: { acel_1h: 3, madera_500k: 1, piedra_500k: 1 } },
-  tk_pack_guerrero: { gemas: 1200, objetos: { reclutas: 3, cofre_plata: 2, escudo_8h: 1 } },
-  tk_pack_pirata: { gemas: 2600, objetos: { cofre_oro: 2, libro_gra: 2, acel_8h: 2, portal_elegir: 1 } }
+  /* v9.47: precios y gemas nuevos del dueño (el número del id = gemas) */ tk_gemas_100: { gemas: 100 }, tk_gemas_300: { gemas: 300 }, tk_gemas_700: { gemas: 700 }, tk_gemas_2100: { gemas: 2100 }, tk_gemas_6300: { gemas: 6300 }, tk_gemas_12600: { gemas: 12600 },
+  tk_pack_constructor: { gemas: 60, objetos: { acel_1h: 3, madera_500k: 1, piedra_500k: 1 } },
+  tk_pack_guerrero: { gemas: 300, objetos: { reclutas: 3, cofre_plata: 2, escudo_8h: 1 } },
+  tk_pack_pirata: { gemas: 700, objetos: { cofre_oro: 2, libro_gra: 2, acel_8h: 2, portal_elegir: 1 } }
 };
 
 async function crearCompra(id, datos) {
@@ -62,7 +61,7 @@ exports.webhookStripe = onRequest({ secrets: [STRIPE_SECRET, STRIPE_WEBHOOK_SECR
   catch (e) { res.status(400).send('firma no válida'); return; }
   if (ev.type === 'checkout.session.completed') {
     const s = ev.data.object, uid = s.client_reference_id;
-    // el producto sale del Payment Link: en Stripe pon en su metadata  producto = tk_gemas_550 (etc.)
+    // el producto sale del Payment Link: en Stripe pon en su metadata  producto = tk_gemas_300 (etc.)
     const producto = (s.metadata && s.metadata.producto) || '';
     const prod = CATALOGO[producto];
     if (uid && prod && s.payment_status === 'paid') await crearCompra('st_' + s.id, { uid, producto, plataforma: 'web', gemas: prod.gemas, objetos: prod.objetos || {} });

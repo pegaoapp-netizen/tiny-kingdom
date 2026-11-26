@@ -5,7 +5,7 @@ Mientras tanto la tienda sigue diciendo «todavía no» y no se cobra nada.
 
 Cómo funciona
 -------------
-- El juego llama a Pagos.comprarProducto('tk_gemas_550')   (archivo juego3d/js/sistemas/pagos.js).
+- El juego llama a Pagos.comprarProducto('tk_gemas_300')   (archivo juego3d/js/sistemas/pagos.js).
 - En la app de iPhone cobra la App Store; en la de Android, Google Play (las dos a través de RevenueCat).
   En la web (tinykingdom-pegao.web.app) cobra Stripe. Stripe NUNCA se usa dentro de la app (Apple y Google lo prohíben).
 - El teléfono no se entrega nada a sí mismo: la Cloud Function «verificarCompraNativa» (o el webhook de Stripe)
@@ -14,15 +14,15 @@ Cómo funciona
 
 Los 9 productos (mismo ID en Google Play Console, App Store Connect, RevenueCat y Stripe)
 ---------------------------------------------------------------------------------------
-  tk_gemas_100      US$ 0.99    100 gemas
-  tk_gemas_550      US$ 4.99    550 gemas
-  tk_gemas_1200     US$ 9.99    1.200 gemas
-  tk_gemas_2600     US$ 19.99   2.600 gemas
-  tk_gemas_7000     US$ 49.99   7.000 gemas
-  tk_gemas_15000    US$ 99.99   15.000 gemas
-  tk_pack_constructor  US$ 2.99   600 gemas + 3 aceleradores 1h + 500k madera + 500k piedra
-  tk_pack_guerrero     US$ 9.99   1.200 gemas + 3 reclutas + 2 cofres de plata + escudo 8h
-  tk_pack_pirata       US$ 19.99  2.600 gemas + 2 cofres de oro + 2 libros + 2 aceleradores 8h + portal elegido
+  tk_gemas_100      US$ 4.99    100 gemas
+  tk_gemas_300      US$ 9.99    300 gemas
+  tk_gemas_700      US$ 19.99   700 gemas
+  tk_gemas_2100     US$ 49.99   2.100 gemas
+  tk_gemas_6300     US$ 69.99   6.300 gemas
+  tk_gemas_12600    US$ 99.99   12.600 gemas
+  tk_pack_constructor  US$ 2.99   60 gemas + 3 aceleradores 1h + 500k madera + 500k piedra
+  tk_pack_guerrero     US$ 9.99   300 gemas + 3 reclutas + 2 cofres de plata + escudo 8h
+  tk_pack_pirata       US$ 19.99  700 gemas + 2 cofres de oro + 2 libros + 2 aceleradores 8h + portal elegido
   (Todos son «consumibles» / «In-app product», NO suscripciones.)
 
 PASO 1 — Tiendas
@@ -46,7 +46,7 @@ PASO 3 — Cloud Functions (necesita el plan Blaze de Firebase en el proyecto ti
   Nunca pegues estas claves en el chat ni en el código.
 
 PASO 4 — Stripe (solo la web)
-  a) Crea un Payment Link por producto. En cada uno, en «Metadata», pon  producto = tk_gemas_550  (su ID).
+  a) Crea un Payment Link por producto. En cada uno, en «Metadata», pon  producto = tk_gemas_300  (su ID).
   b) Developers → Webhooks → añade la dirección de la función webhookStripe
      (https://us-central1-tiny-kingdom-pegao.cloudfunctions.net/webhookStripe) con el evento checkout.session.completed.
 

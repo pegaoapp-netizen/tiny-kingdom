@@ -12199,9 +12199,9 @@
     return '<div class="iv-modos tg-tabs">' + [['paquetes', L('Paquetes', 'Bundles')], ['gemas', L('Gemas', 'Gems')], ['objetos', L('Objetos', 'Items')]].map(function (t) { return '<button data-accion="tienda-tab" data-t="' + t[0] + '" class="' + (act === t[0] ? 'activo' : '') + '">' + t[1] + '</button>'; }).join('') + '</div>';
   }
   var PAQUETES_OFERTA = [
-    { id: 'constructor', ico: '🔨', nombre: ['Paquete del Constructor', "Builder's bundle"], gemas: 600, cosas: [['acel_1h', 3], ['madera_500k', 1], ['piedra_500k', 1]], precio: '2,99', valor: 5 }, // v7.92: tk_pack_constructor
-    { id: 'guerrero', ico: '⚔️', nombre: ['Paquete del Guerrero', "Warrior's bundle"], gemas: 1200, cosas: [['reclutas', 3], ['cofre_plata', 2], ['escudo_8h', 1]], precio: '9,99', valor: 6 },
-    { id: 'pirata', ico: '🏴‍☠️', nombre: ['Tesoro del Pirata', "Pirate's treasure"], gemas: 2600, cosas: [['cofre_oro', 2], ['libro_gra', 2], ['acel_8h', 2], ['portal_elegir', 1]], precio: '19,99', valor: 8 }
+    { id: 'constructor', ico: '🔨', nombre: ['Paquete del Constructor', "Builder's bundle"], gemas: 60, cosas: [['acel_1h', 3], ['madera_500k', 1], ['piedra_500k', 1]], precio: '2,99', valor: 5 }, // v7.92: tk_pack_constructor
+    { id: 'guerrero', ico: '⚔️', nombre: ['Paquete del Guerrero', "Warrior's bundle"], gemas: 300, cosas: [['reclutas', 3], ['cofre_plata', 2], ['escudo_8h', 1]], precio: '9,99', valor: 6 },
+    { id: 'pirata', ico: '🏴‍☠️', nombre: ['Tesoro del Pirata', "Pirate's treasure"], gemas: 700, cosas: [['cofre_oro', 2], ['libro_gra', 2], ['acel_8h', 2], ['portal_elegir', 1]], precio: '19,99', valor: 8 }
   ];
   function abrirPaquetes() {
     var fin = finDeSemana(), h = tabsTienda('paquetes') + '<p class="pr-nota">' + L('Ofertas de la semana. Cada paquete trae gemas y objetos.', 'This week\'s offers. Each bundle brings gems and items.') + '</p>';
@@ -12251,13 +12251,14 @@
     abrirPanel(T('p_tienda'), html + '</div>', { tipo: 'tienda' }); $('panel').classList.add('iv-panel', 'tg-panel', 'mo-panel'); // v7.86: una tarjeta por fila, como Tienda → Objetos
   }
   // ---------- tienda de gemas (paquetes propios; todavía no se cobra dinero real) ----------
+  /* v9.47 (dueño: «estamos dando muchas gemas»): precios y gemas nuevos que pidió el dueño. El «extra» se cuenta sobre el paquete de US$ 4,99 */
   var PAQUETES_GEMAS = [
-    { id: 'p1', nombre: ['Puñado de gemas', 'Handful of gems'], gemas: 100, extra: 0, precio: '0,99' },
-    { id: 'p2', nombre: ['Bolsita de gemas', 'Little gem pouch'], gemas: 550, extra: 10, precio: '4,99' },
-    { id: 'p3', nombre: ['Cofre de gemas', 'Gem chest'], gemas: 1200, extra: 20, precio: '9,99' },
-    { id: 'p4', nombre: ['Baúl de gemas', 'Gem trunk'], gemas: 2600, extra: 30, precio: '19,99' },
-    { id: 'p5', nombre: ['Arca del reino', 'Kingdom ark'], gemas: 7000, extra: 40, precio: '49,99' },
-    { id: 'p6', nombre: ['Tesoro real', 'Royal treasure'], gemas: 15000, extra: 50, precio: '99,99' }
+    { id: 'p1', nombre: ['Puñado de gemas', 'Handful of gems'], gemas: 100, extra: 0, precio: '4,99' },
+    { id: 'p2', nombre: ['Bolsita de gemas', 'Little gem pouch'], gemas: 300, extra: 50, precio: '9,99' },
+    { id: 'p3', nombre: ['Cofre de gemas', 'Gem chest'], gemas: 700, extra: 75, precio: '19,99' },
+    { id: 'p4', nombre: ['Baúl de gemas', 'Gem trunk'], gemas: 2100, extra: 110, precio: '49,99' },
+    { id: 'p5', nombre: ['Arca del reino', 'Kingdom ark'], gemas: 6300, extra: 350, precio: '69,99' },
+    { id: 'p6', nombre: ['Tesoro real', 'Royal treasure'], gemas: 12600, extra: 530, precio: '99,99' }
   ];
   function abrirTiendaGemas() {
     var h = tabsTienda('gemas') + '<div class="tienda-saldo grande"><span>' + L('Tus gemas', 'Your gems') + '</span><b><span class="ico gema"></span> ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></div>' +
@@ -12271,7 +12272,7 @@
     abrirPanel(L('Tienda', 'Shop'), h, { tipo: 'gemas' }); $('panel').classList.add('iv-panel', 'tg-panel');
   }
   // v7.92: dinero real por Pagos (Google Play / App Store en la app, Stripe en la web). La entrega llega por compras/{id}.
-  var SKU_GEMAS = ['tk_gemas_100', 'tk_gemas_550', 'tk_gemas_1200', 'tk_gemas_2600', 'tk_gemas_7000', 'tk_gemas_15000'], SKU_OFERTA = { constructor: 'tk_pack_constructor', guerrero: 'tk_pack_guerrero', pirata: 'tk_pack_pirata' };
+  var SKU_GEMAS = ['tk_gemas_100', 'tk_gemas_300', 'tk_gemas_700', 'tk_gemas_2100', 'tk_gemas_6300', 'tk_gemas_12600'] /* v9.47: ids nuevos (el número = gemas que da) */, SKU_OFERTA = { constructor: 'tk_pack_constructor', guerrero: 'tk_pack_guerrero', pirata: 'tk_pack_pirata' };
   function pagoReal(sku, titulo) {
     if (!window.Pagos || !Pagos.activo()) return false;
     if (!hayCuenta()) { consejoTemporal(L('Necesitas una cuenta para comprar.', 'You need an account to buy.')); sonar('error'); return true; }

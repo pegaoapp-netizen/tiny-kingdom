@@ -6,7 +6,7 @@
  * Apple y Google obligan a cobrar los bienes digitales dentro de la app con su propia pasarela:
  * por eso Stripe NUNCA se usa dentro de la app nativa.
  *
- * El juego llama a Pagos.comprarProducto('tk_gemas_550'). Nada se entrega en el teléfono:
+ * El juego llama a Pagos.comprarProducto('tk_gemas_300'). Nada se entrega en el teléfono:
  * la Cloud Function «verificarCompraNativa» (o el webhook de Stripe) comprueba el pago de verdad y
  * crea un documento en compras/{id}; el juego lo lee, lo entrega una sola vez y lo marca como cobrado.
  *
@@ -23,15 +23,15 @@
   };
   // mismos IDs en Google Play Console, App Store Connect, RevenueCat y Stripe
   var CATALOGO = {
-    tk_gemas_100:        { usd: '0.99',  gemas: 100 },
-    tk_gemas_550:        { usd: '4.99',  gemas: 550 },
-    tk_gemas_1200:       { usd: '9.99',  gemas: 1200 },
-    tk_gemas_2600:       { usd: '19.99', gemas: 2600 },
-    tk_gemas_7000:       { usd: '49.99', gemas: 7000 },
-    tk_gemas_15000:      { usd: '99.99', gemas: 15000 },
-    tk_pack_constructor: { usd: '2.99',  gemas: 600,  objetos: { acel_1h: 3, madera_500k: 1, piedra_500k: 1 } },
-    tk_pack_guerrero:    { usd: '9.99',  gemas: 1200, objetos: { reclutas: 3, cofre_plata: 2, escudo_8h: 1 } },
-    tk_pack_pirata:      { usd: '19.99', gemas: 2600, objetos: { cofre_oro: 2, libro_gra: 2, acel_8h: 2, portal_elegir: 1 } }
+    tk_gemas_100:        { usd: '4.99', gemas: 100 },   /* v9.47: precios y gemas nuevos del dueño */
+    tk_gemas_300:        { usd: '9.99', gemas: 300 },
+    tk_gemas_700:        { usd: '19.99', gemas: 700 },
+    tk_gemas_2100:       { usd: '49.99', gemas: 2100 },
+    tk_gemas_6300:       { usd: '69.99', gemas: 6300 },
+    tk_gemas_12600:      { usd: '99.99', gemas: 12600 },
+    tk_pack_constructor: { usd: '2.99',  gemas: 60,  objetos: { acel_1h: 3, madera_500k: 1, piedra_500k: 1 } },
+    tk_pack_guerrero:    { usd: '9.99',  gemas: 300, objetos: { reclutas: 3, cofre_plata: 2, escudo_8h: 1 } },
+    tk_pack_pirata:      { usd: '19.99', gemas: 700, objetos: { cofre_oro: 2, libro_gra: 2, acel_8h: 2, portal_elegir: 1 } }
   };
   function cap() { return window.Capacitor; }
   function detectarPlataformaPago() {
