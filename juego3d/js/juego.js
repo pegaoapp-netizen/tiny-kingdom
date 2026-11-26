@@ -5379,8 +5379,17 @@
     if (!de.length) return h + '<p class="iv-vacio">' + L('No tienes piezas de este tipo. Se ganan en la Campaña, torneos, oleadas y cofres.', 'You have no pieces of this type. Win them in the Campaign, tournaments, waves and chests.') + '</p>';
     return h + '<div class="her-lista">' + de.map(function (p) {
       return '<div class="eq-fila her-fila ' + p.r + '"><span class="eq-ico">' + icoPieza(p) + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b><small>' + textoPieza(p) + '</small><small class="her-quien">' + (p.h && HEROE[p.h] ? '👤 ' + L('Lo lleva ', 'Worn by ') + NH(p.h) : L('Sin usar', 'Not worn')) + '</small>' +
-        '<div class="her-bot">' + htmlForja(p).replace('data-eq="mejorar"', 'data-accion="inv-mejorar"') + (p.h ? '' : '<button class="comprar mini" data-accion="inv-reciclar" data-i="' + p.i + '">♻️ ' + L('Reciclar', 'Recycle') + '</button>') + '</div></div></div>';
+        '<div class="her-bot">' + htmlMejorarHerreria(p) + '</div></div></div>'; /* v9.56 (dueño): aquí se MEJORAN las piezas (sin Reciclar) */
     }).join('') + '</div>';
+  }
+  /* v9.56: botón grande «Mejorar a Nv X» con lo que cuesta y su % de éxito; si falta material, al tocarlo dice qué falta */
+  function htmlMejorarHerreria(p) {
+    if (p.n >= FORJA_MAX) return '<span class="eq-forja-max">✅ ' + L('Nivel máximo de forja', 'Max forge level') + '</span>';
+    var cf = costoForja(p), ex = exitoForja(p), falta = faltaForja(p);
+    var mats = Object.keys(cf.mat).map(function (k) { var t = (estado.mochila || {})[k] || 0; return '<span class="' + (t >= cf.mat[k] ? '' : 'falta') + '">' + OBJETOS[k].icono + ' ' + formatoNumero(t) + '/' + cf.mat[k] + '</span>'; }).join(' ');
+    return '<button class="comprar verde her-mejorar' + (falta.length ? ' gris' : '') + '" data-accion="inv-mejorar" data-i="' + p.i + '">⬆️ ' + L('Mejorar a Nv ', 'Upgrade to Lv ') + (p.n + 1) + '</button>' +
+      '<div class="her-costo">' + htmlCosto(cf.pago) + ' ' + mats + '</div>' +
+      '<span class="eq-exito" style="color:' + (ex >= 70 ? '#4fd06a' : ex >= 30 ? '#ffd24a' : '#ff7a6a') + '">' + L('Éxito: ', 'Success: ') + ex + '%' + (p.bend ? ' <small>(+' + p.bend + '% ' + L('Bendición', 'Blessing') + ')</small>' : '') + '</span>';
   }
   function abrirPanelHerreria() {
     var hn = nivelMayor('herreria');

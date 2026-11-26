@@ -2491,3 +2491,10 @@ html body #dock-procesos .dk-tabs .dk-flecha { min-height: 30px !important; }
 #panel.az-panel .az-compra { width: 100%; display: flex; justify-content: center; gap: 8px; }
 #panel.az-panel .az-compra .az-b { flex-direction: column; line-height: 1.15; }
 #panel.az-panel .az-compra .az-b small { font: 800 13px system-ui, sans-serif; display: flex; align-items: center; gap: 3px; }
+
+/* v9.56: Herrería › Equipo: botón de mejorar bien visible */
+#panel .her-bot { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 6px; }
+#panel .her-bot .her-mejorar { min-height: 40px; padding: 6px 16px; font-size: 15px; }
+#panel .her-bot .her-mejorar.gris { filter: grayscale(.7); opacity: .75; }
+#panel .her-bot .her-costo { font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#panel .her-bot .her-costo .falta { color: #ff7a6a; font-weight: 700; }
