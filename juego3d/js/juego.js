@@ -2833,6 +2833,7 @@
     // v6.88: los botones rápidos (defensa, velocidad, pausa...) se guardan antes de redibujar el menú
     var cj = $('cajon-lateral'), lat = $('lateral'); if (cj && lat && m.contains(cj)) lat.appendChild(cj);
     if (!m.classList.contains('oculto')) { cerrarMenuGrande(); return; }
+    var eraSocio = esCuentaSocio(); cargarSocios(function () { if (esCuentaSocio() !== eraSocio && !m.classList.contains('oculto')) { cerrarMenuGrande(); abrirMenuGrande(); } }); /* v9.68: al abrir el menú se mira la lista de socios al momento (así le sale Compensación al socio sin esperar) */
     cerrarPanel(); if (menuAbierto()) cerrarMenuEdif();
     // v6.63: iconos propios con marco dorado
     var ICONO_MENU = { 'btn-mochila': 'inventario', 'btn-misiones': 'misiones', 'btn-alianza': 'alianza', 'btn-buzon': 'correo', 'mg-azar': 'azar', 'btn-conquista': 'campana', 'mg-reliquia': 'reliquia', 'mg-entrenar': 'entrenar', 'mg-investigar': 'investigar', 'btn-ranking': 'ranking', 'btn-ajustes': 'ajustes', 'mg-publicar': 'publicar', 'mg-equipo': 'equipo' };
@@ -12653,9 +12654,9 @@
   /* v9.63 (dueño): SOCIOS FUNDADORES. La lista (uids y nombres) está en la nube, en config/socios; solo el dueño la cambia.
      Los socios llevan la insignia 👑 Socio fundador y pueden mandar compensaciones (la regla de la nube también lo comprueba). */
   var SOCIOS = { uids: [], nombres: [], duenos: [] };
-  function cargarSocios() { try { if (!window.firebase || !firebase.firestore || !hayCuenta()) return; var ref = firebase.firestore().collection('config').doc('socios'); ref.get().then(function (d) { var x = d.exists ? d.data() : {}; SOCIOS = { uids: Array.isArray(x.uids) ? x.uids.map(String) : [], nombres: Array.isArray(x.nombres) ? x.nombres.map(String) : [], duenos: Array.isArray(x.duenos) ? x.duenos.map(String) : [] };
+  function cargarSocios(hecho) { try { if (!window.firebase || !firebase.firestore || !hayCuenta()) return; var ref = firebase.firestore().collection('config').doc('socios'); ref.get().then(function (d) { var x = d.exists ? d.data() : {}; SOCIOS = { uids: Array.isArray(x.uids) ? x.uids.map(String) : [], nombres: Array.isArray(x.nombres) ? x.nombres.map(String) : [], duenos: Array.isArray(x.duenos) ? x.duenos.map(String) : [] };
       /* v9.64: la cuenta del dueño se apunta sola en la lista de protegidos (nadie la puede espiar) */
-      var yo = Cuentas.usuario() && Cuentas.usuario().uid; if (yo && esCuentaDueno() && SOCIOS.duenos.indexOf(yo) < 0) { SOCIOS.duenos = SOCIOS.duenos.concat([yo]).slice(-5); ref.set({ uids: SOCIOS.uids, nombres: SOCIOS.nombres, duenos: SOCIOS.duenos, fecha: Date.now() }).catch(function () {}); } if (cuentaDelEquipo()) publicarAldea(true); /* v9.64: en cuanto se sabe que es del equipo, se tapa lo que ven los espías */ }).catch(function () {}); } catch (e) {} }
+      var yo = Cuentas.usuario() && Cuentas.usuario().uid; if (yo && esCuentaDueno() && SOCIOS.duenos.indexOf(yo) < 0) { SOCIOS.duenos = SOCIOS.duenos.concat([yo]).slice(-5); ref.set({ uids: SOCIOS.uids, nombres: SOCIOS.nombres, duenos: SOCIOS.duenos, fecha: Date.now() }).catch(function () {}); } if (cuentaDelEquipo()) publicarAldea(true); /* v9.64: en cuanto se sabe que es del equipo, se tapa lo que ven los espías */ if (hecho) hecho(); }).catch(function () {}); } catch (e) {} }
   /* v9.64 (dueño): las cuentas del equipo (dueño y socios fundadores) NUNCA se pueden espiar */
   function esProtegidoUid(uid) { return !!uid && (esSocioUid(uid) || SOCIOS.duenos.indexOf(String(uid)) >= 0); }
   function cuentaDelEquipo() { return esCuentaDueno() || esCuentaSocio(); }
