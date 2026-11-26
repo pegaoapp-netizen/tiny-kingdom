@@ -1,4 +1,4 @@
-// v6.94: TODAS las tarjetas suben desde abajo y se abren completas hasta arriba (como Kingdoms of Camelot):
+// v6.94: TODAS las tarjetas suben desde abajo y se abren completas hasta arriba (como los juegos clásicos de castillos):
 // título, «Más» y pestañas fijos arriba; la lista baja; el chat con su caja de escribir abajo.
 // Única excepción: la tarjeta de la Paloma (Potenciador), que sale en el centro como un pergamino (clase .tk-centro).
 (function () {

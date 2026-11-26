@@ -2089,7 +2089,7 @@ html body #panel .visor-tropa.pintada.r4 img { filter: drop-shadow(0 0 16px #ffc
 .eq-fila .eq-ico[data-eq] { cursor: pointer; }
 #eq-info .nota { background: none !important; color: #3a2610 !important; border: 0 !important; padding: 0 !important; }
 
-/* v6.93: lista de tropas como en Camelot */
+/* v6.93: lista de tropas */
 html body #panel .tl-lista { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
 html body #panel .tl-fila { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 8px; border-radius: 12px; border: 1px solid rgba(201,162,74,.55); background: linear-gradient(180deg, rgba(60,40,20,.9), rgba(35,22,10,.9)); color: #f1e2c0; min-height: 86px; }
 html body #panel .tl-fila.bloq { opacity: .72; }

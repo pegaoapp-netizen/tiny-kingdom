@@ -170,7 +170,7 @@
   // v6.48: vista isométrica fija estilo 2D: la cámara se aleja ISO_K veces con un lente ISO_K veces más cerrado (casi sin perspectiva)
   // v7.67: con perspectiva de verdad, como en la referencia del dueño: lo de cerca se ve grande y lo de lejos se va achicando
   // iso: cuánta perspectiva (5 = casi plano), grados: inclinación de la cámara, luz: claridad de día, acerca: zoom de la Ciudad
-  var VISTA = /[?&]vista=antes\b/.test(location.search) ? { iso: 1.7, grados: 40, luz: 1.0, sombra: 0.72, acerca: 0.7, baja: 9 } : { iso: 6, grados: 42, luz: 1.0, sombra: 0.72, acerca: 0.78, baja: 0 }; // v7.79: vista isométrica como Kingdoms of Camelot: casi sin perspectiva (los edificios no se deforman), en diagonal a 45° y ángulo fijo al acercar. Con ?vista=antes se ve la de antes // v7.70: luz natural: menos luz que rellena (sombras de verdad) y colores sin quemar
+  var VISTA = /[?&]vista=antes\b/.test(location.search) ? { iso: 1.7, grados: 40, luz: 1.0, sombra: 0.72, acerca: 0.7, baja: 9 } : { iso: 6, grados: 42, luz: 1.0, sombra: 0.72, acerca: 0.78, baja: 0 }; // v7.79: vista isométrica como los juegos clásicos de castillos: casi sin perspectiva (los edificios no se deforman), en diagonal a 45° y ángulo fijo al acercar. Con ?vista=antes se ve la de antes // v7.70: luz natural: menos luz que rellena (sombras de verdad) y colores sin quemar
   var ISO_K = VISTA.iso;
   function fovBase() { return window.innerWidth < window.innerHeight ? 34 : 30; }
   function fovPantalla() { return 2 * Math.atan(Math.tan(fovBase() * Math.PI / 360) / ISO_K) * 180 / Math.PI; }
@@ -191,7 +191,7 @@
   // v6.48: al entrar se ve la ciudad entera de una mirada, todo más chico (antes 68: el castillo llenaba la pantalla)
   // v6.54: zoom corto, como en los juegos de reinos: se acerca y se aleja solo un poco desde la vista normal
   function zoomBase() { return typeof vistaActual !== 'undefined' && vistaActual === 'campos' ? DIST_CAMPOS() : distInicial(); }
-  // v6.83: como en Kingdoms of Camelot: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
+  // v6.83: como en los juegos clásicos de castillos: al entrar se ve casi toda la ciudad de un vistazo; se puede acercar bastante y alejar hasta ver la muralla entera
   function zoomMin() { return zoomBase() * 0.4; } // v7.69: se puede acercar más para ver los detalles
   function zoomMax() { return zoomBase() * (typeof vistaActual !== 'undefined' && vistaActual === 'ciudad' ? ZOOM_MAX_CIUDAD : 1.6); } // v7.65: en la Ciudad no se aleja hasta ver los campos
   // v7.65: en la Ciudad el castillo se ve más grande (más cerca) y los campos no se ven: solo con el botón Campos
@@ -204,7 +204,7 @@
   // ángulo de la cámara: mira la puerta del castillo (que da al lado -x) de frente
   var AZ_CAM = Math.PI; // v7.44: alineado con la muralla cuadrada (antes 3.55)
   // v6.48: la cámara mira la ciudad en diagonal (calles y murallas cruzan la pantalla de lado); el reino no se mueve
-  var GIRO_DIAG = VISTA.baja ? Math.PI / 5 : Math.PI / 4; // v7.79: diagonal exacta de 45° (parcelas en rombo, como en KoC) // v7.55: como en KoC, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
+  var GIRO_DIAG = VISTA.baja ? Math.PI / 5 : Math.PI / 4; // v7.79: diagonal exacta de 45° (parcelas en rombo, como en juegos clásicos) // v7.55: como en juegos clásicos, la villa se mira en diagonal con el castillo en su colina arriba · // v7.44: la ciudad por barrios se mira de frente (antes en diagonal, Math.PI / 4)
   var GIRO_PROTO = 0; // v7.71 prototipo 3D: la cámara se puede girar un poco
   // v7.73 CÁMARA LIBRE: con los edificios en 3D la cámara gira 360° (dos dedos girando) y se inclina (dos dedos arriba/abajo).
   // giro: vueltas que dio el jugador; grados: inclinación elegida (al acercar baja un poco sola, como en los juegos de estrategia modernos)
@@ -217,7 +217,7 @@
   var EJE_U = { x: Math.cos(AZ_CAM), z: Math.sin(AZ_CAM) }, EJE_V = { x: -Math.sin(AZ_CAM), z: Math.cos(AZ_CAM) };
   function aMundo(a, b) { return [EJE_U.x * a + EJE_V.x * b, EJE_U.z * a + EJE_V.z * b]; }
   function aLocal(x, z) { return { a: x * EJE_U.x + z * EJE_U.z, b: x * EJE_V.x + z * EJE_V.z }; }
-  // v7.55: COLINA DEL CASTILLO (como en KoC): el castillo va arriba de una meseta de roca rodeada por un foso, y una rampa baja hacia la villa
+  // v7.55: COLINA DEL CASTILLO (como en juegos clásicos): el castillo va arriba de una meseta de roca rodeada por un foso, y una rampa baja hacia la villa
   var COLINA = { r: 20, alto: 3.2, foso0: 21, foso1: 25, rampa: 29, anchoRampa: 3 };
   function alturaCiudad(x, z) {
     var l = aLocal(x, z), r = Math.hypot(l.a, l.b);
@@ -520,7 +520,7 @@
   //  PARCELAS: cuadrícula con calles dentro de la muralla, campos marrones fuera.
   //  Cada edificio ocupa 1 cuadro y deja 2 cuadros de pasto entre el siguiente.
   // ------------------------------------------------------------------
-  // v7.79: VILLA MÁS JUNTA (como KoC): las filas de fuera se acercan; lo pegado a la colina y al foso no se mueve
+  // v7.79: VILLA MÁS JUNTA (como juegos clásicos): las filas de fuera se acercan; lo pegado a la colina y al foso no se mueve
   var JUNTA_K = /[?&]vista=antes\b/.test(location.search) ? 1 : 0.86;
   function juntaEje(v, piv) { var m = Math.abs(v); return m <= piv ? v : Math.sign(v) * (piv + (m - piv) * JUNTA_K); }
   function juntaA(a) { return juntaEje(a, 8); }
@@ -1104,7 +1104,7 @@
     // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
     castillo.updateMatrixWorld(true);
     var bxC = new THREE.Box3().setFromObject(castillo), anC = Math.max(bxC.max.x - bxC.min.x, bxC.max.z - bxC.min.z);
-    // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
+    // v7.48: como en los juegos clásicos de castillos el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
     var metaC = TAM_CASTILLO * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
     if (nvC >= 16) metaC *= 1.3; /* v8.89: los castillos grandes llenan su plaza */
     if (anC > 0.01) { var escC = metaC / anC, LIM_PLAZA = COLINA.r - 0.5 - ATRAS_CASTILLO; /* v9.40: deja sitio para echarlo hacia atrás */ if (rEsq > 0.01 && rEsq * escC > LIM_PLAZA) escC = LIM_PLAZA / rEsq; castillo.scale.multiplyScalar(escC); }
@@ -1894,7 +1894,7 @@
   function gemasCampamento(n) { return Math.max(1, Math.floor(n / 2)); }
   var casillasNube = {}, M3 = null, ocupadasMundo = {};
   // batalla genérica: devuelve si ganó, qué parte del ejército cae y qué tan bien le fue
-  // ================= v7.14: COMBATE POR RONDAS (estilo Kingdoms of Camelot 2012) =================
+  // ================= v7.14: COMBATE POR RONDAS (estilo los juegos clásicos de castillos 2012) =================
   // Hasta 20 rondas. Cada grupo de tropas avanza según su velocidad si no tiene enemigos a tiro; si los tiene, se para y dispara.
   // Cuerpo a cuerpo pega al grupo enemigo más cercano (por eso las «capas» de exploradores y milicianos protegen a los arqueros).
   // Los de distancia prefieren a los de distancia enemigos, si no al más cercano. El daño es simultáneo.
@@ -1902,7 +1902,7 @@
   function tiposCombate() { return Object.keys(COMBATE_KOC).filter(function (k) { return TROPAS[k] && COMBATE_KOC[k].ataque > 0; }); }
   function miComposicion() { var c = {}; tiposCombate().forEach(function (k) { var n = cuentaTipo(k); if (n > 0) c[k] = n; }); return c; }
   function liderActual() { return (estado.equipo || []).filter(function (k) { return estado.heroes && estado.heroes[k]; })[0] || null; }
-  // multiplicadores del héroe y su equipo (fórmula de KoC): combate = nivel × 3 → +0,5 % ataque y +0,25 % vida por punto
+  // multiplicadores del héroe y su equipo (fórmula de juegos clásicos): combate = nivel × 3 → +0,5 % ataque y +0,25 % vida por punto
   /* v8.49: SETS DE ATAQUE Y DE DEFENSA. Cada pieza de un set de Ataque da +3 % de ataque al atacar;
      cada pieza de un set de Defensa da +3,45 % (15 % más) de salud y defensa al defender tu ciudad. 6/6 da un extra. */
   var SET_ROL = { sol: 'ataque', ancla: 'ataque', chispa: 'ataque', trueno: 'ataque', brisa: 'ataque', fenix: 'ataque', aguila: 'ataque', dragon: 'ataque', roble: 'defensa', luna: 'defensa', pluma: 'defensa', titan: 'defensa', leon: 'defensa' };
@@ -1937,7 +1937,7 @@
   var ASEDIO_KOC = { ariete: 1, catapulta: 1, balista: 1, torre_asedio: 1 };
   /* v8.60 (dueño): con la Defensa en OFF las tropas NO se salvan: no pelean y el atacante mata la mitad de cada tipo */
   var PERD_OFF = 0.5;
-  /* v8.59 (especificación KoC del dueño): TRIÁNGULO DE CONTRAATAQUES. Infantería fuerte contra caballería, caballería fuerte contra
+  /* v8.59 (especificación juegos clásicos del dueño): TRIÁNGULO DE CONTRAATAQUES. Infantería fuerte contra caballería, caballería fuerte contra
      tiradores, tiradores fuertes contra infantería. El asedio rompe murallas (ver aplicar) y es débil sin escolta. */
   var CLASE_KOC = { miliciano: 'inf', espadachin: 'inf', guardian: 'inf', explorador: 'cab', jinete: 'cab', caballeria: 'cab', caballeria_pesada: 'cab', arquero: 'dist', ballestero: 'dist', arquero_largo: 'dist', tirador_elite: 'dist', balista: 'asedio', ariete: 'asedio', catapulta: 'asedio', torre_asedio: 'asedio' };
   var GANA_A = { inf: 'cab', cab: 'dist', dist: 'inf' }, BONO_CONTRA = { inf: 3, cab: 1.5, dist: 1.5 }; /* la infantería necesita más: cada jinete vale mucho más que un soldado */
@@ -2020,7 +2020,7 @@
       // v7.22: el bando con el héroe más fuerte dispara primero en cada ronda (iniciativa); si no, golpean a la vez
       var iniA = (mA.combate || 0) > (mD.combate || 0), iniD = (mD.combate || 0) > (mA.combate || 0);
       var gA = [], gD = [];
-      function aplicar(g) { g.forEach(function (x) { // v8.31: como en KoC, mueren primero exploradores y milicianos, luego infantería, caballería, tiradores y al final el asedio
+      function aplicar(g) { g.forEach(function (x) { // v8.31: como en juegos clásicos, mueren primero exploradores y milicianos, luego infantería, caballería, tiradores y al final el asedio
         var dmg = x.dano, l = x.enemigos.filter(function (e) { return e.n > 0.5; }).sort(function (p, q) { return (CAPA_KOC[p.tipo] || 3) - (CAPA_KOC[q.tipo] || 3); });
         for (var i = 0; i < l.length && dmg > 0; i++) { var o = l[i], xm = (o.tipo === 'defensas' && ASEDIO_KOC[x.tipoAt] ? 2.5 : 1) * multContra(x.tipoAt, o.tipo), mata = Math.min(o.n, dmg * xm / o.vida); o.n -= mata; dmg -= mata * o.vida / xm; } // v8.35: arietes, catapultas, balistas y torres de asedio rompen torres 2,5 veces más rápido
       }); }
@@ -3526,7 +3526,7 @@
     var h = htmlTabsAlianza();
     if (alTab === 'info') {
       var nv = nivelAlianza(al.xp || 0), soyLider = al.lider === yoU; // v7.99: nivel compartido (donaciones de todos)
-      // v7.17: como Kingdoms of Camelot: Canciller, Clasificación entre todas las alianzas y tu puesto de verdad (Vicecanciller, Mariscal…)
+      // v7.17: como los juegos clásicos de castillos: Canciller, Clasificación entre todas las alianzas y tu puesto de verdad (Vicecanciller, Mariscal…)
       var clas = '…';
       if (alListaTodas) { var ix = alListaTodas.map(function (x) { return x.tag; }).indexOf(al.tag); clas = ix >= 0 ? String(ix + 1) : '—'; }
       else Cuentas.alianzas().then(function (l) { alListaTodas = l || []; if (panelActual && panelActual.tipo === 'alianza' && alTab === 'info') pintarHubAlianza(); }).catch(function () {});
@@ -4172,7 +4172,7 @@
   }
 
   function htmlTabsAlianza() { return '<div class="iv-modos al-tabs">' + [['info', 'Info', 'Info'], ['miembros', 'Miembros', 'Members'], ['alianzas', 'Alianzas', 'Alliances'], ['muro', 'Muro', 'Wall'], ['ranking', 'Ranking', 'Ranking']].map(function (t) { return '<button data-accion="al-tab" data-t="' + t[0] + '" class="' + (alTab === t[0] ? 'activo' : '') + '">' + L(t[1], t[2]) + '</button>'; }).join('') + '</div>'; }
-  // v7.21: ficha de cualquier alianza (como KoC): escudo, líder, miembros, poder y liquidación totales, descripción, unirse o ver miembros
+  // v7.21: ficha de cualquier alianza (como juegos clásicos): escudo, líder, miembros, poder y liquidación totales, descripción, unirse o ver miembros
   var alMiembrosN = {}, alMiembrosPend = {}, alPoderN = {}; /* v8.79: poder total de cada alianza */
   function contarMiembrosAl(l) {
     l.forEach(function (x) { if (alMiembrosN[x.tag] !== undefined || alMiembrosPend[x.tag]) return; alMiembrosPend[x.tag] = 1;
@@ -5038,7 +5038,7 @@
     encajarEnParcela(s.modelo, tr, tipo, nivel);
 
     // v7.69: en la villa los edificios llenan más su parcela (como un reino de verdad), sin pisar la calle
-    var CRECE_VILLA = 1.4; // v7.79: más grandes, como en KoC (antes 1.18)
+    var CRECE_VILLA = 1.4; // v7.79: más grandes, como en juegos clásicos (antes 1.18)
     if (!s.campo && !(s.fijo && s.fijo === tipo) && !s.modelo.userData.es2D) {
       s.modelo.scale.multiplyScalar(CRECE_VILLA);
       s.modelo.position.set(0, 0, 0); s.modelo.updateMatrixWorld(true);
@@ -5791,7 +5791,7 @@
   function rapidezEntreno() {
     return cuartelesListos().reduce(function (a, s) { return Math.max(a, EDIFICIOS.cuartel.rapidez[s.edificio.nivel - 1]); }, 1) * (1 + bono('entreno'));
   }
-  // v6.94: HOSPITAL (Enfermería) como Kingdoms of Camelot: camas ocupadas, cada tropa herida en su fila con su foto,
+  // v6.94: HOSPITAL (Enfermería) como los juegos clásicos de castillos: camas ocupadas, cada tropa herida en su fila con su foto,
   // y curar ya (por tipo o todas) pagando el 40 % de lo que cuesta entrenarlas. Si no, se curan solas al acabar la oleada.
   function costoCurar(tipo, n) { var c = costoTropa(tipo); return { oro: Math.ceil((c.oro || 0) * 0.4 * n), comida: Math.ceil((c.comida || 0) * 0.4 * n) }; }
   function costoCurarTodo() { var t = { oro: 0, comida: 0 }; Object.keys(estado.heridos || {}).forEach(function (k) { var c = costoCurar(k, estado.heridos[k]); t.oro += c.oro; t.comida += c.comida; }); return t; }
@@ -5862,7 +5862,7 @@
   function poblacionMax() { return POB_BASE + (estado.pobRegalo || 0) + edificiosDe('cabana').reduce(function (a, s) { return a + EDIFICIOS.cabana.poblacion[s.edificio.nivel - 1]; }, 0); }
   function obrerosOcupados() { var n = slots.filter(function (s) { return s.obra; }).length + (estado.obraCastillo ? 1 : 0) + (obraMuralla ? 1 : 0); if (n > 0 && vipNivel() >= 8) n--; return OBREROS_OBRA * n; } // v7.79: VIP 8 = 2.º constructor
   function poblacionLibre() { return poblacionMax() - obrerosOcupados() - Math.ceil(estado.pobGastada || 0); }
-  // v7.96 (como en KoC): los reclutas salen de la población libre; después la villa la recupera sola, un 5% del máximo por minuto
+  // v7.96 (como en juegos clásicos): los reclutas salen de la población libre; después la villa la recupera sola, un 5% del máximo por minuto
   var POB_RECUPERA_MIN = 0.05;
   function gastarPoblacion(n) { var libre = Math.max(0, poblacionMax() - obrerosOcupados() - (estado.pobGastada || 0)); estado.pobGastada = (estado.pobGastada || 0) + Math.min(n, libre); }
   function recuperarPoblacion(seg) { if (estado.pobGastada > 0) { estado.pobGastada = Math.max(0, estado.pobGastada - poblacionMax() * POB_RECUPERA_MIN / 60 * seg); if (estado.pobGastada < 0.5) estado.pobGastada = 0; } }
@@ -6708,7 +6708,7 @@
     }
     if (!arrastre) {
       cam.meta.addScaledVector(cam.vel, dt);
-      cam.vel.multiplyScalar(Math.exp(-dt * 3.6)); // v7.61: deslizamiento largo y suave al soltar, como en KoC
+      cam.vel.multiplyScalar(Math.exp(-dt * 3.6)); // v7.61: deslizamiento largo y suave al soltar, como en juegos clásicos
       if (cam.vel.lengthSq() < 0.04) cam.vel.set(0, 0, 0);
     }
     // la cámara no se puede ir lejos del reino
@@ -8331,7 +8331,7 @@
     var pestHTML = '<div class="subtabs pest-tropa"><button data-accion="tropa-pest" data-pest="todas" class="' + (v.pest === 'todas' ? 'activo' : '') + '">👥 ' + L('Mis tropas', 'My troops') + '</button>' + Object.keys(PESTANAS_TROPA).map(function (k) {
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
-    // v6.94: como Kingdoms of Camelot: primero la lista, cada tropa en su fila (foto, nombre, «Tienes: X» y descripción)
+    // v6.94: como los juegos clásicos de castillos: primero la lista, cada tropa en su fila (foto, nombre, «Tienes: X» y descripción)
     pestHTML = ''; /* v9.55 (dueño): fuera las pestañas repetidas (Mis tropas · Cuartel · Establo · Campo): una sola lista con todas */
     if (v.modo !== 'detalle') {
       var todasT = [].concat(PESTANAS_TROPA.cuartel, PESTANAS_TROPA.establo, PESTANAS_TROPA.tiro);
@@ -10107,7 +10107,7 @@
   }
   // ================= v6.41: VENTANA MARCHA =================
   // Héroe (con Cambiar), tropas con cantidad exacta (Editar), Guardar formación, tiempo de marcha visible y Marcha.
-  // v7.18: como Kingdoms of Camelot: el Punto de reunión manda. 10.000 tropas por nivel + 250 por nivel del héroe + 1.000 por pieza de su juego;
+  // v7.18: como los juegos clásicos de castillos: el Punto de reunión manda. 10.000 tropas por nivel + 250 por nivel del héroe + 1.000 por pieza de su juego;
   // la Ampliación de marcha suma un 25 %. Sin Punto de reunión, 5.000. Marchas a la vez: una por nivel del Punto de reunión (máximo 12).
   function nivelRelevo() { return nivelMayor('relevo') || 0; }
   function tamanoMarcha(heroe) {
@@ -10144,7 +10144,7 @@
     var f0 = formacionUnaVez || (estado.formacion && estado.formacion.guardada ? estado.formacion : {}); formacionUnaVez = null;
     var sel = { heroe: f0.heroe && estado.heroes[f0.heroe] ? f0.heroe : null, tropas: {} };
     tiposDisponibles().forEach(function (k) { var n = (f0.tropas || {})[k]; if (n) sel.tropas[k] = Math.min(n, cuentaTipo(k)); });
-    var vista = 'unica', d = document.createElement('div'); d.id = 'marcha'; // v7.18: una sola ventana, como Kingdoms of Camelot 2012
+    var vista = 'unica', d = document.createElement('div'); d.id = 'marcha'; // v7.18: una sola ventana, como los juegos clásicos de castillos 2012
     document.body.appendChild(d);
     function total() { var t = 0; for (var k in sel.tropas) t += sel.tropas[k] || 0; return t; }
     function fuerza() { var f = valorHeroe(sel.heroe); for (var k in sel.tropas) if (sel.tropas[k] > 0) f += valorUnidadTipo(k) * sel.tropas[k]; return Math.round(f); }
@@ -10371,11 +10371,11 @@
   function escenaBatalla(a, f, d, gano, alTerminar) {
     // v8.10: contra bestias, aldeas, villas y terrenos no sale ninguna ventana: solo un aviso corto y el informe va al Correo
     if (a && a.silencio) { consejoTemporal((gano ? '🏆 ' + L('Victoria contra ', 'Victory against ') : '💔 ' + L('Derrota contra ', 'Defeat against ')) + escaparHTML(a.nombre || '') + ' · 📜 ' + L('informe en el Correo', 'report in your Mail')); return; }
-    // v7.19: como Kingdoms of Camelot (2012): al llegar la marcha NO sale ninguna ventana. Suena la batalla, sale un aviso corto arriba
+    // v7.19: como los juegos clásicos de castillos (2012): al llegar la marcha NO sale ninguna ventana. Suena la batalla, sale un aviso corto arriba
     // y el informe completo (botín, bajas, regreso) queda en el Correo con su globo rojo.
     if (!window.__escenaVieja) {
       var vj = $('batalla-pvp'); if (vj) vj.remove();
-      sonar('golpe'); // v7.76: el aviso no dice si ganaste (como KoC): el resultado está en el informe
+      sonar('golpe'); // v7.76: el aviso no dice si ganaste (como juegos clásicos): el resultado está en el informe
       consejoTemporal('⚔️ ' + L('Batalla terminada · informe en el Correo', 'Battle over · report in your Mail') + ' · ' + (a.nombre || ''));
       try { alTerminar(function () {}); } catch (e) {}
       try { actualizarAlertas(); } catch (e) {}
@@ -10474,7 +10474,7 @@
       estado.escudoHasta = 0; estado.burbujaHasta = 0; // atacar quita tu protección (y la burbuja)
       estado.cdAtaque = estado.cdAtaque || {}; estado.cdAtaque[a.uid] = Date.now(); /* v8.55: sin espera: se puede atacar seguido */ // v7.14: 1 min entre ataques al mismo reino (antes 10)
       guardar(true); publicarAldea(true); actualizarEscudo();
-      // v7.18: como en KoC 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
+      // v7.18: como en juegos clásicos 2012, la ventana se cierra y el mapa queda libre: solo un aviso corto (la marcha se ve como una línea con la columna avanzando)
       $('mundo-info').innerHTML = ''; abrirDockAuto(); try { guardarDock(); actualizarDock(); } catch (e) {} sonar('cuerno'); // v7.19: la marcha se ve en la barra de abajo con Acelerar y Retirar, sin cartel encima
       actualizarAlertas();
     }).catch(function (e) { try { console.warn('No se pudo crear el ataque:', e && (e.code || e.message), JSON.stringify(doc)); } catch (x) {} consejoTemporal('⚠️ ' + T('mar_error')); $('mundo-info').innerHTML = '<div class="carta"><p class="aviso-rojo"><b>' + T('mar_error') + '</b></p></div>'; sonar('error'); }); /* v9.15: el aviso se ve aunque el panel del mapa esté cerrado */
@@ -10496,7 +10496,7 @@
     if (resolviendo[m.id]) return; resolviendo[m.id] = true;
     var paso = m.resuelto ? Promise.resolve(m) : Cuentas.leerAldea(m.defensor).then(function (al) {
       var umT = (estado.marchaTropas || {})[m.id] || estado.ultimaMarcha || {}, esp = (al && al.espia) || {};
-      // v7.26: si el defensor no ha entrado desde mi último ataque, sus tropas muertas siguen muertas (como en KoC): se descuentan de lo publicado
+      // v7.26: si el defensor no ha entrado desde mi último ataque, sus tropas muertas siguen muertas (como en juegos clásicos): se descuentan de lo publicado
       var dDef = Math.max(1, (al && al.defensa) || m.defensa || 1), tDef = JSON.parse(JSON.stringify(esp.tropas || {}));
       var bv = (estado.bajasDe || {})[m.defensor];
       var fdA = esp.fd ? JSON.parse(JSON.stringify(esp.fd)) : null;
@@ -10660,7 +10660,7 @@
       // tropas en ON: defienden y algunas mueren (más si se pierde); en OFF no mueren
       if (enOtra) { var mf = bajasEnFoto(dm, perdio ? 0.5 : 0.15); if (mf) html += '<p class="aviso-rojo">⚔️ ' + T('at_bajas', { n: mf }) + '</p>'; }
       else if (estado.tropasDefienden !== false) { var muertas = bajasEjercito(perdio ? 0.5 : 0.15); if (muertas) html += '<p class="aviso-rojo">⚔️ ' + T('at_bajas', { n: muertas }) + '</p>'; }
-      // v7.14: ya no se pone un escudo automático de 30 min al perder (por eso solo se podía atacar una vez); como en KoC, el escudo se compra o se usa
+      // v7.14: ya no se pone un escudo automático de 30 min al perder (por eso solo se podía atacar una vez); como en juegos clásicos, el escudo se compra o se usa
       actualizarHUD(); guardar(true); publicarAldea(true); actualizarEscudo();
       consejoTemporal('📬 ' + L('Tienes un informe nuevo de guerra en el Correo', 'You have a new war report in your Mail'));
       sonar(perdio ? 'derrota' : 'victoria');
@@ -10777,7 +10777,7 @@
     { id: 'mariscal', ico: '⚔️', es: ['Mariscal', 'Más daño de tus tropas'], en: ['Marshal', 'More troop damage'], bonos: ['espadas', 'flechas'] }
   ];
   function cargos() { if (!estado.cargos) estado.cargos = {}; return estado.cargos; }
-  // v7.14: como en KoC, el caballero con cargo gana experiencia cada hora (10 por nivel del castillo)
+  // v7.14: como en juegos clásicos, el caballero con cargo gana experiencia cada hora (10 por nivel del castillo)
   setInterval(function () { if (enMenu || !estado.heroes) return; var c = cargos(); Object.keys(c).forEach(function (k) { if (c[k] && estado.heroes[c[k]]) darExp(c[k], 10 * (estado.castillo || 1) / 60); }); }, 60000);
   function bonoCargoDe(heroeId) { var e = heroeId && estado.heroes[heroeId]; return e ? Math.min(0.6, 0.02 * (e.estrellas || 1) + 0.002 * (e.nivel || 1)) : 0; } // v7.87: hasta +60% con héroes de nivel alto
   function cargoDeHeroe(heroeId) { var c = cargos(); for (var k in c) if (c[k] === heroeId) return k; return ''; }
@@ -12732,7 +12732,7 @@
     actualizarHUD();
     guardarPreferencias();
   }
-  // v6.99: RECURSOS DE LA CIUDAD (al tocar la fila de recursos de arriba), como Kingdoms of Camelot:
+  // v6.99: RECURSOS DE LA CIUDAD (al tocar la fila de recursos de arriba), como los juegos clásicos de castillos:
   // población, felicidad, impuestos y almacén; y cada recurso con producción por hora, mantenimiento, lo que tienes, capacidad y Mejora
   function produccionHoraDe(r) {
     var p = 0;
@@ -12899,7 +12899,7 @@
       return '<div class="ib-lado ' + cls + '"><h4>' + titulo + '</h4><b class="ib-nom">' + escaparHTML(x.nombre || '?') + '</b>' + hz +
         '<div class="ib-filas"><span>💪 ' + L('Poder', 'Power') + '</span><b>' + f(x.poder) + '</b><span>⚔️ ' + L('Lucharon', 'Fought') + '</span><b>' + f(x.lucharon) + '</b><span>✅ ' + L('Sobrevivieron', 'Survived') + '</span><b>' + f(x.sobreviven) + '</b>' +
         '<span>☠️ ' + L('Murieron', 'Died') + '</span><b>' + f(x.muertos) + '</b><span>🩹 ' + L('Heridos', 'Wounded') + '</span><b>' + f(x.heridos) + '</b><span>✨ ' + L('Se pueden revivir', 'Can be revived') + '</span><b>' + f(x.revivir) + '</b></div>' +
-        // v7.18: tropa por tropa, como el pergamino de Kingdoms of Camelot
+        // v7.18: tropa por tropa, como el pergamino de los juegos clásicos de castillos
         (x.tropas && Object.keys(x.tropas).length ? '<div class="ib-tropas">' + Object.keys(x.tropas).sort(function (p, q2) { return (p === 'defensas') - (q2 === 'defensas'); }).map(function (k) { var q = x.tropas[k]; if (k === 'defensas') return '<div class="ib-tr ib-fijas"><span>🏹 ' + L('Torres de la muralla', 'Wall towers') + (q.torres != null ? ' · ' + L('quedan ', 'left ') + formatoNumero(q.torres - (q.caen || 0)) : '') + '</span><b>' + (q.torres != null ? formatoNumero(q.torres) : '100 %') + '</b><b class="ib-rojo">−' + (q.torres != null ? formatoNumero(q.caen || 0) : formatoNumero(q.perdidos) + ' %') + '</b></div>'; /* v8.32 */ return '<div class="ib-tr"><span>' + (TROPAS[k] ? TROPAS[k].icono + ' ' + N(k) : k) + '</span><b>' + formatoNumero(q.ini) + '</b><b class="ib-rojo">−' + formatoNumero(q.perdidos) + '</b></div>'; }).join('') + '</div>' : '') + '</div>';
     }
     var mej = o.mejoras || {}, filasMej = [['⚔️', L('Ataque', 'Attack'), 'ataque'], ['❤️', L('Vida', 'Health'), 'vida'], ['👟', L('Velocidad', 'Speed'), 'vel'], ['📦', L('Carga', 'Load'), 'carga'], ['👥', L('Límite', 'Limit'), 'limite']];
@@ -14245,7 +14245,7 @@
       tropas.forEach(guardarDentro);
     }
     if (!g) { estado.burbujaHasta = Date.now() + BURBUJA.dias * 86400000; estado.escudoHasta = Math.max(estado.escudoHasta || 0, estado.burbujaHasta); }
-    if (!g || estado.villaNueva) { // v7.78: como en KoC la villa nueva nunca empieza vacía (v7.82: también las villas fundadas): Punto de Reunión, 1 Cabaña, 1 Cuartel, muralla nv 1, 1 Granja y 1 Aserradero
+    if (!g || estado.villaNueva) { // v7.78: como en juegos clásicos la villa nueva nunca empieza vacía (v7.82: también las villas fundadas): Punto de Reunión, 1 Cabaña, 1 Cuartel, muralla nv 1, 1 Granja y 1 Aserradero
       estado.villaNueva = 0;
       estado.muralla = Math.max(1, estado.muralla || 0); estado.inicioKoC = true; estado.misAlmacen = true;
       var libresC = slots.filter(function (q) { return !q.campo && !q.fijo && !q.edificio && q.orden >= 0 && q.orden < parcelasAbiertas(); }).sort(function (a, b) { return a.orden - b.orden; });
@@ -14374,7 +14374,7 @@
     return d;
   }
   // v7.19: acelerar una marcha: con Marcha rápida (de la mochila) o con gemas, le quita la mitad de lo que falta
-  // v7.22: como KoC: una ventana oscura con tus relojes de la mochila (15 min resta 15 min, etc.) y la Marcha rápida (−50 %); con gemas solo si no tienes
+  // v7.22: como juegos clásicos: una ventana oscura con tus relojes de la mochila (15 min resta 15 min, etc.) y la Marcha rápida (−50 %); con gemas solo si no tienes
   function acelerarMarcha(id, resultado) {
     var m = marchas.filter(function (x) { return x.id === id; })[0], aplicar;
     if (m && !m.resuelto) aplicar = function (nueva) { return Cuentas.acelerarMarcha(id, nueva); };
@@ -14514,7 +14514,7 @@
       if (movs.length) { lleno = true; txt = '🏇 ' + L('Marchas: ', 'Marches: ') + totalMarchando() + ' / ' + maxMarchas(); btn = ''; acc = ''; }
       else { txt = L('No hay ninguna marcha activa.', 'No active marches.'); btn = L('Marchar', 'March'); acc = 'mundo'; }
     } else if (false) {
-      // v7.19: la marcha que llega primero, con ⚡ Acelerar y ↩ Retirar (como KoC: nada flota encima del menú)
+      // v7.19: la marcha que llega primero, con ⚡ Acelerar y ↩ Retirar (como juegos clásicos: nada flota encima del menú)
       var prox = marchas.filter(function (m) { return !m.resuelto && !m.cancelado && m.llega > ahora; }).sort(function (x, y) { return x.llega - y.llega; })[0];
       if (prox) {
         txt = '🏇 ' + (nMarchas > 1 ? '×' + nMarchas + ' · ' : '') + escaparHTML(prox.defensorNombre || '') + ' · <b>⏱ ' + fmtTiempo(Math.ceil((prox.llega - ahora) / 1000)) + '</b>';

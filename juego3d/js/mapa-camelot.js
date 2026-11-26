@@ -1,4 +1,4 @@
-// Mapa del mundo infinito estilo Kingdoms of Camelot: suelo pintado, casillas en rombo y
+// Mapa del mundo infinito estilo los juegos clásicos de castillos: suelo pintado, casillas en rombo y
 // bosques, montañas, lagos y castillos dibujados a mano. El terreno se genera alrededor de la
 // cámara a medida que te mueves, así que nunca se acaba.
 (function () {

@@ -699,7 +699,7 @@ var M = (function () {
   function edificioTripo(tipo, nivel) {
     var esc = TRIPO_EDIFICIOS[tipo]; if (!esc) return null;
     var s2 = edificio2D(tipo, nivel); if (s2) return s2;
-    if (!ES_CAMPO_T[tipo]) esc *= tipo === 'cabana' ? 1.2 : 1.3; // v7.48: edificios de la villa más grandes en su barrio (como en KoC)
+    if (!ES_CAMPO_T[tipo]) esc *= tipo === 'cabana' ? 1.2 : 1.3; // v7.48: edificios de la villa más grandes en su barrio (como en juegos clásicos)
     var et = TRIPO_ETAPAS[tipo] === 2 ? ((nivel || 1) >= 15 || PROTO3D ? 2 : 1) : Math.min(TRIPO_ETAPAS[tipo] || 1, etapaEdificio(nivel || 1));
     var t = et > 1 ? modeloTripo(tipo + et, tipo + '_tripo_' + et + '.glb', 'tripo-glb') : modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb');
     if (!t && et > 1) t = modeloTripo(tipo, tipo + '_tripo.glb', 'tripo-glb'); // mientras carga la versión nueva se ve la anterior

@@ -1,7 +1,7 @@
 {
  "ataque": {
-  "realizarAtaque": "cc5815778cb78f25",
-  "llegarMarcha": "26cdaf405a6fda05",
+  "realizarAtaque": "ed7c2d6688afe890",
+  "llegarMarcha": "d651a798c11c465c",
   "decidirAtaque": "edb706aeb7c5fd8d",
   "resolverBatalla": "d60219d11f6eb575",
   "aplicarPerdidasRondas": "975823d5b7eef91d",
@@ -15,7 +15,7 @@
   "curarHeridos": "f47212689c4104a1"
  },
  "marchas": {
-  "abrirMarcha": "8ba783f6b65b8484",
+  "abrirMarcha": "8e91bc29b433bc3a",
   "tamanoMarcha": "5863229d48c7519d",
   "maxMarchas": "d286f48a2d43df26",
   "enMarcha": "3aabebf14388695c",
@@ -38,7 +38,7 @@
   "reserva": "71c10d22b200cadf"
  },
  "edificios": {
-  "js/modelos.js": "f3f4a6e2ab68b4a5"
+  "js/modelos.js": "c64e33e37c167b3b"
  },
  "campana": {
   "js/tk-campana.js": "699d24abdda133e8",
