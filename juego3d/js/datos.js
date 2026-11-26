@@ -4,10 +4,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.33';
+var VERSION_JUEGO = '9.34';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.33","2026-11-25","Campaña: los héroes y los enemigos se ven de frente, con la cara a la vista.","Campaign: heroes and enemies are shown facing forward."],
+var NOVEDADES_VER = [["9.34","2026-11-25","Campaña: los muñecos caminan pisando bien (el paso va al ritmo de lo que avanzan) y más suave.","Campaign: figures walk with proper footing and smoother steps."],
+  ["9.33","2026-11-25","Campaña: los héroes y los enemigos se ven de frente, con la cara a la vista.","Campaign: heroes and enemies are shown facing forward."],
   ["9.32","2026-11-25","Campaña: tus héroes pelean de frente, el lobo y los demás se ven enteros, y ningún muñeco se sale de la pantalla.","Campaign: your heroes fight facing forward, the wolf and others are shown whole, and no figure goes off screen."],
   ["9.31","2026-11-25","Campaña: tus héroes también salen como muñecos 3D (Sir Sol, Luna, Capitán Ancla, Brisa, Chispa, Roble, Trueno y Pluma) y atacan con su movimiento. Arreglado un error al entrar mientras cargaba el castillo.","Campaign: your heroes are 3D figures too and attack with their own move. Fixed an error while the castle was loading."],
   ["9.30","2026-11-25","Campaña: los enemigos son ahora muñecos 3D que caminan, y la batalla ya no se queda parada si algo falla al dibujar. Al entrar ya no se ve el castillo viejo antes del nuevo.","Campaign: enemies are now walking 3D figures, and the battle no longer freezes if drawing fails. The old castle no longer flashes before the new one when you enter."],

@@ -17,7 +17,7 @@
   };
   // héroes que ya tienen modelo 3D (los demás siguen con su retrato en círculo)
   var HEROE = { sol: 1, luna: 1, ancla: 1, brisa: 1, chispa: 1, roble: 1, trueno: 1, pluma: 1 };
-  var N_FOTOS = 8, AN = 150, AL = 190;
+  var N_FOTOS = 12, AN = 150, AL = 190;
   var cache = {}, cola = [], trabajando = false, rend = null;
 
   function ruta(clave) {
@@ -89,11 +89,14 @@
 
   window.TKSprites = {
     claveEnemigo: function (ico, jefe) { return jefe && ENEMIGO['j' + ico] ? 'j' + ico : ico; },
-    foto: function (clave, estado, t) {
+    /* fase (0..1): en qué punto del paso va; si se da, manda ella (así los pies van al ritmo de lo que avanza y no «flota») */
+    foto: function (clave, estado, t, fase) {
       if (!clave) return null;
       var e = pedir(clave); if (!e.fotos) return null;
       var l = e.fotos[estado] || e.fotos.anda; if (!l || !l.length) return null;
-      return l.length > 1 ? l[Math.floor(((t || 0) * (estado === 'ataca' ? 12 : 9)) % l.length)] : l[0];
+      if (l.length < 2) return l[0];
+      var k = fase != null ? Math.floor((((fase % 1) + 1) % 1) * l.length) : Math.floor(((t || 0) * (estado === 'ataca' ? 14 : 10)) % l.length);
+      return l[Math.min(l.length - 1, k)];
     },
     info: function () { var o = {}; for (var k in cache) o[k] = cache[k].fotos ? 'listo' : (cache[k].falla ? 'falla' : 'cargando'); return o; }
   };

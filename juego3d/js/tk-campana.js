@@ -205,7 +205,10 @@
     if (!u.vivo) { cx.globalAlpha = 0.35; }
     var r = u.jefe ? (mis ? 24 : 19) : 16, sal = u.anda ? Math.abs(Math.sin(t * 8)) * 2 : 0;
     /* v9.30 (dueño): los enemigos son los muñecos 3D que hizo él (fotos sacadas de sus modelos, ver tk-campana-sprites.js); mientras cargan, el círculo de antes */
-    var estFig = !u.vivo ? 'quieto' : u.anda ? 'anda' : (u.cd > u.ritmo - 0.35 ? 'ataca' : 'quieto'), fig = claveFig ? TKSprites.foto(claveFig, estFig, t) : null, hFig = fig ? r * (u.jefe ? 5.2 : (az ? 4.6 : 4.2)) : 0, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
+    var estFig = !u.vivo ? 'quieto' : u.anda ? 'anda' : (u.cd > u.ritmo - 0.35 ? 'ataca' : 'quieto'), hFig = claveFig ? r * (u.jefe ? 5.2 : (az ? 4.6 : 4.2)) : 0;
+    /* v9.34 (dueño: «parece que van flotando»): el paso va según lo que avanza de verdad (un paso completo ≈ 0,9 de su altura) */
+    if (u._px != null && u.vivo) u._camino = (u._camino || 0) + Math.hypot(u.x - u._px, u.y - u._py); u._px = u.x; u._py = u.y;
+    var fig = claveFig ? TKSprites.foto(claveFig, estFig, t, estFig === 'anda' ? (u._camino || 0) / Math.max(10, hFig * 0.9) : null) : null, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
     cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, u.y + r * 0.8, fig ? wFig * 0.32 : r, r * 0.35, 0, 0, 7); cx.fill();
     /* v9.32: el muñeco no se sale de la zona de batalla (ni por arriba, debajo de la barra, ni por los lados) */
     var zF = fig ? zona() : null, topF = fig ? Math.max(zF.y0 + 2, pie - hFig) : 0, xF = fig ? Math.max(wFig / 2 + 2, Math.min(W - wFig / 2 - 2, u.x)) : u.x;
