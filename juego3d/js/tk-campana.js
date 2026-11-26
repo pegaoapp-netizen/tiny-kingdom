@@ -165,7 +165,7 @@
   // lo que te da ventaja es el equipo, las estrellas, la Maestría y los talentos
   var nivelRival = 1;
   function escuadronEnemigo(n, i) {
-    var jefe = i === 2 && n % 5 === 0, f = Math.pow(1.13, n - 1) * (1 + 0.06 * (nivelRival - 1)) * 1.4 * factorAyuda() * (jefe ? 0.8 : 1), e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4); /* v9.44 */
+    var jefe = i === 2 && n % 5 === 0, f = Math.pow(1.10, n - 1) * (1 + 0.03 * (nivelRival - 1)) * 0.35 * factorAyuda() * (jefe ? 0.8 : 1), e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4); /* v9.44 */
     var vida = 1500 * f * (jefe ? 1.8 : 1), atk = 52 * f * (jefe ? 1.5 : 1);
     return { lado: 'ro', ico: jefe ? '🐲' : e.ico, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: jefe, d: e.d };
   }
@@ -182,7 +182,7 @@
     return '<p class="tkc-tn">🛡️ ' + L('Próximo intento: los enemigos de esta etapa estarán un ' + pct + ' % más débiles.', 'Next try: enemies of this stage will be ' + pct + '% weaker.') + '</p>';
   }
   function escuadronMision(e, i, n, t0) {
-    var f = mis.f * (1 + 0.06 * (nivelRival - 1)) * factorAyuda() * (e.jefe ? 0.8 : 1), carril = e.jefe ? 0 : (n > 1 ? -0.85 + i * 1.7 / (n - 1) : 0), p = punto(t0 || (e.jefe ? 0.9 : 0.86 - (i % 2) * 0.05), carril);
+    var f = mis.f * (1 + 0.03 * (nivelRival - 1)) * factorAyuda() * (e.jefe ? 0.8 : 1), carril = e.jefe ? 0 : (n > 1 ? -0.85 + i * 1.7 / (n - 1) : 0), p = punto(t0 || (e.jefe ? 0.9 : 0.86 - (i % 2) * 0.05), carril);
     var vida = 1500 * f * (e.v || 1), atk = 52 * f * (e.a || 1);
     return { lado: 'ro', ico: e.ico, nom: e.nom, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: !!e.jefe, d: !!e.d, vel: e.vel || 1, habs: e.habs || null, nh: 0, sana: e.sana ? 4 : 0, invoca: e.invoca || null };
   }
