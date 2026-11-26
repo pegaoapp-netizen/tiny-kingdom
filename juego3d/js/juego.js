@@ -2840,6 +2840,7 @@
     var items = [];
     /* v9.57 (dueño: «está regado todo»): el menú ▲ ya no repite lo que está en el menú de abajo (Inventario, Alianza, Campaña) ni Entrenar (= Tropas) */
     [['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
+      ['mg-entrenar', '⚔️', L('Cuartel', 'Barracks')], ['mg-reunion', '🚩', L('Punto de reunión', 'Rally point')], /* v9.59 */
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')],
       ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Lanzar héroes y armaduras', 'Release heroes & armor')]] : [])
       .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
@@ -7040,6 +7041,7 @@
     if (a === 'entrenar') {
       var te = slots[i] && slots[i].edificio && slots[i].edificio.tipo;
       if (te === 'establo') { vistaTropa.pest = 'establo'; vistaTropa.tipo = 'caballeria'; } else if (te === 'galeria') { vistaTropa.pest = 'tiro'; vistaTropa.tipo = 'arquero'; } else if (te === 'cuartel' && vistaTropa.pest !== 'cuartel') { vistaTropa.pest = 'cuartel'; vistaTropa.tipo = 'espadachin'; }
+      if (te === 'establo' || te === 'galeria') { var scE = slots.filter(function (x) { return x.edificio && x.edificio.tipo === 'cuartel'; })[0]; if (!scE) { cerrarMenuEdif(); consejoTemporal(L('Las tropas se entrenan en el Cuartel. Construye uno.', 'Troops are trained in the Barracks. Build one.')); return; } i = scE.i; te = 'cuartel'; } /* v9.59 (dueño): todas las tropas en el Cuartel */
       vistaTropa.rango = null; cerrarMenuEdif(); if (te === 'cuartel' || te === 'establo' || te === 'galeria') { pestCuartel = 'entrenar'; tropaDetalle = null; panelActual = { tipo: 'edificio', slot: i }; abrirPanelEdificio(i); } else abrirPanelTropas(); return;
     }
     if (a === 'comerciar') { cerrarMenuEdif(); abrirPanelMercado(); return; }
@@ -8575,7 +8577,7 @@
     marcarSlot(s);
     var tipo = s.edificio ? s.edificio.tipo : s.obra.tipo;
     var nivel = s.edificio ? s.edificio.nivel : s.obra.nivel;
-    var esCuartel = (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') && s.edificio;
+    var esCuartel = tipo === 'cuartel' && s.edificio; /* v9.59: Establo y Campo de tiro solo con Detalles; se entrena en el Cuartel */
     if (!panelActual || panelActual.tipo !== 'edificio' || panelActual.slot !== i) { if (!esCuartel || pestCuartel === 'detalles') pestCuartel = esCuartel && panelActual && panelActual.tipo === 'cuartel-abrir' ? 'entrenar' : 'detalles'; }
     if (esCuartel && pestCuartel !== 'detalles') {
       var arribaP = panelActual && panelActual.tipo === 'edificio' && panelActual.slot === i && tropaDetalle ? $('panel').scrollTop : 0;
@@ -8755,7 +8757,7 @@
   }
   function pestanasVentana(i, tipo) {
     var t = [['cafe-det', L('Detalles', 'Details'), true]];
-    if (tipo === 'cuartel' || tipo === 'establo' || tipo === 'galeria') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
+    if (tipo === 'cuartel') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
     else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
     else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
     else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
@@ -10659,7 +10661,7 @@
   }
   $('pill-escudo').addEventListener('click', function () { if (!protegido()) { consejoTemporal(L('🔓 Tu ciudad está abierta: cualquiera te puede atacar. Pon un escudo de paz (Tienda › Combate).', '🔓 Your city is open: anyone can attack you. Use a peace shield (Shop › Combat).')); return; } consejoTemporal(burbujaActiva() ? T('burbuja_txt', { t: fmtLargo((estado.burbujaHasta - Date.now()) / 1000), n: BURBUJA.castillo }) : T('escudo_info')); });
   function subtabsHeroes(cual) {
-    return '<div class="subtabs"><button data-accion="sub-tropas" class="' + (cual === 'tropas' ? 'activo' : '') + '">⚔️ ' + T('sub_tropas') + '</button>' +
+    return '<div class="subtabs">' + /* v9.59: sin la pestaña Tropas (están en el Cuartel) */
       '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
       '<button data-accion="sub-invocar" class="' + (cual === 'invocar' ? 'activo' : '') + '">✨ ' + T('sub_invocar') + '</button>' +
       '<button data-accion="sub-salon" class="' + (cual === 'salon' ? 'activo' : '') + '">🛡️ ' + L('Caballeros', 'Knights') + '</button>' +
@@ -13391,7 +13393,7 @@
     });
   }
   botonMenu('btn-conquista', ['conquista'], function () { if (window.TKMapa && !oleadaActiva && TKMapa.abrir()) return; abrirPanelConquista(); }); // v9.00: el botón Campaña abre el mapa (las Etapas siguen dentro)
-  botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); });
+  botonMenu('btn-heroes', ['tropas', 'invocar', 'heroes', 'heroe', 'reclutado'], function () { abrirPanelHeroes(); }); /* v9.59 (dueño): el botón de abajo es Héroes; las tropas están en el Cuartel y en el Punto de reunión */
   botonMenu('btn-mochila', ['mochila'], function () { if (panelActual && panelActual.tipo === 'tienda' && pestTiendaArriba === 'mios' && !$('panel').classList.contains('oculto')) { cerrarPanel(); return; } pestTiendaArriba = 'mios'; abrirMisObjetos(); }); /* v9.57 (dueño): un solo inventario: el mismo de Tienda › Mis objetos */
   botonMenu('btn-tienda', ['tienda'], function () { abrirPanelTienda(); });
   $('btn-ajustes').addEventListener('click', function () { sonar('click'); abrirPanelAjustes(); });
@@ -13413,6 +13415,7 @@
     if (id === 'mg-soporte') { sonar('click'); abrirSoporte('escribir'); return; }
     if (id === 'mg-reliquia') { sonar('click'); abrirTiendaGemas(); return; }
     if (id === 'mg-entrenar') { sonar('click'); var sc = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'cuartel'; })[0]; if (!sc) { consejoTemporal(L('Primero construye un Cuartel.', 'Build a Barracks first.')); return; } pestCuartel = 'entrenar'; tropaDetalle = null; slotElegido = sc.i; abrirPanelEdificio(sc.i); return; }
+    if (id === 'mg-reunion') { sonar('click'); var sr = slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'relevo'; })[0]; if (!sr) { consejoTemporal(L('Primero construye un Punto de reunión.', 'Build a Rally point first.')); return; } slotElegido = sr.i; abrirReunion(sr.i, 'tropas'); return; } /* v9.59 */
     if (id === 'mg-equipo') { sonar('click'); pestHerreria = 'equipo'; abrirPanelHerreria(); return; } /* v9.57 (dueño): Equipo abre la Herrería › Equipo (todas tus piezas por tipo) */
     if (id === 'mg-publicar') { sonar('click'); var urlJ = 'https://tinykingdom-pegao.web.app', txtJ = L('¡Juega conmigo a Brother Kingdom!', 'Play Brother Kingdom with me!'); if (navigator.share) navigator.share({ title: 'Brother Kingdom', text: txtJ, url: urlJ }).catch(function () {}); else { try { navigator.clipboard.writeText(txtJ + ' ' + urlJ); } catch (e) {} consejoTemporal(L('Enlace copiado: compártelo con tus amigos.', 'Link copied: share it with your friends.')); } return; }
     if (id === 'mg-ciudad') irAVista('ciudad'); else if (id === 'mg-campos') irAVista('campos'); else if (id === 'mg-investigar') { sonar('click'); abrirPanelInvestigacion(ramaInv); } else if (id === 'mg-procesos') { sonar('click'); abrirPanelVigia(); } else if ($(id)) $(id).click();
