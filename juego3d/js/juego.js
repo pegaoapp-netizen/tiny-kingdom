@@ -10006,11 +10006,12 @@
     if (esProtegidoUid(a.uid) || (a.espia && a.espia.oculto)) { consejoTemporal(MSG_EQUIPO); sonar('error'); return; } /* v9.64 */
     if ((a.escudo || 0) > Date.now()) { consejoTemporal(MSG_PROT); sonar('error'); return; } /* v8.41: con burbuja no se espía */
     var exp = cuentaTipo('explorador');
-    var frescoP = Cuentas.leerAldea ? Cuentas.leerAldea(a.uid).catch(function () { return null; }) : Promise.resolve(null);
+    var sociosP = (window.firebase && firebase.firestore) ? firebase.firestore().collection('config').doc('socios').get().then(function (d) { var x = d.exists ? d.data() : {}; SOCIOS = { uids: Array.isArray(x.uids) ? x.uids.map(String) : [], nombres: Array.isArray(x.nombres) ? x.nombres.map(String) : [], duenos: Array.isArray(x.duenos) ? x.duenos.map(String) : [] }; }).catch(function () {}) : Promise.resolve(); /* v9.65: la lista del equipo se lee AL ESPIAR (siempre al día) */
+    var frescoP = sociosP.then(function () { return Cuentas.leerAldea ? Cuentas.leerAldea(a.uid).catch(function () { return null; }) : null; });
     if (b) b.disabled = true;
     frescoP.then(function (al0) {
     if (b && document.body.contains(b)) b.disabled = false;
-    if (al0 && al0.espia && al0.espia.oculto && esProtegidoUid(a.uid)) { consejoTemporal(MSG_EQUIPO); sonar('error'); return; } /* v9.64 */
+    if (esProtegidoUid(a.uid)) { consejoTemporal(MSG_EQUIPO); sonar('error'); return; } /* v9.64-9.65: del equipo → nunca se espía */
     if (al0 && (al0.escudo || 0) > Date.now()) { a.escudo = al0.escudo; consejoTemporal(MSG_PROT); sonar('error'); return; } /* v8.41 */
     if (!exp && !pagar({ oro: COSTO_ESPIAR })) return;
     if (b) b.disabled = true; sonar('click');
@@ -12658,7 +12659,7 @@
   /* v9.64 (dueño): las cuentas del equipo (dueño y socios fundadores) NUNCA se pueden espiar */
   function esProtegidoUid(uid) { return !!uid && (esSocioUid(uid) || SOCIOS.duenos.indexOf(String(uid)) >= 0); }
   function cuentaDelEquipo() { return esCuentaDueno() || esCuentaSocio(); }
-  setTimeout(cargarSocios, 6000); setInterval(cargarSocios, 600000);
+  setTimeout(cargarSocios, 6000); setTimeout(cargarSocios, 20000); setInterval(cargarSocios, 300000); /* v9.65: también a los 20 s (por si la cuenta tarda en entrar) */
   function esSocioUid(uid) { return !!uid && SOCIOS.uids.indexOf(String(uid)) >= 0; }
   function esCuentaSocio() { return !!(window.Cuentas && Cuentas.usuario() && esSocioUid(Cuentas.usuario().uid)); }
   function chipSocio(uid) { return esSocioUid(uid) ? ' <span class="socio-chip">👑 ' + L('Socio fundador', 'Founding partner') + '</span>' : ''; }
