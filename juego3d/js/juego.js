@@ -9127,7 +9127,7 @@
   }
   var MULT_RAREZA_EQ = { comun: 1, raro: 1.8, legendario: 3, mitico: 5 }, EQ_NIVEL_MAX = 20, EQ_MAX_PIEZAS = 200; // v8.03: antes 60 (al llenarse se borraban piezas subidas)
   function piezas() { return estado.eqItems || (estado.eqItems = []); }
-  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ' + (rolSet(p.s) === 'defensa' ? '🛡️' : '⚔️'); return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
+  function nombrePieza(p) { if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) return L(SET_DRAGON.piezas[p.t].es, SET_DRAGON.piezas[p.t].en) + ' 🐉'; if (p.s && ARMADURA_HEROE[p.s]) return T('eq_' + p.t) + ' ' + ARMADURA_HEROE[p.s][estado.idioma === 'en' ? 'en' : 'es'] + ' ' + (rolSet(p.s) === 'defensa' ? '🛡️' : '⚔️'); if (p.r === 'mitico' && estado.idioma !== 'en') return T('eq_' + p.t) + ' ' + ({ casco: 'mítico', amuleto: 'mítico', guantes: 'míticos', botas: 'míticas' }[p.t] || 'mítica'); /* v9.73 (dueño): «Casco mítico», no «Casco mítica» */ return T('eq_' + p.t) + ' ' + T('eq_r_' + p.r); }
   function valorPieza(p, stat) { var b = EQ[p.t][stat] || 0; return b * MULT_RAREZA_EQ[p.r] * (1 + 0.12 * (p.n - 1)) * multSalidaArmadura(p.s); } /* v8.45 */
   function textoPieza(p) {
     if (p.s === 'dragon' && SET_DRAGON.piezas[p.t]) { var dp = {}, d0 = SET_DRAGON.piezas[p.t]; Object.keys(TXT_DRAGON).forEach(function (k) { if (d0[k]) dp[k] = d0[k]; }); return textoBonosDragon(dp); }
