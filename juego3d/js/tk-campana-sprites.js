@@ -21,7 +21,7 @@
   var cache = {}, cola = [], trabajando = false, rend = null;
 
   function ruta(clave) {
-    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: 2.35 } : null; }
+    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -2.4 } /* v9.32: de frente y mirando a la derecha, hacia los enemigos (los héroes miran hacia -Z) */ : null; }
     var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.65 } : null;
   }
   function renderer() {
@@ -49,17 +49,19 @@
     var ataca = clipDe(gl, /attack|ataque|atacar/i), quieto = clipDe(gl, /idle|quieto/i);
     var mix = anda ? new THREE.AnimationMixer(m) : null;
     function poner(clip, t) { if (!mix || !clip) return; mix.stopAllAction(); var ac = mix.clipAction(clip); ac.reset(); ac.play(); mix.setTime(t); }
-    poner(quieto || anda, 0);
-    // los de Mixamo miden diminutos antes de posar: se mide con los huesos ya colocados
-    esc.updateMatrixWorld(true);
+    // v9.32: se mide el cuerpo ENTERO (ya girado) en todos los movimientos, para que nada quede cortado (el lobo es largo, no alto)
     var bx = new THREE.Box3(), pv = new THREE.Vector3(), hayHueso = false;
-    m.traverse(function (o) { if (o.isBone) { hayHueso = true; bx.expandByPoint(o.getWorldPosition(pv)); } });
-    if (!hayHueso || bx.isEmpty()) bx.setFromObject(m);
-    var tam = new THREE.Vector3(); bx.getSize(tam);
-    var alto = Math.max(tam.y, 0.001) * (hayHueso ? 1.12 : 1), ancho = Math.max(tam.x, tam.z, 0.001);
-    var cam = new THREE.PerspectiveCamera(30, AN / AL, 0.001, 10000), dist = Math.max(alto / (2 * Math.tan(15 * Math.PI / 180)), ancho * 1.6) * 1.08;
-    var cy = bx.min.y + alto * 0.5;
-    cam.position.set(0, cy + alto * 0.18, dist); cam.lookAt(0, cy, 0);
+    function medir() { esc.updateMatrixWorld(true); var algo = false; m.traverse(function (o) { if (o.isBone) { algo = true; bx.expandByPoint(o.getWorldPosition(pv)); } }); return algo; }
+    [anda, ataca, quieto].forEach(function (cl) { if (!cl) return; for (var i = 0; i < 6; i++) { poner(cl, cl.duration * i / 6); if (medir()) hayHueso = true; } });
+    if (!mix && medir()) hayHueso = true;
+    if (!hayHueso || bx.isEmpty()) { esc.updateMatrixWorld(true); bx.setFromObject(m); }
+    else { var tb = new THREE.Vector3(); bx.getSize(tb); bx.expandByScalar(Math.max(tb.x, tb.y, tb.z) * 0.14); } /* los huesos no llegan a la punta del hocico ni de la cabeza */
+    poner(quieto || anda, 0);
+    var tam = new THREE.Vector3(), cen = new THREE.Vector3(); bx.getSize(tam); bx.getCenter(cen);
+    var FOV = 30, tv = Math.tan(FOV / 2 * Math.PI / 180), th = tv * AN / AL;
+    var cam = new THREE.PerspectiveCamera(FOV, AN / AL, 0.001, 10000);
+    var dist = Math.max(tam.y / 2 / tv, tam.x / 2 / th) * 1.08 + tam.z / 2;
+    cam.position.set(cen.x, cen.y + tam.y * 0.12, cen.z + dist); cam.lookAt(cen.x, cen.y, cen.z);
     function foto() { R.render(esc, cam); var c = document.createElement('canvas'); c.width = AN; c.height = AL; c.getContext('2d').drawImage(R.domElement, 0, 0); return c; }
     function serie(clip, n) { var l = []; if (!clip) return l; for (var i = 0; i < n; i++) { poner(clip, clip.duration * i / n); l.push(foto()); } return l; }
     var res = { anda: mix ? serie(anda, N_FOTOS) : [foto()] };

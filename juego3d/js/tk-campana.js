@@ -207,7 +207,9 @@
     /* v9.30 (dueño): los enemigos son los muñecos 3D que hizo él (fotos sacadas de sus modelos, ver tk-campana-sprites.js); mientras cargan, el círculo de antes */
     var estFig = !u.vivo ? 'quieto' : u.anda ? 'anda' : (u.cd > u.ritmo - 0.35 ? 'ataca' : 'quieto'), fig = claveFig ? TKSprites.foto(claveFig, estFig, t) : null, hFig = fig ? r * (u.jefe ? 5.2 : (az ? 4.6 : 4.2)) : 0, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
     cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, u.y + r * 0.8, fig ? wFig * 0.32 : r, r * 0.35, 0, 0, 7); cx.fill();
-    if (fig) { cx.drawImage(fig, u.x - wFig / 2, pie - hFig, wFig, hFig); if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.ellipse(u.x, pie - hFig / 2, wFig * 0.45, hFig * 0.55, 0, 0, 7); cx.stroke(); } }
+    /* v9.32: el muñeco no se sale de la zona de batalla (ni por arriba, debajo de la barra, ni por los lados) */
+    var zF = fig ? zona() : null, topF = fig ? Math.max(zF.y0 + 2, pie - hFig) : 0, xF = fig ? Math.max(wFig / 2 + 2, Math.min(W - wFig / 2 - 2, u.x)) : u.x;
+    if (fig) { cx.drawImage(fig, xF - wFig / 2, topF, wFig, hFig); if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.ellipse(u.x, pie - hFig / 2, wFig * 0.45, hFig * 0.55, 0, 0, 7); cx.stroke(); } }
     else {
     cx.save(); cx.beginPath(); cx.arc(u.x, u.y - sal, r, 0, 7); cx.closePath(); cx.fillStyle = az ? '#1b3f8a' : '#7a1a12'; cx.fill(); cx.clip();
     if (u.im && u.im.complete && u.im.naturalWidth) cx.drawImage(u.im, u.x - r, u.y - r - sal, r * 2, r * 2);
@@ -218,7 +220,7 @@
     cx.lineWidth = 2.6; cx.strokeStyle = u.escudo > 0 ? '#7fd3ff' : (u.buff > 0 ? '#ffd23a' : gm); cx.beginPath(); cx.arc(u.x, u.y - sal, r, 0, 7); cx.stroke();
     if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.arc(u.x, u.y - sal, r + 6, 0, 7); cx.stroke(); }
     }
-    var arriba = fig ? pie - hFig + 4 : u.y - r - sal; /* v9.30: la barra, la corona y el mareo van encima del muñeco */
+    var arriba = fig ? topF + 4 : u.y - r - sal; /* v9.30: la barra, la corona y el mareo van encima del muñeco */
     if (u.jefe && mis && u.vivo) { cx.font = '16px system-ui'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('👑', u.x, arriba - 20); }
     if (u.aturdido > 0) { cx.font = '12px system-ui'; cx.textAlign = 'center'; cx.fillText('💫', u.x, arriba - 16 + sal); }
     cx.globalAlpha = 1;
