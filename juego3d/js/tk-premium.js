@@ -456,6 +456,7 @@
     return vida.muro;
   }
   function crearPatrullas(c, escena) {
+    if (window.TKCorsarios && TKCorsarios.activa()) { while (vida.patrullas.length) escena.remove(vida.patrullas.pop().grupo); return; } // v9.93: la isla pirata no tiene murallas
     var ruta = rutaMuralla(c); if (!ruta || !window.M) return;
     var quiero = N().patrulla;
     while (vida.patrullas.length > quiero) { var s0 = vida.patrullas.pop(); escena.remove(s0.grupo); }
@@ -547,7 +548,7 @@
   }
   var cAgua = new T3.Color(0.75, 0.9, 1.0), cAgua2 = new T3.Color(0.92, 0.97, 1.0);
   function moverFuente(dt) {
-    var f = vida.fuente; if (!f) return;
+    var f = vida.fuente; if (!f || (window.TKCorsarios && TKCorsarios.activa())) return;
     f.acc = (f.acc || 0) + dt * (N().post ? 95 : 45);
     while (f.acc > 1) { f.acc--; var a = Math.random() * 6.283, v = 1.0 + Math.random() * 0.35; emitir(PL, f.p.x, f.p.y + 1.25, f.p.z, Math.cos(a) * v, 2.6 + Math.random() * 0.8, Math.sin(a) * v, Math.random() < 0.5 ? cAgua : cAgua2, 0.26 + Math.random() * 0.16, 0.9, 6.5, 0.2); if (Math.random() < 0.35) { var a2 = Math.random() * 6.283; emitir(PL, f.p.x + Math.cos(a2) * 1.0, f.p.y + 0.05, f.p.z + Math.sin(a2) * 1.0, Math.cos(a2) * 1.6, 0.6, Math.sin(a2) * 1.6, cAgua, 0.22, 0.6, 5, 0.2); } }
   }
@@ -573,6 +574,7 @@
     m.customProgramCacheKey = function () { return 'tkpVeg'; }; return m;
   }
   function crearDeco(c, escena) {
+    if (vida.deco) { var verD = !(window.TKCorsarios && TKCorsarios.activa()); vida.deco.forEach(function (m) { m.visible = verD; }); } // v9.93: la hierba medieval no va en la isla
     var k = N().deco, clave = String(k); if (vida.hechoDeco === clave) return; vida.hechoDeco = clave;
     if (vida.deco) { vida.deco.forEach(function (m) { escena.remove(m); m.geometry.dispose(); }); vida.deco = null; }
     if (!k) return;
@@ -624,6 +626,8 @@
   }
   var MAT_EST = null;
   function decorarCastillo(c, escena) {
+    if (CAST.g) CAST.g.visible = !(window.TKCorsarios && TKCorsarios.activa()); // v9.93
+    if (window.TKCorsarios && TKCorsarios.activa()) return;
     var ca = c.castillo(); if (!ca || ca.userData.esperandoModelo || !ca.parent) return;
     ca.updateMatrixWorld(true);
     var caja = new T3.Box3().setFromObject(ca); if (!isFinite(caja.min.x)) return;
@@ -669,6 +673,7 @@
   }
   var cFuego = [new T3.Color(1.0, 0.55, 0.15), new T3.Color(1.0, 0.8, 0.35), new T3.Color(1.0, 0.35, 0.08)];
   function moverLlamas(dt) {
+    if (window.TKCorsarios && TKCorsarios.activa()) return; // v9.93
     CAST.llamas.forEach(function (p) {
       if (Math.random() < dt * 40) emitir(PL, p.x + (Math.random() - 0.5) * 0.4, p.y, p.z + (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.3, 1.4 + Math.random(), (Math.random() - 0.5) * 0.3, cFuego[(Math.random() * 3) | 0], 0.9 + Math.random() * 0.5, 0.5 + Math.random() * 0.3, -0.6, 0.6);
     });

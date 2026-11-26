@@ -6722,7 +6722,7 @@
       var lc = aLocal(cam.meta.x, cam.meta.z), aMin, aMax, bMax;
       // v7.69: cuanto más cerca, más se puede recorrer la villa (de lejos se queda centrada para que no se vean los campos)
       // v7.70: a los lados y hacia delante se llega a TODA la villa (antes el lado de la ruleta quedaba fuera); hacia atrás el tope depende del zoom para que no se vean los campos
-      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz; aMax = R_CIUDAD * 0.95; bMax = R_CIUDAD * 0.92; }
+      if (vistaActual === 'ciudad') { var kz = Math.max(0.42, Math.min(0.78, 0.42 * zoomBase() / Math.max(1, cam.dist))); aMin = 14 - R_CIUDAD * kz; aMax = R_CIUDAD * (window.TKCorsarios && TKCorsarios.activa() ? 1.45 : 0.95); bMax = R_CIUDAD * 0.92; } /* v9.93: en la Bahía de los Corsarios se puede bajar hasta el puerto */
       else { aMin = CAMPOS_RECT.a - 14; aMax = CAMPOS_RECT.a + 14; bMax = CAMPOS_RECT.hb - 20; }
       var na = Math.max(aMin, Math.min(aMax, lc.a)), nb = Math.max(-bMax, Math.min(bMax, lc.b));
       if (na !== lc.a || nb !== lc.b) {
@@ -15056,6 +15056,7 @@
     ciudad: {
       aMundo: aMundo, aLocal: aLocal, alturaCiudad: alturaCiudad, formaD2: formaD2, forma: MURALLA_FORMA, R: R_CIUDAD, COLINA: COLINA, centro: CENTRO_REINO,
       esquinas: function () { return ESQUINAS; }, slots: slots, castillo: function () { return castillo; }, muralla: function () { return murallaModelo; },
+      torres: function () { return torresPuerta; }, villa: function () { return villaActiva(); }, campos: CAMPOS_RECT, ejeU: EJE_U, ejeV: EJE_V, // v9.93: para js/tk-corsarios.js (la 2.ª ciudad)
       sol: sol, hemi: hemi, dirSol: DIR_SOL, cam: cam, camv: CAMV, zoomBase: function () { return zoomBase(); }, vista: function () { return vistaActual; },
       enMenu: function () { return enMenu; }, enMundo: function () { return enMundo; }, oleada: function () { return oleadaActiva; }, noche: function () { return nocheActual; },
       fase: function () { return faseDia(); }, horaForzada: function () { return horaForzada; }, ponerHora: function (f) { horaForzada = f; }, dorada: function () { return doradaDe(faseDia()); },

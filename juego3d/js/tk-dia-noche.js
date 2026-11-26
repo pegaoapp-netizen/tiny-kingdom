@@ -69,10 +69,12 @@
   }
   function hacerAntorchas(c, esc) {
     var muro = window.TKPremium && TKPremium._muro && TKPremium._muro(), es = c.esquinas();
-    var clave = (muro ? muro.p.length : 0) + ':' + (es ? es.length : 0) + ':' + (muro && muro.obj ? muro.obj.uuid : '');
+    var cors = !!(window.TKCorsarios && TKCorsarios.activa()); // v9.93: en la Bahía de los Corsarios, sus faroles en vez de los medievales
+    var clave = (muro ? muro.p.length : 0) + ':' + (es ? es.length : 0) + ':' + (muro && muro.obj ? muro.obj.uuid : '') + (cors ? ':C' + TKCorsarios.version() : '');
     if (clave === ANT.hecho || !es || !es.length) return; ANT.hecho = clave;
     [ANT.postes, ANT.soportes, ANT.llamas, ANT.halo].forEach(function (o) { if (o) { esc.remove(o); o.geometry.dispose(); } });
-    var lista = [];
+    var lista = cors ? TKCorsarios.antorchas() : [];
+    if (!cors) {
     // murallas: cada ~18° y a los dos lados de cada puerta (donde el paseo se corta)
     if (muro) muro.p.forEach(function (p, i) {
       if (!p) return; var a = muro.p[(i + 359) % 360], b = muro.p[(i + 1) % 360];
@@ -83,6 +85,7 @@
     es.forEach(function (q, i) { if (i % 2) return; lista.push({ x: q.x + 1.0, y: 2.35, z: q.z + 1.0, tipo: 'calle', base: 0 }); });
     // foso del castillo: antorchas alrededor (se reflejan en el agua)
     for (var j = 0; j < 10; j++) { var ang = j / 10 * Math.PI * 2, r = c.COLINA.foso1 + 1.2, w = c.aMundo(Math.cos(ang) * r, Math.sin(ang) * r); if (Math.abs(Math.sin(ang)) < 0.15 && Math.cos(ang) > 0) continue; lista.push({ x: w[0], y: 1.75, z: w[1], tipo: 'calle', base: 0, foso: true }); }
+    }
     ANT.lista = lista;
     // soportes
     var nP = lista.filter(function (q) { return q.tipo === 'calle'; }), nM = lista.filter(function (q) { return q.tipo === 'muro'; }), o = new T3.Object3D();
@@ -128,7 +131,7 @@
         l.push({ x: cen.x, y: b.min.y + (b.max.y - b.min.y) * 0.75, z: cen.z, col: cCast, int: 0.9, dist: R * 1.3, parp: 0.1, pri: 20 });
       }
     }
-    var fu = window.TKPremium && TKPremium.estado && window.__tkFuentePos; if (fu) l.push({ x: fu.x, y: fu.y + 1.6, z: fu.z, col: cFuente, int: 1.2, dist: 11, parp: 0, pri: 25 });
+    var fu = window.TKPremium && TKPremium.estado && window.__tkFuentePos && !(window.TKCorsarios && TKCorsarios.activa()); if (fu) l.push({ x: fu.x, y: fu.y + 1.6, z: fu.z, col: cFuente, int: 1.2, dist: 11, parp: 0, pri: 25 });
     // edificios importantes: los de nivel más alto (y el castillo ya va aparte)
     c.slots.filter(function (s) { return s.edificio && !s.campo; }).sort(function (a, b) { return (b.edificio.nivel || 0) - (a.edificio.nivel || 0); }).slice(0, 4)
       .forEach(function (s) { l.push({ x: s.pos.x + 2.6, y: 1.6, z: s.pos.z + 2.6, col: cEdif, int: 1.3, dist: 10, parp: 0.05, pri: 12 }); });
@@ -178,7 +181,7 @@
       g.traverse(function (o) {
         if (!o.isMesh || !o.material) return;
         (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) {
-          if (vistos.has(m)) return; // se marca solo al parchar: la textura de un modelo de archivo puede llegar más tarde
+          if (vistos.has(m) || m.userData.tkpSinVentanas) return; // se marca solo al parchar: la textura de un modelo de archivo puede llegar más tarde
           if ((m.isMeshLambertMaterial || m.isMeshStandardMaterial || m.isMeshPhongMaterial) && (!m.transparent || m.map) && !/agua/i.test(String(m.customProgramCacheKey && m.customProgramCacheKey()))) { vistos.add(m); parcharVentanas(m); }
         });
       });
