@@ -282,7 +282,7 @@
   var DURACION_DIA = 480;          // segundos reales por día completo (8 min)
   // ciudad de día; con ?noche en la dirección vuelve el tema oscuro. window.__juego.hora(null) vuelve al ciclo día/noche
   var horaForzada = /[?&]noche\b/.test(location.search) ? 0.82 : 0.32;
-  function faseDia() { return horaForzada !== null ? horaForzada : ((performance.now() / 1000) / DURACION_DIA + 0.12) % 1; }
+  function faseDia() { return horaForzada !== null ? horaForzada : window.TKDiaNoche ? TKDiaNoche.fase() : ((performance.now() / 1000) / DURACION_DIA + 0.12) % 1; } // v9.92: ciclo de 1 hora con la hora del servidor (js/tk-dia-noche.js)
   function suave(x) { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); }
   // 0..0.62 día · 0.62..0.72 atardecer · 0.72..0.92 noche · 0.92..1 amanecer
   function nocheDe(p) { if (p < 0.62) return 0; if (p < 0.72) return suave((p - 0.62) / 0.1); if (p < 0.92) return 1; return 1 - suave((p - 0.92) / 0.08); }

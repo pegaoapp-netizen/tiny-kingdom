@@ -290,9 +290,19 @@
         ' vec3 tkpR = reflect(-tkpV, tkpNn); vec3 tkpCielo = mix(uTkpHor, uTkpArr, clamp(tkpR.y * 1.3, 0.0, 1.0));',
         ' outgoingLight = mix(outgoingLight, tkpCielo * 1.05, clamp(tkpF * 1.6, 0.0, 0.62));',
         ' outgoingLight += uTkpSolC * pow(max(dot(tkpR, uTkpSolD), 0.0), 220.0) * 3.5;',
+        // v9.92: reflejo de las antorchas y luces cercanas sobre el agua (rielan con las ondas)
+        '#if NUM_POINT_LIGHTS > 0',
+        ' vec3 tkpPv = -vViewPosition; vec3 tkpRl = vec3(0.0);',
+        ' #pragma unroll_loop_start',
+        ' for (int i = 0; i < NUM_POINT_LIGHTS; i ++) {',
+        '  { float tkpK = 1.0 - clamp(length(pointLights[ i ].position - tkpPv) / (max(pointLights[ i ].distance, 1.0) * 0.9), 0.0, 1.0); tkpRl += pointLights[ i ].color * tkpK * tkpK; }',
+        ' }',
+        ' #pragma unroll_loop_end',
+        ' outgoingLight += tkpRl * (0.35 + 0.65 * smoothstep(-0.2, 0.9, o2 * 0.6 + o3 * 0.7)) * 0.55;',
+        '#endif',
         '#include <output_fragment>'].join('\n'));
     };
-    m.customProgramCacheKey = function () { return 'aguaTkp1'; }; m.needsUpdate = true;
+    m.customProgramCacheKey = function () { return 'aguaTkp2'; }; m.needsUpdate = true;
   }
   function revisarMateriales(escena) {
     var n = N(), env = escena.environment;
@@ -687,8 +697,7 @@
     var c = C(); if (!c) return;
     if (/[?&](noche|dia)\b/.test(location.search)) return; // las pruebas mandan
     var ciclo = pref.ciclo || 'real';
-    if (ciclo === 'real') { if (c.horaForzada() !== null) c.ponerHora(null); }
-    else if (c.horaForzada() === null) c.ponerHora(0.32);
+    c.ponerHora(ciclo === 'dia' ? 0.32 : ciclo === 'noche' ? 0.82 : null); // v9.92: también noche permanente
   }
 
   // ======================================================================
@@ -813,12 +822,12 @@
     return '<div class="carta tkp-ajustes"><h3>🎨 ' + L('Gráficos', 'Graphics') + '</h3><div class="stats tkp-niveles">' +
       ORDEN.map(function (k) { return '<button class="comprar' + (nivel === k ? ' tkp-sel' : ' morado') + '" data-accion="grafico" data-valor="' + k + '">' + nom[k] + '</button>'; }).join('') +
       '</div><p class="nota">' + txt[nivel || 'alta'] + (pref.manual ? '' : ' ' + L('(Se ajusta sola si el juego va lento.)', '(Adjusts itself if the game is slow.)')) + '</p>' +
-      '<h3 style="margin-top:10px">🌗 ' + L('Día y noche', 'Day and night') + '</h3><div class="stats"><button class="comprar' + (ciclo === 'real' ? ' tkp-sel' : ' morado') + '" data-accion="ciclo" data-valor="real">' + L('Ciclo real', 'Real cycle') + '</button><button class="comprar' + (ciclo === 'dia' ? ' tkp-sel' : ' morado') + '" data-accion="ciclo" data-valor="dia">' + L('Siempre de día', 'Always day') + '</button></div>' +
+      '<h3 style="margin-top:10px">🌗 ' + L('Día y noche', 'Day and night') + '</h3><div class="stats"><button class="comprar' + (ciclo === 'real' ? ' tkp-sel' : ' morado') + '" data-accion="ciclo" data-valor="real">' + L('Ciclo automático', 'Automatic cycle') + '</button><button class="comprar' + (ciclo === 'dia' ? ' tkp-sel' : ' morado') + '" data-accion="ciclo" data-valor="dia">' + L('Día permanente', 'Always day') + '</button><button class="comprar' + (ciclo === 'noche' ? ' tkp-sel' : ' morado') + '" data-accion="ciclo" data-valor="noche">' + L('Noche permanente', 'Always night') + '</button></div><p class="nota">' + L('Ciclo automático: 1 hora (amanecer 5 min, día 25, atardecer 5, noche 25), igual para todos los jugadores.', 'Automatic cycle: 1 hour (dawn 5 min, day 25, dusk 5, night 25), the same for every player.') + '</p>' +
       '<div class="stats" style="margin-top:8px"><button class="comprar naranja" data-accion="cine" data-valor="1">🎬 ' + L('Modo cine', 'Cinematic mode') + '</button></div></div>';
   }
   function accionAjustes(a, v) {
     if (a === 'grafico') aplicarNivel(v, true);
-    else if (a === 'ciclo') { pref.ciclo = v === 'dia' ? 'dia' : 'real'; guardarPref(); aplicarCiclo(); }
+    else if (a === 'ciclo') { pref.ciclo = v === 'dia' || v === 'noche' ? v : 'real'; guardarPref(); aplicarCiclo(); }
     else if (a === 'cine') setTimeout(entrarCine, 350);
   }
   // calidad automática: baja un escalón si va lento (solo si no la elegiste tú)
@@ -837,7 +846,7 @@
   // ======================================================================
   //  11. ARRANQUE Y BUCLE
   // ======================================================================
-  var revisaT = 0, ultEsc = null;
+  var revisaT = 0, ultEsc = null, revisaUlt = 0;
   function iniciar() {
     var x = X(), c = C(); if (!x || !c || !x.escena || !x.render) return false;
     if (!nivel) nivel = x.calidad() === 'baja' ? 'baja' : (ES_MOVIL ? 'alta' : 'ultra');
@@ -853,7 +862,7 @@
     actualizarLuz(dt, esc, c);
     if (!x.activo() && !cine.on) { moverConfeti(dt); return; }
     medirFps(dt);
-    revisaT -= dt;
+    var ahoraR = performance.now(); revisaT -= (ahoraR - (revisaUlt || ahoraR)) / 1000; revisaUlt = ahoraR; // tiempo real
     if (revisaT <= 0) {
       revisaT = 2; revisarMateriales(esc); colocarBotonCine();
       if (!vida.fuente) { var fp = buscarFuente(esc); if (fp) vida.fuente = { p: fp }; }
@@ -872,6 +881,7 @@
   })();
 
   window.TKPremium = {
+    _muro: function () { return vida.muro; }, _nivelN: function () { return N(); },
     dibujar: dibujar, evento: evento, enfoque: enfoque, htmlAjustes: htmlAjustes, accionAjustes: accionAjustes,
     zoomMinK: function () { return N().zoom; }, nivel: function () { return nivel; }, ponerNivel: function (n) { aplicarNivel(n, true); },
     cine: function (on) { if (on === false) salirCine(); else entrarCine(); },
