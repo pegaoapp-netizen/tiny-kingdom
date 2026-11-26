@@ -3804,7 +3804,7 @@
   function filaInvReq(id, pide) { var t = buscarTec(id), lv = (estado.invest || {})[id] || 0; return { nombre: (t ? t.icono : '📜') + ' ' + N('inv_' + id), pide: L('Nv ', 'Lv ') + pide, tiene: L('Nv ', 'Lv ') + lv, ok: lv >= pide || !!estado.dueno, k: 'academia', inv: id, n: pide }; }
   // v8.00: ÁRBOL DE CONSTRUCCIÓN: qué edificios pide cada uno (para construirlo y para subirlo: al menos ese nivel o el suyo)
   var REQ_ARBOL = { academia: [['castillo', 2], ['almacen', 2]], establo: [['cuartel', 3], ['granja', 3]], galeria: [['cuartel', 2], ['aserradero', 2]], herreria: [['academia', 3], ['mina', 3]],
-    embajada: [['castillo', 3], ['mercado', 2]], enfermeria: [['academia', 2], ['cabana', 3]], relevo: [['cuartel', 1]] };
+    embajada: [['castillo', 3], ['mercado', 2]], enfermeria: [['academia', 2], ['cabana', 3]], relevo: [['cuartel', 1]], salon: [['castillo', 2], ['cuartel', 1]] };
   function filaReq(que, pide) {
     if (que === 'jugador') pide = nivelReq(pide); // v7.79
     var tiene = que === 'jugador' ? nivelJugador() : que === 'castillo' ? (estado.castillo || 1) : que === 'muralla' ? (estado.muralla || 0) : nivelMayor(que);
@@ -4837,7 +4837,7 @@
   // 'tramo' es 1..4 (ver tramoNivel): el modelo base más los adornos y materiales de ese tramo
   function crearModeloBase(tipo, tramo) {
     var n = TRAMO_INTERNO[tramo] || 1;
-    var m = M.edificioTripo(tipo, crearModeloBase.nivel) || (tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : M.torre(n));
+    var m = M.edificioTripo(tipo, crearModeloBase.nivel) || (tipo === 'granja' ? M.granja(n) : tipo === 'cuartel' ? M.cuartel(n) : tipo === 'enfermeria' ? M.enfermeria(n) : tipo === 'aserradero' ? M.aserradero(n) : tipo === 'mina' ? M.minaOro(n) : tipo === 'cantera' ? M.cantera(n) : tipo === 'vigia' ? M.vigia(n) : tipo === 'almacen' ? M.almacen(n) : tipo === 'mercado' ? M.mercado(n) : tipo === 'herreria' ? M.herreria(n) : tipo === 'establo' ? M.establo(n) : tipo === 'galeria' ? M.galeria(n) : tipo === 'academia' ? M.academia(n) : tipo === 'cabana' ? M.cabana(n) : tipo === 'embajada' ? M.embajada(n) : tipo === 'relevo' ? M.relevo(n) : tipo === 'salon' ? M.academia(n) /* v9.76: provisional hasta su modelo propio */ : M.torre(n));
     if (m.userData.tripo) return m; // v6.37: los modelos de Tripo ya vienen completos (crecen por escala)
     M.crecerEdificio(m, tramo, tipo);
     return M.mejorarPorTramo(m, tramo, tipo);
@@ -4928,7 +4928,7 @@
   // v6.86: más grandes para que desde arriba se vean y se distingan (las parcelas miden 12)
   // v7.60: código exacto del dueño
   var TAM_TIPO = {
-    cuartel: 8.6, almacen: 8.6, embajada: 8.8, academia: 8.6, relevo: 8.4,
+    cuartel: 8.6, almacen: 8.6, embajada: 8.8, academia: 8.6, relevo: 8.4, salon: 8.6,
     mercado: 8.6, herreria: 8.2, establo: 8.4, enfermeria: 8.2, galeria: 8.4,
     cabana: 5.8, granja: 6.2, aserradero: 6.2, mina: 6.2, cantera: 6.2,
     torre: 6.6, vigia: 6.0
@@ -7175,7 +7175,7 @@
       });
       retratos.castillo = foto(M.castillo(), 22, 3);
       ['trasgo', 'bruto', 'ogro'].forEach(function (t) { var u = M.unidad(t); u.grupo.rotation.y = 0.3; retratos[t] = foto(u.grupo, 2.9 * u.escala, 0.8 * u.escala); });
-      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria', 'vigia', 'cabana'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = t === 'cabana' ? foto(m, 9, 1.6) : foto(m, 5.5, 0.9); });
+      ['aserradero', 'mina', 'cantera', 'academia', 'almacen', 'mercado', 'herreria', 'establo', 'galeria', 'vigia', 'cabana', 'salon'].forEach(function (t) { var m = crearModelo(t, 1); m.rotation.y = 0.5; retratos[t] = t === 'cabana' ? foto(m, 9, 1.6) : foto(m, 5.5, 0.9); });
       HEROES.forEach(function (h) { var hu = M.heroe(h, 1); hu.grupo.rotation.y = 0.35; retratos['h_' + h.id] = foto(hu.grupo, 1.55 * hu.escala, (hu.cabezaY - 0.12) * hu.escala); });
       [1, 2, 3].forEach(function (n) { var cm = M.castillo(n); cm.rotation.y = 0.6; retratos['mapa_castillo' + n] = foto(cm, 24, 3.2); });
       retratos.mapa_campamento = (function () {
@@ -7842,7 +7842,7 @@
     if (tipo === 'herreria') return '<span>⚒️ ' + T('herreria_txt', { n: ARMAS.herreria.filter(function (r) { return r <= i + 1; }).length }) + '</span>';
     if (tipo === 'establo' || tipo === 'galeria') return '<span>' + d.icono + ' ' + N(tipo === 'establo' ? 'caballeria' : 'arquero') + '</span>' + (d.rapidez[i] > 1 ? '<span>' + T('velocidad_ent') + ' x' + d.rapidez[i] + '</span>' : '');
     if (tipo === 'academia') return '<span>📜 ' + T('nivel') + ' máx. ' + d.tope[i] + '</span>' + (d.rapidez[i] > 1 ? '<span>⏱ x' + d.rapidez[i] + '</span>' : '');
-    if (tipo === 'embajada' || tipo === 'relevo') return '<span>' + EDIFICIOS[tipo].icono + ' ' + N(tipo) + '</span>';
+    if (tipo === 'embajada' || tipo === 'relevo' || tipo === 'salon') return '<span>' + EDIFICIOS[tipo].icono + ' ' + N(tipo) + '</span>';
     return '<span>' + T('dano') + ': ' + d.dano[i] + '</span><span>' + T('alcance') + ': ' + d.alcance[i] + '</span>';
   }
   // =====================================================================
@@ -8219,7 +8219,7 @@
     slotElegido = slot === undefined ? null : slot;
     var html = '<div class="lista">';
     var sl = slotElegido !== null ? slots[slotElegido] : null;
-    ['granja', 'aserradero', 'mina', 'cantera', 'cabana', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado', 'vigia', 'embajada', 'relevo'].filter(function (t) { return !sl || parcelaAcepta(sl, t); }).forEach(function (t) {
+    ['granja', 'aserradero', 'mina', 'cantera', 'cabana', 'cuartel', 'establo', 'galeria', 'torre', 'enfermeria', 'academia', 'herreria', 'almacen', 'mercado', 'vigia', 'embajada', 'relevo', 'salon'].filter(function (t) { return !sl || parcelaAcepta(sl, t); }).forEach(function (t) {
       var fo = faltaObra(t, 1), lleno = !repetibleCiudad(t) && !esCampo(t) && contarEdificios(t) >= 1;
       html += '<button class="fila-construir' + (fo || lleno ? ' bloq' : '') + '" data-accion="detalle-construir" data-tipo="' + t + '"><span class="foto">' + fotoHTML(t, EDIFICIOS[t].icono) + (fo || lleno ? '<b class="candado">🔒</b>' : '') + '</span><span class="fc-txt"><b>' + N(t) + '</b><small>' + D(t) + '</small>' + (fo ? '<small class="aviso-rojo">' + fo + '</small>' : '') + (lleno ? '<small class="aviso-rojo">' + L('Ya tienes uno', 'You already have one') + '</small>' : '') + '<small class="t-obra">⏱ ' + fmtTiempo(EDIFICIOS[t].tiempo[0] * (1 - bono('obras'))) + '</small></span><span class="fc-flecha">›</span></button>';
     });
@@ -8807,6 +8807,7 @@
     else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
     else if (tipo === 'relevo') { t.push(['reunion-pest" data-p="tropas', L('Mis tropas', 'My troops')]); t.push(['reunion-pest" data-p="defensa', '🛡️ ' + L('Defensa', 'Defense')]); if (hayCuenta() && estado.alianza) t.push(['reunion-pest" data-p="guarnicion', '🏳️ ' + L('Guarnición', 'Garrison')]); t.push(['reunion-pest" data-p="marchas', L('Mis Marchas', 'My marches') + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length ? ' <span class="mail-n">' + (marchasPVE.length + marchas.filter(function (m) { return !m.resuelto && m.llega > Date.now(); }).length) + '</span>' : '')]); }
     else if (tipo === 'herreria') t.push(['abrir-herreria', T('mb_forjar')]);
+    else if (tipo === 'salon') { t.push(['salon-pest" data-p="caballeros', '🛡️ ' + L('Caballeros', 'Knights')]); t.push(['salon-pest" data-p="cargos', '🎖️ ' + L('Cargos', 'Posts')]); } /* v9.76 */
     else if (tipo === 'torre') { t.push(['torre-pest" data-p="artefactos', L('Artefactos', 'Artifacts')]); t.push(['torre-pest" data-p="promos', L('Promociones', 'Promotions') + (promosTorreN() ? ' <span class="mail-n">' + promosTorreN() + '</span>' : '')]); t.push(['torre-pest" data-p="campana', '🎖️ ' + L('Campaña', 'Campaign')]); }
     else if (tipo === 'embajada') t.push(['emb-pest" data-p="acampados', L('Aliados acampados', 'Encamped allies') + (tropas.some(function (u) { return u.refuerzo; }) ? ' <span class="mail-n">' + tropas.filter(function (u) { return u.refuerzo; }).length + '</span>' : '')]);
     if (t.length === 1) return ''; /* v9.61 (dueño): si solo hay Detalles (Establo, Galería, Granja…) no se pinta la pestaña: la ventana va directa */
@@ -10713,8 +10714,7 @@
     return '<div class="subtabs">' + /* v9.59: sin la pestaña Tropas (están en el Cuartel) */
       '<button data-accion="sub-heroes" class="' + (cual === 'heroes' ? 'activo' : '') + '">🦸 ' + T('sub_heroes') + (reclutaGratisHoy() ? ' 🎁' : '') + '</button>' +
       '<button data-accion="sub-invocar" class="' + (cual === 'invocar' ? 'activo' : '') + '">✨ ' + T('sub_invocar') + '</button>' +
-      '<button data-accion="sub-salon" class="' + (cual === 'salon' ? 'activo' : '') + '">🛡️ ' + L('Caballeros', 'Knights') + '</button>' +
-      '<button data-accion="sub-cargos" class="' + (cual === 'cargos' ? 'activo' : '') + '">🎖️ ' + L('Cargos', 'Posts') + '</button>' +
+      /* v9.76 (dueño): Caballeros y Cargos ahora están en el edificio Salón de Caballeros */
       '<button data-accion="sub-fortaleza" class="' + (cual === 'fortaleza' ? 'activo' : '') + '">🏯 ' + L('Fortaleza', 'Fortress') + '</button></div>';
   }
   // v6.54: Salón de Caballeros: tus caballeros con nivel, ataque, salud y experiencia, y los botones +EXP y Equipar
@@ -10750,10 +10750,17 @@
     sonar('magia'); guardar(true); actualizarHUD(); ponerEquipo && ponerEquipo(); abrirFortaleza();
     mostrarRecompensas('🧭 ' + NH(id) + ' · ' + L('Exploración', 'Exploration') + ' (' + (EXPLORAR_DIA - exploracionesHoy(id)) + '/' + EXPLORAR_DIA + ')', items);
   }
+  /* v9.76: el Salón de Caballeros (edificio): sus pestañas arriba; si no lo has construido, se avisa */
+  function slotSalon() { return slots.filter(function (x) { return x.edificio && x.edificio.tipo === 'salon'; })[0] || null; }
+  function cabeceraSalon(cual) {
+    var sl = slotSalon(); if (!sl) return '<p class="nota aviso-rojo">🛡️ ' + L('Construye el Salón de Caballeros (Edificios) para tener aquí a tus caballeros.', 'Build the Knights Hall (Buildings) to keep your knights here.') + '</p>';
+    var tb = pestanasVentana(sl.i, 'salon').replace('class="activo" data-accion="cafe-det"', 'class="" data-accion="cafe-det"');
+    return tb.replace('data-p="' + cual + '"', 'data-p="' + cual + '" data-act="1"').replace(/<button class="" data-accion="salon-pest" data-p="(\w+)" data-act="1"/, '<button class="activo" data-accion="salon-pest" data-p="$1"');
+  }
   function abrirSalonCaballeros() {
     var mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });
     var libros = librosQueTienes();
-    var html = subtabsHeroes('salon') + '<p class="nota">' + L('Dale equipo y experiencia a tus caballeros para ganar más Poder.', 'Give your knights gear and experience to gain more Power.') + ' 📗 ' + L('Libros: ', 'Books: ') + '<b>' + libros + '</b></p>' +
+    var html = cabeceraSalon('caballeros') + '<p class="nota">' + L('Dale equipo y experiencia a tus caballeros para ganar más Poder.', 'Give your knights gear and experience to gain more Power.') + ' 📗 ' + L('Libros: ', 'Books: ') + '<b>' + libros + '</b></p>' +
       '<div class="salon-lista">' + (mios.length ? mios.map(function (h) {
         var e = estado.heroes[h.id], s = statsHeroe(h.id), need = expNivel(e.nivel), ex = Math.min(e.exp || 0, need), tope = topeNivel(h.id), lleno = e.nivel >= tope;
         return '<div class="salon-fila ' + h.rareza + '"><div class="salon-foto">' + fotoHTML('h_' + h.id, '🦸') + '</div><div class="salon-dat"><b>' + NH(h.id) + '</b>' +
@@ -10761,7 +10768,7 @@
           '<div class="hf-barra salon-exp"><div style="width:' + (lleno ? 100 : Math.round(ex / need * 100)) + '%"></div><span>' + (lleno ? T('exp_llena') : ex + ' / ' + need) + '</span></div></div>' +
           '<div class="salon-bts">' + (lleno ? '<button class="comprar mini dorado" data-accion="heroe-ver" data-id="' + h.id + '">' + ((e.estrellas || 1) < 5 ? '⭐ ' + L('Estrella', 'Star') : (e.asc || 0) < ASC_HEROE.length ? '✨ ' + L('Ascender', 'Ascend') : '👑 ' + L('Maestría', 'Mastery')) + '</button>' : '<button class="comprar mini verde" data-accion="salon-exp" data-id="' + h.id + '"' + (!libros ? ' disabled' : '') + '>+EXP</button>') + '<button class="comprar mini naranja" data-accion="salon-equipar" data-id="' + h.id + '">' + L('Equipar', 'Equip') + '</button></div></div>';
       }).join('') : '<p class="nota">' + L('Todavía no tienes caballeros: recluta en la pestaña Héroes.', 'You have no knights yet: recruit in the Heroes tab.') + '</p>') + '</div>';
-    abrirPanel(L('Salón de Caballeros', 'Knights Hall'), html, { tipo: 'salon' });
+    var slS = slotSalon(); abrirPanel(N('salon') + (slS ? ' (' + L('Nvl.', 'Lvl.') + slS.edificio.nivel + ')' : ''), html, { tipo: 'salon' }); if (slS) ponerCafe();
   }
   // ==================================================================
   //  v6.80: CARGOS DE CABALLEROS · FELICIDAD · VIP · EVENTO DE FIN DE SEMANA · LOGROS · PERFIL
@@ -10790,7 +10797,7 @@
   }
   function abrirCargos() {
     var c = cargos(), mios = HEROES.filter(function (h) { return estado.heroes[h.id]; });
-    var html = subtabsHeroes('cargos') + '<p class="nota">' + L('Pon un caballero en cada cargo. Cuanto más nivel y estrellas tenga, más bonus da. Un caballero solo puede tener un cargo.', 'Put a knight in each post. The higher their level and stars, the bigger the bonus. Each knight can hold one post.') + '</p><div class="cg-lista">' +
+    var html = cabeceraSalon('cargos') + '<p class="nota">' + L('Pon un caballero en cada cargo. Cuanto más nivel y estrellas tenga, más bonus da. Un caballero solo puede tener un cargo.', 'Put a knight in each post. The higher their level and stars, the bigger the bonus. Each knight can hold one post.') + '</p><div class="cg-lista">' +
       CARGOS.map(function (x) {
         var hid = c[x.id] && estado.heroes[c[x.id]] ? c[x.id] : '', pct = Math.round(bonoCargoDe(hid) * 100);
         var opciones = '<option value="">' + L('— Vacío —', '— Empty —') + '</option>' + mios.map(function (h) {
@@ -13179,6 +13186,7 @@
     else if (a === 'eq-rapido') { marcarEqAntes(b.getAttribute('data-id')); equiparRapido(b.getAttribute('data-id')); }
     else if (a === 'eq-guia') { sonar('click'); abrirGuiaEquipo(); }
     else if (a === 'sub-salon') { sonar('click'); abrirSalonCaballeros(); }
+    else if (a === 'salon-pest') { sonar('click'); if (b.getAttribute('data-p') === 'cargos') abrirCargos(); else abrirSalonCaballeros(); } /* v9.76 */
     else if (a === 'salon-exp') { sonar('click'); unLibroCaballero(b.getAttribute('data-id')); }
     else if (a === 'salon-equipar') { sonar('click'); pestanaHeroe = 'equipo'; abrirPanelHeroe(b.getAttribute('data-id')); }
     else if (a === 'eq-dueno-set') { if (!esCuentaDueno()) return; var ids = b.getAttribute('data-id'); TIPOS_EQ.forEach(function (t) { if (!piezas().some(function (p) { return p.s === ids && p.t === t; })) { var np = darPieza(t, 'mitico'); if (np) np.s = ids; } }); sonar('magia'); guardar(true); abrirPanelHeroe(ids); }
