@@ -1655,7 +1655,7 @@
     if (!forzar && ahora - ultimaPublicacion < 60000) return;
     ultimaPublicacion = ahora;
     var l = vp ? lugarVilla(0) : miLugar(), espP = vp ? espiaDeVilla(vp) : datosEspia(), defP = vp ? (estado.defPrincipal || defensaDeEspia(espP)) : (estado.defPrincipal = Math.round(defensaReino()));
-    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, kp: estado.kpTotal || 0, kpt: estado.kpSem === semanaActual() ? (estado.kpTemp || 0) : 0, kps: semanaActual(), defensa: defP, espia: espP })
+    Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, kp: estado.kpTotal || 0, kpt: estado.kpSem === semanaActual() ? (estado.kpTemp || 0) : 0, kps: semanaActual(), defensa: defP, espia: cuentaDelEquipo() ? { oculto: true } : espP }) /* v9.64: el equipo no publica nada para los espías */
       .catch(function () {
         // v6.94: si la nube no acepta los datos completos, se publica lo mínimo para que el reino SIEMPRE salga en el mapa
         Cuentas.publicarAldea({ nombre: Cuentas.nombrePublico(), nivel: nivelJugador(), poder: Math.round(calcularPoder()), x: l.x, y: l.y, alianza: estado.alianza || null, escudo: estado.escudoHasta || 0, minimo: true }).catch(function () {});
@@ -10002,12 +10002,15 @@
     if (!hayCuenta()) { consejoTemporal(T('at_cuenta')); sonar('error'); return; }
     if (estado.alianza && a.alianza === estado.alianza) { consejoTemporal(L('No hace falta espiar a tu alianza.', 'No need to scout your alliance.')); return; }
     var MSG_PROT = '🛡️ ' + L('Está protegido: no se puede espiar ni atacar.', 'Protected: cannot be scouted or attacked.');
+    var MSG_EQUIPO = '🛡️ ' + L('Este reino es del equipo del juego: no se puede espiar.', 'This kingdom belongs to the game team: it cannot be spied on.');
+    if (esProtegidoUid(a.uid) || (a.espia && a.espia.oculto)) { consejoTemporal(MSG_EQUIPO); sonar('error'); return; } /* v9.64 */
     if ((a.escudo || 0) > Date.now()) { consejoTemporal(MSG_PROT); sonar('error'); return; } /* v8.41: con burbuja no se espía */
     var exp = cuentaTipo('explorador');
     var frescoP = Cuentas.leerAldea ? Cuentas.leerAldea(a.uid).catch(function () { return null; }) : Promise.resolve(null);
     if (b) b.disabled = true;
     frescoP.then(function (al0) {
     if (b && document.body.contains(b)) b.disabled = false;
+    if (al0 && al0.espia && al0.espia.oculto && esProtegidoUid(a.uid)) { consejoTemporal(MSG_EQUIPO); sonar('error'); return; } /* v9.64 */
     if (al0 && (al0.escudo || 0) > Date.now()) { a.escudo = al0.escudo; consejoTemporal(MSG_PROT); sonar('error'); return; } /* v8.41 */
     if (!exp && !pagar({ oro: COSTO_ESPIAR })) return;
     if (b) b.disabled = true; sonar('click');
@@ -12648,13 +12651,18 @@
   setInterval(function () { try { if (esCuentaDueno() || estado.dueno) localStorage.setItem('tk_dueno', '1'); } catch (e) {} }, 5000);
   /* v9.63 (dueño): SOCIOS FUNDADORES. La lista (uids y nombres) está en la nube, en config/socios; solo el dueño la cambia.
      Los socios llevan la insignia 👑 Socio fundador y pueden mandar compensaciones (la regla de la nube también lo comprueba). */
-  var SOCIOS = { uids: [], nombres: [] };
-  function cargarSocios() { try { if (!window.firebase || !firebase.firestore || !hayCuenta()) return; firebase.firestore().collection('config').doc('socios').get().then(function (d) { var x = d.exists ? d.data() : {}; SOCIOS = { uids: Array.isArray(x.uids) ? x.uids.map(String) : [], nombres: Array.isArray(x.nombres) ? x.nombres.map(String) : [] }; }).catch(function () {}); } catch (e) {} }
+  var SOCIOS = { uids: [], nombres: [], duenos: [] };
+  function cargarSocios() { try { if (!window.firebase || !firebase.firestore || !hayCuenta()) return; var ref = firebase.firestore().collection('config').doc('socios'); ref.get().then(function (d) { var x = d.exists ? d.data() : {}; SOCIOS = { uids: Array.isArray(x.uids) ? x.uids.map(String) : [], nombres: Array.isArray(x.nombres) ? x.nombres.map(String) : [], duenos: Array.isArray(x.duenos) ? x.duenos.map(String) : [] };
+      /* v9.64: la cuenta del dueño se apunta sola en la lista de protegidos (nadie la puede espiar) */
+      var yo = Cuentas.usuario() && Cuentas.usuario().uid; if (yo && esCuentaDueno() && SOCIOS.duenos.indexOf(yo) < 0) { SOCIOS.duenos = SOCIOS.duenos.concat([yo]).slice(-5); ref.set({ uids: SOCIOS.uids, nombres: SOCIOS.nombres, duenos: SOCIOS.duenos, fecha: Date.now() }).catch(function () {}); } if (cuentaDelEquipo()) publicarAldea(true); /* v9.64: en cuanto se sabe que es del equipo, se tapa lo que ven los espías */ }).catch(function () {}); } catch (e) {} }
+  /* v9.64 (dueño): las cuentas del equipo (dueño y socios fundadores) NUNCA se pueden espiar */
+  function esProtegidoUid(uid) { return !!uid && (esSocioUid(uid) || SOCIOS.duenos.indexOf(String(uid)) >= 0); }
+  function cuentaDelEquipo() { return esCuentaDueno() || esCuentaSocio(); }
   setTimeout(cargarSocios, 6000); setInterval(cargarSocios, 600000);
   function esSocioUid(uid) { return !!uid && SOCIOS.uids.indexOf(String(uid)) >= 0; }
   function esCuentaSocio() { return !!(window.Cuentas && Cuentas.usuario() && esSocioUid(Cuentas.usuario().uid)); }
   function chipSocio(uid) { return esSocioUid(uid) ? ' <span class="socio-chip">👑 ' + L('Socio fundador', 'Founding partner') + '</span>' : ''; }
-  function guardarSocios(l) { return firebase.firestore().collection('config').doc('socios').set({ uids: l.map(function (x) { return x.uid; }).slice(0, 10), nombres: l.map(function (x) { return String(x.nombre).slice(0, 30); }).slice(0, 10), fecha: Date.now() }); }
+  function guardarSocios(l) { return firebase.firestore().collection('config').doc('socios').set({ uids: l.map(function (x) { return x.uid; }).slice(0, 10), nombres: l.map(function (x) { return String(x.nombre).slice(0, 30); }).slice(0, 10), duenos: (SOCIOS.duenos || []).slice(-5), fecha: Date.now() }); }
   function esCuentaDueno() { return !!(window.Cuentas && Cuentas.usuario() && HUELLAS_DUENO.indexOf(sha256(Cuentas.correo().toLowerCase())) >= 0); }
   // v6.99: tocar la fila de recursos abre la ventana de Recursos de la ciudad
   ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (id) {

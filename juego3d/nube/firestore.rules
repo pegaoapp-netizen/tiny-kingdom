@@ -385,7 +385,8 @@ service cloud.firestore {
     // v8.40: configuración del juego (héroes lanzados): todos la leen, solo el dueño la cambia
     match /config/{id} {
       allow read: if request.auth != null;
-      allow write: if esDueno() && id == 'socios' && request.resource.data.keys().hasOnly(['uids', 'nombres', 'fecha']) // v9.63
+      allow write: if esDueno() && id == 'socios' && request.resource.data.keys().hasOnly(['uids', 'nombres', 'duenos', 'fecha']) // v9.63 (v9.64: duenos = cuentas del dueño, no se espían)
+        && (!('duenos' in request.resource.data) || (request.resource.data.duenos is list && request.resource.data.duenos.size() <= 5))
         && request.resource.data.uids is list && request.resource.data.uids.size() <= 10
         && request.resource.data.nombres is list && request.resource.data.nombres.size() <= 10 && request.resource.data.fecha is int;
       allow write: if esDueno() && id != 'socios' && request.resource.data.keys().hasOnly(['lanzados', 'armaduras', 'fecha'])
