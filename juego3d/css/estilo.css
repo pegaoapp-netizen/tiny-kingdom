@@ -2511,3 +2511,14 @@ html body #menu-grande .mg-ico .mg-n { position: absolute !important; top: -6px 
 
 /* v9.63: insignia de Socio fundador */
 .socio-chip { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; padding: 1px 7px; border-radius: 999px; font: 800 10.5px system-ui, sans-serif; color: #3a2400; background: linear-gradient(#ffe38a, #d9a12a); border: 1px solid #8a5a10; box-shadow: 0 1px 2px rgba(0,0,0,.35); white-space: nowrap; vertical-align: middle; }
+
+/* v9.67: Herrería › Mejoras de tropas: una tarjeta por fila con su texto y sus botones a la vista */
+html body #panel .her-tropas { display: flex !important; flex-direction: column !important; gap: 8px !important; }
+html body #panel .her-tropas .carta { width: auto !important; height: auto !important; max-height: none !important; overflow: visible !important; }
+html body #panel .her-tropas .carta .nota { display: block !important; font-size: 13px !important; margin: 4px 0 !important; }
+html body #panel .her-tropas .carta .cab { display: flex !important; align-items: center; gap: 10px; }
+html body #panel .her-tropas .carta .botones, html body #panel .her-tropas .carta .hf-fila { display: flex !important; flex-wrap: wrap; gap: 6px; }
+html body #panel .her-tropas .carta .cab > div:last-child { flex: 1 1 auto !important; min-width: 0 !important; width: auto !important; }
+html body #panel .her-tropas .carta .cab .nota { background: none !important; padding: 0 !important; }
+html body #panel .her-tropas .carta { display: block !important; grid-template-columns: none !important; }
+html body #panel .her-tropas .carta .cab { width: 100% !important; }

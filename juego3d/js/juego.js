@@ -5397,7 +5397,7 @@
     var hn = nivelMayor('herreria');
     var tabsH = '<div class="iv-modos"><button data-accion="her-pest" data-p="equipo" class="' + (pestHerreria === 'equipo' ? 'activo' : '') + '">🛡️ ' + L('Equipo', 'Gear') + '</button><button data-accion="her-pest" data-p="tropas" class="' + (pestHerreria === 'tropas' ? 'activo' : '') + '">⚒️ ' + L('Mejoras de tropas', 'Troop upgrades') + '</button></div>';
     if (pestHerreria === 'equipo') { abrirPanel(T('p_herreria'), tabsH + htmlHerreriaEquipo(), { tipo: 'herreria' }); $('panel').classList.add('iv-panel'); return; }
-    var html = tabsH + (hn ? '' : '<p class="nota aviso-rojo">' + T('her_sin') + '</p>') + '<div class="lista">';
+    var html = tabsH + (hn ? '' : '<p class="nota aviso-rojo">' + T('her_sin') + '</p>') + '<div class="lista her-tropas">'; /* v9.67: con su propio estilo (antes se escondía el texto y, con todo al máximo, la tarjeta quedaba vacía) */
     ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
       var na = nivelArmadura(t), nw = nivelArmas(t);
       html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, TROPAS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p class="nota">🛡️ ' + T('her_armadura') + ' ' + na + '/' + ARMADURA.max + ' · ⚔️ ' + T('her_armas') + ' ' + nw + '/' + ARMAS.max + '</p></div></div><div class="botones">';
