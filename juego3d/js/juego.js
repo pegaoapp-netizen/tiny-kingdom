@@ -11787,7 +11787,7 @@
       '<div class="comp-items">' + Object.keys(compSel.objetos).map(function (k) { return '<div class="comp-it"><span class="comp-ic">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small><b>×' + formatoNumero(compSel.objetos[k]) + '</b><button class="co-borrar" data-accion="comp-quitar" data-k="' + k + '">✕</button></div>'; }).join('') + '</div>' +
       '<h4>' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="comp-rec">' + [['gemas', '💎'], ['oro', '🪙'], ['comida', '🍞'], ['madera', '🪵'], ['piedra', '🪨'], ['hierro', '🔩']].map(function (q) { return '<label>' + q[1] + '<input id="comp-' + q[0] + '" type="number" min="0" value="0"></label>'; }).join('') + '</div>' +
       '<p class="nota aviso-rojo" id="comp-error"></p><button class="comprar verde sp-enviar" data-accion="comp-enviar">📨 ' + L('Enviar compensación', 'Send compensation') + '</button></div>';
-    abrirPanel('📨 ' + L('Compensación', 'Compensation'), h + htmlSociosDueno(), { tipo: 'compensar' });
+    abrirPanel('📨 ' + L('Compensación', 'Compensation'), htmlSociosDueno() + h, { tipo: 'compensar' }); /* v9.66: Socios fundadores arriba del todo */
   }
   function enviarCompensacion(b) {
     var premio = {}, num = function (id) { var e = $(id); return e ? Math.max(0, Math.floor(+e.value || 0)) : 0; };
