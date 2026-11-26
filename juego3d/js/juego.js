@@ -12460,6 +12460,13 @@
     if (a > 0) l.push({ ico: window.ICONO_FICHA || '🪙', nom: L('Fichas de Azar', 'Lucky tokens'), n: a, des: L('Para abrir cofres en el Azar. Se guardan, no se pierden.', 'To open chests in Lucky. They never expire.'), acc: 'inv-fichas-azar' });
     if (ru > 0) l.push({ ico: '🎡', nom: L('Fichas de Ruleta', 'Wheel tokens'), n: ru, des: L('Para girar la Ruleta cuando está abierta. Se guardan, no se pierden.', 'To spin the Wheel when it is open. They never expire.'), acc: 'inv-fichas-rul' });
     return l; }
+  function cambiarNombreLibre() {
+    var nuevo = (window.prompt(L('Nuevo nombre (3 a 20 letras):', 'New name (3 to 20 letters):'), Cuentas.nombrePublico()) || '').replace(/\s+/g, ' ').trim();
+    if (!nuevo) return;
+    if (nuevo.length < 3 || nuevo.length > 20 || /[@<>]/.test(nuevo)) { consejoTemporal(L('El nombre debe tener de 3 a 20 letras.', 'The name must be 3 to 20 letters.')); sonar('error'); return; }
+    Cuentas.cambiarNombre(nuevo).then(function () { guardar(true); publicarAldea(true); actualizarHUD(); reabrirPanel(); sonar('magia'); consejoTemporal('✒️ ' + L('Ahora te llamas ', 'Your name is now ') + escaparHTML(nuevo)); })
+      .catch(function () { consejoTemporal(L('No se pudo cambiar el nombre. Revisa tu internet.', 'Could not change the name.')); sonar('error'); });
+  }
   function abrirMisObjetos() {
     var cats = CATS_TIENDA, mios = Object.keys(estado.mochila || {}).filter(function (k) { return OBJETOS[k] && estado.mochila[k] > 0; });
     if (!cats.some(function (c) { return c[0] === pestTienda; })) pestTienda = 'varios';
@@ -13032,6 +13039,8 @@
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
     /* v9.42 (dueño): limpiar lo viejo guardado en el navegador (service worker y cachés) y recargar; tu cuenta y tu reino no se tocan */
+    /* v9.82 (dueño: «no encontramos dónde cambiar el nombre»): Ajustes › Cambiar nombre. Gratis para el equipo; los demás gastan un «Cambio de nombre» */
+    if (hayCuenta()) html += '<div class="carta" style="margin-top:10px"><h3>✒️ ' + L('Tu nombre', 'Your name') + ': ' + escaparHTML(Cuentas.nombrePublico() || '') + '</h3><p class="nota">' + (cuentaDelEquipo() ? L('Como eres del equipo del juego, cambiarlo es gratis.', 'As a game team member, changing it is free.') : L('Cambiarlo gasta 1 «Cambio de nombre» (Tienda › Varios). Tienes: ', 'Changing it uses 1 «Name change» (Shop › Misc.). You have: ') + ((estado.mochila && estado.mochila.cambio_nombre) || 0)) + '</p><button class="comprar naranja" data-accion="ajustes-nombre">✒️ ' + L('Cambiar mi nombre', 'Change my name') + '</button></div>';
     html += '<div class="carta" style="margin-top:10px"><h3>🧹 ' + L('Si el juego va lento o se queda pegado', 'If the game is slow or stuck') + '</h3><p class="nota">' + L('Borra lo viejo guardado en el navegador y recarga. Tu cuenta y tu reino no se borran.', 'Clears old browser data and reloads. Your account and kingdom are kept.') + '</p><button class="comprar morado" data-accion="limpiar-cache">🧹 ' + L('Limpiar caché y recargar', 'Clear cache and reload') + '</button></div>';
     html += '' + /* v8.28: sin el botón «Borrar partida y empezar de cero» (se tocaba sin querer) */
       '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v' + VERSION_JUEGO + '</p>';
@@ -13226,6 +13235,7 @@
     else if (a === 'tal-reset') resetTalentos();
     else if (a === 'pf-ajustes') { sonar('click'); abrirPanelAjustes(); }
     else if (a === 'eq-fundir-dup') { sonar('click'); fundirDuplicadas(b.getAttribute('data-id')); } /* v9.46 */
+    else if (a === 'ajustes-nombre') { sonar('click'); if (cuentaDelEquipo()) cambiarNombreLibre(); else if ((estado.mochila.cambio_nombre || 0) > 0) usarObjeto('cambio_nombre'); else { consejoTemporal('✒️ ' + L('Necesitas un «Cambio de nombre»: está en Tienda › Objetos › Varios.', 'You need a «Name change»: Shop › Items › Misc.')); sonar('error'); } } /* v9.82 */
     else if (a === 'limpiar-cache') { sonar('click'); b.disabled = true; b.textContent = '🧹 ' + L('Limpiando…', 'Clearing…'); try { guardar(true); } catch (e) {} /* v9.42: primero se guarda en la nube */
       var listo = false, recargar = function () { if (listo) return; listo = true; location.replace(location.pathname + '?r=' + Date.now()); }, pr = [];
       try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) pr.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (x) { return x.unregister(); })); })); } catch (e) {}
