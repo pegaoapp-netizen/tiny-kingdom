@@ -404,6 +404,20 @@ service cloud.firestore {
         && request.resource.data.fecha is int && request.resource.data.vence is int;
       allow delete: if esDueno();
     }
+    // v9.77: RETIROS (corregir un regalo equivocado). Los crean el dueño y los socios fundadores; el jugador los lee, los aplica y los borra.
+    match /retiros/{id} {
+      allow read: if request.auth != null && (resource.data.para == request.auth.uid || esDueno() || esSocio());
+      allow create: if (esDueno() || esSocio())
+        && request.resource.data.keys().hasOnly(['para', 'paraNombre', 'deNombre', 'titulo', 'texto', 'quitar', 'fecha'])
+        && request.resource.data.para is string && request.resource.data.para.size() > 0 && request.resource.data.para.size() <= 64 && request.resource.data.para != 'todos'
+        && request.resource.data.paraNombre is string && request.resource.data.paraNombre.size() <= 30
+        && request.resource.data.deNombre is string && request.resource.data.deNombre.size() <= 60
+        && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 80
+        && request.resource.data.texto is string && request.resource.data.texto.size() <= 600
+        && request.resource.data.quitar is map && request.resource.data.quitar.size() <= 20
+        && request.resource.data.fecha is int;
+      allow delete: if request.auth != null && (resource.data.para == request.auth.uid || esDueno() || esSocio());
+    }
     // v7.07: SOPORTE. Cada jugador crea sus mensajes y lee solo los suyos; el dueño lee todos, responde y borra.
     match /soporte/{id} {
       allow read: if request.auth != null && (resource.data.de == request.auth.uid || esDueno());

@@ -11831,7 +11831,19 @@
   function abrirCompensar() {
     if (!esCuentaDueno() && !esCuentaSocio()) return; /* v9.63: también los socios fundadores */
     var objs = Object.keys(OBJETOS).filter(function (k) { return NOMBRES[k]; }).sort(function (a, b) { return N(a).localeCompare(N(b)); });
-    var h = '<div class="carta comp-panel"><p class="nota">' + L('Arma un paquete y mándalo por Correo. Le llega con un mensaje de disculpa, los dibujos de lo que recibe, «La recompensa caduca en 10 días» y el botón Cobrar.', 'Build a package and send it by Mail with an apology, the item pictures, a 10-day expiry and a Claim button.') + '</p>' +
+    var qt = compSel.modo === 'quitar'; if (qt && compSel.para === 'todos') compSel.para = 'uno'; /* v9.77: quitar solo a UN jugador */
+    var modos = '<div class="sp-tipos comp-modos"><button data-accion="comp-modo" data-m="dar" class="' + (!qt ? 'activo' : '') + '">📨 ' + L('Dar', 'Give') + '</button><button data-accion="comp-modo" data-m="quitar" class="' + (qt ? 'activo' : '') + '">➖ ' + L('Quitar', 'Take back') + '</button></div>';
+    if (qt) {
+      var hq = '<div class="carta comp-panel comp-quitar">' + modos + '<p class="nota aviso-rojo">' + L('Quitar sirve para corregir un error (por ejemplo, un regalo equivocado). Se le resta al jugador lo que pongas aquí (nunca baja de 0) y le llega un Correo explicándolo.', 'Take back fixes a mistake (e.g. a wrong gift). What you set here is subtracted from the player (never below 0) and they get a Mail explaining it.') + '</p>' +
+        '<h4>' + L('¿A quién?', 'Who?') + '</h4><div class="comp-fila"><input id="comp-nombre" placeholder="' + L('Nombre del jugador', 'Player name') + '" value="' + escaparHTML(compSel.paraNombre || '') + '"><button class="comprar mini" data-accion="comp-buscar">🔍</button></div><div id="comp-res">' + (compSel.para && compSel.para !== 'uno' ? '<p class="nota">✓ ' + escaparHTML(compSel.paraNombre) + '</p>' : '') + '</div>' +
+        '<h4>' + L('Mensaje', 'Message') + '</h4><input id="comp-titulo" maxlength="80" value="' + L('Corrección de un error', 'Correction of a mistake') + '"><textarea id="comp-texto" maxlength="600" rows="3">' + L('Por un error te llegó algo que no te correspondía. Ya lo corregimos. ¡Gracias por entenderlo!', 'By mistake you received something that was not yours. We have corrected it. Thanks for understanding!') + '</textarea>' +
+        '<h4>' + L('Objetos que se quitan', 'Items to take back') + '</h4><div class="comp-fila"><select id="comp-obj">' + objs.map(function (k) { return '<option value="' + k + '">' + escaparHTML(N(k)) + '</option>'; }).join('') + '</select><input id="comp-cant" type="number" min="1" value="1"><button class="comprar mini" data-accion="comp-anadir">＋</button></div>' +
+        '<div class="comp-items">' + Object.keys(compSel.objetos).map(function (k) { return '<div class="comp-it"><span class="comp-ic">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small><b>−' + formatoNumero(compSel.objetos[k]) + '</b><button class="co-borrar" data-accion="comp-quitar" data-k="' + k + '">✕</button></div>'; }).join('') + '</div>' +
+        '<h4>' + L('Gemas y recursos que se quitan', 'Gems and resources to take back') + '</h4><div class="comp-rec">' + [['gemas', '💎'], ['oro', '🪙'], ['comida', '🍞'], ['madera', '🪵'], ['piedra', '🪨'], ['hierro', '🔩']].map(function (q) { return '<label>' + q[1] + '<input id="comp-' + q[0] + '" type="number" min="0" value="0"></label>'; }).join('') + '</div>' +
+        '<p class="nota aviso-rojo" id="comp-error"></p><button class="comprar rojo sp-enviar" data-accion="comp-retirar">➖ ' + L('Quitar al jugador', 'Take back from player') + '</button></div>';
+      abrirPanel('➖ ' + L('Quitar', 'Take back'), htmlSociosDueno() + hq, { tipo: 'compensar' }); return;
+    }
+    var h = '<div class="carta comp-panel">' + modos + '<p class="nota">' + L('Arma un paquete y mándalo por Correo. Le llega con un mensaje de disculpa, los dibujos de lo que recibe, «La recompensa caduca en 10 días» y el botón Cobrar.', 'Build a package and send it by Mail with an apology, the item pictures, a 10-day expiry and a Claim button.') + '</p>' +
       '<h4>' + L('¿Para quién?', 'For whom?') + '</h4><div class="sp-tipos"><button data-accion="comp-para" data-p="todos" class="' + (compSel.para === 'todos' ? 'activo' : '') + '">👥 ' + L('Todos los jugadores', 'All players') + '</button><button data-accion="comp-para" data-p="uno" class="' + (compSel.para !== 'todos' ? 'activo' : '') + '">👤 ' + L('Un jugador', 'One player') + '</button></div>' +
       (compSel.para !== 'todos' ? '<div class="comp-fila"><input id="comp-nombre" placeholder="' + L('Nombre del jugador', 'Player name') + '" value="' + escaparHTML(compSel.paraNombre || '') + '"><button class="comprar mini" data-accion="comp-buscar">🔍</button></div><div id="comp-res">' + (compSel.para && compSel.para !== 'uno' ? '<p class="nota">✓ ' + escaparHTML(compSel.paraNombre) + '</p>' : '') + '</div>' : '') +
       '<h4>' + L('Mensaje', 'Message') + '</h4><input id="comp-titulo" maxlength="80" value="' + L('Compensación por un error', 'Compensation for an error') + '"><textarea id="comp-texto" maxlength="600" rows="3">' + L('Hubo un fallo técnico en el juego que ya fue corregido. Te pedimos disculpas por las molestias y te enviamos este regalo.', 'There was a technical issue in the game that is already fixed. We apologize and send you this gift.') + '</textarea>' +
@@ -11841,6 +11853,47 @@
       '<p class="nota aviso-rojo" id="comp-error"></p><button class="comprar verde sp-enviar" data-accion="comp-enviar">📨 ' + L('Enviar compensación', 'Send compensation') + '</button></div>';
     abrirPanel('📨 ' + L('Compensación', 'Compensation'), htmlSociosDueno() + h, { tipo: 'compensar' }); /* v9.66: Socios fundadores arriba del todo */
   }
+  /* v9.77 (socios): QUITAR. Un documento en «retiros» para un jugador; su juego lo resta (sin bajar de 0), le manda un Correo y lo borra */
+  function enviarRetiro(b) {
+    var quitar = {}, num = function (id) { var e = $(id); return e ? Math.max(0, Math.floor(+e.value || 0)) : 0; };
+    if (Object.keys(compSel.objetos).length) quitar.objetos = JSON.parse(JSON.stringify(compSel.objetos));
+    ['gemas', 'oro', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (k) { var v = num('comp-' + k); if (v) quitar[k] = v; });
+    if (!Object.keys(quitar).length) { $('comp-error').textContent = L('Pon al menos un objeto, gemas o recursos.', 'Add at least one item, gems or resources.'); sonar('error'); return; }
+    if (!compSel.para || compSel.para === 'uno' || compSel.para === 'todos') { $('comp-error').textContent = L('Busca y elige al jugador.', 'Search and choose the player.'); sonar('error'); return; }
+    var doc = { para: compSel.para, paraNombre: String(compSel.paraNombre || '').slice(0, 30), deNombre: esCuentaDueno() ? 'Brother Kingdom' : 'Brother Kingdom · ' + String(Cuentas.nombrePublico() || '').slice(0, 20), titulo: String(($('comp-titulo') || {}).value || '').slice(0, 80) || L('Corrección de un error', 'Correction of a mistake'), texto: String(($('comp-texto') || {}).value || '').slice(0, 600), quitar: quitar, fecha: Date.now() };
+    confirmarJuego('➖ ' + L('¿Quitar?', 'Take back?'), L('Se le quitará a <b>', 'This will be taken from <b>') + escaparHTML(doc.paraNombre) + '</b>: ' + textoQuitar(quitar), L('Sí, quitar', 'Yes, take back'), function () {
+      b.disabled = true;
+      firebase.firestore().collection('retiros').add(doc).then(function () { sonar('moneda'); consejoTemporal('✅ ' + L('Listo: se le quitará a ', 'Done: it will be taken from ') + escaparHTML(doc.paraNombre) + L(' cuando entre al juego.', ' when they open the game.')); compSel = { para: 'todos', paraNombre: '', objetos: {}, modo: 'dar' }; cerrarPanel(); })
+        .catch(function (er) { b.disabled = false; $('comp-error').textContent = L('No se pudo enviar', 'Could not send') + ' (' + ((er && er.code) || '?') + ')'; sonar('error'); });
+    });
+  }
+  function textoQuitar(q) {
+    var l = []; Object.keys(q.objetos || {}).forEach(function (k) { l.push((OBJETOS[k] ? N(k) : k) + ' ×' + formatoNumero(q.objetos[k])); });
+    [['gemas', '💎'], ['oro', '🪙'], ['comida', '🍞'], ['madera', '🪵'], ['piedra', '🪨'], ['hierro', '🔩']].forEach(function (x) { if (q[x[0]]) l.push(x[1] + ' ' + formatoNumero(q[x[0]])); });
+    return l.join(' · ');
+  }
+  /* el jugador: aplica los retiros que le llegaron (una sola vez cada uno) */
+  function revisarRetiros() {
+    try { if (!hayCuenta() || !window.firebase || !firebase.firestore) return; } catch (e) { return; }
+    var uid = Cuentas.usuario().uid, col = firebase.firestore().collection('retiros');
+    col.where('para', '==', uid).limit(20).get().then(function (qs) {
+      var hechos = estado.retirosHechos || (estado.retirosHechos = {}), hubo = false;
+      qs.forEach(function (d) {
+        var x = d.data() || {}, q = x.quitar || {};
+        if (!hechos[d.id]) {
+          hechos[d.id] = Date.now(); hubo = true;
+          var campo = { gemas: 'gemas', oro: 'monedas', comida: 'comida', madera: 'madera', piedra: 'piedra', hierro: 'hierro' };
+          Object.keys(campo).forEach(function (k) { var v = Math.max(0, Math.floor(+q[k] || 0)); if (v && !(k === 'gemas' && estado.gemasInfinitas)) estado[campo[k]] = Math.max(0, (estado[campo[k]] || 0) - v); });
+          Object.keys(q.objetos || {}).forEach(function (k) { var v = Math.max(0, Math.floor(+q.objetos[k] || 0)); if (v && estado.mochila) estado.mochila[k] = Math.max(0, (estado.mochila[k] || 0) - v); });
+          nuevoCorreo('sistema', '➖ ' + String(x.titulo || L('Corrección de un error', 'Correction of a mistake')).slice(0, 80), x.deNombre || 'Brother Kingdom', '<p>' + escaparHTML(x.texto || '') + '</p><p><b>' + L('Se quitó: ', 'Taken back: ') + '</b>' + escaparHTML(textoQuitar(q)) + '</p>');
+        }
+        d.ref.delete().catch(function () {});
+      });
+      var ks = Object.keys(hechos); if (ks.length > 200) ks.slice(0, ks.length - 200).forEach(function (k) { delete hechos[k]; });
+      if (hubo) { guardar(true); actualizarHUD(); consejoTemporal('📨 ' + L('Te llegó un mensaje al Correo.', 'You got a message in your Mail.')); }
+    }).catch(function () {});
+  }
+  setTimeout(revisarRetiros, 16000); setInterval(function () { if (!enMenu) revisarRetiros(); }, 180000);
   function enviarCompensacion(b) {
     var premio = {}, num = function (id) { var e = $(id); return e ? Math.max(0, Math.floor(+e.value || 0)) : 0; };
     if (Object.keys(compSel.objetos).length) premio.objetos = JSON.parse(JSON.stringify(compSel.objetos));
@@ -13094,6 +13147,8 @@
     else if (a === 'comp-buscar') { var qn = (($('comp-nombre') || {}).value || '').trim(); if (!qn) return; Cuentas.buscarJugador(qn).then(function (l) { var r = $('comp-res'); if (!r) return; r.innerHTML = l.length ? l.slice(0, 6).map(function (x) { return '<button class="comprar mini" data-accion="comp-elegir" data-uid="' + escaparHTML(x.uid) + '" data-n="' + escaparHTML(x.nombre) + '">👤 ' + escaparHTML(x.nombre) + '</button>'; }).join(' ') : '<p class="nota">' + L('No encontré a nadie con ese nombre.', 'Nobody found with that name.') + '</p>'; }).catch(function () {}); }
     else if (a === 'comp-elegir') { sonar('click'); compSel.para = b.getAttribute('data-uid'); compSel.paraNombre = b.getAttribute('data-n'); abrirCompensar(); }
     else if (a === 'comp-anadir') { var ko = ($('comp-obj') || {}).value, kc = Math.max(1, Math.floor(+(($('comp-cant') || {}).value) || 1)); if (OBJETOS[ko]) { compSel.objetos[ko] = (compSel.objetos[ko] || 0) + kc; sonar('click'); abrirCompensar(); } }
+    else if (a === 'comp-modo') { sonar('click'); compSel.modo = b.getAttribute('data-m'); compSel.objetos = {}; abrirCompensar(); } /* v9.77 */
+    else if (a === 'comp-retirar') enviarRetiro(b);
     else if (a === 'comp-quitar') { delete compSel.objetos[b.getAttribute('data-k')]; abrirCompensar(); }
     else if (a === 'comp-enviar') enviarCompensacion(b);
     else if (a === 'sp-vista') { sonar('click'); abrirSoporte(b.getAttribute('data-v')); }
