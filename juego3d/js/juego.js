@@ -2082,14 +2082,14 @@
   }
   // quita las tropas perdidas TIPO POR TIPO (como salió en las rondas) y manda los heridos a la Enfermería si hay camas
   function aplicarPerdidasRondas(lado, defensa) {
-    var fh = fraccionHeridos(defensa), camas = Math.max(0, capacidadEnfermeria() - totalHeridos()), tot = { muertos: 0, heridos: 0, detalle: {} };
+    var fh = fraccionHeridos(defensa), camas = camasLibresTotal(), tot = { muertos: 0, heridos: 0, detalle: {} }; /* v9.71: también las camas de tus otras villas */
     Object.keys(lado).forEach(function (k) {
       var n = lado[k].perdidos; if (!n || !TROPAS[k]) return; // v8.32: las «defensas» no son tropas (TROPAS no las tiene)
       var her = Math.min(camas, Math.round(n * fh)); camas -= her;
       var quitar = n, de = Math.min(reserva()[k] || 0, quitar); reserva()[k] = (reserva()[k] || 0) - de; quitar -= de;
       var vis = tropas.filter(function (u) { return u.tipo === k && !u.heroeId && !u.refuerzo && !u.invocada && u.vida > 0; });
       for (var i = 0; i < quitar && i < vis.length; i++) { vis[i].invocada = true; vis[i].vida = 0; morir(vis[i]); }
-      if (her) estado.heridos[k] = (estado.heridos[k] || 0) + her;
+      if (her) her = ponerHeridos(k, her); /* v9.71 */
       tot.muertos += n - her; tot.heridos += her; tot.detalle[k] = { perdidos: n, heridos: her };
     });
     return tot;
@@ -5828,6 +5828,26 @@
     return CAMAS_POR_PUNTO * Math.floor(slots.reduce(function (a, s) { return a + (s.edificio && s.edificio.tipo === 'enfermeria' ? EDIFICIOS.enfermeria.capacidad[s.edificio.nivel - 1] : 0); }, 0) * (1 + bonoTalento('enfermeria')));
   }
   function totalHeridos() { var n = 0; for (var k in estado.heridos) n += estado.heridos[k]; return n; }
+  /* v9.71 (dueño): si la Enfermería de esta villa se llena, los heridos que sobran van a la Enfermería de tus OTRAS villas (las que tengan camas libres) */
+  function camasOtraVilla(d) {
+    if (!d || !Array.isArray(d.edificios)) return 0;
+    var pts = d.edificios.reduce(function (a, e) { return a + (e && e.tipo === 'enfermeria' ? (EDIFICIOS.enfermeria.capacidad[(e.nivel || 1) - 1] || 0) : 0); }, 0);
+    var cap = CAMAS_POR_PUNTO * Math.floor(pts * (1 + bonoTalento('enfermeria'))), her = 0; for (var k in (d.heridos || {})) her += d.heridos[k] || 0;
+    return Math.max(0, cap - her);
+  }
+  function otrasVillasConDatos() { var v = estado.villas, l = []; if (!v || !v.lista) return l; v.lista.forEach(function (e, i) { if (i !== v.activa && e && e.datos) l.push({ i: i, d: e.datos }); }); return l; }
+  function camasLibresTotal() { return Math.max(0, capacidadEnfermeria() - totalHeridos()) + otrasVillasConDatos().reduce(function (a, x) { return a + camasOtraVilla(x.d); }, 0); }
+  var avisoHeridosOtras = { n: 0, t: 0 };
+  function ponerHeridos(k, n) {
+    n = Math.max(0, Math.floor(n || 0)); if (!n) return 0;
+    estado.heridos = estado.heridos || {};
+    var aqui = Math.min(n, Math.max(0, capacidadEnfermeria() - totalHeridos())), puestos = aqui;
+    if (aqui) estado.heridos[k] = (estado.heridos[k] || 0) + aqui;
+    var resto = n - aqui;
+    otrasVillasConDatos().forEach(function (x) { if (resto <= 0) return; var c = Math.min(resto, camasOtraVilla(x.d)); if (c <= 0) return; x.d.heridos = x.d.heridos || {}; x.d.heridos[k] = (x.d.heridos[k] || 0) + c; resto -= c; puestos += c; avisoHeridosOtras.n += c; });
+    if (avisoHeridosOtras.n && Date.now() - avisoHeridosOtras.t > 4000) { var nAv = avisoHeridosOtras.n; avisoHeridosOtras.t = Date.now(); setTimeout(function () { consejoTemporal('🏥 ' + formatoNumero(avisoHeridosOtras.n || nAv) + L(' heridos fueron a la Enfermería de tus otras villas (aquí ya no había camas).', ' wounded went to the Infirmary of your other villages (no beds left here).')); avisoHeridosOtras.n = 0; }, 1500); }
+    return puestos;
+  }
   function curarHeridos() {
     var n = totalHeridos();
     if (!n) return;
@@ -6082,8 +6102,7 @@
       sonar('moneda');
     } else {
       // con Enfermería, la tropa no se pierde: va a curarse
-      if (u.tipo !== 'heroe' && !u.invocada && !u.refuerzo && totalHeridos() < capacidadEnfermeria()) {
-        estado.heridos[u.tipo] = (estado.heridos[u.tipo] || 0) + 1;
+      if (u.tipo !== 'heroe' && !u.invocada && !u.refuerzo && ponerHeridos(u.tipo, 1)) { /* v9.71: si aquí no hay cama, a otra villa */
         flotar(T('a_enfermeria'), u.pos.clone().setY(u.altoBarra + 0.6), 'gema');
       }
       asignarPuestos();
@@ -11284,7 +11303,7 @@
     /* v8.47: TROPAS EN LA CAMPAÑA: el jugador elige cuáles y cuántas van; las que caen se pierden */
     tropas: function () { return Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; }).map(function (k) { var t = TROPAS[k]; return { k: k, nombre: N(k), ico: t.icono, n: cuentaTipo(k), vida: t.vida || 100, dano: t.dano || 10, distancia: (t.alcance || 1) > 3 }; }); },
     /* v9.35 (dueño): las bajas de la Campaña van 70 % a la Enfermería (hasta llenar las camas); devuelve las que no cupieron para que se cuenten como muertas */
-    herir: function (m) { var puestos = 0, sinCama = {}; estado.heridos = estado.heridos || {}; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (!q) return; var camas = Math.max(0, capacidadEnfermeria() - totalHeridos()), pon = Math.min(q, camas); if (pon > 0) { quitarDeCasa(k, pon); estado.heridos[k] = (estado.heridos[k] || 0) + pon; puestos += pon; } if (q - pon > 0) sinCama[k] = q - pon; }); if (puestos) { guardar(true); actualizarHUD(); } return { heridos: puestos, sinCama: sinCama }; },
+    herir: function (m) { var puestos = 0, sinCama = {}; estado.heridos = estado.heridos || {}; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (!q) return; var camas = camasLibresTotal(), pon = Math.min(q, camas); if (pon > 0) { quitarDeCasa(k, pon); pon = ponerHeridos(k, pon); puestos += pon; } /* v9.71: también a otras villas */ if (q - pon > 0) sinCama[k] = q - pon; }); if (puestos) { guardar(true); actualizarHUD(); } return { heridos: puestos, sinCama: sinCama }; },
     perder: function (m) { var tot = 0; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (q > 0) { quitarDeCasa(k, q); tot += q; } }); if (tot) { guardar(true); actualizarHUD(); } return tot; },
     num: formatoNumero,
     abierta: function (v) { window.__tkCampanaAbierta = !!v; if (!v) { actualizarHUD(); } },
