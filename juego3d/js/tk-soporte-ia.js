@@ -64,5 +64,25 @@
       return { respuesta: resp, necesitaPremio: !!d.necesitaPremio, motivoPremio: String(d.motivoPremio || '').trim().slice(0, 400) };
     }).catch(function (e) { console.warn('Soporte IA:', e && (e.code || e.message)); return null; });
   }
-  window.TKSoporteIA = { preguntar: preguntar };
+  /* v9.83 (dueño: «no me sale el botón de traducir» en iPhone): el mismo Gemini gratis traduce los mensajes del chat
+     cuando el teléfono no trae traductor propio (Safari en iPhone). Solo devuelve el texto traducido. */
+  var modeloTr = null, NOMBRE_IDIOMA = { es: 'español', en: 'English', pt: 'português', fr: 'français', it: 'italiano', de: 'Deutsch' };
+  function cargarTr() {
+    if (modeloTr) return modeloTr;
+    modeloTr = cargar().then(function () {
+      return import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-ai.js').then(function (I) {
+        return import('https://www.gstatic.com/firebasejs/' + VER + '/firebase-app.js').then(function (A) {
+          var ai = I.getAI(A.getApp('tk-ia'), { backend: new I.GoogleAIBackend() });
+          return I.getGenerativeModel(ai, { model: MODELO, systemInstruction: 'You translate short chat messages from a medieval strategy game. Reply ONLY with the translation, nothing else. Keep emojis, names and numbers as they are.', generationConfig: { temperature: 0.1, maxOutputTokens: 300 } });
+        });
+      });
+    });
+    modeloTr.catch(function () { modeloTr = null; });
+    return modeloTr;
+  }
+  function traducir(texto, a) {
+    var q = 'Translate into ' + (NOMBRE_IDIOMA[a] || a) + ':\n' + String(texto || '').slice(0, 500);
+    return conTiempo(cargarTr().then(function (m) { return m.generateContent(q); }), 15000).then(function (r) { return String(r.response.text() || '').trim().slice(0, 800) || null; });
+  }
+  window.TKSoporteIA = { preguntar: preguntar, traducir: traducir };
 })();

@@ -37,7 +37,9 @@
       return traductoresWeb[k].then(function (t) { aviso(TXT.traduciendo); return t.translate(texto); }, function (e) { delete traductoresWeb[k]; throw e; });
     }
   };
-  function motor() { if (pluginMLKit()) return motorNativo; if (window.Translator && window.Translator.create) return motorWeb; return null; }
+  /* v9.83: si el teléfono no trae traductor (Safari en iPhone), se usa el Gemini gratis del juego (Firebase AI Logic) */
+  var motorIA = { traducir: function (texto, de, a, aviso) { aviso(TXT.traduciendo); return window.TKSoporteIA.traducir(texto, a); } };
+  function motor() { if (pluginMLKit()) return motorNativo; if (window.Translator && window.Translator.create) return motorWeb; if (window.TKSoporteIA && window.TKSoporteIA.traducir) return motorIA; return null; }
 
   // ---- En qué idioma está el mensaje (palabras muy comunes de cada idioma) ----
   var COMUNES = {
