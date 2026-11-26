@@ -4849,20 +4849,16 @@
   function parcelaAcepta(s, tipo) {
     if (!s || s.campo !== esCampo(tipo)) return false;
     if (s.campo) return true;
-    if (s.fijo) return s.fijo === tipo;
+    /* v9.84 (Felix: «no me deja poner mis casas como yo quiera»): ya no hay parcelas reservadas; cada edificio va donde TÚ elijas.
+       Los repetibles (Cabaña, Cuartel, Enfermería) todos los que quieras; los demás, uno por villa */
     if (repetibleCiudad(tipo)) return true;
-    // v7.14: si la parcela fija de ese edificio (p. ej. la Herrería) está ocupada por otro edificio, va en cualquier parcela libre
-    var sf = slots.filter(function (x) { return x.fijo === tipo; })[0], oc = sf && (sf.edificio || sf.obra);
-    // v7.31: también si su parcela fija todavía está cerrada (castillo bajo): así se pueden construir todos los edificios desde el principio
-    if ((!sf || (oc && oc.tipo !== tipo) || (!oc && cerrada(sf))) && contarEdificios(tipo) < 1 && !slots.some(function (x) { return x.obra && x.obra.tipo === tipo; })) return true;
-    if (tipo === 'galeria' || tipo === 'enfermeria' || tipo === 'almacen') return contarEdificios(tipo) < 1;
-    return false;
+    return contarEdificios(tipo) < 1 && !slots.some(function (x) { return x.obra && x.obra.tipo === tipo; });
   }
   function construir(i, tipo) {
     var s = slots[i];
     if (s.edificio || s.obra) return;
     if (!parcelaAcepta(s, tipo)) {
-      consejoTemporal(s.fijo ? L('Aquí solo va ' + N(s.fijo) + '.', 'Only ' + N(s.fijo) + ' goes here.') : (repetibleCiudad(tipo) || esCampo(tipo) ? T(s.campo ? 'solo_ciudad' : 'solo_campo') : L('Ese edificio solo puede haber uno, en su parcela del borde.', 'That building can exist only once, on its edge plot.')));
+      consejoTemporal((repetibleCiudad(tipo) || esCampo(tipo) || s.campo !== esCampo(tipo) ? T(s.campo ? 'solo_ciudad' : 'solo_campo') : L('Ese edificio solo puede haber uno por villa.', 'That building can exist only once, on its edge plot.')));
       sonar('error');
       return;
     }
@@ -7096,7 +7092,7 @@
     if (cerrada(s)) { cerrarMenuEdif(); consejoTemporal(T('parcela_cerrada', { n: nivelParaParcela(s) })); return; }
     if (modoColocar === 'barricada') { consejoTemporal(T('colocando_barr')); sonar('error'); return; }
     if (modoColocar) {
-      if (!s.edificio && !s.obra && !parcelaAcepta(s, modoColocar)) { consejoTemporal(s.fijo ? L('Aquí solo va ' + N(s.fijo) + '.', 'Only ' + N(s.fijo) + ' goes here.') : T(s.campo ? 'solo_ciudad' : 'solo_campo')); sonar('error'); return; }
+      if (!s.edificio && !s.obra && !parcelaAcepta(s, modoColocar)) { consejoTemporal(s.campo !== esCampo(modoColocar) ? T(s.campo ? 'solo_ciudad' : 'solo_campo') : L('Ese edificio solo puede haber uno por villa.', 'Only one of that building per village.')); sonar('error'); return; } /* v9.84 */
       if (!s.edificio && !s.obra) construir(i, modoColocar);
       else { consejoTemporal(T('ocupado')); sonar('error'); }
       return;
