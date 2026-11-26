@@ -8464,7 +8464,10 @@
   function rolTropa(t) { var f = FAMILIA[t]; return f === 'inf' ? L('Infantería', 'Infantry') : f === 'dist' ? L('Distancia', 'Ranged') : f === 'cab' ? L('Caballería', 'Cavalry') : L('Asedio', 'Siege'); }
   // v6.65: el cuartel con las mismas pestañas de los demás edificios (Detalles / Entrenar tropas / Entrenando)
   var subCuartel = 'basicas';
-  function esAvanzada(t) { return t !== 'carreta' && (TROPA_RANGO_ESTRELLAS[t] || 1) >= 2; }
+  /* v9.58 (dueño): Unidades básicas = 1 y 2 estrellas; Unidades avanzadas = 3 estrellas o más. Las carretas también, cada una con sus estrellas */
+  var EST_CARRO = { carretilla: 1, carreta: 2, convoy: 3 };
+  function estrellasUnidad(t) { return EST_CARRO[t] || TROPA_RANGO_ESTRELLAS[t] || 1; }
+  function esAvanzada(t) { return estrellasUnidad(t) >= 3; }
   function htmlPestanasCuartel() {
     var n = colaEntreno.length;
     var h = '<div class="cafe-tabs ve-tabs">' + [['detalles', L('Detalles', 'Details')], ['entrenar', L('Entrenar tropas', 'Train troops')], ['cola', L('Entrenando', 'Training')]].map(function (q) {
@@ -8531,7 +8534,12 @@
     if ($('det-btn')) { $('det-btn').innerHTML = '⚔️ ' + T('entrenar') + ' ×' + cantDetalle; $('det-btn').disabled = maxEntrenar(t) < 1; }
   }
   function htmlEntrenarLista() {
-    return '<div class="cq2-lista">' + TROPAS_LISTA.filter(function (t) { return subCuartel === 'avanzadas' ? esAvanzada(t) : !esAvanzada(t); }).map(function (t) {
+    var unidades = TROPAS_LISTA.filter(function (t) { return t !== 'carreta'; }).concat(SUMINISTRO_ORDEN);
+    var deAqui = unidades.filter(function (t) { return subCuartel === 'avanzadas' ? esAvanzada(t) : !esAvanzada(t); }).map(function (t, i) { return [t, i]; }).sort(function (a, b) { return estrellasUnidad(a[0]) - estrellasUnidad(b[0]) || a[1] - b[1]; }).map(function (x) { return x[0]; });
+    return '<div class="cq2-lista">' + deAqui.map(function (t) {
+      if (SUMINISTRO[t]) { var su = SUMINISTRO[t], es0 = ''; for (var q = 0; q < estrellasUnidad(t); q++) es0 += '★'; /* v9.58: carretas en su categoría */
+        return '<button class="cq2-fila" data-accion="cuartel-carretas"><span class="cq2-foto"><img src="iconos/ui/' + su.img + '.webp" alt=""><i class="cq2-est">' + es0 + '</i></span>' +
+          '<span class="cq2-dat"><span class="cq2-top"><b>' + L(su.es, su.en) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaSum(t) || 0) + '</small></span><span class="cq2-frase">' + L(su.des_es, su.des_en) + '</span></span><i class="cq2-flecha">›</i></button>'; }
       var esCar = t === 'carreta', ok = esCar || puedeEntrenarTipo(t), est = esCar ? 2 : (TROPA_RANGO_ESTRELLAS[t] || 1), ent = esCar ? 0 : (infoCola().cuenta[t] || 0), tiene = esCar ? carretas().n : cuentaTipo(t);
       var estrellas = ''; for (var k = 0; k < est; k++) estrellas += '★';
       return '<button class="cq2-fila' + (ok ? '' : ' bloq') + '" data-accion="' + (esCar ? 'cuartel-carretas' : 'cuartel-tropa') + '"' + (esCar ? '' : ' data-tipo="' + t + '"') + '>' +

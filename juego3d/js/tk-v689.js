@@ -1,7 +1,7 @@
 // v6.89: en TODAS las ventanas el título, el botón «Más» y las pestañas de arriba se quedan fijos;
 // solo baja la lista de abajo. Las pestañas que van al principio del cuerpo se pasan a una franja fija (#panel-fijo).
 (function () {
-  var PEST = '.iv-modos, .iv-cats, .subtabs, .tienda-arriba, .tienda-saldo, .cafe-tabs, .dk-tabs, .hi-tabs, .hl-tabs, .tg-tabs, .al-tabs';
+  var PEST = '.iv-modos, .iv-cats, .subtabs, .tienda-arriba, .tienda-saldo, .cafe-tabs, .dk-tabs, .hi-tabs, .hl-tabs, .tg-tabs, .al-tabs, .cq2-sub'; /* v9.58: también Unidades básicas / avanzadas se quedan fijas arriba */
   function listo() {
     var panel = document.getElementById('panel'), cuerpo = document.getElementById('panel-cuerpo');
     if (!panel || !cuerpo) return setTimeout(listo, 300);
