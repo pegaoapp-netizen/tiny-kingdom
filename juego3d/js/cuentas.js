@@ -71,6 +71,7 @@ var Cuentas = (function () {
     if (c === 'auth/invalid-credential' || c === 'auth/wrong-password' || c === 'auth/user-not-found' || c === 'auth/invalid-login-credentials') return 'e_clave';
     if (c === 'auth/email-already-in-use') return 'e_existe';
     if (c === 'auth/weak-password') return 'e_debil';
+    if (c === 'tk/nombre-reservado') return 'e_reservado'; /* v9.81 */
     if (c === 'auth/invalid-email') return 'e_usuario';
     if (c === 'auth/network-request-failed') return 'e_red';
     if (c === 'auth/too-many-requests') return 'e_muchos';
@@ -101,6 +102,7 @@ var Cuentas = (function () {
       return auth.signInWithEmailAndPassword(correoDe(texto), clave);
     },
     crear: function (texto, clave) {
+      if (window.nombreReservado && nombreReservado(String(texto).split('@')[0])) return Promise.reject({ code: 'tk/nombre-reservado' }); /* v9.81 */
       return auth.createUserWithEmailAndPassword(correoDe(texto), clave).then(function (r) {
         var nombre = String(texto).trim();
         if (nombre.indexOf('@') < 0) return r.user.updateProfile({ displayName: nombre }).then(function () { return r; });
