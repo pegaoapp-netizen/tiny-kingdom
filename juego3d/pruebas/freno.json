@@ -22,7 +22,9 @@
   "libresParaMarcha": "160204c27295a76d",
   "tiempoMarcha": "ea0357d2e5f88317",
   "acelerarMarcha": "1cedc9c8ba23273d",
-  "abrirDestacar": "dbe3871c6773dc37"
+  "abrirDestacar": "dbe3871c6773dc37",
+  "abrirDockAuto": "60b6e21d8cc54d7c",
+  "recogerDock": "8986a6b19b1c0bd2"
  },
  "correo": {
   "nuevoCorreo": "69993e5805ad5a3a",

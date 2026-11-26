@@ -13965,8 +13965,8 @@
   /* v8.53: la barra de marchas no tapa el mapa: se recoge sola 5 s después de abrirse por una marcha y al arrastrar el mapa */
   function recogerDock() { if (!dockAbierto) return; dockAbierto = false; dockAuto = 0; try { guardarDock(); actualizarDock(); } catch (e) {} }
   var dockAuto = 0;
-  function abrirDockAuto() { dockPest = 'marchar'; dockAbierto = true; dockAuto = Date.now(); }
-  (function () { var p0 = null; document.addEventListener('pointerdown', function (ev) { p0 = ev.target && ev.target.tagName === 'CANVAS' ? { x: ev.clientX, y: ev.clientY } : null; }, true); document.addEventListener('pointermove', function (ev) { if (p0 && Math.hypot(ev.clientX - p0.x, ev.clientY - p0.y) > 14) { p0 = null; recogerDock(); } }, true); document.addEventListener('pointerup', function () { p0 = null; }, true); })();
+  function abrirDockAuto() { dockPest = 'marchar'; dockAbierto = true; var t = dockAuto = Date.now(); setTimeout(function () { if (dockAuto === t) recogerDock(); }, 5000); } /* v9.29 (dueño): las marchas se esconden solas a los 5 s (se había perdido en la v8.56) */
+  (function () { var p0 = null; document.addEventListener('pointerdown', function (ev) { p0 = ev.target && ev.target.tagName === 'CANVAS' ? { x: ev.clientX, y: ev.clientY } : null; }, true); document.addEventListener('pointermove', function (ev) { if (p0 && Math.hypot(ev.clientX - p0.x, ev.clientY - p0.y) > 14) { p0 = null; recogerDock(); } }, true); document.addEventListener('pointerup', function (ev) { var toque = p0 && Math.hypot(ev.clientX - p0.x, ev.clientY - p0.y) <= 14; p0 = null; if (toque && dockPest === 'marchar') recogerDock(); }, true); })(); /* v9.29: tocar el mapa también esconde las marchas */
   function guardarDock() { try { localStorage.setItem('tinykingdom_dock', JSON.stringify({ p: dockPest, a: dockAbierto })); } catch (e) {} }
   function slotRelevo() { return slots.filter(function (s) { return s.edificio && s.edificio.tipo === 'relevo'; })[0]; }
   // v7.02: la misión se pone justo encima de la barra de procesos (antes quedaba escondida detrás)

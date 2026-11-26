@@ -14,7 +14,7 @@ const RAIZ = path.join(__dirname, '..');
 const PARTES = {
   ataque:    { nombre: 'Ataque y batallas', prueba: 'ataca a alguien y mira que llegue el informe a Correo › Guerras', fn: ['realizarAtaque', 'llegarMarcha', 'decidirAtaque', 'resolverBatalla', 'aplicarPerdidasRondas', 'fraccionHeridos', 'puedeAtacar', 'botinAtaque'] },
   defensa:   { nombre: 'Defensa', prueba: 'que te ataquen y mira el informe «te atacó»', fn: ['heroeDefensor', 'capacidadEnfermeria', 'curarHeridos'] },
-  marchas:   { nombre: 'Marchas', prueba: 'abre Marchar, elige tropas y manda una marcha', fn: ['abrirMarcha', 'tamanoMarcha', 'maxMarchas', 'enMarcha', 'libresParaMarcha', 'tiempoMarcha', 'acelerarMarcha', 'abrirDestacar'] },
+  marchas:   { nombre: 'Marchas', prueba: 'abre Marchar, elige tropas y manda una marcha', fn: ['abrirMarcha', 'tamanoMarcha', 'maxMarchas', 'enMarcha', 'libresParaMarcha', 'tiempoMarcha', 'acelerarMarcha', 'abrirDestacar', 'abrirDockAuto', 'recogerDock'] },
   correo:    { nombre: 'Correo e informes', prueba: 'abre Correo y mira Informes y Guerras', fn: ['nuevoCorreo', 'avisoResultado', 'correoLista'] },
   poder:     { nombre: 'Poder', prueba: 'mira tu poder arriba y en el perfil', fn: ['desglosePoder', 'calcularPoder', 'cuentaTipo', 'reserva'] },
   edificios: { nombre: 'Edificios y colores', prueba: 'mira la ciudad: edificios y techos de colores', fn: [], archivos: ['js/modelos.js'] },
