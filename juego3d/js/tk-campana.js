@@ -80,7 +80,7 @@
   var CSS_MIS = '#tkc .tkc-mi{max-width:38%;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#tkc .tkc-mi b{font-size:15px}' +
     '#tkc .tkc-obj{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 62px);max-width:calc(100% - 110px);padding:4px 12px;border-radius:12px;background:#000a;border:1px solid #f2c45a88;color:#ffe08a;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '#tkc .tkc-jefe{position:absolute;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top) + 92px);width:min(300px,70%);text-align:center;font:800 12px system-ui;color:#ffd0c8;text-shadow:0 1px 2px #000}#tkc .tkc-jefe div{height:9px;border-radius:5px;background:#000b;border:1px solid #ff8a7a;overflow:hidden;margin-top:2px}#tkc .tkc-jefe i{display:block;height:100%;background:linear-gradient(90deg,#ff3a2a,#ff9a3a);transition:width .2s}#tkc .tkc-jefe.muerto{opacity:.4}' +
-    '#tkc .tkc-aviso{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);font:900 20px Georgia,serif;color:#ffd0c8;-webkit-text-stroke:1px #400;text-shadow:0 3px 0 #0009;opacity:0;pointer-events:none;white-space:nowrap}#tkc .tkc-aviso.on{animation:tkcAv 1.8s ease}@keyframes tkcAv{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}' +
+    '#tkc .tkc-aviso{position:absolute;left:50%;top:34%;transform:translate(-50%,-50%);font:900 20px Georgia,serif;color:#ffd0c8;-webkit-text-stroke:1px #400;text-shadow:0 3px 0 #0009;opacity:0;pointer-events:none;white-space:nowrap}#tkc .tkc-aviso{transform-origin:center;font-size:80% !important;padding:4px 10px !important}' + '#tkc .tkc-aviso.on{animation:tkcAv 1.8s ease}@keyframes tkcAv{0%{opacity:0;transform:translate(-50%,-50%) scale(1.6)}15%{opacity:1;transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0}}' +
     '#tkc .tkc-est{display:flex;justify-content:center;gap:6px;margin:4px 0 6px}#tkc .tkc-est span{font-size:40px;color:#3a2a18;-webkit-text-stroke:1px #000}#tkc .tkc-est span.on{color:#ffd23a;text-shadow:0 0 12px #ffb000;animation:tkcEst .5s ease both}@keyframes tkcEst{from{transform:scale(2.6) rotate(-30deg);opacity:0}to{transform:scale(1);opacity:1}}' +
     '#tkc .tkc-nota{color:#9fe08a;font-size:12px;margin:2px 0}';
   // ---------------- estado de la pantalla ----------------
@@ -145,7 +145,7 @@
     fondo = c;
   }
   function medir() {
-    DPR = Math.min(2, window.devicePixelRatio || 1); W = raiz.clientWidth; H = raiz.clientHeight;
+    DPR = Math.min(window.__topePx || 2, window.devicePixelRatio || 1); W = raiz.clientWidth; /* v9.42: 1,5 en teléfonos */ H = raiz.clientHeight;
     cv.width = W * DPR; cv.height = H * DPR; cx = cv.getContext('2d'); cx.setTransform(DPR, 0, 0, DPR, 0, 0); dibujarFondo();
   }
 
@@ -358,7 +358,7 @@
   function lanzarJefe(u) {
     u.en = 0; var hab = u.habs[u.nh++ % u.habs.length], o = objetivo(u), nom = HAB_JEFE[hab] ? L(HAB_JEFE[hab].es, HAB_JEFE[hab].en) : '';
     ponerTexto({ tipo: 'texto', x: u.x, y: u.y - 40, txt: '☠️ ' + nom, c: '#ff8a7a', g: true, t: 0, dur: 0.6 }); if (G) G.sonar('cuerno');
-    var av = $('tkc-aviso'); if (av) { av.textContent = '☠️ ' + (u.nom || '') + ': ' + nom; av.classList.remove('on'); void av.offsetWidth; av.classList.add('on'); }
+    var av = $('tkc-aviso'); if (av) { av.textContent = '☠️ ' + (u.nom || '') + ': ' + nom; av.classList.remove('on'); void av.offsetWidth; av.classList.add('on'); clearTimeout(av._tm); av._tm = setTimeout(function () { av.classList.remove('on'); }, 600); } /* v9.42: se va a los 600 ms */
     if (hab === 'furia') aliados(u).forEach(function (a) { a.buff = 7; efectos.push({ tipo: 'aro', x: a.x, y: a.y, c: 'rgba(255,80,40,A)', t: 0, dur: 0.7 }); });
     else if (hab === 'escudo') { u.escudo = 7; efectos.push({ tipo: 'aro', x: u.x, y: u.y, c: 'rgba(170,170,190,A)', t: 0, dur: 0.8 }); }
     else if (hab === 'terremoto') { sacude = 0.8; enemigosDe(u).forEach(function (e2) { efectos.push({ tipo: 'aro', x: e2.x, y: e2.y, c: 'rgba(150,100,50,A)', t: 0, dur: 0.6 }); danar(u, e2, u.atk * 1.4, true); }); }
@@ -400,7 +400,7 @@
       else if (!lado.az.some(function (u) { return u.vivo; }) || tPelea > 120) fin(false);
     }
   }
-  var errBucle = 0;
+  var errBucle = 0, animId = 0; /* v9.42: id del fotograma para cancelarlo */
   /* v9.35 (dueño): BAJAS JUSTAS. Ganando: cae el % de vida que perdió cada escuadrón (0 daño = 0 bajas). Perdiendo: caen todas las tropas enviadas (los héroes nunca).
      De las caídas, el 70 % va herido a la Enfermería (hasta llenar las camas) y solo el 30 % muere. */
   function bajasCampana(gano) {
@@ -419,7 +419,7 @@
   }
   function bucle(t) {
     if (!corriendo) return;
-    requestAnimationFrame(bucle); /* v9.30 (dueño: «se para»): el siguiente fotograma se pide ANTES, así un fallo al dibujar ya no congela la batalla */
+    animId = requestAnimationFrame(bucle); /* v9.30 (dueño: «se para»): el siguiente fotograma se pide ANTES, así un fallo al dibujar ya no congela la batalla */
     var dt = Math.min(0.05, (t - ultimo) / 1000 || 0); ultimo = t;
     try { if (modo === 'pelea' && !terminado) paso(dt * vel); } catch (e) { if (errBucle++ < 5) console.warn('Campaña · paso:', e); }
     try { dibujar(dt * vel); } catch (e) { if (errBucle++ < 5) console.warn('Campaña · dibujar:', e); }
@@ -538,7 +538,7 @@
     else if (c === 'siguiente' || c === 'alineacion') pantallaFormacion();
     else if (c === 'mejorar') { cerrar(); G && G.heroesPanel(); }
   }
-  function cerrar() { corriendo = false; if (raiz) raiz.remove(); raiz = null; cx = null; window.removeEventListener('resize', alCambiar); if (G) G.abierta(false); }
+  function cerrar() { corriendo = false; cancelAnimationFrame(animId); if (window.TKSprites && TKSprites.liberar) TKSprites.liberar(); /* v9.42: para el motor y suelta los muñecos */ if (raiz) raiz.remove(); raiz = null; cx = null; window.removeEventListener('resize', alCambiar); if (G) G.abierta(false); }
   function alCambiar() { if (raiz) medir(); }
   function abrir(cfg) {
     G = window.__tkCamp; if (!G) return false;
@@ -552,7 +552,7 @@
     raiz = document.createElement('div'); raiz.id = 'tkc'; raiz.innerHTML = '<canvas></canvas><div class="tkc-ui"></div>'; document.body.appendChild(raiz);
     cv = raiz.querySelector('canvas'); raiz.addEventListener('click', clic); window.addEventListener('resize', alCambiar);
     G.abierta(true); pantallaFormacion();
-    corriendo = true; ultimo = performance.now(); requestAnimationFrame(bucle);
+    cancelAnimationFrame(animId); corriendo = true; ultimo = performance.now(); animId = requestAnimationFrame(bucle); /* v9.42: nunca dos bucles a la vez */
     return true;
   }
   window.TKCampana = { abrir: function () { return abrir(null); }, abrirMision: function (cfg) { return abrir(cfg); }, cerrar: cerrar, simular: function (seg) { for (var i = 0; i < seg * 30; i++) { if (modo === 'pelea' && !terminado) paso(1 / 30); efectos.forEach(function (e) { e.t += 1 / 30; }); } dibujar(0); pintarRetratos(); return this.info(); }, info: function () { return { modo: modo, t: Math.round(tPelea * 10) / 10, fin: terminado, az: lado.az.map(function (u) { return Math.round(u.hp) + '@' + Math.round(u.x); }), ro: lado.ro.map(function (u) { return Math.round(u.hp) + '@' + Math.round(u.x); }) }; } };

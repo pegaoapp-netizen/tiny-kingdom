@@ -120,7 +120,8 @@
     }, false);
   }
   // v7.25: en iPhone/iPad el 3D gasta mucha memoria y Safari reinicia la página: tope de nitidez 1,5
-  var ES_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), TOPE_PX = ES_IOS ? 1.5 : 2;
+  var ES_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), ES_MOVIL = ES_IOS || (window.matchMedia && matchMedia('(pointer: coarse)').matches), TOPE_PX = ES_MOVIL ? 1.5 : 2; /* v9.42: 1,5 en todos los teléfonos */
+  window.__topePx = TOPE_PX;
   render.setPixelRatio(Math.min(window.devicePixelRatio || 1, TOPE_PX));
   render.setSize(window.innerWidth, window.innerHeight);
   render.shadowMap.enabled = true;
@@ -3233,8 +3234,22 @@
       return true;
     });
   }
+  /* v9.42 (dueño): LIMPIAR ESCENA. Al salir del Mundo se sueltan de la tarjeta gráfica sus geometrías, materiales y texturas
+     (los objetos se quedan: al volver, Three.js los sube otra vez solo). Así Safari en iPhone no acumula memoria ni recarga la página. */
+  function limpiarEscena(esc, rend) {
+    if (!esc) return; var vistas = new Set();
+    esc.traverse(function (o) {
+      if (o.geometry && !vistas.has(o.geometry)) { vistas.add(o.geometry); try { o.geometry.dispose(); } catch (e) {} }
+      var mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      mats.forEach(function (m) { if (!m || vistas.has(m)) return; vistas.add(m); ['map', 'emissiveMap', 'normalMap', 'alphaMap', 'aoMap', 'bumpMap', 'roughnessMap', 'metalnessMap', 'lightMap'].forEach(function (k) { var t = m[k]; if (t && !vistas.has(t)) { vistas.add(t); try { t.dispose(); } catch (e) {} } }); try { m.dispose(); } catch (e) {} });
+    });
+    try { if (rend && rend.renderLists) rend.renderLists.dispose(); } catch (e) {}
+  }
+  var tmLimpiar = null;
+  function limpiarEscenaLuego() { clearTimeout(tmLimpiar); tmLimpiar = setTimeout(function () { if (!enMundo && M3) { try { limpiarEscena(M3.e, M3.r); } catch (e) {} } }, 20000); } /* 20 s después de salir (si vuelves enseguida no se nota) */
   function cerrarMundo() {
     try { if (M3 && M3.r) { M3.r.setSize(1, 1); M3.w = 1; M3.h = 1; } } catch (e) {} // v7.25: el mapa escondido no guarda su imagen grande en memoria
+    limpiarEscenaLuego(); /* v9.42 */
     cerrarFicha(); $('mundo').classList.add('oculto'); enMundo = false; var lf = $('lupa-flota'); if (lf) lf.remove(); var ba = $('barra-acciones'); if (ba) ba.classList.add('oculto'); if (vistaActual === 'mundo') { vistaActual = 'ciudad'; pintarVista(); } }
   // volver a la ciudad desde el mapa: la cámara baja desde lo alto hasta el reino
   function entrarCiudad() {
@@ -8188,7 +8203,7 @@
     try {
       if (!visor) {
         var r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-        r.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+        r.setPixelRatio(Math.min(TOPE_PX, window.devicePixelRatio || 1)); /* v9.42 */
         var e = new THREE.Scene();
         e.add(new THREE.HemisphereLight(0xffffff, 0x8a7a5a, 0.7));
         var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(3, 6, 5); e.add(l);
@@ -12724,6 +12739,8 @@
         (esCuentaDueno() ? '<button class="comprar oro" data-accion="dueno-regalar">🎁 ' + L('Regalar a un jugador', 'Gift a player') + '</button>' : '') +
         '</div><div style="margin-top:8px"><button class="comprar rojo" data-accion="dueno-salir">' + T('salir_dueno') + '</button></div></div>';
     }
+    /* v9.42 (dueño): limpiar lo viejo guardado en el navegador (service worker y cachés) y recargar; tu cuenta y tu reino no se tocan */
+    html += '<div class="carta" style="margin-top:10px"><h3>🧹 ' + L('Si el juego va lento o se queda pegado', 'If the game is slow or stuck') + '</h3><p class="nota">' + L('Borra lo viejo guardado en el navegador y recarga. Tu cuenta y tu reino no se borran.', 'Clears old browser data and reloads. Your account and kingdom are kept.') + '</p><button class="comprar morado" data-accion="limpiar-cache">🧹 ' + L('Limpiar caché y recargar', 'Clear cache and reload') + '</button></div>';
     html += '' + /* v8.28: sin el botón «Borrar partida y empezar de cero» (se tocaba sin querer) */
       '<p class="nota" style="text-align:center;opacity:.6"><a href="' + URL_PRIVACIDAD + '" target="_blank" rel="noopener">' + T('privacidad') + '</a> · ' + NOMBRE_JUEGO + ' · v' + VERSION_JUEGO + '</p>';
     abrirPanel(T('p_ajustes'), html, { tipo: 'ajustes' });
@@ -12908,6 +12925,11 @@
     else if (a === 'tal-sumar') sumarTalento(b.getAttribute('data-r'), +b.getAttribute('data-n') || 1);
     else if (a === 'tal-reset') resetTalentos();
     else if (a === 'pf-ajustes') { sonar('click'); abrirPanelAjustes(); }
+    else if (a === 'limpiar-cache') { sonar('click'); b.disabled = true; b.textContent = '🧹 ' + L('Limpiando…', 'Clearing…'); try { guardar(true); } catch (e) {} /* v9.42: primero se guarda en la nube */
+      var listo = false, recargar = function () { if (listo) return; listo = true; location.replace(location.pathname + '?r=' + Date.now()); }, pr = [];
+      try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) pr.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (x) { return x.unregister(); })); })); } catch (e) {}
+      try { if (window.caches && caches.keys) pr.push(caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })); } catch (e) {}
+      setTimeout(function () { Promise.all(pr).then(recargar, recargar); }, 1200); setTimeout(recargar, 4000); }
     else if (a === 'logro-cobrar') cobrarMedalla(b.getAttribute('data-id'), +b.getAttribute('data-i'));
     else if (a === 'finde-reclamar') reclamarFinde(+b.getAttribute('data-i'));
     else if (a === 'heroe-ver') { if (!panelActual || panelActual.tipo !== 'obtener') pestanaHeroe = 'atrib'; abrirPanelHeroe(b.getAttribute('data-id')); }
@@ -14649,7 +14671,7 @@
     // HUD cada 0.2 s
     cuentaHUD += dtReal;
     if (cuentaHUD > 0.2) { cuentaHUD = 0; pintarColas(); actualizarPanel(); mostrarConsejo(); actualizarBadges(); actualizarEscudo(); revisarAtaques(); revisarRefuerzos(); $('tropas').textContent = textoTropas(); $('oleada').textContent = textoOleada(); actualizarPillEntreno(); procesarCarretas(); procesarRegresos(); if (MODO_CAMPO) pintarBarraBatalla(); }
-    render.render(escena, camara);
+    if (!enMundo) render.render(escena, camara); /* v9.42: con el Mundo abierto la ciudad está tapada: no se dibuja (la mitad de trabajo para el teléfono) */
   }
 
   window.addEventListener('resize', function () {

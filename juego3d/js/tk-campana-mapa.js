@@ -535,7 +535,7 @@
   function aMundo(sx, sy) { return [(sx - W / 2) / cam.z + cam.x, (sy - H / 2) / cam.z + cam.y]; }
   function volarA(x, y, z) { vuelo = { x0: cam.x, y0: cam.y, z0: cam.z, x1: x, y1: y, z1: z || cam.z, t: 0 }; }
   function medir() {
-    DPR = Math.min(2, window.devicePixelRatio || 1); W = raiz.clientWidth; H = raiz.clientHeight;
+    DPR = Math.min(window.__topePx || 2, window.devicePixelRatio || 1); W = raiz.clientWidth; /* v9.42 */ H = raiz.clientHeight;
     cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR); cx = cv.getContext('2d');
     zMin = Math.max(W / WW, H / WH); zMax = Math.max(zMin * 3, W / WW * 4); limitar(); sucio = true;
   }
@@ -643,7 +643,7 @@
   }
   function bucle(ahora) {
     if (!corriendo) return;
-    requestAnimationFrame(bucle);
+    animIdM = requestAnimationFrame(bucle);
     if (document.hidden || ahora - ultimo < 33) return; // ~30 fotogramas por segundo (ahorra batería)
     var dt = Math.min(0.1, (ahora - ultimo) / 1000); ultimo = ahora;
     if (vuelo) { vuelo.t = Math.min(1, vuelo.t + dt / 0.8); var e = 1 - Math.pow(1 - vuelo.t, 3); cam.x = vuelo.x0 + (vuelo.x1 - vuelo.x0) * e; cam.y = vuelo.y0 + (vuelo.y1 - vuelo.y0) * e; cam.z = vuelo.z0 + (vuelo.z1 - vuelo.z0) * e; limitar(); if (vuelo.t >= 1) vuelo = null; }
@@ -888,7 +888,7 @@
       pintarUI(); centrar();
       if (nueva) { claros[nueva] = 1; var p = CAPS[nueva - 1].pos[0]; cam.y = p[1] + 300; limitar(); volarA(p[0], p[1] - 60); G.sonar('cuerno'); setTimeout(function () { if (raiz) ventanaHistoria(nueva); }, 1400); }
       else { var cur = actual(); if (cur && !st().visto['c' + cur[0]] && d === 'normal') ventanaHistoria(cur[0]); }
-      corriendo = true; t0 = ultimo = performance.now(); sucio = true; requestAnimationFrame(bucle);
+      cancelAnimationFrame(animIdM); corriendo = true; t0 = ultimo = performance.now(); sucio = true; animIdM = requestAnimationFrame(bucle); /* v9.42 */
     };
     if (!terreno) { raiz.insertAdjacentHTML('beforeend', '<div class="tkm-carga">🗺️ ' + L('Preparando el mapa…', 'Preparing the map…') + '<i></i></div>'); setTimeout(function () { RES = Math.max(1, Math.min(1.6, W * DPR * 1.8 / WW)); try { pintarMundo(); } catch (e) { console.error(e); } var cg = raiz && raiz.querySelector('.tkm-carga'); if (cg) cg.remove(); seguir(); }, 40); }
     else seguir();
@@ -896,8 +896,9 @@
   }
   function alCambiar() { if (raiz) medir(); }
   // cerrar(true) = se va a la batalla (el dibujo del mapa se guarda); cerrar() = vuelve a la ciudad (se libera la memoria)
+  var animIdM = 0;
   function cerrar(aBatalla) {
-    corriendo = false; modal = false;
+    corriendo = false; cancelAnimationFrame(animIdM); modal = false; /* v9.42: nunca dos bucles */
     window.removeEventListener('pointermove', pm); window.removeEventListener('pointerup', pu); window.removeEventListener('pointercancel', pu); window.removeEventListener('resize', alCambiar);
     if (raiz) raiz.remove(); raiz = null; cx = null; toques = []; inercia = null; vuelo = null;
     if (!aBatalla) { terreno = null; nieblas = {}; claros = {}; if (G) G.abierta(false); }

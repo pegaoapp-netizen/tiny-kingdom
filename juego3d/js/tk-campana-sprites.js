@@ -104,6 +104,8 @@
     },
     /* v9.36: a qué altura de la foto (0 arriba, 1 abajo) están los pies */
     pie: function (clave) { var e = cache[clave]; return e && e.fotos && e.fotos.pie ? e.fotos.pie : 0.95; },
+    /* v9.42: al cerrar la Campaña se suelta el motor 3D aparte y las fotos (se rehacen la próxima vez) */
+    liberar: function () { cola = []; cache = {}; if (rend) { try { rend.dispose(); rend.forceContextLoss(); } catch (e) {} } rend = null; },
     info: function () { var o = {}; for (var k in cache) o[k] = cache[k].fotos ? 'listo' : (cache[k].falla ? 'falla' : 'cargando'); return o; }
   };
 })();
