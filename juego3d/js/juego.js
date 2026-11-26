@@ -5369,9 +5369,24 @@
     consejoTemporal(T('armas_lista', { n: n + 1, t: N(tipo) }));
     actualizarHUD(); guardar(true); abrirPanelHerreria();
   }
+  var pestHerreria = 'equipo', ranHerreria = 'arma';
+  /* v9.55 (dueño): en la Herrería están TODAS tus armaduras y armas, por tipo, con su forja */
+  function htmlHerreriaEquipo() {
+    var RAN = ['arma', 'guantes', 'casco', 'pechera', 'botas', 'amuleto'], todas = piezas();
+    var h = '<p class="nota her-alm">' + L('Piezas guardadas: ', 'Pieces stored: ') + '<b>' + formatoNumero(todas.length) + '</b></p>' +
+      '<div class="subtabs her-ran">' + RAN.map(function (t) { var n = todas.filter(function (p) { return p.t === t; }).length; return '<button data-accion="her-ran" data-t="' + t + '" class="' + (t === ranHerreria ? 'activo' : '') + '">' + EQ[t].icono + ' ' + T('eq_' + t) + (n ? ' <span class="mail-n">' + n + '</span>' : '') + '</button>'; }).join('') + '</div>';
+    var de = todas.filter(function (p) { return p.t === ranHerreria; }).sort(function (a, b) { return puntosPieza(b) - puntosPieza(a) || b.n - a.n; });
+    if (!de.length) return h + '<p class="iv-vacio">' + L('No tienes piezas de este tipo. Se ganan en la Campaña, torneos, oleadas y cofres.', 'You have no pieces of this type. Win them in the Campaign, tournaments, waves and chests.') + '</p>';
+    return h + '<div class="her-lista">' + de.map(function (p) {
+      return '<div class="eq-fila her-fila ' + p.r + '"><span class="eq-ico">' + icoPieza(p) + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b><small>' + textoPieza(p) + '</small><small class="her-quien">' + (p.h && HEROE[p.h] ? '👤 ' + L('Lo lleva ', 'Worn by ') + NH(p.h) : L('Sin usar', 'Not worn')) + '</small>' +
+        '<div class="her-bot">' + htmlForja(p).replace('data-eq="mejorar"', 'data-accion="inv-mejorar"') + (p.h ? '' : '<button class="comprar mini" data-accion="inv-reciclar" data-i="' + p.i + '">♻️ ' + L('Reciclar', 'Recycle') + '</button>') + '</div></div></div>';
+    }).join('') + '</div>';
+  }
   function abrirPanelHerreria() {
     var hn = nivelMayor('herreria');
-    var html = (hn ? '' : '<p class="nota aviso-rojo">' + T('her_sin') + '</p>') + '<div class="lista">';
+    var tabsH = '<div class="iv-modos"><button data-accion="her-pest" data-p="equipo" class="' + (pestHerreria === 'equipo' ? 'activo' : '') + '">🛡️ ' + L('Equipo', 'Gear') + '</button><button data-accion="her-pest" data-p="tropas" class="' + (pestHerreria === 'tropas' ? 'activo' : '') + '">⚒️ ' + L('Mejoras de tropas', 'Troop upgrades') + '</button></div>';
+    if (pestHerreria === 'equipo') { abrirPanel(T('p_herreria'), tabsH + htmlHerreriaEquipo(), { tipo: 'herreria' }); $('panel').classList.add('iv-panel'); return; }
+    var html = tabsH + (hn ? '' : '<p class="nota aviso-rojo">' + T('her_sin') + '</p>') + '<div class="lista">';
     ['espadachin', 'caballeria', 'arquero', 'guardian'].forEach(function (t) {
       var na = nivelArmadura(t), nw = nivelArmas(t);
       html += '<div class="carta compacta"><div class="cab"><div class="foto">' + fotoHTML(t, TROPAS[t].icono) + '</div><div><h3>' + N(t) + '</h3><p class="nota">🛡️ ' + T('her_armadura') + ' ' + na + '/' + ARMADURA.max + ' · ⚔️ ' + T('her_armas') + ' ' + nw + '/' + ARMAS.max + '</p></div></div><div class="botones">';
@@ -8287,7 +8302,22 @@
       return '<button data-accion="tropa-pest" data-pest="' + k + '" class="' + (k === v.pest ? 'activo' : '') + '">' + ICONO_PESTANA[k] + ' ' + T('pest_' + k) + '</button>';
     }).join('') + '</div>';
     // v6.94: como Kingdoms of Camelot: primero la lista, cada tropa en su fila (foto, nombre, «Tienes: X» y descripción)
-    if (v.modo !== 'detalle' && v.pest === 'todas') {
+    pestHTML = ''; /* v9.55 (dueño): fuera las pestañas repetidas (Mis tropas · Cuartel · Establo · Campo): una sola lista con todas */
+    if (v.modo !== 'detalle') {
+      var todasT = [].concat(PESTANAS_TROPA.cuartel, PESTANAS_TROPA.establo, PESTANAS_TROPA.tiro);
+      Object.keys(TROPAS).forEach(function (k) { if (k !== 'heroe' && todasT.indexOf(k) < 0 && cuentaTipo(k) > 0) todasT.push(k); });
+      var nT0 = todasT.filter(function (k) { return cuentaTipo(k) > 0; }).length;
+      html += '<p class="nota mt-nota">' + L('Todas tus tropas. Toca una para ver su ficha y entrenar más.', 'All your troops. Tap one to see it and train more.') + '</p><div class="cq2-lista tk-tropas-lista">' + todasT.map(function (k) {
+        var ok = puedeEntrenarTipo(k), ent = infoCola().cuenta[k] || 0;
+        return '<button class="cq2-fila' + (ok ? '' : ' bloq') + '" data-accion="tropa-fila" data-tipo="' + k + '">' +
+          '<span class="cq2-foto">' + fotoHTML(k, '<span class="cq-emoji">' + TROPAS[k].icono + '</span>') + (ok ? '' : '<i class="cq2-candado">🔒</i>') + (ent ? '<i class="cq2-ent">🔨' + formatoNumero(ent) + '</i>' : '') + '</span>' +
+          '<span class="cq2-dat"><span class="cq2-top"><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaTipo(k)) + '</small></span><span class="cq2-frase">' + D(k) + '</span></span><i class="cq2-flecha">›</i></button>';
+      }).join('') + SUMINISTRO_ORDEN.filter(function (k) { return (cuentaSum(k) || 0) > 0; }).map(function (k) { var su = SUMINISTRO[k]; return '<div class="cq2-fila"><span class="cq2-foto"><img src="iconos/ui/' + su.img + '.webp" alt=""></span><span class="cq2-dat"><span class="cq2-top"><b>' + L(su.es, su.en) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(cuentaSum(k)) + '</small></span></span></div>'; }).join('') + '</div>' +
+        '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (nT0 ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
+      abrirPanel(T('p_heroes'), html, { tipo: 'tropas' });
+      return;
+    }
+    if (false) {
       var nT = Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; }).length;
       html += pestHTML + '<p class="nota mt-nota">' + L('Todas tus tropas en casa. Toca una para entrenar más.', 'All your troops at home. Tap one to train more.') + '</p>' + htmlRejillaTropas('tropa-fila') +
         '<div class="ru-fijo"><button class="ru-marchar" data-accion="reunion-marchar"' + (nT ? '' : ' disabled') + '>' + L('Marchar', 'March') + '</button></div>';
@@ -11927,7 +11957,7 @@
     var p = piezas().filter(function (x) { return x.i === i; })[0]; if (!p || p.h) return;
     var oro = oroAlFundir(p);
     confirmarJuego(L('Reciclar', 'Recycle'), T('eq_fundir_txt', { n: nombrePieza(p), o: oro }), L('Reciclar', 'Recycle'), function () {
-      piezas().splice(piezas().indexOf(p), 1); sumarRecurso('oro', oro); sonar('moneda'); consejoTemporal(T('eq_fundida', { n: nombrePieza(p), o: oro })); guardar(true); abrirPanelMochila();
+      piezas().splice(piezas().indexOf(p), 1); sumarRecurso('oro', oro); sonar('moneda'); consejoTemporal(T('eq_fundida', { n: nombrePieza(p), o: oro })); guardar(true); if (panelActual && panelActual.tipo === 'herreria') abrirPanelHerreria(); else abrirPanelMochila(); /* v9.55 */
     });
   }
   function mejorarPiezaInv(i) {
@@ -13009,6 +13039,8 @@
     else if (a === 'sub-tropas') abrirPanelTropas();
     else if (a === 'tropa-pest') { vistaTropa.pest = b.getAttribute('data-pest'); vistaTropa.modo = 'lista'; if (PESTANAS_TROPA[vistaTropa.pest]) vistaTropa.tipo = PESTANAS_TROPA[vistaTropa.pest][0]; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-fila') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.modo = 'detalle'; vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
+    else if (a === 'her-pest') { sonar('click'); pestHerreria = b.getAttribute('data-p'); abrirPanelHerreria(); } /* v9.55 */
+    else if (a === 'her-ran') { sonar('click'); ranHerreria = b.getAttribute('data-t'); abrirPanelHerreria(); }
     else if (a === 'tropa-lista') { vistaTropa.modo = 'lista'; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-tipo') { vistaTropa.tipo = b.getAttribute('data-tipo'); vistaTropa.rango = null; vistaTropa.n = 1; sonar('click'); abrirPanelTropas(); }
     else if (a === 'tropa-rango') { vistaTropa.rango = +b.getAttribute('data-r'); sonar('click'); abrirPanelTropas(); }
