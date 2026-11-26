@@ -2596,8 +2596,10 @@
     var brc = $('cas-recoger'); if (brc) brc.addEventListener('click', function () { recogerCasilla(c); });
     var bp = $('cas-portal'); if (bp) bp.addEventListener('click', function () {
       var no = puedeTeleportar(); if (no) { consejoTemporal(no); sonar('error'); return; }
-      confirmarJuego('✨ ' + T('tel_titulo'), T('tel_txt', { x: c.x, y: c.y }), T('tel_aqui'), function () {
-        if (!(estado.mochila.portal_elegir > 0)) { var pt = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0]; if (!pagar(0, pt.gemas)) return; estado.mochila.portal_elegir = (estado.mochila.portal_elegir || 0) + 1; }
+      var ptT = TIENDA.filter(function (x) { return x.id === 'portal_elegir'; })[0], sinPortal = !(estado.mochila.portal_elegir > 0);
+      confirmarJuego('✨ ' + T('tel_titulo'), T('tel_txt', { x: c.x, y: c.y }) + (sinPortal ? '<br><b>' + L('No tienes portales: cuesta ', 'You have no portals: it costs ') + ptT.gemas + ' 💎</b>' : ''), T('tel_aqui'), function () {
+        /* v9.74 (bug de Felix): sin portal, pagar pedía otra confirmación que volvía a pulsar el botón y empezaba de nuevo: nunca se movía. Ya lo confirmaste aquí: se paga directo */
+        if (!(estado.mochila.portal_elegir > 0)) { var ok; gemasOk = true; try { ok = pagar(0, ptT.gemas); } finally { gemasOk = false; } if (!ok) return; estado.mochila.portal_elegir = (estado.mochila.portal_elegir || 0) + 1; }
         teletransportar(c.x, c.y, 'portal_elegir');
       });
     });
@@ -2893,7 +2895,7 @@
     $('libre-mover').addEventListener('click', function () {
       var no = puedeTeleportar(); if (no) { consejoTemporal(no); sonar('error'); return; }
       confirmarJuego('✨ ' + T('tel_titulo'), T('tel_txt', { x: x, y: y }), T('tel_aqui'), function () {
-        if (!(estado.mochila.portal_elegir > 0)) { if (!pt || !pagar(0, pt.gemas)) return; estado.mochila.portal_elegir = (estado.mochila.portal_elegir || 0) + 1; }
+        if (!(estado.mochila.portal_elegir > 0)) { var ok2; gemasOk = true; try { ok2 = !!pt && pagar(0, pt.gemas); } finally { gemasOk = false; } if (!ok2) return; estado.mochila.portal_elegir = (estado.mochila.portal_elegir || 0) + 1; } /* v9.74: mismo arreglo (el precio ya sale en el botón) */
         teletransportar(x, y, 'portal_elegir');
       });
     });
