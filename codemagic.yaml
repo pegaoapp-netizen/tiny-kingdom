@@ -95,7 +95,8 @@ workflows:
         script: |
           cd app
           npm install --no-audit --no-fund
-          npm install --no-save @capacitor/android@^7.6.9
+          # v9.71: + traductor del chat en el teléfono (ML Kit), en la misma línea para que npm no quite el otro. Solo Android: en iPhone no funciona con Swift Package Manager
+          npm install --no-save @capacitor/android@^7.6.9 @capacitor-mlkit/translation@7.5.0
       - name: Crear el proyecto Android y copiar el juego
         script: |
           cd app
