@@ -2498,3 +2498,13 @@ html body #dock-procesos .dk-tabs .dk-flecha { min-height: 30px !important; }
 #panel .her-bot .her-mejorar.gris { filter: grayscale(.7); opacity: .75; }
 #panel .her-bot .her-costo { font-size: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 #panel .her-bot .her-costo .falta { color: #ff7a6a; font-weight: 700; }
+
+/* v9.62 (dueño): menú ▲ más junto (4 por fila, sin espacios grandes, nada cortado) y el número encima de su botón */
+html body #menu-grande { box-sizing: border-box; width: 100% !important; overflow-x: hidden !important; }
+html body #menu-grande .mg-rejilla { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 6px 4px !important; padding: 8px 8px 8px !important; }
+html body #menu-grande .mg-item { min-width: 0 !important; padding: 2px 0 !important; gap: 2px !important; }
+html body #menu-grande .mg-ico { position: relative !important; width: 52px !important; height: 52px !important; overflow: visible !important; }
+html body #menu-grande .mg-img, html body #menu-grande .mg-ico svg.io { width: 50px !important; height: 50px !important; }
+html body #menu-grande .mg-emoji { font-size: 34px !important; }
+html body #menu-grande .mg-txt { font-size: 11.5px !important; line-height: 1.15 !important; white-space: normal !important; max-width: 100%; overflow-wrap: anywhere; }
+html body #menu-grande .mg-ico .mg-n { position: absolute !important; top: -6px !important; right: -8px !important; left: auto !important; z-index: 2; }
