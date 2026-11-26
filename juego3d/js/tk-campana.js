@@ -96,7 +96,7 @@
   function zona() { var arriba = 70, abajo = modo === 'pelea' ? 120 : Math.min(H * 0.45, 330); return { y0: arriba, y1: H - abajo }; }
   function punto(t, carril) { // t: 0 = tu lado, 1 = lado enemigo · carril: -1..1 de un borde al otro del camino
     var z = zona(), ax = W * 0.06, ay = z.y1 - 14, bx = W * 0.94, by = z.y0 + 14;
-    var dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy), px = -dy / l, py = dx / l, ancho = Math.min(W, z.y1 - z.y0) * 0.16;
+    var dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy), px = -dy / l, py = dx / l, ancho = Math.min(W, z.y1 - z.y0) * 0.21; /* v9.39: camino más ancho */
     return { x: ax + dx * t + px * carril * ancho, y: ay + dy * t + py * carril * ancho };
   }
   /* v9.00: el terreno cambia según la región de la misión */
@@ -114,7 +114,7 @@
     for (var i = 0; i < 260; i++) { g.fillStyle = rnd() < 0.5 ? T.m0 : T.m1; g.beginPath(); g.ellipse(rnd() * W, rnd() * H, 3 + rnd() * 6, 2 + rnd() * 3, 0, 0, 7); g.fill(); }
     // el camino de tierra
     g.lineCap = 'round';
-    var a = punto(0, 0), b = punto(1, 0), z = zona(), ancho = Math.min(W, z.y1 - z.y0) * 0.16;
+    var a = punto(0, 0), b = punto(1, 0), z = zona(), ancho = Math.min(W, z.y1 - z.y0) * 0.21;
     g.strokeStyle = T.bo; g.lineWidth = ancho * 2 + 10; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
     g.strokeStyle = T.ca; g.lineWidth = ancho * 2; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
     for (i = 0; i < 90; i++) { var p = punto(rnd(), rnd() * 2 - 1); g.fillStyle = rnd() < 0.5 ? T.p0 : T.p1; g.beginPath(); g.ellipse(p.x, p.y, 2 + rnd() * 4, 1 + rnd() * 2, 0, 0, 7); g.fill(); }
@@ -122,7 +122,7 @@
     for (i = 0; i < 900; i++) { var hx = rnd() * W, hy = rnd() * H; g.strokeStyle = rnd() < 0.5 ? T.m0 : T.m1; g.lineWidth = 1; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx - 1.5, hy - 4 - rnd() * 3); g.moveTo(hx, hy); g.lineTo(hx + 1.5, hy - 3 - rnd() * 3); g.stroke(); }
     if (T.fl) for (i = 0; i < 70; i++) { var fx = rnd() * W, fy = rnd() * H; g.fillStyle = T.fl[Math.floor(rnd() * T.fl.length)]; g.beginPath(); g.arc(fx, fy, 1.6, 0, 7); g.fill(); }
     // surcos de carros y piedras del camino
-    g.strokeStyle = 'rgba(70,45,20,0.35)'; g.lineWidth = 2; [-0.35, 0.35].forEach(function (cr) { var p0 = punto(0, cr), p1 = punto(1, cr); g.beginPath(); g.moveTo(p0.x, p0.y); g.lineTo(p1.x, p1.y); g.stroke(); });
+    g.strokeStyle = 'rgba(70,45,20,0.35)'; g.lineWidth = 2; [-1 / 3, 1 / 3].forEach(function (cr) { var p0 = punto(0, cr), p1 = punto(1, cr); /* v9.39: 3 carriles iguales */ g.beginPath(); g.moveTo(p0.x, p0.y); g.lineTo(p1.x, p1.y); g.stroke(); });
     for (i = 0; i < 60; i++) { var sp = punto(rnd(), rnd() * 2 - 1); g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.ellipse(sp.x + 1, sp.y + 1, 3, 1.6, 0, 0, 7); g.fill(); g.fillStyle = rnd() < 0.5 ? '#a8a296' : '#7e786c'; g.beginPath(); g.ellipse(sp.x, sp.y, 2.6, 1.7, 0, 0, 7); g.fill(); }
     // árboles (redondos y pinos, con luz y sombra como en el mapa), rocas y arbustos fuera del camino
     var cosas = [];
@@ -174,6 +174,23 @@
     var f = mis.f * (1 + 0.06 * (nivelRival - 1)), carril = e.jefe ? 0 : (n > 1 ? -0.85 + i * 1.7 / (n - 1) : 0), p = punto(t0 || (e.jefe ? 0.9 : 0.86 - (i % 2) * 0.05), carril);
     var vida = 1500 * f * (e.v || 1), atk = 52 * f * (e.a || 1);
     return { lado: 'ro', ico: e.ico, nom: e.nom, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: !!e.jefe, d: !!e.d, vel: e.vel || 1, habs: e.habs || null, nh: 0, sana: e.sana ? 4 : 0, invoca: e.invoca || null };
+  }
+  /* v9.39 (dueño): TRES CARRILES. El camino tiene dos rayas: cada grupo va por un carril, los que sobran se ponen detrás en fila,
+     y nadie (ni los tuyos ni los enemigos) pisa nunca el césped. */
+  var CARRILES = [0, -2 / 3, 2 / 3];
+  function aCamino(x, y) { var z = zona(), ax = W * 0.06, ay = z.y1 - 14, bx = W * 0.94, by = z.y0 + 14, dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy), px = -dy / l, py = dx / l, ancho = Math.min(W, z.y1 - z.y0) * 0.21; return { t: ((x - ax) * dx + (y - ay) * dy) / (l * l), c: ((x - ax) * px + (y - ay) * py) / ancho }; }
+  function ponerCarril(u, lista, alEmpezar) {
+    var k = lista.filter(function (o) { return o.carril != null; }).length, fila = Math.floor(k / 3); u.carril = CARRILES[k % 3];
+    var t = alEmpezar ? (u.lado === 'az' ? Math.max(0.03, 0.2 - fila * 0.07) : Math.min(0.97, 0.82 + fila * 0.06)) : aCamino(u.x, u.y).t;
+    var p = punto(t, u.carril); u.x = p.x; u.y = p.y;
+  }
+  function colocarCarriles() { [lado.az, lado.ro].forEach(function (l) { l.forEach(function (u) { u.carril = null; }); l.forEach(function (u) { ponerCarril(u, l, true); }); }); }
+  function sujetarAlCamino(dt) {
+    [lado.az, lado.ro].forEach(function (l) { l.forEach(function (u) {
+      if (u.carril == null) ponerCarril(u, l, false); /* refuerzos y los que llaman los jefes */
+      var q = aCamino(u.x, u.y), c = q.c + (u.carril - q.c) * Math.min(1, dt * 8);
+      c = Math.max(-0.8, Math.min(0.8, c)); var t = Math.max(0.02, Math.min(0.98, q.t)), p = punto(t, c); u.x = p.x; u.y = p.y;
+    }); });
   }
   function armarLados() {
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
@@ -367,6 +384,7 @@
     // que no se encimen
     var vs = lado.az.concat(lado.ro).filter(function (u) { return u.vivo; });
     for (var i = 0; i < vs.length; i++) for (var j = i + 1; j < vs.length; j++) { var a = vs[i], b = vs[j], dd = dist(a, b); if (dd < 46 && dd > 0.01) { var e = (46 - dd) / 2 /* v9.38 (dueño): que no se acerquen tanto */, ux = (a.x - b.x) / dd, uy = (a.y - b.y) / dd; a.x += ux * e; a.y += uy * e; b.x -= ux * e; b.y -= uy * e; } }
+    sujetarAlCamino(dt); /* v9.39 */
     if (mis) refuerzos.forEach(function (r) { if (!r.ya && tPelea >= r.t) { r.ya = true; var n0 = lado.ro.length; r.l.forEach(function (e, k) { var m = escuadronMision(e, n0 + k, r.l.length, 0.97); m.y = punto(0.97, r.l.length > 1 ? -0.85 + k * 1.7 / (r.l.length - 1) : 0).y; lado.ro.push(m); efectos.push({ tipo: 'boom', x: m.x, y: m.y, r: 28, t: 0, dur: 0.5 }); }); var av = $('tkc-aviso'); if (av) { av.textContent = '⚠️ ' + L('¡Llegan refuerzos enemigos!', 'Enemy reinforcements!'); av.classList.remove('on'); void av.offsetWidth; av.classList.add('on'); } if (G) G.sonar('cuerno'); } });
     if (!terminado && mis) { if (ganoMision()) fin(true); else if (perdioMision()) fin(false); }
     else if (!terminado) {
@@ -426,7 +444,7 @@
   }
   function pantallaFormacion() {
     if (G && G.tropas) { tropasD = G.tropas(); Object.keys(selT).forEach(function (k) { if (!tropasD.some(function (t) { return t.k === k; })) delete selT[k]; }); }
-    modo = 'formacion'; terminado = false; efectos = []; medir(); armarLados();
+    modo = 'formacion'; terminado = false; efectos = []; medir(); armarLados(); colocarCarriles();
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
     var lista = heroes.slice().sort(function (a, b) { return (b.dano * 6 + b.vida / 3) - (a.dano * 6 + a.vida / 3); });
     raiz.querySelector('.tkc-ui').innerHTML = arriba() +
@@ -436,7 +454,7 @@
       '<div class="tkc-bts"><button class="tkc-b gris" data-c="cerrar">' + (mis ? '🗺️ ' + L('Mapa', 'Map') : '✕ ' + L('Salir', 'Exit')) + '</button><button class="tkc-b azul" data-c="rapido">⚡ ' + L('Rápido', 'Quick') + '</button><button class="tkc-b naranja" data-c="luchar">⚔️ ' + L('Luchar', 'Fight') + '</button></div></div>';
   }
   function pantallaPelea() {
-    modo = 'pelea'; terminado = false; efectos = []; medir(); armarLados();
+    modo = 'pelea'; terminado = false; efectos = []; medir(); armarLados(); colocarCarriles();
     raiz.querySelector('.tkc-ui').innerHTML = arriba() +
       '<div class="tkc-abajo"><div class="tkc-ret"><div class="tkc-ret" id="tkc-rets" style="flex:1">' + lado.az.map(function (u, i) { return '<div class="tkc-r" data-c="hab" data-i="' + i + '">' + (u.h.foto ? '<img src="' + esc(u.h.foto) + '" alt="">' : (u.ico || '🦸')) + '<div class="bv"><i></i></div><div class="be"><i></i></div></div>'; }).join('') + '</div>' +
       '<div class="tkc-ctl"><button class="tkc-c' + (vel === 2 ? ' on' : '') + '" data-c="vel">x2</button><button class="tkc-c' + (vel > 2 ? ' on' : '') + '" data-c="saltar">⏭</button><button class="tkc-c' + (auto ? ' on' : '') + '" data-c="auto">' + L('Auto', 'Auto') + '</button></div></div></div>' +
