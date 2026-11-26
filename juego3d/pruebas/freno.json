@@ -53,11 +53,11 @@
   "js/cuentas.js": "63fc34a16a9cabaa"
  },
  "chat": {
-  "perfilJugador": "8413bfe3f1c5f06c",
+  "perfilJugador": "6ac6b5f0ef3dd60e",
   "opcionesChat": "b8c5fbfd4163c6cc",
   "abrirPanelChat": "85474d17205892e5"
  },
  "reglas": {
-  "nube/firestore.rules": "67e4a738716b737b"
+  "nube/firestore.rules": "534cc19ca7c8336a"
  }
 }

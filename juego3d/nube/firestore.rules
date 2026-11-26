@@ -359,6 +359,11 @@ service cloud.firestore {
           'fd78fd09b2cd76c82a80675a4c758b65306b2309aaff68e598a4e344e7024bad',
           'bc81ce5c754b6d193233a82763f34d3c63953a8f9f05d9060e46d2a9111790e2']);
     }
+    // v9.63: SOCIOS FUNDADORES (config/socios, lista de uids que elige el dueño): pueden mandar compensaciones
+    function esSocio() {
+      return request.auth != null && exists(/databases/$(database)/documents/config/socios)
+        && request.auth.uid in get(/databases/$(database)/documents/config/socios).data.uids;
+    }
     match /regalos/{id} {
       allow read: if request.auth != null && (resource.data.para == request.auth.uid || resource.data.de == request.auth.uid);
       allow create: if esDueno()
@@ -380,13 +385,16 @@ service cloud.firestore {
     // v8.40: configuración del juego (héroes lanzados): todos la leen, solo el dueño la cambia
     match /config/{id} {
       allow read: if request.auth != null;
-      allow write: if esDueno() && request.resource.data.keys().hasOnly(['lanzados', 'armaduras', 'fecha'])
+      allow write: if esDueno() && id == 'socios' && request.resource.data.keys().hasOnly(['uids', 'nombres', 'fecha']) // v9.63
+        && request.resource.data.uids is list && request.resource.data.uids.size() <= 10
+        && request.resource.data.nombres is list && request.resource.data.nombres.size() <= 10 && request.resource.data.fecha is int;
+      allow write: if esDueno() && id != 'socios' && request.resource.data.keys().hasOnly(['lanzados', 'armaduras', 'fecha'])
         && request.resource.data.lanzados is list && request.resource.data.lanzados.size() <= 30 && request.resource.data.fecha is int
         && (!('armaduras' in request.resource.data) || (request.resource.data.armaduras is list && request.resource.data.armaduras.size() <= 40)); // v8.41: armaduras lanzadas
     }
     match /compensaciones/{id} {
       allow read: if request.auth != null && (resource.data.para == 'todos' || resource.data.para == request.auth.uid || esDueno());
-      allow create: if esDueno()
+      allow create: if (esDueno() || esSocio()) // v9.63: también los socios fundadores
         && request.resource.data.keys().hasOnly(['para', 'paraNombre', 'deNombre', 'titulo', 'texto', 'premio', 'fecha', 'vence'])
         && request.resource.data.para is string && request.resource.data.para.size() <= 64
         && request.resource.data.titulo is string && request.resource.data.titulo.size() <= 80

@@ -2842,7 +2842,7 @@
     [['btn-misiones', '📜', L('Misiones', 'Quests'), 'badge-misiones'], ['btn-buzon', '📬', L('Correo', 'Mail'), 'badge-buzon'],
       ['mg-entrenar', '⚔️', L('Cuartel', 'Barracks')], ['mg-reunion', '🚩', L('Punto de reunión', 'Rally point')], /* v9.59 */
       ['mg-azar', '🎲', L('Azar', 'Lucky')], ['mg-reliquia', '🏺', L('Reliquia', 'Relic')],
-      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Lanzar héroes y armaduras', 'Release heroes & armor')]] : [])
+      ['mg-investigar', '📚', L('Investigación', 'Research')], ['btn-ranking', '🏆', L('Clasificación', 'Ranking')], ['btn-ajustes', '⚙️', L('Ajustes', 'Settings')], ['mg-publicar', '📣', L('Publicar', 'Share')], ['mg-equipo', '🛡️', L('Equipo', 'Gear')], ['mg-soporte', '🛟', L('Soporte', 'Support')]].concat(esCuentaDueno() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')], ['mg-lanzar', '🦸', L('Lanzar héroes y armaduras', 'Release heroes & armor')]] : esCuentaSocio() ? [['mg-compensar', '📨', L('Compensación', 'Compensation')]] : []) /* v9.63: los socios fundadores también compensan */
       .forEach(function (q) { var bd = q[3] ? $(q[3]) : null, io = MENU_IMG[q[0]] ? '<img class="mg-img" src="iconos/ui/' + MENU_IMG[q[0]] + '.webp" alt="">' : (window.ICONOS_ORO && ICONOS_ORO[ICONO_MENU[q[0]]]); items.push({ id: q[0], ico: io ? io : q[1].indexOf('img:') === 0 ? '<img class="mg-img" src="iconos/ui/' + q[1].slice(4) + '.webp" alt="">' : '<span class="mg-emoji">' + q[1] + '</span>', txt: q[2], n: bd ? bd.textContent : '' }); });
     m.innerHTML = '<div class="mg-cab"><b>' + L('Menú', 'Menu') + '</b><button id="mg-cerrar" aria-label="Cerrar">▼</button></div><div class="mg-rejilla">' + items.map(function (it) {
       return '<button class="mg-item" data-mg="' + it.id + '"><span class="mg-ico">' + it.ico + (it.n ? '<span class="mg-n">' + escaparHTML(it.n) + '</span>' : '') /* v9.62: el número va pegado arriba de su botón */ + '</span><span class="mg-txt">' + escaparHTML(it.txt) + '</span></button>';
@@ -11765,8 +11765,15 @@
     }).catch(function () {});
   }
   setTimeout(revisarCompensaciones, 15000); setInterval(function () { if (!enMenu) revisarCompensaciones(); }, 180000);
+  function htmlSociosDueno() {
+    if (!esCuentaDueno()) return '';
+    var l = SOCIOS.uids.map(function (u, i) { return { uid: u, nombre: SOCIOS.nombres[i] || '?' }; });
+    return '<div class="carta comp-panel"><h4>👑 ' + L('Socios fundadores', 'Founding partners') + '</h4><p class="nota">' + L('Llevan la insignia 👑 Socio fundador en el chat y en su perfil, y pueden mandar compensaciones.', 'They wear the 👑 Founding partner badge in chat and profile, and can send compensations.') + '</p>' +
+      (l.length ? l.map(function (x) { return '<div class="comp-fila"><b>👑 ' + escaparHTML(x.nombre) + '</b><button class="comprar mini rojo" data-accion="soc-quitar" data-uid="' + escaparHTML(x.uid) + '">✕ ' + L('Quitar', 'Remove') + '</button></div>'; }).join('') : '<p class="nota">' + L('Todavía no hay socios.', 'No partners yet.') + '</p>') +
+      '<div class="comp-fila"><input id="soc-nombre" placeholder="' + L('Nombre del jugador', 'Player name') + '"><button class="comprar mini" data-accion="soc-buscar">🔍</button></div><div id="soc-res"></div></div>';
+  }
   function abrirCompensar() {
-    if (!esCuentaDueno()) return;
+    if (!esCuentaDueno() && !esCuentaSocio()) return; /* v9.63: también los socios fundadores */
     var objs = Object.keys(OBJETOS).filter(function (k) { return NOMBRES[k]; }).sort(function (a, b) { return N(a).localeCompare(N(b)); });
     var h = '<div class="carta comp-panel"><p class="nota">' + L('Arma un paquete y mándalo por Correo. Le llega con un mensaje de disculpa, los dibujos de lo que recibe, «La recompensa caduca en 10 días» y el botón Cobrar.', 'Build a package and send it by Mail with an apology, the item pictures, a 10-day expiry and a Claim button.') + '</p>' +
       '<h4>' + L('¿Para quién?', 'For whom?') + '</h4><div class="sp-tipos"><button data-accion="comp-para" data-p="todos" class="' + (compSel.para === 'todos' ? 'activo' : '') + '">👥 ' + L('Todos los jugadores', 'All players') + '</button><button data-accion="comp-para" data-p="uno" class="' + (compSel.para !== 'todos' ? 'activo' : '') + '">👤 ' + L('Un jugador', 'One player') + '</button></div>' +
@@ -11776,7 +11783,7 @@
       '<div class="comp-items">' + Object.keys(compSel.objetos).map(function (k) { return '<div class="comp-it"><span class="comp-ic">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small><b>×' + formatoNumero(compSel.objetos[k]) + '</b><button class="co-borrar" data-accion="comp-quitar" data-k="' + k + '">✕</button></div>'; }).join('') + '</div>' +
       '<h4>' + L('Gemas y recursos', 'Gems and resources') + '</h4><div class="comp-rec">' + [['gemas', '💎'], ['oro', '🪙'], ['comida', '🍞'], ['madera', '🪵'], ['piedra', '🪨'], ['hierro', '🔩']].map(function (q) { return '<label>' + q[1] + '<input id="comp-' + q[0] + '" type="number" min="0" value="0"></label>'; }).join('') + '</div>' +
       '<p class="nota aviso-rojo" id="comp-error"></p><button class="comprar verde sp-enviar" data-accion="comp-enviar">📨 ' + L('Enviar compensación', 'Send compensation') + '</button></div>';
-    abrirPanel('📨 ' + L('Compensación', 'Compensation'), h, { tipo: 'compensar' });
+    abrirPanel('📨 ' + L('Compensación', 'Compensation'), h + htmlSociosDueno(), { tipo: 'compensar' });
   }
   function enviarCompensacion(b) {
     var premio = {}, num = function (id) { var e = $(id); return e ? Math.max(0, Math.floor(+e.value || 0)) : 0; };
@@ -11785,7 +11792,7 @@
     if (!Object.keys(premio).length) { $('comp-error').textContent = L('Agrega al menos un objeto, gemas o recursos.', 'Add at least one item, gems or resources.'); sonar('error'); return; }
     if (compSel.para !== 'todos' && (!compSel.para || compSel.para === 'uno')) { $('comp-error').textContent = L('Busca y elige al jugador.', 'Search and choose the player.'); sonar('error'); return; }
     b.disabled = true;
-    var doc = { para: compSel.para, paraNombre: String(compSel.para === 'todos' ? L('Todos', 'All') : compSel.paraNombre).slice(0, 30), deNombre: 'Brother Kingdom', titulo: String(($('comp-titulo') || {}).value || '').slice(0, 80) || L('Compensación', 'Compensation'), texto: String(($('comp-texto') || {}).value || '').slice(0, 600), premio: premio, fecha: Date.now(), vence: Date.now() + 10 * 86400000 };
+    var doc = { para: compSel.para, paraNombre: String(compSel.para === 'todos' ? L('Todos', 'All') : compSel.paraNombre).slice(0, 30), deNombre: esCuentaDueno() ? 'Brother Kingdom' : 'Brother Kingdom · ' + String(Cuentas.nombrePublico() || '').slice(0, 20), titulo: String(($('comp-titulo') || {}).value || '').slice(0, 80) || L('Compensación', 'Compensation'), texto: String(($('comp-texto') || {}).value || '').slice(0, 600), premio: premio, fecha: Date.now(), vence: Date.now() + 10 * 86400000 };
     Cuentas.enviarCompensacion(doc).then(function () { sonar('moneda'); consejoTemporal('✅ ' + L('Compensación enviada a ', 'Compensation sent to ') + escaparHTML(doc.paraNombre)); compSel = { para: 'todos', paraNombre: '', objetos: {} }; cerrarPanel(); })
       .catch(function (er) { b.disabled = false; $('comp-error').textContent = L('No se pudo enviar', 'Could not send') + ' (' + ((er && er.code) || '?') + ')'; sonar('error'); });
   }
@@ -12639,6 +12646,15 @@
   }
   // v7.05: el aviso de errores (js/tk-guardian.js) solo se le muestra al dueño
   setInterval(function () { try { if (esCuentaDueno() || estado.dueno) localStorage.setItem('tk_dueno', '1'); } catch (e) {} }, 5000);
+  /* v9.63 (dueño): SOCIOS FUNDADORES. La lista (uids y nombres) está en la nube, en config/socios; solo el dueño la cambia.
+     Los socios llevan la insignia 👑 Socio fundador y pueden mandar compensaciones (la regla de la nube también lo comprueba). */
+  var SOCIOS = { uids: [], nombres: [] };
+  function cargarSocios() { try { if (!window.firebase || !firebase.firestore || !hayCuenta()) return; firebase.firestore().collection('config').doc('socios').get().then(function (d) { var x = d.exists ? d.data() : {}; SOCIOS = { uids: Array.isArray(x.uids) ? x.uids.map(String) : [], nombres: Array.isArray(x.nombres) ? x.nombres.map(String) : [] }; }).catch(function () {}); } catch (e) {} }
+  setTimeout(cargarSocios, 6000); setInterval(cargarSocios, 600000);
+  function esSocioUid(uid) { return !!uid && SOCIOS.uids.indexOf(String(uid)) >= 0; }
+  function esCuentaSocio() { return !!(window.Cuentas && Cuentas.usuario() && esSocioUid(Cuentas.usuario().uid)); }
+  function chipSocio(uid) { return esSocioUid(uid) ? ' <span class="socio-chip">👑 ' + L('Socio fundador', 'Founding partner') + '</span>' : ''; }
+  function guardarSocios(l) { return firebase.firestore().collection('config').doc('socios').set({ uids: l.map(function (x) { return x.uid; }).slice(0, 10), nombres: l.map(function (x) { return String(x.nombre).slice(0, 30); }).slice(0, 10), fecha: Date.now() }); }
   function esCuentaDueno() { return !!(window.Cuentas && Cuentas.usuario() && HUELLAS_DUENO.indexOf(sha256(Cuentas.correo().toLowerCase())) >= 0); }
   // v6.99: tocar la fila de recursos abre la ventana de Recursos de la ciudad
   ['monedas', 'comida', 'madera', 'piedra', 'hierro'].forEach(function (id) {
@@ -13006,6 +13022,10 @@
     else if (a === 'ref-mandar') mandarRefuerzo(b);
     else if (a === 'ref-siguiente') siguienteRefuerzo(b);
     else if (a === 'comp-para') { sonar('click'); compSel.para = b.getAttribute('data-p') === 'todos' ? 'todos' : 'uno'; compSel.paraNombre = ''; abrirCompensar(); }
+    else if (a === 'soc-buscar') { var qs = (($('soc-nombre') || {}).value || '').trim(); if (!qs || !esCuentaDueno()) return; Cuentas.buscarJugador(qs).then(function (l) { var r2 = $('soc-res'); if (!r2) return; r2.innerHTML = l.length ? l.slice(0, 6).map(function (x) { return '<button class="comprar mini" data-accion="soc-poner" data-uid="' + escaparHTML(x.uid) + '" data-n="' + escaparHTML(x.nombre) + '">👑 ' + escaparHTML(x.nombre) + '</button>'; }).join(' ') : '<p class="nota">' + L('No encontré a nadie con ese nombre.', 'Nobody found with that name.') + '</p>'; }).catch(function () {}); } /* v9.63 */
+    else if (a === 'soc-poner' || a === 'soc-quitar') { if (!esCuentaDueno()) return; var uS = b.getAttribute('data-uid'), lS = SOCIOS.uids.map(function (u, i) { return { uid: u, nombre: SOCIOS.nombres[i] || '?' }; }).filter(function (x) { return x.uid !== uS; }); if (a === 'soc-poner') lS.push({ uid: uS, nombre: b.getAttribute('data-n') || '?' }); b.disabled = true;
+      guardarSocios(lS).then(function () { SOCIOS = { uids: lS.map(function (x) { return x.uid; }), nombres: lS.map(function (x) { return x.nombre; }) }; sonar('moneda'); consejoTemporal(a === 'soc-poner' ? '👑 ' + L('Nuevo socio fundador: ', 'New founding partner: ') + escaparHTML(b.getAttribute('data-n') || '') : L('Socio quitado.', 'Partner removed.')); abrirCompensar(); })
+        .catch(function (er) { b.disabled = false; consejoTemporal('⚠️ ' + L('No se pudo guardar', 'Could not save') + ' (' + ((er && er.code) || '?') + ')'); sonar('error'); }); }
     else if (a === 'comp-buscar') { var qn = (($('comp-nombre') || {}).value || '').trim(); if (!qn) return; Cuentas.buscarJugador(qn).then(function (l) { var r = $('comp-res'); if (!r) return; r.innerHTML = l.length ? l.slice(0, 6).map(function (x) { return '<button class="comprar mini" data-accion="comp-elegir" data-uid="' + escaparHTML(x.uid) + '" data-n="' + escaparHTML(x.nombre) + '">👤 ' + escaparHTML(x.nombre) + '</button>'; }).join(' ') : '<p class="nota">' + L('No encontré a nadie con ese nombre.', 'Nobody found with that name.') + '</p>'; }).catch(function () {}); }
     else if (a === 'comp-elegir') { sonar('click'); compSel.para = b.getAttribute('data-uid'); compSel.paraNombre = b.getAttribute('data-n'); abrirCompensar(); }
     else if (a === 'comp-anadir') { var ko = ($('comp-obj') || {}).value, kc = Math.max(1, Math.floor(+(($('comp-cant') || {}).value) || 1)); if (OBJETOS[ko]) { compSel.objetos[ko] = (compSel.objetos[ko] || 0) + kc; sonar('click'); abrirCompensar(); } }
@@ -14631,7 +14651,7 @@
       var mp = /^📦\[PED:([A-Za-z0-9_]+)\]/.exec(String(m.texto || '')); if (mp) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaPedido(mp[1], m) + '</div>'; // v7.88
       var mr = /^🛡️\[REF:([A-Za-z0-9_]+)\]/.exec(String(m.texto || '')); if (mr) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaRefuerzo(mr[1], m) + '</div>'; // v7.98
       var mm = /^⚔️\[MAR:(\d+),(\d+),([a-z]+)\]\s?([\s\S]*)$/.exec(String(m.texto || '')); if (mm) return '<div class="chat-m' + (mio ? ' mio' : '') + '">' + htmlTarjetaMarcha(mm, m) + '</div>';
-      return '<div class="chat-m' + (mio ? ' mio' : '') + (String(m.texto || '').indexOf('📣') === 0 ? ' megafono' : '') + '"><button class="chat-quien" data-accion="chat-quien" data-uid="' + m.uid + '" data-id="' + m.id + '" data-n="' + escaparHTML(m.nombre) + '">' + (mio ? T('chat_tu') : escaparHTML(m.nombre)) + '</button><span class="chat-hora">' + hh + '</span><div class="chat-t">' + escaparHTML(filtrarTexto(m.texto)) + '</div></div>';
+      return '<div class="chat-m' + (mio ? ' mio' : '') + (String(m.texto || '').indexOf('📣') === 0 ? ' megafono' : '') + '"><button class="chat-quien" data-accion="chat-quien" data-uid="' + m.uid + '" data-id="' + m.id + '" data-n="' + escaparHTML(m.nombre) + '">' + (mio ? T('chat_tu') : escaparHTML(m.nombre)) + '</button>' + chipSocio(m.uid) /* v9.63 */ + '<span class="chat-hora">' + hh + '</span><div class="chat-t">' + escaparHTML(filtrarTexto(m.texto)) + '</div></div>';
     }).join('') : '<p class="nota chat-vacio">' + T('chat_vacio') + '</p>';
     if (!nuevo || abajo) box.scrollTop = box.scrollHeight;
     marcarVistoChat(c);
@@ -14694,7 +14714,7 @@
     function pintar(al, alNom) {
       var dp = al ? diplomacia(al) : { t: L('Neutral', 'Neutral') }, inv = estado.alianza && al && !al.alianza && uid !== yo;
       d.innerHTML = '<div class="pj-caja"><button class="pj-x" data-pj="cerrar">✕</button><h3>' + L('Perfil del jugador', 'Player profile') + '</h3>' +
-        '<div class="pj-cuerpo"><div class="pj-av">' + escaparHTML(String(nombre || '?').charAt(0).toUpperCase()) + '</div><div class="pj-dat"><b>' + escaparHTML(nombre) + '</b>' +
+        '<div class="pj-cuerpo"><div class="pj-av">' + escaparHTML(String(nombre || '?').charAt(0).toUpperCase()) + '</div><div class="pj-dat"><b>' + escaparHTML(nombre) + '</b>' + chipSocio(uid) /* v9.63 */ +
         '<span>' + L('Nivel', 'Level') + ': ' + (al ? (al.nivel || 1) : '…') + '</span><span>' + L('Poder', 'Power') + ': ' + (al ? formatoNumero(al.poder || 0) : '…') + '</span><span>⚔️ ' + L('Liquidación', 'Kills') + ': ' + (al ? formatoNumero(al.kp || 0) : '…') + '</span></div></div>' +
         '<div class="pj-al"><span>' + L('Alianza', 'Alliance') + ': <b>' + (al ? (al.alianza ? escaparHTML(alNom || al.alianza) : L('Ninguna', 'None')) : '…') + '</b></span><span>' + L('Diplomacia', 'Diplomacy') + ': ' + dp.t + '</span></div>' +
         // v6.94: dónde está su reino y botón para ir al mapa (y, para el dueño, regalarle)
