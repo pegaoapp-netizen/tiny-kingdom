@@ -11720,8 +11720,12 @@
     document.querySelectorAll('.az-celda.abierta').forEach(function (c) { if (libres.indexOf(+c.getAttribute('data-c')) < 0) c.style.animation = 'none'; }); /* solo se anima lo que acabas de abrir */
     libres.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
     consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k) + (ganado[k] > 1 ? ' ×' + ganado[k] : ''); }).join(', '));
+    cerrarCofresLuego(1400); /* v9.79: el cofre vuelve a cerrarse */
   }
   /* v9.49 (dueño): abrir 1 o 10 cofres de una vez (1 ficha cada uno). Si el tablero se llena, sale uno nuevo y se sigue; al final, la ventana con todo lo ganado */
+  /* v9.79 (dueño): el cofre se abre, enseña el premio un momento y SE VUELVE A CERRAR, para que el jugador siga escogiendo */
+  var tmCerrarAzar = null;
+  function cerrarCofresLuego(ms) { clearTimeout(tmCerrarAzar); tmCerrarAzar = setTimeout(function () { azarGrid = [null, null, null, null, null, null, null, null, null]; if (panelActual && panelActual.tipo === 'azar' && !$('panel').classList.contains('oculto')) abrirAzar(); }, ms || 1400); }
   function sacarAzarVarios(cant) {
     cant = Math.max(1, Math.min(10, Math.floor(+cant || 1)));
     var prem = modoAzar === 'premium', costo = (prem ? 6 : 1) * cant;
@@ -11737,6 +11741,7 @@
     sonar('magia'); guardar(true); abrirAzar();
     document.querySelectorAll('.az-celda.abierta').forEach(function (el) { if (nuevos.indexOf(+el.getAttribute('data-c')) < 0) el.style.animation = 'none'; });
     nuevos.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
+    cerrarCofresLuego(cant === 1 ? 1400 : 1800); /* v9.79 */
     if (cant === 1) { consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k); }).join(', ')); return; }
     setTimeout(function () { mostrarRecompensas(L('Azar', 'Lucky') + ' ×' + cant, Object.keys(ganado).map(function (k) { return { ico: OBJETOS[k].icono, n: ganado[k], nom: N(k) }; })); }, 700);
   }
