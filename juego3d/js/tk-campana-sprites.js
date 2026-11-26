@@ -21,8 +21,8 @@
   var cache = {}, cola = [], trabajando = false, rend = null;
 
   function ruta(clave) {
-    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -2.4 } /* v9.32: de frente y mirando a la derecha, hacia los enemigos (los héroes miran hacia -Z) */ : null; }
-    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.65 } : null;
+    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: -2.85 } /* v9.33 (dueño: «están de lado»): casi de frente a la cámara, con un poco de giro hacia los enemigos (los héroes miran hacia -Z) */ : null; }
+    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.35 } : null;
   }
   function renderer() {
     if (rend !== null) return rend;
