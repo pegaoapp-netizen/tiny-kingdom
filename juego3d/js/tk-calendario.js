@@ -1,5 +1,6 @@
 /* v9.12 · CALENDARIO DE PREMIOS DEL MES («Conectarse»).
-   Cada día distinto que entras en el mes se ilumina una casilla más. Tocas las iluminadas y te llevas el premio.
+   v9.69: va con la FECHA: cada día del mes tiene su premio; si ese día entras, lo puedes cobrar; si faltas, se pierde.
+   (Antes: cada día distinto que entrabas en el mes se iluminaba una casilla más.) Tocas las iluminadas y te llevas el premio.
    Al cambiar de mes empieza de cero. Día 15: el gran premio de BOTELLAS de campaña.
    Usa el puente window.__tkCal de juego.js. Nunca da gemas (regla del dueño). */
 (function () {
@@ -29,16 +30,23 @@
   function premio(i) { return PREMIOS[i - 1] || PREMIOS[PREMIOS.length - 1]; }
   function icono(p) { return p[0] === 'botella' ? BOTELLA_SVG : C().icono(p[0]); }
 
-  // cuenta el día de hoy (una vez por día) y reinicia al cambiar de mes
+  // v9.69 (dueño): EL CALENDARIO VA CON LA FECHA. Hoy es el día del mes que marca el reloj; el día que no entras, su premio se pierde.
+  // d.ent = { día: 1 } los días del mes en que entraste. Solo esos se pueden cobrar.
+  function diaHoy() { return new Date().getDate(); }
   function contarHoy() {
     var c = C(); if (!c || !c.listo()) return null;
     var d = c.datos(), ahora = new Date(), mes = mesDe(ahora), hoy = fecha(ahora), cambio = false;
-    if (d.mes !== mes) { d.mes = mes; d.dias = 0; d.ult = ''; d.cob = {}; d.visto = ''; cambio = true; }
-    if (d.ult !== hoy) { d.ult = hoy; d.dias = Math.min(diasDelMes(ahora), (d.dias || 0) + 1); cambio = true; }
+    if (d.mes !== mes) { d.mes = mes; d.dias = 0; d.ult = ''; d.cob = {}; d.ent = {}; d.visto = ''; cambio = true; }
+    if (!d.ent) { d.ent = {}; if (d.ult && d.ult.slice(0, 7) === mes) d.ent[+d.ult.slice(8, 10)] = 1; cambio = true; } /* cuentas de antes: cuenta el último día que entró */
+    d.cob = d.cob || {};
+    if (!d.ent[diaHoy()]) { d.ent[diaHoy()] = 1; cambio = true; }
+    if (d.ult !== hoy) { d.ult = hoy; cambio = true; }
+    var n = Object.keys(d.ent).length; if (d.dias !== n) { d.dias = n; cambio = true; }
     if (cambio) c.guardar();
     return d;
   }
-  function pendientes(d) { var n = 0; for (var i = 1; i <= (d.dias || 0); i++) if (!d.cob[i]) n++; return n; }
+  function estadoDia(d, i) { return d.cob[i] ? 'cogido' : d.ent[i] ? 'listo' : i < diaHoy() ? 'perdido' : 'futuro'; }
+  function pendientes(d) { var n = 0; for (var i = 1; i <= diaHoy(); i++) if (estadoDia(d, i) === 'listo') n++; return n; }
 
   // ---------- BOTÓN «CONECTARSE» (a la izquierda de la ciudad) ----------
   function boton() {
@@ -70,10 +78,10 @@
     var ahora = new Date(), total = diasDelMes(ahora), nombreMes = ahora.toLocaleDateString(L('es-ES', 'en-US'), { month: 'long' });
     var celdas = '';
     for (var i = 1; i <= total; i++) {
-      var p = premio(i), est = d.cob[i] ? 'cogido' : i <= d.dias ? 'listo' : 'futuro';
+      var p = premio(i), est = estadoDia(d, i);
       celdas += '<button type="button" class="cal-dia ' + est + (i === DIA_GRANDE ? ' grande' : '') + '" data-dia="' + i + '"' + (est === 'listo' ? '' : ' tabindex="-1"') + ' title="' + c.nombre(p[0]) + '">' +
         '<span class="cal-n">' + i + '</span><span class="cal-img">' + icono(p) + '</span><b>×' + c.num(p[1]) + '</b>' +
-        (est === 'cogido' ? '<span class="cal-ok">✓</span>' : '') + '</button>';
+        (est === 'cogido' ? '<span class="cal-ok">✓</span>' : est === 'perdido' ? '<span class="cal-ok cal-no">✕</span>' : '') + (i === diaHoy() ? '<span class="cal-hoy">' + L('HOY', 'TODAY') + '</span>' : '') + '</button>';
     }
     var fin = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1) - ahora, dd = Math.floor(fin / 86400000), hh = Math.floor(fin % 86400000 / 3600000), n = pendientes(d);
     var bot = premio(DIA_GRANDE);
@@ -81,7 +89,7 @@
     v.innerHTML = '<div class="cal-caja" role="dialog" aria-label="' + L('Premios por conectarte', 'Log-in rewards') + '">' +
       '<button class="cal-x" type="button" aria-label="' + L('Cerrar', 'Close') + '">✕</button>' +
       '<h2>' + L('Premios de ', 'Log-in Rewards · ') + nombreMes.charAt(0).toUpperCase() + nombreMes.slice(1) + '</h2><div class="cal-raya"></div>' +
-      '<p class="cal-txt">' + L('Este mes has entrado <b>' + d.dias + '</b> día(s). Toca cualquier día para ver su premio; los iluminados ya son tuyos.', 'You have logged in <b>' + d.dias + '</b> day(s) this month. Tap any day to see its reward; glowing ones are yours.') + '</p>' +
+      '<p class="cal-txt">' + L('Hoy es el día <b>' + diaHoy() + '</b>. Entra cada día para cobrar su premio: <b>si faltas un día, ese premio se pierde</b>. Este mes has entrado <b>' + d.dias + '</b> día(s).', 'Today is day <b>' + diaHoy() + '</b>. Log in every day to collect its reward: <b>miss a day and that reward is lost</b>. You logged in <b>' + d.dias + '</b> day(s) this month.') + '</p>' +
       '<p class="cal-txt cal-bot-txt">🧪 ' + L('Día ' + DIA_GRANDE + ': <b>' + bot[1] + ' botellas de campaña</b> para jugar la Campaña.', 'Day ' + DIA_GRANDE + ': <b>' + bot[1] + ' campaign flasks</b> to play the Campaign.') + '</p>' +
       '<div class="cal-rejilla">' + celdas + '</div>' +
       '<div class="cal-info" id="cal-info"></div>' + /* v9.16: qué es el premio que tocas */
@@ -100,25 +108,25 @@
     });
     // ficha del premio: dibujo grande, nombre, cantidad, para qué sirve y cuándo se cobra
     function info(i) {
-      var p = premio(i), nm = window.NOMBRES && NOMBRES[p[0]], q = nm && nm.des_es ? [nm.des_es, nm.des_en || nm.des_es] : null, est = d.cob[i] ? 'cogido' : i <= d.dias ? 'listo' : 'futuro', falta = i - d.dias;
+      var p = premio(i), nm = window.NOMBRES && NOMBRES[p[0]], q = nm && nm.des_es ? [nm.des_es, nm.des_en || nm.des_es] : null, est = estadoDia(d, i), falta = i - diaHoy();
       Array.prototype.forEach.call(v.querySelectorAll('.cal-dia'), function (e) { e.classList.toggle('elegido', +e.getAttribute('data-dia') === i); });
       v.querySelector('#cal-info').innerHTML = '<div class="ci-img">' + icono(p) + '</div><div class="ci-txt"><b>' + L('Día ', 'Day ') + i + ' · ' + c.nombre(p[0]) + ' ×' + c.num(p[1]) + '</b>' +
         (q ? '<span>' + L(q[0], q[1]) + '</span>' : '') +
-        '<em class="ci-' + est + '">' + (est === 'cogido' ? '✓ ' + L('Ya lo recogiste.', 'Already collected.') : est === 'listo' ? '🎁 ' + L('¡Ya es tuyo! Toca otra vez la casilla o el botón para recogerlo.', 'It is yours! Tap the square again or the button to collect.') : '🔒 ' + L('Se desbloquea cuando entres ' + falta + ' día' + (falta > 1 ? 's' : '') + ' más este mes.', 'Unlocks after ' + falta + ' more log-in day' + (falta > 1 ? 's' : '') + ' this month.')) + '</em>' +
+        '<em class="ci-' + est + '">' + (est === 'cogido' ? '✓ ' + L('Ya lo recogiste.', 'Already collected.') : est === 'listo' ? '🎁 ' + L('¡Ya es tuyo! Toca otra vez la casilla o el botón para recogerlo.', 'It is yours! Tap the square again or the button to collect.') : est === 'perdido' ? '✕ ' + L('Ese día no entraste: este premio se perdió.', 'You did not log in that day: this reward is lost.') : falta > 0 ? '🔒 ' + L('Se cobra el día ' + i + ' (faltan ' + falta + (falta === 1 ? ' día' : ' días') + ').', 'Collect it on day ' + i + ' (' + falta + (falta === 1 ? ' day' : ' days') + ' left).') : '🔒 ' + L('Se desbloquea cuando entres ' + falta + ' día' + (falta > 1 ? 's' : '') + ' más este mes.', 'Unlocks after ' + falta + ' more log-in day' + (falta > 1 ? 's' : '') + ' this month.')) + '</em>' +
         (est === 'listo' ? '<button type="button" class="comprar verde ci-recoger">' + L('Recoger', 'Collect') + '</button>' : '') + '</div>';
       var br = v.querySelector('.ci-recoger'); if (br) br.addEventListener('click', function () { recoger([i]); });
     }
-    var primero = 0; for (var j = 1; j <= total && !primero; j++) if (!d.cob[j]) primero = j; // al abrir: el premio que toca ahora
-    info(primero || Math.min(total, d.dias));
+    var primero = 0; for (var j = 1; j <= total && !primero; j++) if (estadoDia(d, j) === 'listo') primero = j; // al abrir: el premio que toca ahora
+    info(primero || diaHoy());
     var bt = v.querySelector('.cal-todo');
-    if (bt) bt.addEventListener('click', function () { var l = []; for (var i = 1; i <= d.dias; i++) if (!d.cob[i]) l.push(i); recoger(l); });
+    if (bt) bt.addEventListener('click', function () { var l = []; for (var i = 1; i <= diaHoy(); i++) if (estadoDia(d, i) === 'listo') l.push(i); recoger(l); });
   }
   // se marca primero como cogido (nunca se cobra dos veces) y luego se da
   function recoger(lista) {
     var c = C(), d = contarHoy(); if (!d) return;
     var items = [], dias = [];
     lista.forEach(function (i) {
-      if (d.cob[i] || i > d.dias) return;
+      if (d.cob[i] || !d.ent[i] || i > diaHoy()) return; /* v9.69: solo los días que entraste */
       var p = premio(i); if (!c.existe(p[0])) return;
       d.cob[i] = 1; c.dar(p[0], p[1]); dias.push(i);
       items.push({ ico: icono(p), n: p[1], nom: c.nombre(p[0]) });
@@ -160,6 +168,10 @@
     '#cal-ventana .cal-dia.cogido { filter: saturate(.35) brightness(.8); }',
     '#cal-ventana .cal-dia.cogido .cal-ok { position: absolute; inset: 0; display: grid; place-items: center; font-size: 30px; font-weight: 900; color: #7dff3a; text-shadow: 0 2px 3px #000; background: rgba(0,0,0,.25); }',
     '#cal-ventana .cal-dia.futuro { background: linear-gradient(#f8e3b0, #e7c27a); border-color: #b8925a; }',
+    '#cal-ventana .cal-dia.perdido { background: linear-gradient(#6a5a4a, #3a3028); border-color: #5a4a3a; filter: grayscale(.8) brightness(.75); }',
+    '#cal-ventana .cal-dia .cal-ok.cal-no { color: #ff6a5a; }',
+    '#cal-ventana .cal-dia .cal-hoy { position: absolute; left: 0; right: 0; bottom: 0; font-size: 9px; font-weight: 900; color: #fff; background: #c62f22; letter-spacing: .5px; }',
+    '#cal-ventana .ci-perdido { color: #a3101a; }',
     '#cal-ventana .cal-dia.futuro b { color: #5b3016; text-shadow: none; }',
     '#cal-ventana .cal-dia.grande { background: radial-gradient(circle at 50% 40%, #ffe9a0, #d8402e 75%); border-color: #ffd34d; }',
     '#cal-ventana .cal-dia.grande::after { content: "★"; position: absolute; right: 3px; top: 0; color: #fff6c8; font-size: 12px; text-shadow: 0 0 4px #b8860b; }',
