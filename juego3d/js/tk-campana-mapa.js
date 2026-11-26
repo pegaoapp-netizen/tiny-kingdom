@@ -834,6 +834,7 @@
       var tir = null;
       if (primera) { tir = darAzar(base, res.heroes); items = tir.items; nota = '🆕 ' + L('¡Primera victoria!', 'First victory!'); }
       else { var rp = st().rep || {}; if (rp.d !== hoy()) rp = { d: hoy(), n: 0 }; st().nRep = (st().nRep || 0) + 1; if (rp.n < REP_DIA) { rp.n++; tir = darAzar(premiosRepetir(base), res.heroes); items = tir.items; nota = '🔁 ' + rp.n + ' / ' + REP_DIA; } else nota = L('Sin premio: ya usaste las repeticiones de hoy.', 'No reward: today\'s replays are used.'); st().rep = rp; }
+      if (G.forja) { try { items = items.concat(G.forja(M.gIdx + 1, !!M.jefe)); } catch (e) {} } /* v9.46: materiales de forja */
       sumarSemana(M, 1);
       if (tir) nota = notaSuerte(tir.suerte) + ' · ' + nota;
       if (res.estrellas >= 3 && antes < 3) { items = items.concat(darAzar(premioTres(M), res.heroes).items); nota += (nota ? ' · ' : '') + '👑 ' + L('¡Extra por 3 estrellas!', '3-star bonus!'); }

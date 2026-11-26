@@ -7378,7 +7378,7 @@
     e: { ico: '🛡️', es: 'Torneo de Entrenamiento', en: 'Training Tournament', des: ['¡Gana quien más tropas entrene esta semana!', 'Whoever trains the most troops this week wins!'], unidad: ['tropas', 'troops'] },
     p: { ico: '💪', es: 'Torneo de Poder', en: 'Power Tournament', des: ['¡Gana quien más suba su poder esta semana!', 'Whoever raises their power the most this week wins!'], unidad: ['de poder', 'power'] }
   };
-  var PREMIOS_TX = [{ hasta: 1, oro: 150000, objeto: 'acel_15m', piezas: 2, botellas: 40 }, { hasta: 3, oro: 80000, piezas: 1, botellas: 25 }, { hasta: 10, oro: 40000, botellas: 15 }, { hasta: 50, oro: 12000, botellas: 8 }, { hasta: 1e9, oro: 3000, botellas: 3 }];
+  var PREMIOS_TX = [{ hasta: 1, oro: 150000, objeto: 'acel_15m', piezas: 2, botellas: 40, templado: 5 }, { hasta: 3, oro: 80000, piezas: 1, botellas: 25, templado: 3 }, { hasta: 10, oro: 40000, botellas: 15, templado: 2 }, { hasta: 50, oro: 12000, botellas: 8, templado: 1 }, { hasta: 1e9, oro: 3000, botellas: 3 }]; /* v9.46: + Piedra de Templado */
   function premioTX(pos) { for (var i = 0; i < PREMIOS_TX.length; i++) if (pos <= PREMIOS_TX[i].hasta) return PREMIOS_TX[i]; return PREMIOS_TX[PREMIOS_TX.length - 1]; }
   function torneoX(k) { estado.tx = estado.tx || {}; var t = estado.tx[k]; if (!t) t = estado.tx[k] = { semana: semanaActual(), puntos: 0, cobrada: 0 }; return t; }
   function puntosTX(k) {
@@ -7400,8 +7400,9 @@
       t.cobrada = sem; t.semana = semanaActual(); t.puntos = 0; t.base = null; guardar(true);
       var items = [{ ico: '🪙', n: p.oro, nom: T('r_oro') }]; if (p.objeto && OBJETOS[p.objeto]) items.push({ ico: OBJETOS[p.objeto].icono, n: 1, nom: N(p.objeto) }); if (p.botellas) items.push({ ico: '🧪', n: p.botellas, nom: N('botella') });
       for (var ip = 0; ip < (p.piezas || 0); ip++) items.push({ ico: '🛡️', n: 1, nom: L('Pieza de armadura de héroe', 'Hero armor piece') });
+      if (p.templado) items.push({ ico: OBJETOS.piedra_templado.icono, n: p.templado, nom: N('piedra_templado') }); /* v9.46 */
       nuevoCorreo('sistema', cfg.ico + ' ' + L(cfg.es, cfg.en) + ': ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), L('Torneo', 'Tournament'), htmlInforme([[L('Tus puntos', 'Your points'), formatoNumero(hechos)], [L('Puesto', 'Place'), pos > 100 ? '100+' : '#' + pos]]));
-      mostrarRecompensas(cfg.ico + ' ' + L(cfg.es, cfg.en) + ' · ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), items, function () { darPremio(p); for (var q = 0; q < (p.piezas || 0); q++) darPiezaHeroe(); guardar(true); });
+      mostrarRecompensas(cfg.ico + ' ' + L(cfg.es, cfg.en) + ' · ' + L('puesto ', 'place ') + (pos > 100 ? '100+' : pos), items, function () { darPremio(p); for (var q = 0; q < (p.piezas || 0); q++) darPiezaHeroe(); if (p.templado) estado.mochila.piedra_templado = (estado.mochila.piedra_templado || 0) + p.templado; guardar(true); });
     }).catch(function () { revisarTX['a' + k] = false; });
   }
   setTimeout(function () { revisarTX('e'); revisarTX('p'); }, 7000);
@@ -9102,6 +9103,49 @@
     var r = darMedallas(id, 30) || { id: id, nuevo: false }; return { id: id, nuevo: !!r.nuevo };
   }
   function rarezaAlAzar(nivel) { var r = Math.random(); return r < 0.03 + nivel * 0.006 ? 'legendario' : r < 0.25 + nivel * 0.02 ? 'raro' : 'comun'; }
+  /* v9.46 (dueño): LA FORJA. Las piezas suben hasta el nivel 15 (las que ya pasaban de 15 se quedan como están).
+     Nv 2–5: 100 % (Oro + Polvo de Forja) · Nv 6–10: 70/60/50/40/30 % (Oro + Carmot) · Nv 11–15: 25/20/15/12/10 % (Oro + Carmot + Piedra de Templado).
+     Si falla: se gastan los materiales, la pieza se queda igual y gana +5 % de «Bendición de Herrero» para el siguiente intento. */
+  var FORJA_MAX = 15, EXITO_FORJA = { 6: 70, 7: 60, 8: 50, 9: 40, 10: 30, 11: 25, 12: 20, 13: 15, 14: 12, 15: 10 };
+  function exitoForja(p) { var sig = p.n + 1; return Math.min(100, (EXITO_FORJA[sig] || 100) + (sig > 5 ? (p.bend || 0) : 0)); }
+  function costoForja(p) {
+    var sig = p.n + 1, m = MULT_RAREZA_EQ[p.r] || 1, c = { oro: Math.round(60 * m * Math.pow(sig, 1.35)) }, mat = {};
+    if (sig <= 5) mat.polvo_forja = Math.ceil(2 * sig * m);
+    else if (sig <= 10) mat.carmot = Math.ceil((sig - 5) * m);
+    else { mat.carmot = Math.ceil((sig - 8) * m); mat.piedra_templado = sig - 10; }
+    return { pago: c, mat: mat };
+  }
+  function faltaForja(p) { var cf = costoForja(p), f = []; Object.keys(cf.mat).forEach(function (k) { var t = (estado.mochila || {})[k] || 0; if (t < cf.mat[k]) f.push(N(k) + ' ×' + (cf.mat[k] - t)); }); return f; }
+  function htmlForja(p) {
+    if (p.n >= FORJA_MAX) return '<span class="eq-forja-max">✅ ' + L('Nivel máximo de forja', 'Max forge level') + '</span>';
+    var cf = costoForja(p), ex = exitoForja(p), falta = faltaForja(p);
+    var mats = Object.keys(cf.mat).map(function (k) { var t = (estado.mochila || {})[k] || 0; return '<span class="' + (t >= cf.mat[k] ? '' : 'falta') + '">' + OBJETOS[k].icono + cf.mat[k] + '</span>'; }).join(' ');
+    return '<button class="comprar mini" data-eq="mejorar" data-i="' + p.i + '"' + (falta.length ? ' disabled style="filter:grayscale(1);opacity:.6"' : '') + '>⬆ ' + htmlCosto(cf.pago) + ' ' + mats + '</button>' +
+      '<span class="eq-exito" style="color:' + (ex >= 70 ? '#4fd06a' : ex >= 30 ? '#ffd24a' : '#ff7a6a') + '">' + L('Éxito: ', 'Success: ') + ex + '%' + (p.bend ? ' <small>(+' + p.bend + '% ' + L('Bendición', 'Blessing') + ')</small>' : '') + '</span>';
+  }
+  /* un intento en la forja: devuelve true si subió */
+  function intentarForja(p) {
+    if (!p || p.n >= FORJA_MAX) return false;
+    var falta = faltaForja(p); if (falta.length) { consejoTemporal('🔒 ' + L('Falta: ', 'Missing: ') + falta.join(', ')); sonar('error'); return false; }
+    var cf = costoForja(p); if (!pagar(cf.pago)) return false;
+    Object.keys(cf.mat).forEach(function (k) { estado.mochila[k] = Math.max(0, (estado.mochila[k] || 0) - cf.mat[k]); });
+    var ex = exitoForja(p);
+    if (Math.random() * 100 < ex) { p.n++; p.bend = 0; sonar('martillo'); consejoTemporal('🔨 ' + T('eq_mejorada', { n: nombrePieza(p), v: p.n }) + ' · ' + T('poder_subio', { n: formatoNumero(calcularPoder()) })); }
+    else { p.bend = Math.min(50, (p.bend || 0) + 5); sonar('error'); consejoTemporal('💥 ' + L('¡La forja falló! La pieza se queda en Nv ' + p.n + '. Bendición de Herrero: +' + p.bend + '% para el próximo intento.', 'The forge failed! The piece stays at Lv ' + p.n + '. Blacksmith Blessing: +' + p.bend + '% next try.')); }
+    ponerEquipo(); actualizarHUD(); guardar(true); return true;
+  }
+  /* v9.46: FUNDIR DUPLICADAS. Las piezas Nv 1 repetidas (mismo tipo, rareza y juego) que no llevas puestas se funden en Polvo de Forja y Oro (se queda una de cada) */
+  function duplicadasNv1() { var vistas = {}, fuera = []; piezas().filter(function (p) { return !p.h && p.n === 1; }).forEach(function (p) { var k = p.t + '|' + p.r + '|' + (p.s || ''); if (vistas[k]) fuera.push(p); else vistas[k] = true; }); return fuera; }
+  function fundirDuplicadas(id) {
+    var l = duplicadasNv1(); if (!l.length) { consejoTemporal(L('No tienes piezas Nv 1 repetidas para fundir.', 'You have no duplicate Lv 1 pieces to smelt.')); return; }
+    var oro = 0, polvo = 0, carm = 0; l.forEach(function (p) { oro += oroAlFundir(p); polvo += Math.round(2 * (MULT_RAREZA_EQ[p.r] || 1)); if (p.r === 'legendario' || p.r === 'mitico') carm += 1; });
+    confirmarJuego('🔨 ' + L('Fundir duplicadas', 'Smelt duplicates'), L('Se funden ' + l.length + ' piezas Nv 1 repetidas que no llevas puestas (se queda una de cada). Ganas: ', 'Smelts ' + l.length + ' duplicate Lv 1 pieces you are not wearing (one of each is kept). You get: ') + formatoNumero(oro) + ' 🪙 · ' + polvo + ' ✨ ' + N('polvo_forja') + (carm ? ' · ' + carm + ' 💠 ' + N('carmot') : ''), L('Fundir', 'Smelt'), function () {
+      l.forEach(function (p) { var ix = piezas().indexOf(p); if (ix >= 0) piezas().splice(ix, 1); });
+      sumarRecurso('oro', oro); estado.mochila.polvo_forja = (estado.mochila.polvo_forja || 0) + polvo; if (carm) estado.mochila.carmot = (estado.mochila.carmot || 0) + carm;
+      sonar('moneda'); consejoTemporal('🔨 ' + l.length + ' ' + L('piezas fundidas', 'pieces smelted') + ': +' + formatoNumero(oro) + ' 🪙 · +' + polvo + ' ✨'); guardar(true); if (id) abrirPanelHeroe(id); else reabrirPanel();
+    });
+  }
+  function premiosForja(n, jefe) { var l = [['carmot', 1 + Math.floor((n || 1) / 8)]]; if (jefe || (n || 1) % 5 === 0 || Math.random() < 0.25) l.push(['piedra_templado', 1 + Math.floor((n || 1) / 15)]); return l; }
   function costoMejoraPieza(p) { var m = MULT_RAREZA_EQ[p.r]; return { oro: Math.round(60 * m * Math.pow(p.n, 1.35)), piedra: Math.round(20 * m * p.n) }; }
   function oroAlFundir(p) { return Math.round(40 * MULT_RAREZA_EQ[p.r] * p.n); }
   // v6.92: cada pieza pide un nivel del héroe; las del juego de torneo, más
@@ -9159,7 +9203,9 @@
   function htmlEquipo(id) {
     if (bloqueo('equipoHeroe')) return htmlCandado('equipoHeroe', L('La forja y los sets de equipo de tus héroes se desbloquean al llegar al nivel ' + DESBLOQUEO.equipoHeroe.jugador + '.', 'The forge and your heroes\' gear sets unlock at level ' + DESBLOQUEO.equipoHeroe.jugador + '.')); // v8.00
     var e = estado.heroes[id], sE = statsHeroe(id), ant = eqAntes && eqAntes.id === id ? eqAntes : { dano: sE.dano, vida: sE.vida }; eqAntes = null;
-    var h = '<div class="eq-numeros">' + numeroSube(L('Ataque', 'Attack'), '⚔', ant.dano, sE.dano) + numeroSube(L('Salud', 'Health'), '❤', ant.vida, sE.vida) + '<button class="eq-guia-btn" data-accion="eq-guia" title="' + L('¿Cómo funciona?', 'How does it work?') + '">?</button></div>';
+    var nDup = duplicadasNv1().length;
+    var h = (nDup ? '<button class="comprar mini naranja eq-fundir-dup" data-accion="eq-fundir-dup" data-id="' + id + '" style="width:100%;margin-bottom:8px">🔨 ' + L('Fundir duplicadas (Nv 1) · ', 'Smelt duplicates (Lv 1) · ') + nDup + '</button>' : '') + /* v9.46 */
+      '<div class="eq-numeros">' + numeroSube(L('Ataque', 'Attack'), '⚔', ant.dano, sE.dano) + numeroSube(L('Salud', 'Health'), '❤', ant.vida, sE.vida) + '<button class="eq-guia-btn" data-accion="eq-guia" title="' + L('¿Cómo funciona?', 'How does it work?') + '">?</button></div>';
     h += '<div class="eq-rejilla">' + TIPOS_EQ.map(function (t) {
       var p = piezasDe(id).filter(function (x) { return x.t === t; })[0];
       return '<button class="eq-hueco' + (p ? ' ' + p.r : '') + '" data-accion="eq-hueco" data-id="' + id + '" data-t="' + t + '"' + (e ? '' : ' disabled') + '><span class="eq-ico">' + (p ? icoPieza(p) : EQ[t].icono) + '</span>' +
@@ -9171,7 +9217,7 @@
     h += '<p class="nota">' + T('eq_bonos', { t: partes.join(' · ') || '—' }) + ' · ' + T('eq_tienes', { n: piezas().length }) + '</p>';
     var nd = piezasDragonDe(id); if (nd) { h += '<div class="carta dg-caja">' + (etiquetaDragon(nd) || '<span class="et-dragon gris">🐉 ' + L(SET_DRAGON.es, SET_DRAGON.en) + ' (1/6)</span>') + SET_DRAGON.bonos.map(function (b) { return '<div class="dg-b' + (nd >= b[0] ? ' si' : '') + '">' + (nd >= b[0] ? '✅' : '🔒') + ' ' + b[0] + ' ' + L('piezas', 'pieces') + ': ' + textoBonosDragon(b[1]) + '</div>'; }).join('') + '</div>'; } // v7.84
     h += '<p class="nota eq-ayuda">' + L('Toca un espacio para elegir pieza. Para quitarla, pulsa dos veces o déjala pulsada.', 'Tap a slot to choose a piece. To remove it, double-tap or press and hold.') + '</p>';
-    if (e && esCuentaDueno()) h += '<button class="comprar morado" data-accion="eq-dueno-set" data-id="' + id + '">👑 ' + L('Dueño: darme el juego ', 'Owner: give me set ') + (ARMADURA_HEROE[id] ? ARMADURA_HEROE[id][estado.idioma === 'en' ? 'en' : 'es'] : '') + '</button>';
+    if (e && esCuentaDueno() && window.__panelDueno) h += '<button class="comprar morado" data-accion="eq-dueno-set" data-id="' + id + '">👑 ' + L('Dueño: darme el juego ', 'Owner: give me set ') + (ARMADURA_HEROE[id] ? ARMADURA_HEROE[id][estado.idioma === 'en' ? 'en' : 'es'] : '') + '</button>'; /* v9.46 (dueño): botón de prueba escondido; solo sale con window.__panelDueno = true */
     if (e) h += '<div class="hf-fila"><button class="comprar naranja" data-accion="eq-rapido" data-id="' + id + '">' + T('eq_rapido') + '</button><button class="comprar" data-accion="eq-quitar-todo" data-id="' + id + '">' + T('eq_quitar_todo') + '</button></div>';
     return h;
   }
@@ -9183,7 +9229,7 @@
     function fila(p, esActual) {
       var c = costoMejoraPieza(p);
       return '<div class="eq-fila ' + p.r + '"><span class="eq-ico" data-eq="info" data-i="' + p.i + '">' + icoPieza(p) + '</span><div class="ob-txt"><b>' + nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n + '</b>' + (nivelHeroe(id) < nivelPide(p) ? '<em class="ei-req no">' + L('Nivel del héroe', 'Hero level') + ' Lv' + nivelHeroe(id) + '/Lv' + nivelPide(p) + '</em>' : '') + '<span>' + textoPieza(p) + (p.h && !esActual ? ' · ' + T('eq_de', { n: NH(p.h) }) : '') + '</span></div><div class="eq-bts">' +
-        (esActual ? (p.n < EQ_NIVEL_MAX ? '<button class="comprar mini" data-eq="mejorar" data-i="' + p.i + '" data-costo=\'' + JSON.stringify(c) + '\'>⬆ ' + htmlCosto(c) + '</button>' : '') + '<button class="comprar mini" data-eq="quitar" data-i="' + p.i + '">' + T('eq_quitar') + '</button>'
+        (esActual ? htmlForja(p) /* v9.46: la forja con su % de éxito */ + '<button class="comprar mini" data-eq="quitar" data-i="' + p.i + '">' + T('eq_quitar') + '</button>'
           : '<button class="comprar mini naranja" data-eq="equipar" data-i="' + p.i + '">' + T('eq_equipar') + '</button>' + (p.h ? '' : '<button class="comprar mini" data-eq="fundir" data-i="' + p.i + '">🔥</button>')) + '</div></div>';
     }
     var d = document.createElement('div'); d.id = 'eq-elegir';
@@ -9199,7 +9245,7 @@
       if (que !== 'fundir') marcarEqAntes(id);
       if (que === 'equipar') { if (equiparPieza(id, p.i) === false) return; ponerEquipo(); guardar(true); d.remove(); abrirPanelHeroe(id); return; }
       if (que === 'quitar') { p.h = null; sonar('click'); ponerEquipo(); guardar(true); d.remove(); abrirPanelHeroe(id); return; }
-      if (que === 'mejorar') { if (p.n >= EQ_NIVEL_MAX || !pagar(costoMejoraPieza(p))) return; p.n++; sonar('martillo'); consejoTemporal(T('eq_mejorada', { n: nombrePieza(p), v: p.n }) + ' · ' + T('poder_subio', { n: formatoNumero(calcularPoder()) })); ponerEquipo(); actualizarHUD(); guardar(true); abrirHueco(id, t); return; }
+      if (que === 'mejorar') { intentarForja(p); abrirHueco(id, t); return; } /* v9.46: la forja con probabilidad */
       if (que === 'fundir') {
         var oro = oroAlFundir(p);
         confirmarJuego('🔥 ' + T('eq_fundir'), T('eq_fundir_txt', { n: nombrePieza(p), o: oro }), T('eq_fundir'), function () {
@@ -11224,6 +11270,8 @@
       return items;
     },
     // premios de la etapa (sin gemas: las gemas no se regalan)
+    /* v9.46: materiales de forja como premio de la Campaña: Carmot siempre, Piedra de Templado de vez en cuando (más en las etapas altas y en los jefes) */
+    forja: function (n, jefe) { var l = premiosForja(n, jefe); l.forEach(function (q) { estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + q[1]; }); return l.map(function (q) { return { ico: OBJETOS[q[0]].icono, nom: N(q[0]), n: '×' + q[1] }; }); },
     ganar: function (n, ids) {
       var items = [], expH = 30 + 12 * n, expR = 15 + 5 * n;
       ids.forEach(function (id) { if (estado.heroes[id]) darExp(id, expH); });
@@ -11234,7 +11282,7 @@
       var hf = ids[Math.floor(Math.random() * ids.length)], fr = 2 + Math.floor(n / 5);
       if (hf && estado.heroes[hf]) { estado.heroes[hf].frag = (estado.heroes[hf].frag || 0) + fr; items.push({ img: RETRATOS_IMG['h_' + hf] ? 'iconos/ui/' + RETRATOS_IMG['h_' + hf] + '.webp' : '', ico: '🧩', nom: L('Fragmentos de ', 'Shards of ') + NH(hf), n: '×' + fr }); }
       var lib = n % 5 === 0 ? 'libro_gra' : 'libro_peq', nl = 1 + Math.floor(n / 10), ac = n % 10 === 0 ? 'acel_1h' : 'acel_15m';
-      [[lib, nl], [ac, 1]].forEach(function (q) { if (!OBJETOS[q[0]]) return; estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + q[1]; items.push({ ico: OBJETOS[q[0]].icono, nom: N(q[0]), n: '×' + q[1] }); });
+      [[lib, nl], [ac, 1]].concat(premiosForja(n)).forEach(function (q) { if (!OBJETOS[q[0]]) return; estado.mochila[q[0]] = (estado.mochila[q[0]] || 0) + q[1]; items.push({ ico: OBJETOS[q[0]].icono, nom: N(q[0]), n: '×' + q[1] }); }); /* v9.46: + materiales de forja */
       estado.histOleadas = (estado.histOleadas || []).concat([{ n: n, f: Date.now(), v: 100 }]).slice(-20);
       estado.oleada = n + 1; sumarTorneo(PUNTOS_TORNEO.oleada); sumarTemporada('campana', n);
       guardar(true); actualizarHUD();
@@ -11849,10 +11897,8 @@
   }
   function mejorarPiezaInv(i) {
     var p = piezas().filter(function (x) { return x.i === i; })[0];
-    if (!p || p.n >= EQ_NIVEL_MAX || !pagar(costoMejoraPieza(p))) return;
-    p.n++; sonar('martillo'); ponerEquipo(); actualizarHUD();
-    consejoTemporal(T('poder_subio', { n: formatoNumero(calcularPoder()) })); pulso('poder');
-    guardar(true); reabrirPanel();
+    if (!p) return; if (intentarForja(p)) pulso('poder'); /* v9.46 */
+    reabrirPanel();
   }
   function htmlDiario() {
     var racha = rachaDeHoy(), disp = diarioDisponible();
@@ -12926,6 +12972,7 @@
     else if (a === 'tal-sumar') sumarTalento(b.getAttribute('data-r'), +b.getAttribute('data-n') || 1);
     else if (a === 'tal-reset') resetTalentos();
     else if (a === 'pf-ajustes') { sonar('click'); abrirPanelAjustes(); }
+    else if (a === 'eq-fundir-dup') { sonar('click'); fundirDuplicadas(b.getAttribute('data-id')); } /* v9.46 */
     else if (a === 'limpiar-cache') { sonar('click'); b.disabled = true; b.textContent = '🧹 ' + L('Limpiando…', 'Clearing…'); try { guardar(true); } catch (e) {} /* v9.42: primero se guarda en la nube */
       var listo = false, recargar = function () { if (listo) return; listo = true; location.replace(location.pathname + '?r=' + Date.now()); }, pr = [];
       try { if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) pr.push(navigator.serviceWorker.getRegistrations().then(function (rs) { return Promise.all(rs.map(function (x) { return x.unregister(); })); })); } catch (e) {}

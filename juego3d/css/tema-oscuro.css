@@ -1701,3 +1701,11 @@ html body #pantalla.bk-login.oculto, html body #pantalla.oculto { display: none 
 
 /* v9.10 (dueño): la tarjeta del jugador lleva su ✕ arriba (además de cerrarse tocando fuera) */
 html body #perfil-jugador .pj-x { display: grid !important; place-items: center; z-index: 2; font: 700 18px/1 system-ui, sans-serif; padding: 0; cursor: pointer; }
+
+/* v9.46: la forja en la ventana de la pieza: el nombre arriba y los botones (coste, % de éxito, quitar) en una segunda línea */
+#eq-elegir .eq-fila { flex-wrap: wrap; }
+#eq-elegir .eq-fila .ob-txt { flex: 1 1 60%; min-width: 60%; }
+#eq-elegir .eq-fila .eq-exito { font: 800 12px system-ui, sans-serif; margin: 0 6px; white-space: nowrap; align-self: center; }
+#eq-elegir .eq-fila .eq-exito small { font-weight: 600; opacity: .85; }
+#eq-elegir .eq-fila .eq-forja-max { font: 700 12px system-ui, sans-serif; color: #4fd06a; margin: 0 6px; align-self: center; }
+#eq-elegir .eq-fila button .falta { color: #ff7a6a; }

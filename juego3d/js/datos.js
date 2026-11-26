@@ -4,10 +4,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.45';
+var VERSION_JUEGO = '9.46';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.45","2026-11-25","Maestría de héroes: el botón gasta las Estrellas de Mar y Caracolas, se bloquea si falta nivel o materiales (también al dueño), y cada rango suma +35 de ataque y +350 de salud.","Hero Mastery: spends Starfish and Conches, locks when level or materials are missing, and each rank adds +35 attack and +350 health."],
+var NOVEDADES_VER = [["9.46","2026-11-25","Nueva Forja: las piezas de armadura suben hasta Nv 15 con probabilidad de éxito (Polvo de Forja, Carmot y Piedra de Templado); si falla, ganas Bendición de Herrero. Nuevo botón para fundir piezas Nv 1 repetidas.","New Forge: armor pieces go up to Lv 15 with a success chance (Forge Dust, Carmot and Tempering Stone); failures grant Blacksmith Blessing. New button to smelt duplicate Lv 1 pieces."],
+  ["9.45","2026-11-25","Maestría de héroes: el botón gasta las Estrellas de Mar y Caracolas, se bloquea si falta nivel o materiales (también al dueño), y cada rango suma +35 de ataque y +350 de salud.","Hero Mastery: spends Starfish and Conches, locks when level or materials are missing, and each rank adds +35 attack and +350 health."],
   ["9.44","2026-11-25","Campaña: siempre se puede ganar. Cada vez que pierdes una etapa, sus enemigos salen un 15 % más débiles (hasta la mitad), y los jefes son un 20 % más flojos.","Campaign: always winnable. Each loss on a stage makes its enemies 15% weaker (down to half), and bosses are 20% softer."],
   ["9.43","2026-11-25","Campaña: tus héroes van delante y las tropas detrás como refuerzo, y nadie se sale de la imagen.","Campaign: your heroes lead, troops stay behind as reinforcements, and nobody leaves the screen."],
   ["9.42","2026-11-25","El juego gasta menos memoria y va más ligero: la ciudad no se dibuja detrás del Mundo, se libera memoria al salir del Mundo y de la Campaña, nunca corren dos motores a la vez y los teléfonos dibujan a 1,5×. Nuevo en Ajustes: «Limpiar caché y recargar».","The game uses less memory: the city is not drawn behind the World, memory is freed when leaving the World and the Campaign, no duplicated loops, and phones render at 1.5x. New in Settings: Clear cache and reload."],
@@ -523,6 +524,10 @@ var NOMBRES = {
   caracola_real: { es: 'Caracola Real', en: 'Royal Conch', des_es: 'Hace falta para subir el Castillo al nivel 10.', des_en: 'Needed to upgrade the Castle to level 10.' },
   perla_rey: { es: 'Perla del Rey', en: 'King\'s Pearl', des_es: 'Hace falta para subir el Castillo al nivel 11.', des_en: 'Needed to upgrade the Castle to level 11.' },
   corona_coral: { es: 'Corona de Coral', en: 'Coral Crown', des_es: 'Hace falta para subir el Castillo al nivel 12.', des_en: 'Needed to upgrade the Castle to level 12.' },
+  /* v9.46: materiales de la FORJA de armaduras */
+  polvo_forja: { es: 'Polvo de Forja', en: 'Forge Dust', des_es: 'Sirve para subir piezas de armadura del nivel 1 al 5. Se consigue fundiendo piezas repetidas.', des_en: 'Used to upgrade armor pieces from level 1 to 5. Get it by smelting duplicate pieces.' },
+  carmot: { es: 'Carmot', en: 'Carmot', des_es: 'Metal raro para subir piezas de armadura del nivel 6 al 15. Sale en la Campaña y al fundir piezas buenas.', des_en: 'Rare metal to upgrade armor pieces from level 6 to 15. Found in the Campaign and by smelting good pieces.' },
+  piedra_templado: { es: 'Piedra de Templado', en: 'Tempering Stone', des_es: 'Hace falta para subir piezas de armadura del nivel 11 al 15. Se gana en los Torneos y en la Campaña.', des_en: 'Needed to upgrade armor pieces from level 11 to 15. Won in Tournaments and the Campaign.' },
   caracola: { es: 'Caracola', en: 'Conch', des_es: 'Hace falta para subir un edificio o la muralla a los niveles 10 y 11.', des_en: 'Needed to upgrade a building or the wall to levels 10 and 11.' },
   flor_coral: { es: 'Flor de Coral', en: 'Coral Flower', des_es: 'Hace falta para subir un edificio o la muralla al nivel 12.', des_en: 'Needed to upgrade a building or the wall to level 12.' },
   elevacion_sol: { es: 'Elevación del Sol', en: 'Sun Elevation', des_es: 'La ELEVACIÓN: sube el Castillo del 12 al 13★ y abre los niveles con estrella.', des_en: 'The ELEVATION: takes the Castle from 12 to 13★ and opens the star levels.' },
@@ -895,6 +900,7 @@ var OBJETOS = {
   lingote:      { icono: '🥇', da: { oro: 1000000 } },
   botella:      { icono: '🧪' }, // v9.05: energía de la Campaña (se gasta en el mapa de Campaña)
   caracola_real: { icono: '🐚', especial: true }, perla_rey: { icono: '🫧', especial: true }, corona_coral: { icono: '👑', especial: true },
+  polvo_forja:  { icono: '✨', especial: true }, carmot: { icono: '💠', especial: true }, piedra_templado: { icono: '🔷', especial: true }, // v9.46: forja
   caracola:     { icono: '🐚', especial: true }, flor_coral: { icono: '🌺', especial: true },
   elevacion_sol: { icono: '☀️', especial: true }, estrella_rey: { icono: '🌟', especial: true }, estrella_mar: { icono: '⭐', especial: true },
   cofre_galeon: { icono: '🎁', galeon: true }, // v8.02: se abre en el Inventario (contenido en GALEON, juego.js)
