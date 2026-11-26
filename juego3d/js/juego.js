@@ -1088,6 +1088,7 @@
   }
   setTimeout(ponerAdornosCiudad, 1500);
   var altoCastillo = 12;
+  var ATRAS_CASTILLO = 1.2; /* v9.40 (dueño): cuánto se echa el castillo hacia el fondo para que la puerta quede justo frente al puente */
   var TAM_CASTILLO = 1.78; /* v8.89 (dueño): el castillo más grande para llenar su parcela (antes 1.44) */
   function ponerCastillo() {
     escena.remove(castillo);
@@ -1096,7 +1097,8 @@
     castillo = M.castilloEtapa(nvC);
     castillo.userData.castillo = true;
     /* v8.95 (dueño): el castillo nunca sobresale de su plaza: se mide su esquina más lejana del centro antes de girarlo */
-    castillo.updateMatrixWorld(true); var rEsq = 0, vC = new THREE.Vector3(); castillo.traverse(function (m) { var pa = m.geometry && m.geometry.attributes && m.geometry.attributes.position; if (!pa) return; for (var i = 0; i < pa.count; i++) { vC.fromBufferAttribute(pa, i).applyMatrix4(m.matrixWorld); var rr = Math.hypot(vC.x, vC.z); if (rr > rEsq) rEsq = rr; } });
+    castillo.updateMatrixWorld(true); var b0C = new THREE.Box3().setFromObject(castillo), c0x = isFinite(b0C.min.x) ? (b0C.min.x + b0C.max.x) / 2 : 0, c0z = isFinite(b0C.min.z) ? (b0C.min.z + b0C.max.z) / 2 : 0; /* v9.40: se mide desde su propio centro (luego se centra en la plataforma) */
+    var rEsq = 0, vC = new THREE.Vector3(); castillo.traverse(function (m) { var pa = m.geometry && m.geometry.attributes && m.geometry.attributes.position; if (!pa) return; for (var i = 0; i < pa.count; i++) { vC.fromBufferAttribute(pa, i).applyMatrix4(m.matrixWorld); var rr = Math.hypot(vC.x - c0x, vC.z - c0z); if (rr > rEsq) rEsq = rr; } });
     castillo.rotation.y = Math.atan2(EJE_U.x, EJE_U.z) - GIRO_DIAG; // v6.49: la puerta mira de frente a la cámara en diagonal
     // v6.86: el castillo es lo que manda: de 11 de ancho al nivel 1 hasta 25 al nivel 30 (la plaza central deja hasta ~26)
     castillo.updateMatrixWorld(true);
@@ -1104,15 +1106,19 @@
     // v7.48: como en Kingdoms of Camelot el castillo domina la villa: llena la plaza octogonal desde el principio (21 de ancho) y crece hasta 27
     var metaC = TAM_CASTILLO * (21 + 4 * Math.pow((Math.min(16, nvC) - 1) / 15, 0.8) + 2 * Math.max(0, Math.min(27, nvC) - 16) / 11); // v7.52: +15%
     if (nvC >= 16) metaC *= 1.3; /* v8.89: los castillos grandes llenan su plaza */
-    if (anC > 0.01) { var escC = metaC / anC, LIM_PLAZA = COLINA.r - 0.5; if (rEsq > 0.01 && rEsq * escC > LIM_PLAZA) escC = LIM_PLAZA / rEsq; castillo.scale.multiplyScalar(escC); }
+    if (anC > 0.01) { var escC = metaC / anC, LIM_PLAZA = COLINA.r - 0.5 - ATRAS_CASTILLO; /* v9.40: deja sitio para echarlo hacia atrás */ if (rEsq > 0.01 && rEsq * escC > LIM_PLAZA) escC = LIM_PLAZA / rEsq; castillo.scale.multiplyScalar(escC); }
     castillo.position.y = COLINA.alto; // v7.55: arriba de su colina
+    /* v9.40 (dueño): CENTRADO en el medio exacto de su plataforma (por su caja real) y un poco hacia el fondo: la puerta queda frente al puente sin pisar el borde */
+    castillo.updateMatrixWorld(true); var bxCen = new THREE.Box3().setFromObject(castillo);
+    if (isFinite(bxCen.min.x)) { castillo.position.x -= (bxCen.min.x + bxCen.max.x) / 2; castillo.position.z -= (bxCen.min.z + bxCen.max.z) / 2; castillo.position.x -= EJE_U.x * ATRAS_CASTILLO; castillo.position.z -= EJE_U.z * ATRAS_CASTILLO; }
+    window.__castilloListo = !castillo.userData.esperandoModelo; /* v9.40: la pantalla de carga espera a que esté puesto */
     escena.add(castillo);
     castillo.updateMatrixWorld(true); var altoC = new THREE.Box3().setFromObject(castillo).max.y; if (!isFinite(altoC)) altoC = COLINA.alto + 12; /* v9.30: mientras baja el castillo nuevo no hay nada que medir */
     if (adornosCastillo) { escena.remove(adornosCastillo); adornosCastillo = null; }
     altoC += 0.5; altoCastillo = altoC;
     if (insigniaCastillo) escena.remove(insigniaCastillo);
     insigniaCastillo = M.insigniaNivel(estado.castillo || 1);
-    insigniaCastillo.position.set(0, altoC + 1.4, 0); insigniaCastillo.scale.set(1.8, 1.8, 1);
+    insigniaCastillo.position.set(castillo.position.x, altoC + 1.4, castillo.position.z); insigniaCastillo.scale.set(1.8, 1.8, 1); /* v9.40: encima del castillo ya centrado */
     escena.add(insigniaCastillo);
   }
   function danoCastillo() { return CASTILLO.dano + ((estado.castillo || 1) - 1) * MEJORA_CASTILLO.dano; }
@@ -13415,7 +13421,11 @@
     $('pantalla').classList.remove('oculto');
     cerrarPanel();
   }
-  function ocultarPantalla() { $('pantalla').classList.remove('bk-login', 'bk-crear'); $('pantalla').classList.add('oculto'); enMenu = false; cambiarPausa(false); }
+  function ocultarPantalla() {
+    /* v9.40 (dueño): la pantalla de «Cargando…» (la que se ve igual que la portada) espera a que el castillo esté puesto, como mucho 10 s */
+    var pP = $('pantalla'); if (pP && pP.classList.contains('como-portada') && window.__castilloListo === false && !(ocultarPantalla.desde && Date.now() - ocultarPantalla.desde > 10000)) { ocultarPantalla.desde = ocultarPantalla.desde || Date.now(); clearTimeout(ocultarPantalla.tm); ocultarPantalla.tm = setTimeout(ocultarPantalla, 150); return; }
+    ocultarPantalla.desde = 0;
+    $('pantalla').classList.remove('bk-login', 'bk-crear'); $('pantalla').classList.add('oculto'); enMenu = false; cambiarPausa(false); }
 
   var habiaUsuario = false, duenoPorCuenta = false, modoInvitado = !!leerPref().invitado, modoCrear = false, partidaNube = null, cargandoNube = false, errorCuenta = '';
   function botonIdioma() {

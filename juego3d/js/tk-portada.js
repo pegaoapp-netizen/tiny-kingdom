@@ -99,7 +99,7 @@ var PORTADA = {
     var pa = document.getElementById('pantalla'), pb = document.getElementById('pantalla-botones'), pf = document.getElementById('pantalla-form');
     var pide = pa && !pa.classList.contains('oculto') && ((pb && pb.children.length) || (pf && pf.children.length));
     var dentro = !pa || pa.classList.contains('oculto');
-    listo = listo && (dentro || pide);
+    listo = listo && (dentro || pide) && (pide || window.__castilloListo !== false); /* v9.40 (dueño): no se abre la villa con la plataforma vacía: espera a que el castillo esté puesto (como mucho 10 s; luego sale el de antes) */
     var vv = document.getElementById('pt-version'); if (vv && typeof VERSION_JUEGO !== 'undefined' && !vv.textContent) vv.textContent = 'v' + VERSION_JUEGO;
     if (listo && av < 90) av = 90;
     if (listo && av >= 100 && pasado >= MIN && !fin) { fin = true; clearInterval(reloj); d.classList.add('fuera'); setTimeout(function () { d.remove(); }, 700); }
