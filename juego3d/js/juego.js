@@ -6304,7 +6304,7 @@
       if (s.modelo.userData.banderas) s.modelo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
     });
     if (castillo.userData.colorPuesto !== (estado.colorBandera || 'rojo')) { castillo.userData.colorPuesto = estado.colorBandera || 'rojo'; pintarBanderasCastillo(); }
-    castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); }); if (castillo.userData.aura) { castillo.userData.aura[0].material.opacity = 0.4 + 0.25 * Math.sin(tiempo * 2.2); castillo.userData.aura[1].material.opacity = 0.35 + 0.2 * Math.sin(tiempo * 1.6); }
+    (castillo.userData.banderas || []).forEach(function (b) { M.ondear(b, tiempo); }); /* v9.31 */ if (castillo.userData.aura) { castillo.userData.aura[0].material.opacity = 0.4 + 0.25 * Math.sin(tiempo * 2.2); castillo.userData.aura[1].material.opacity = 0.35 + 0.2 * Math.sin(tiempo * 1.6); }
 
     // ---- impuestos del castillo ----
     impuestoCd += dt;
@@ -14596,7 +14596,7 @@
       // en el menú la cámara gira despacio
       tiempo += dtReal;
       cam.az = AZ_CAM + GIRO_DIAG + Math.sin(tiempo * 0.15) * 0.25;
-      castillo.userData.banderas.forEach(function (b) { M.ondear(b, tiempo); });
+      (castillo.userData.banderas || []).forEach(function (b) { M.ondear(b, tiempo); }); /* v9.31 */
     }
     if (!enMenu) cam.az += (azVista() - cam.az) * Math.min(1, dtReal * (pellizco || giroRaton ? 30 : 6));
     if (brujula) brujula.style.transform = 'rotate(' + ((CAMV.giro + GIRO_PROTO) * 180 / Math.PI).toFixed(1) + 'deg)';

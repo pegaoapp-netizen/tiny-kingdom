@@ -1,47 +1,55 @@
-/* Brother Kingdom · MUÑECOS 3D DE LA CAMPAÑA (v9.30, pedido del dueño: «cambiar esos muñecos feos por los que creé»).
- * La batalla de la Campaña se dibuja en 2D (Canvas). Este archivo carga los modelos 3D del dueño (modelos/campana/*.glb),
- * los pone a caminar UNA vez en un lienzo aparte y guarda 8 fotos de cada uno. Luego la batalla solo pega esas fotos: va rápido en el teléfono.
- * Solo se baja el modelo de los enemigos que salen en la batalla (cada uno ~1,4 MB), y mientras carga se sigue viendo el círculo de antes.
- * Uso desde tk-campana.js: TKSprites.foto(ico, jefe, anda, t) → lienzo con la foto, o null si todavía no está.
+/* Brother Kingdom · MUÑECOS 3D DE LA CAMPAÑA (v9.30–9.31, pedido del dueño: «cambiar esos muñecos feos», también los de su lado).
+ * La batalla de la Campaña se dibuja en 2D (Canvas). Este archivo carga los modelos 3D (los enemigos que hizo el dueño en modelos/campana/
+ * y los héroes de modelos/<héroe>.glb), los pone a moverse UNA vez en un lienzo aparte y guarda fotos de cada movimiento.
+ * Luego la batalla solo pega esas fotos: va rápido en el teléfono. Solo se baja lo que sale en la batalla (~1,4 MB cada uno);
+ * mientras carga se sigue viendo el círculo de antes.
+ * Uso desde tk-campana.js: TKSprites.foto(clave, estado, t) → lienzo, o null si todavía no está.
+ *   clave: el dibujito del enemigo (con «j» delante si es jefe) o «h:» + id del héroe.   estado: 'anda' | 'ataca' | 'quieto'.
  */
 (function () {
   'use strict';
-  // qué modelo va con cada enemigo (por su dibujito); los jefes se distinguen con el «j»
-  var MODELO = {
+  // enemigos: por su dibujito (los jefes llevan «j» delante)
+  var ENEMIGO = {
     '🗡️': '01_bandido', '🏹': '02_arquero_bandido', '🐺': '03_lobo', '👺': '04_trasgo', '🔮': '05_chaman_trasgo', '👹': '06_ogro',
     '🪨': '07_trol_de_piedra', '🧌': '07_trol_de_piedra', '💀': '08_esqueleto', '🧙': '09_nigromante', /* '🦇': gárgola, falta el modelo */
     'j🪓': '11_capitan_rojo', 'j🦹': '12_garra_negra', 'j🐺': '13_colmillo', 'j🧙‍♀️': '14_zarza', 'j⚒️': '15_brusco', 'j🧌': '16_gorlak',
     'j🛡️': '17_caballero_negro', 'j🐲': '18_ignaroth', 'j👹': '06_ogro', 'j👺': '04_trasgo', 'j🔮': '05_chaman_trasgo', 'j🏹': '02_arquero_bandido'
   };
-  var VERSION = 1, N_FOTOS = 8, AN = 150, AL = 190;
+  // héroes que ya tienen modelo 3D (los demás siguen con su retrato en círculo)
+  var HEROE = { sol: 1, luna: 1, ancla: 1, brisa: 1, chispa: 1, roble: 1, trueno: 1, pluma: 1 };
+  var N_FOTOS = 8, AN = 150, AL = 190;
   var cache = {}, cola = [], trabajando = false, rend = null;
 
-  function clave(ico, jefe) { return jefe && MODELO['j' + ico] ? 'j' + ico : ico; }
-  function nombreModelo(ico, jefe) { return MODELO[clave(ico, jefe)] || null; }
-
+  function ruta(clave) {
+    if (clave.indexOf('h:') === 0) { var id = clave.slice(2); return HEROE[id] ? { url: 'modelos/' + id + '.glb?v=' + (window.VERSION_JUEGO || 1), giro: 2.35 } : null; }
+    var n = ENEMIGO[clave]; return n ? { url: 'modelos/campana/' + n + '.glb?v=1', giro: -0.65 } : null;
+  }
   function renderer() {
-    if (rend) return rend;
+    if (rend !== null) return rend;
     try { rend = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); rend.setPixelRatio(1); rend.setSize(AN, AL, false); rend.setClearColor(0x000000, 0); }
     catch (e) { rend = false; }
     return rend;
   }
+  function clipDe(gl, re) { return (gl.animations || []).filter(function (a) { return re.test(a.name); })[0] || null; }
 
-  function hacerFotos(nombre, gl) {
+  function hacerFotos(gl, giroY) {
     var R = renderer(); if (!R) return null;
     var esc = new THREE.Scene(), m = gl.scene;
     esc.add(new THREE.HemisphereLight(0xfff4e0, 0x5a4a3a, 1.6));
     var dl = new THREE.DirectionalLight(0xffffff, 1.1); dl.position.set(-2, 4, 3); esc.add(dl);
     m.traverse(function (o) {
       if (o.isMesh && o.material) {
-        var mp = o.material.map || null;
-        o.material = new THREE.MeshLambertMaterial({ map: mp, color: mp ? 0xffffff : 0x999999, emissive: mp ? 0x8a8a8a : 0x000000, emissiveMap: mp, skinning: !!o.isSkinnedMesh });
+        var mp = o.material.map || null, col = o.material.color ? o.material.color.getHex() : 0x999999;
+        o.material = new THREE.MeshLambertMaterial({ map: mp, color: mp ? 0xffffff : col, emissive: mp ? 0x8a8a8a : 0x222222, emissiveMap: mp, skinning: !!o.isSkinnedMesh });
         o.frustumCulled = false;
       }
     });
-    var giro = new THREE.Group(); giro.add(m); esc.add(giro);
-    giro.rotation.y = -0.65; /* mira hacia abajo a la izquierda, hacia tus héroes */
-    var mix = null, clip = null;
-    if (gl.animations && gl.animations.length) { mix = new THREE.AnimationMixer(m); clip = gl.animations.filter(function (a) { return /walk/i.test(a.name); })[0] || gl.animations[0]; mix.clipAction(clip).play(); mix.update(0); }
+    var giro = new THREE.Group(); giro.add(m); esc.add(giro); giro.rotation.y = giroY;
+    var anda = clipDe(gl, /walk|caminar/i) || clipDe(gl, /run|correr/i) || (gl.animations || [])[0] || null;
+    var ataca = clipDe(gl, /attack|ataque|atacar/i), quieto = clipDe(gl, /idle|quieto/i);
+    var mix = anda ? new THREE.AnimationMixer(m) : null;
+    function poner(clip, t) { if (!mix || !clip) return; mix.stopAllAction(); var ac = mix.clipAction(clip); ac.reset(); ac.play(); mix.setTime(t); }
+    poner(quieto || anda, 0);
     // los de Mixamo miden diminutos antes de posar: se mide con los huesos ya colocados
     esc.updateMatrixWorld(true);
     var bx = new THREE.Box3(), pv = new THREE.Vector3(), hayHueso = false;
@@ -49,47 +57,42 @@
     if (!hayHueso || bx.isEmpty()) bx.setFromObject(m);
     var tam = new THREE.Vector3(); bx.getSize(tam);
     var alto = Math.max(tam.y, 0.001) * (hayHueso ? 1.12 : 1), ancho = Math.max(tam.x, tam.z, 0.001);
-    var cam = new THREE.PerspectiveCamera(30, AN / AL, 0.01, 1000), dist = Math.max(alto / (2 * Math.tan(15 * Math.PI / 180)), ancho * 1.6) * 1.08;
+    var cam = new THREE.PerspectiveCamera(30, AN / AL, 0.001, 10000), dist = Math.max(alto / (2 * Math.tan(15 * Math.PI / 180)), ancho * 1.6) * 1.08;
     var cy = bx.min.y + alto * 0.5;
     cam.position.set(0, cy + alto * 0.18, dist); cam.lookAt(0, cy, 0);
-    var fotos = [], dur = clip ? clip.duration : 1;
-    for (var i = 0; i < (mix ? N_FOTOS : 1); i++) {
-      if (mix) { mix.setTime(dur * i / N_FOTOS); }
-      R.render(esc, cam);
-      var c = document.createElement('canvas'); c.width = AN; c.height = AL; c.getContext('2d').drawImage(R.domElement, 0, 0); fotos.push(c);
-    }
-    // se suelta la memoria del modelo (las fotos ya están guardadas)
+    function foto() { R.render(esc, cam); var c = document.createElement('canvas'); c.width = AN; c.height = AL; c.getContext('2d').drawImage(R.domElement, 0, 0); return c; }
+    function serie(clip, n) { var l = []; if (!clip) return l; for (var i = 0; i < n; i++) { poner(clip, clip.duration * i / n); l.push(foto()); } return l; }
+    var res = { anda: mix ? serie(anda, N_FOTOS) : [foto()] };
+    res.ataca = ataca ? serie(ataca, N_FOTOS) : res.anda;
+    res.quieto = quieto ? serie(quieto, 1) : [res.anda[0]];
     m.traverse(function (o) { if (o.isMesh) { try { o.geometry.dispose(); if (o.material.map) o.material.map.dispose(); o.material.dispose(); } catch (e) {} } });
-    return fotos;
+    return res;
   }
 
   function siguiente() {
     if (trabajando || !cola.length) return;
     if (!window.THREE || !THREE.GLTFLoader) { cola = []; return; }
     trabajando = true;
-    var nombre = cola.shift(), e = cache[nombre];
-    new THREE.GLTFLoader().load('modelos/campana/' + nombre + '.glb?v=' + VERSION, function (gl) {
-      try { e.fotos = hacerFotos(nombre, gl); } catch (err) { e.falla = true; try { console.warn('Campaña · muñeco ' + nombre + ':', err); } catch (x) {} }
+    var clave = cola.shift(), e = cache[clave], r = ruta(clave);
+    new THREE.GLTFLoader().load(r.url, function (gl) {
+      try { e.fotos = hacerFotos(gl, r.giro); if (!e.fotos) e.falla = true; } catch (err) { e.falla = true; try { console.warn('Campaña · muñeco ' + clave + ':', err); } catch (x) {} }
       trabajando = false; setTimeout(siguiente, 30);
     }, undefined, function () { e.falla = true; trabajando = false; setTimeout(siguiente, 30); });
   }
-
-  function pedir(nombre) {
-    var e = cache[nombre];
-    if (!e) { e = cache[nombre] = { fotos: null, falla: false }; cola.push(nombre); siguiente(); }
+  function pedir(clave) {
+    var e = cache[clave];
+    if (!e) { e = cache[clave] = { fotos: null, falla: false }; if (ruta(clave)) { cola.push(clave); siguiente(); } else e.falla = true; }
     return e;
   }
 
   window.TKSprites = {
-    /* la foto que toca: camina si «anda», si no se queda en la primera */
-    foto: function (ico, jefe, anda, t) {
-      var n = nombreModelo(ico, jefe); if (!n) return null;
-      var e = pedir(n); if (!e.fotos || !e.fotos.length) return null;
-      var k = anda && e.fotos.length > 1 ? Math.floor(((t || 0) * 9) % e.fotos.length) : 0;
-      return e.fotos[k];
+    claveEnemigo: function (ico, jefe) { return jefe && ENEMIGO['j' + ico] ? 'j' + ico : ico; },
+    foto: function (clave, estado, t) {
+      if (!clave) return null;
+      var e = pedir(clave); if (!e.fotos) return null;
+      var l = e.fotos[estado] || e.fotos.anda; if (!l || !l.length) return null;
+      return l.length > 1 ? l[Math.floor(((t || 0) * (estado === 'ataca' ? 12 : 9)) % l.length)] : l[0];
     },
-    /* para bajar antes los de una misión: TKSprites.precargar([{ ico, jefe }]) */
-    precargar: function (lista) { (lista || []).forEach(function (x) { var n = nombreModelo(x.ico, x.jefe); if (n) pedir(n); }); },
-    info: function () { var o = {}; for (var k in cache) o[k] = cache[k].fotos ? cache[k].fotos.length : (cache[k].falla ? 'falla' : 'cargando'); return o; }
+    info: function () { var o = {}; for (var k in cache) o[k] = cache[k].fotos ? 'listo' : (cache[k].falla ? 'falla' : 'cargando'); return o; }
   };
 })();

@@ -190,7 +190,8 @@
     var dir = az ? 1 : -1, t = performance.now() / 1000;
     // v9.02: soldados dibujados (casco, escudo y lanza) detrás del héroe
     var tun = az ? ['#2f6be0', '#1a3f8a'] : ['#c0281e', '#6a0e08'];
-    var conFig = !az && window.TKSprites && TKSprites.foto(u.ico, u.jefe, false, 0); /* v9.30: con muñeco 3D no hacen falta los soldaditos */
+    var claveFig = window.TKSprites ? (az ? (u.h && u.h.id ? 'h:' + u.h.id : null) : TKSprites.claveEnemigo(u.ico, u.jefe)) : null; /* v9.31: también tus héroes */
+    var conFig = claveFig && TKSprites.foto(claveFig, 'quieto', 0); /* v9.30: con muñeco 3D no hacen falta los soldaditos */
     for (var k = 0; k < (conFig ? 0 : vivos); k++) {
       var sx = u.x - dir * (15 + (k % 2) * 11), sy = u.y + (k < 2 ? -10 : 10) + (k % 2) * 4, salto = u.anda ? Math.abs(Math.sin(t * 9 + k)) * 2 : 0, gol = u.cd > u.ritmo - 0.15 ? 3 : 0;
       cx.fillStyle = 'rgba(0,0,0,0.3)'; cx.beginPath(); cx.ellipse(sx + 2, sy + 6, 7, 2.6, 0, 0, 7); cx.fill();
@@ -204,7 +205,7 @@
     if (!u.vivo) { cx.globalAlpha = 0.35; }
     var r = u.jefe ? (mis ? 24 : 19) : 16, sal = u.anda ? Math.abs(Math.sin(t * 8)) * 2 : 0;
     /* v9.30 (dueño): los enemigos son los muñecos 3D que hizo él (fotos sacadas de sus modelos, ver tk-campana-sprites.js); mientras cargan, el círculo de antes */
-    var fig = !az && window.TKSprites ? TKSprites.foto(u.ico, u.jefe, u.anda && u.vivo, t) : null, hFig = fig ? r * (u.jefe ? 5.2 : 4.2) : 0, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
+    var estFig = !u.vivo ? 'quieto' : u.anda ? 'anda' : (u.cd > u.ritmo - 0.35 ? 'ataca' : 'quieto'), fig = claveFig ? TKSprites.foto(claveFig, estFig, t) : null, hFig = fig ? r * (u.jefe ? 5.2 : (az ? 4.6 : 4.2)) : 0, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
     cx.fillStyle = '#0005'; cx.beginPath(); cx.ellipse(u.x, u.y + r * 0.8, fig ? wFig * 0.32 : r, r * 0.35, 0, 0, 7); cx.fill();
     if (fig) { cx.drawImage(fig, u.x - wFig / 2, pie - hFig, wFig, hFig); if (u.escudo > 0) { cx.strokeStyle = '#7fd3ff88'; cx.lineWidth = 2; cx.beginPath(); cx.ellipse(u.x, pie - hFig / 2, wFig * 0.45, hFig * 0.55, 0, 0, 7); cx.stroke(); } }
     else {
