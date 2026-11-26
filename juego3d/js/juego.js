@@ -11349,7 +11349,7 @@
     botellas: function () { return Math.max(0, Math.floor((estado.mochila && estado.mochila.botella) || 0)); },
     gastarBotellas: function (n) { var t = (estado.mochila && estado.mochila.botella) || 0; if (n > t) return false; estado.mochila.botella = t - n; guardar(true); return true; },
     darBotellas: function (n) { if (n > 0) { estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); } },
-    comprarBotellas: function (n, g) { if (!(n > 0) || !(g > 0) || !pagarViejo(0, g)) return false; estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); sonar('moneda'); return true; },
+    comprarBotellas: function (n, g) { if (!(n > 0) || !(g > 0)) return false; var okB; gemasOk = true; try { okB = pagarViejo(0, g); } finally { gemasOk = false; } if (!okB) return false; /* v9.87 (Felix: «está bloqueado»): la pregunta de gemas quedaba DETRÁS de la Campaña y nunca se podía aceptar; el precio ya sale en el botón */ estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); sonar('moneda'); return true; },
     gemas: function () { return estado.gemasInfinitas ? Infinity : estado.gemas || 0; },
     regalosBotellas: function () { return { dia: BOT_DIA, mes: BOT_MES }; },
     revisarSemana: function () { revisarCampSemana(); },
@@ -11650,8 +11650,9 @@
     '<path d="M6 22 Q32 2 58 22 L58 26 L6 26 Z" fill="url(#azc1)" stroke="#2a0c06" stroke-width="2"/><rect x="6" y="26" width="52" height="26" rx="3" fill="url(#azc1)" stroke="#2a0c06" stroke-width="2"/>' +
     '<rect x="14" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="44" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="6" y="24" width="52" height="5" fill="#d9a13a" stroke="#6a4a10"/>' +
     '<rect x="27" y="27" width="10" height="12" rx="2" fill="#f2c45a" stroke="#6a4a10"/><circle cx="32" cy="33" r="2" fill="#3a2410"/></svg>';
-  var PREMIOS_AZAR = [['bolsa_oro', 20], ['saco_comida', 18], ['saco_madera', 18], ['saco_piedra', 14], ['acel_5m', 14], ['acel_15m', 8], ['libro_peq', 6], ['cofre_madera', 6], ['acel_1h', 3], ['cofre_plata', 2]];
-  var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4]];
+  var PREMIOS_AZAR = [['bolsa_oro', 20], ['saco_comida', 18], ['saco_madera', 18], ['saco_piedra', 14], ['acel_5m', 14], ['acel_15m', 8], ['libro_peq', 6], ['cofre_madera', 6], ['acel_1h', 3], ['cofre_plata', 2], ['botella', 8]]; /* v9.87 (dueño): un cofre puede traer botellas de campaña */
+  var CANT_AZAR = { botella: 5 }, CANT_AZAR_PREM = { botella: 15 }; /* cuántas da ese cofre (los demás premios dan 1) */
+  var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4], ['botella', 10]];
   var RAROS_AZAR = ['cofre_oro', 'libro_gra', 'acel_8h'];
   var modoAzar = 'normal', azarGrid = null;
   // v8.19: fichas gratis de cada día según tu nivel (Nv 1-9: 1 · Nv 10-19: 2 · Nv 20+: 3). Las gratis NO se acumulan: si no las usas hoy, se pierden.
@@ -11685,7 +11686,7 @@
     var html = '<div class="iv-modos"><button data-accion="azar-modo" data-m="normal" class="' + (!prem ? 'activo' : '') + '">' + L('Azar', 'Lucky') + '</button>' + (evP ? '<button data-accion="azar-modo" data-m="premium" class="' + (prem ? 'activo' : '') + '">' + L('Azar Premium', 'Premium Lucky') + ' ⏳' + fmtTiempo(Math.ceil((evP.fin - Date.now()) / 1000)) + '</button>' : '') + '</div>' +
       '<div class="az-guia"><div class="az-cara">🦜<span class="az-gorro">🏴‍☠️</span></div><div class="az-globo">' + (prem ? L('¡Usa más fichas y gana premios mejores, marinero!', 'Use more tokens and win better prizes, sailor!') : L('¡Usa una ficha de la suerte y prueba tu fortuna!', 'Use a lucky token and try your fortune!')) + '<small>— ' + L('Capitana Coral', 'Captain Coral') + '</small></div></div>' +
       '<div class="az-tablero">' + azarGrid.map(function (k, i) {
-        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
+        return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + (((prem ? CANT_AZAR_PREM : CANT_AZAR)[k] || 1) > 1 ? ' ×' + (prem ? CANT_AZAR_PREM : CANT_AZAR)[k] : '') + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
       (azarGrid.every(function (x) { return !x; }) && !azarAvisoVisto ? '<div class="az-cinta az-cinta-aviso">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
         L('¡Toca el cofre que quieras abrir! Cada uno cuesta ' + costo + ' ficha' + (costo > 1 ? 's' : '') + '.', 'Tap the chest you want to open! Each costs ' + costo + ' token' + (costo > 1 ? 's' : '') + '.') + '</div>' /* v9.81: la cuenta de fichas sale una sola vez, encima de los botones */ : '') + '</div>' +
@@ -11712,7 +11713,7 @@
     if (fichasAzar() < costo) { consejoTemporal(L('No tienes fichas suficientes.', 'Not enough tokens.')); sonar('error'); return; }
     gastarFichasAzar(costo); // v8.19: primero se gastan las gratis de hoy
     var libres = cerrados, ganado = {};
-    libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; estado.mochila[k] = (estado.mochila[k] || 0) + 1; ganado[k] = (ganado[k] || 0) + 1; });
+    libres.forEach(function (c) { var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; var qk = (prem ? CANT_AZAR_PREM : CANT_AZAR)[k] || 1; estado.mochila[k] = (estado.mochila[k] || 0) + qk; ganado[k] = (ganado[k] || 0) + qk; });
     sonar('magia'); guardar(true); abrirAzar();
     // los cofres se abren uno por uno
     document.querySelectorAll('.az-celda.abierta').forEach(function (c) { if (libres.indexOf(+c.getAttribute('data-c')) < 0) c.style.animation = 'none'; }); /* solo se anima lo que acabas de abrir */
@@ -11735,7 +11736,7 @@
       if (!azarGrid || azarGrid.every(function (x) { return x; })) { azarGrid = [null, null, null, null, null, null, null, null, null]; nuevos = []; }
       var cerr = [0, 1, 2, 3, 4, 5, 6, 7, 8].filter(function (c) { return !azarGrid[c]; }), c = cerr[Math.floor(Math.random() * cerr.length)];
       var k = sortearAzar(prem ? PREMIOS_AZAR_PREMIUM : PREMIOS_AZAR); azarGrid[c] = k; nuevos.push(c);
-      estado.mochila[k] = (estado.mochila[k] || 0) + 1; ganado[k] = (ganado[k] || 0) + 1;
+      var qk = (prem ? CANT_AZAR_PREM : CANT_AZAR)[k] || 1; estado.mochila[k] = (estado.mochila[k] || 0) + qk; ganado[k] = (ganado[k] || 0) + qk;
     }
     sonar('magia'); guardar(true); abrirAzar();
     document.querySelectorAll('.az-celda.abierta').forEach(function (el) { if (nuevos.indexOf(+el.getAttribute('data-c')) < 0) el.style.animation = 'none'; });
