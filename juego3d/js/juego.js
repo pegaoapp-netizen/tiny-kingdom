@@ -14356,7 +14356,7 @@
     var ocultar = enMenu || (enMundo && !hayMarchaYa) || !!panelActual || document.body.classList.contains('panel-abierto');
     d.classList.toggle('en-mundo', !!enMundo);
     d.classList.toggle('oculto', ocultar);
-    if (ocultar) { var mpO = $('mv-pop'); if (mpO) mpO.style.display = 'none'; return; } /* v8.55 */
+    if (ocultar) { var mpO = $('mv-pop'); if (mpO) mpO.style.display = 'none'; var dlO = $('dk-lista'); if (dlO) { dlO.style.display = 'none'; dlO.innerHTML = ''; dlO.dataset.h = ''; dlO.dataset.est = ''; } return; } /* v8.55 · v9.70: la lista tampoco se queda congelada */
     // va justo encima de la barra del chat (o de la barra de abajo)
     var ref = $('chat-barra') || $('abajo');
     if (ref) { var y = Math.max(0, window.innerHeight - ref.getBoundingClientRect().top) + 4; if (d.dataset.y !== String(y)) { d.dataset.y = y; d.style.bottom = y + 'px'; } }
@@ -14373,7 +14373,7 @@
       b.classList.toggle('con-algo', !!activo[k]);
       if (k === 'marchar') { var nB = listaMovimientos(ahora).length, bd = b.querySelector('.kc-badge'); if (nB) { if (!bd) { bd = document.createElement('i'); bd.className = 'kc-badge'; b.appendChild(bd); } if (bd.textContent !== String(nB)) bd.textContent = nB; } else if (bd) bd.remove(); } /* v8.56 */
     });
-    if (!dockAbierto) return;
+    if (!dockAbierto) { pintarListaMarchas([], ahora); return; } /* v9.70 (dueño: «se para la marcha»): al recogerse la barra, la lista se esconde (antes se quedaba congelada con el último tiempo) */
     var txt = '', btn = '', acc = '', lleno = false;
     if (dockPest === 'territorios') {
       lleno = activo.territorios;
