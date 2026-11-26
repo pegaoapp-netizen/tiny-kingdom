@@ -11159,6 +11159,8 @@
     heroesPanel: function () { vistaTropa.modo = 'lista'; abrirPanelTropas(); },
     /* v8.47: TROPAS EN LA CAMPAÑA: el jugador elige cuáles y cuántas van; las que caen se pierden */
     tropas: function () { return Object.keys(TROPAS).filter(function (k) { return k !== 'heroe' && cuentaTipo(k) > 0; }).map(function (k) { var t = TROPAS[k]; return { k: k, nombre: N(k), ico: t.icono, n: cuentaTipo(k), vida: t.vida || 100, dano: t.dano || 10, distancia: (t.alcance || 1) > 3 }; }); },
+    /* v9.35 (dueño): las bajas de la Campaña van 70 % a la Enfermería (hasta llenar las camas); devuelve las que no cupieron para que se cuenten como muertas */
+    herir: function (m) { var puestos = 0, sinCama = {}; estado.heridos = estado.heridos || {}; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (!q) return; var camas = Math.max(0, capacidadEnfermeria() - totalHeridos()), pon = Math.min(q, camas); if (pon > 0) { quitarDeCasa(k, pon); estado.heridos[k] = (estado.heridos[k] || 0) + pon; puestos += pon; } if (q - pon > 0) sinCama[k] = q - pon; }); if (puestos) { guardar(true); actualizarHUD(); } return { heridos: puestos, sinCama: sinCama }; },
     perder: function (m) { var tot = 0; Object.keys(m || {}).forEach(function (k) { var q = Math.min(cuentaTipo(k), Math.max(0, Math.floor(m[k] || 0))); if (q > 0) { quitarDeCasa(k, q); tot += q; } }); if (tot) { guardar(true); actualizarHUD(); } return tot; },
     num: formatoNumero,
     abierta: function (v) { window.__tkCampanaAbierta = !!v; if (!v) { actualizarHUD(); } },

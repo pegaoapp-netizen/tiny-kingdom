@@ -32,7 +32,7 @@
     '#tkc .tkc-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;max-height:34vh;overflow-y:auto;max-width:460px;margin:0 auto}' +
     '#tkc .tkc-tit,#tkc .tkc-bts{max-width:460px;margin-left:auto;margin-right:auto}' +
     '#tkc .tkc-h{position:relative;border-radius:10px;border:2px solid #6b4a1a;background:#3a2410;padding:3px 2px 4px;text-align:center;min-width:0}' +
-    '#tkc .tkc-h img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;display:block;background:#0004}' +
+    '#tkc .tkc-h img{width:100%;aspect-ratio:1;object-fit:cover;object-position:center 18%;border-radius:7px;display:block;background:#0004}' +
     '#tkc .tkc-h small{display:block;font-size:10px;color:#f3e6c8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
     '#tkc .tkc-h i{position:absolute;left:4px;top:4px;font-style:normal;font-size:10px;color:#fff;background:#000c;border-radius:6px;padding:0 4px}' +
     '#tkc .tkc-h.sel{border-color:#4fa3ff;box-shadow:0 0 8px #4fa3ff}' +
@@ -42,7 +42,7 @@
     '#tkc .tkc-b.azul{background:linear-gradient(#5b9bff,#1f55c9)}#tkc .tkc-b.naranja{background:linear-gradient(#ffc24a,#e07a10)}#tkc .tkc-b.verde{background:linear-gradient(#6fdc5a,#2f8f22)}#tkc .tkc-b.gris{background:linear-gradient(#8a7a66,#4d3f2e)}' +
     '#tkc .tkc-ret{display:flex;gap:6px;align-items:flex-end;justify-content:center;max-width:520px;margin:0 auto}' +
     '#tkc .tkc-r{flex:1;min-width:0;max-width:78px;text-align:center;border-radius:10px;border:2px solid #6b4a1a;background:#3a2410;padding:3px}' +
-    '#tkc .tkc-r img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px;display:block}' +
+    '#tkc .tkc-r img{width:100%;aspect-ratio:1;object-fit:cover;object-position:center 18%;border-radius:7px;display:block}' +
     '#tkc .tkc-r .bv,#tkc .tkc-r .be{height:6px;border-radius:3px;background:#0008;margin-top:3px;overflow:hidden}' +
     '#tkc .tkc-r .bv i{display:block;height:100%;background:#4fd06a}#tkc .tkc-r .be i{display:block;height:100%;background:#ffd23a}' +
     '#tkc .tkc-r.listo{border-color:#ffd23a;box-shadow:0 0 12px #ffd23a;animation:tkcBrilla .7s infinite alternate}' +
@@ -85,6 +85,8 @@
     '#tkc .tkc-nota{color:#9fe08a;font-size:12px;margin:2px 0}';
   // ---------------- estado de la pantalla ----------------
   var raiz, cv, cx, W = 0, H = 0, DPR = 1, fondo = null, modo = 'formacion', etapa = 1, sel = [], heroes = [], lado = { az: [], ro: [] };
+  /* v9.35 (dueño): cuántas tropas de cada tipo se pueden llevar: 50 × capítulo (cap. 1 = 50, cap. 2 = 100…); en las etapas de siempre, 50 por cada 10 etapas */
+  function topeTropa() { var c = mis && mis.c ? mis.c : Math.max(1, Math.ceil((etapa || 1) / 10)); return 50 * c; }
   var tropasD = [], selT = {}, MAX_TIPOS = 4; /* v8.47: tropas elegidas para la campaña { tipo: cantidad } */
   var mis = null, sacude = 0; /* v9.00: misión del mapa de Campaña (null = etapas de siempre) */
   var efectos = [], vel = 1, auto = false, tPelea = 0, corriendo = false, ultimo = 0, terminado = false, imgs = {};
@@ -177,7 +179,7 @@
     var mapa = {}; heroes.forEach(function (h) { mapa[h.id] = h; });
     lado.az = sel.filter(function (id) { return mapa[id]; }).map(function (id, i) { return escuadronHeroe(mapa[id], i); });
     var nh = lado.az.map(function (u) { return u.h.nivel || 1; });
-    tropasD.filter(function (t) { return selT[t.k] > 0; }).slice(0, MAX_TIPOS).forEach(function (t, i) { lado.az.push(escuadronTropa(t, Math.min(selT[t.k], t.n), i)); }); /* v8.47 */ nivelRival = nh.length ? nh.reduce(function (a, b) { return a + b; }, 0) / nh.length : 1;
+    tropasD.filter(function (t) { return selT[t.k] > 0; }).slice(0, MAX_TIPOS).forEach(function (t, i) { lado.az.push(escuadronTropa(t, Math.min(selT[t.k], t.n, topeTropa()), i)); }); /* v8.47 · v9.35: con el tope del capítulo */ nivelRival = nh.length ? nh.reduce(function (a, b) { return a + b; }, 0) / nh.length : 1;
     if (mis) { lado.ro = mis.enemigos.map(function (e, i, l) { return escuadronMision(e, i, l.length); }); refuerzos = (mis.refuerzos || []).map(function (r) { return { t: r.t, l: r.l, ya: false }; }); return; }
     lado.ro = [0, 1, 2, 3, 4].map(function (i) { return escuadronEnemigo(etapa, i); });
   }
@@ -185,7 +187,27 @@
   function poderLado(l) { return l.reduce(function (a, u) { return a + poderDe(u); }, 0); }
 
   // ---------------- dibujo ----------------
+  /* v9.35 (dueño): las tropas se ven como un escuadrón de soldaditos formados detrás de los héroes (lanzas, arcos, escudos o caballos) */
+  function dibujarFormacion(u) {
+    var t = performance.now() / 1000, vivos = u.vivo ? Math.max(1, Math.ceil(9 * u.hp / u.max)) : 0, k = u.tropa || '', arq = u.rango > 0.1, cab = /caball|jinete/.test(k), gua = /guard/.test(k);
+    if (!u.vivo) cx.globalAlpha = 0.35;
+    for (var n = 0; n < Math.max(vivos, u.vivo ? 1 : 3); n++) {
+      var fila = Math.floor(n / 3), col = n % 3, sx = u.x - 14 + col * 14 - fila * 6, sy = u.y - 10 + fila * 11 + (col % 2) * 3, salto = u.anda ? Math.abs(Math.sin(t * 9 + n)) * 2 : 0, gol = u.cd > u.ritmo - 0.15 ? 3 : 0;
+      cx.fillStyle = 'rgba(0,0,0,0.3)'; cx.beginPath(); cx.ellipse(sx + 2, sy + 6, cab ? 9 : 6, 2.4, 0, 0, 7); cx.fill();
+      if (cab) { cx.fillStyle = '#6b4424'; cx.beginPath(); cx.ellipse(sx, sy + 1 - salto, 8, 4, 0, 0, 7); cx.fill(); cx.fillRect(sx + 5, sy - 5 - salto, 3, 6); cx.fillStyle = '#4a2c14'; cx.fillRect(sx - 6, sy + 3 - salto, 2, 5); cx.fillRect(sx + 4, sy + 3 - salto, 2, 5); sy -= 5; }
+      if (arq) { cx.strokeStyle = '#8a5a2a'; cx.lineWidth = 1.4; cx.beginPath(); cx.arc(sx + 5, sy - 6 - salto, 5, -1.2, 1.2); cx.stroke(); cx.strokeStyle = '#ddd'; cx.lineWidth = 0.6; cx.beginPath(); cx.moveTo(sx + 5 + Math.cos(-1.2) * 5, sy - 6 - salto + Math.sin(-1.2) * 5); cx.lineTo(sx + 5 + Math.cos(1.2) * 5 - gol, sy - 6 - salto + Math.sin(1.2) * 5); cx.stroke(); }
+      else { cx.strokeStyle = '#6a4a2a'; cx.lineWidth = 1.6; cx.beginPath(); cx.moveTo(sx - 2, sy + 4 - salto); cx.lineTo(sx + 10 + gol, sy - 12 - salto); cx.stroke(); cx.fillStyle = '#d8d8d8'; cx.beginPath(); cx.moveTo(sx + 10 + gol, sy - 12 - salto); cx.lineTo(sx + 13 + gol, sy - 16 - salto); cx.lineTo(sx + 8 + gol, sy - 13 - salto); cx.fill(); }
+      cx.fillStyle = '#1a3f8a'; cx.fillRect(sx - 4, sy - 5 - salto, 8, 9); cx.fillStyle = '#2f6be0'; cx.fillRect(sx - 4, sy - 5 - salto, 5, 9);
+      cx.fillStyle = '#f1d2a8'; cx.beginPath(); cx.arc(sx, sy - 8 - salto, 3.2, 0, 7); cx.fill();
+      cx.fillStyle = '#9aa0a8'; cx.beginPath(); cx.arc(sx, sy - 9 - salto, 3.6, Math.PI, 0); cx.fill();
+      if (gua || !arq) { cx.fillStyle = '#1a3f8a'; cx.beginPath(); cx.ellipse(sx + 4, sy - 1 - salto, gua ? 4.4 : 3.2, gua ? 6 : 4.6, 0, 0, 7); cx.fill(); cx.strokeStyle = '#e8c060'; cx.lineWidth = 1; cx.stroke(); }
+    }
+    cx.globalAlpha = 1;
+    if (u.vivo) { var bw = 34, bx = u.x - bw / 2, by = u.y - 32; cx.fillStyle = '#000b'; cx.fillRect(bx - 1, by - 1, bw + 2, 6); cx.fillStyle = '#4fd06a'; cx.fillRect(bx, by, bw * Math.max(0, u.hp / u.max), 4);
+      cx.font = '700 10px system-ui'; cx.textAlign = 'right'; cx.textBaseline = 'middle'; cx.lineWidth = 3; cx.strokeStyle = '#000'; var et = (u.ico || '') + ' ' + (G ? G.num(Math.round(u.nT * u.hp / u.max)) : Math.round(u.nT * u.hp / u.max)); cx.strokeText(et, bx - 3, by + 2); cx.fillStyle = '#fff'; cx.fillText(et, bx - 3, by + 2); }
+  }
   function dibujarEscuadron(u) {
+    if (u.tropa && u.lado === 'az') { dibujarFormacion(u); return; } /* v9.35 */
     var az = u.lado === 'az', c = az ? '#2f6be0' : '#d03a2a', vivos = u.vivo ? Math.max(1, Math.ceil(4 * u.hp / u.max)) : 0;
     var dir = az ? 1 : -1, t = performance.now() / 1000;
     // v9.02: soldados dibujados (casco, escudo y lanza) detrás del héroe
@@ -203,9 +225,9 @@
       cx.fillStyle = tun[1]; cx.beginPath(); cx.ellipse(sx + dir * 4, sy - 1 - salto, 3.2, 4.6, 0, 0, 7); cx.fill(); cx.strokeStyle = '#e8c060'; cx.lineWidth = 1; cx.stroke();
     }
     if (!u.vivo) { cx.globalAlpha = 0.35; }
-    var r = u.jefe ? (mis ? 24 : 19) : 16, sal = u.anda ? Math.abs(Math.sin(t * 8)) * 2 : 0;
+    var r = u.jefe ? (mis ? 24 : 19) : (az && u.h && !u.tropa ? 12 : 16), sal = u.anda ? Math.abs(Math.sin(t * 8)) * 2 : 0;
     /* v9.30 (dueño): los enemigos son los muñecos 3D que hizo él (fotos sacadas de sus modelos, ver tk-campana-sprites.js); mientras cargan, el círculo de antes */
-    var estFig = !u.vivo ? 'quieto' : u.anda ? 'anda' : (u.cd > u.ritmo - 0.35 ? 'ataca' : 'quieto'), hFig = claveFig ? r * (u.jefe ? 5.2 : (az ? 4.6 : 4.2)) : 0;
+    var estFig = !u.vivo ? 'quieto' : u.anda ? 'anda' : (u.cd > u.ritmo - 0.35 ? 'ataca' : 'quieto'), hFig = claveFig ? r * (u.jefe ? 5.2 : (az ? 4.6 * 16 / r : 4.2)) : 0;
     /* v9.34 (dueño: «parece que van flotando»): el paso va según lo que avanza de verdad (un paso completo ≈ 0,9 de su altura) */
     if (u._px != null && u.vivo) u._camino = (u._camino || 0) + Math.hypot(u.x - u._px, u.y - u._py); u._px = u.x; u._py = u.y;
     var fig = claveFig ? TKSprites.foto(claveFig, estFig, t, estFig === 'anda' ? (u._camino || 0) / Math.max(10, hFig * 0.9) : null) : null, wFig = fig ? hFig * fig.width / fig.height : 0, pie = u.y + r * 0.9;
@@ -230,6 +252,7 @@
     if (u.vivo) { // barra de vida
       var bw = 38, bx = u.x - bw / 2, by = arriba - 10;
       cx.fillStyle = '#000b'; cx.fillRect(bx - 1, by - 1, bw + 2, 6); cx.fillStyle = az ? '#4fd06a' : '#ff5a4a'; cx.fillRect(bx, by, bw * Math.max(0, u.hp / u.max), 4);
+      if (az && u.h && !u.tropa && u.im && u.im.complete && u.im.naturalWidth) { var mx2 = bx - 8, my2 = by + 2; cx.save(); cx.beginPath(); cx.arc(mx2, my2, 7, 0, 7); cx.clip(); cx.drawImage(u.im, mx2 - 7, my2 - 9, 14, 14); cx.restore(); cx.strokeStyle = '#e8b84a'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(mx2, my2, 7, 0, 7); cx.stroke(); } /* v9.35: medalla pequeña al lado de la barra */
     }
   }
   function dibujarEfectos(dt) {
@@ -244,6 +267,7 @@
       else if (e.tipo === 'boom') { cx.fillStyle = 'rgba(255,' + Math.round(180 - 120 * k) + ',40,' + (0.8 * (1 - k)) + ')'; cx.beginPath(); cx.arc(e.x, e.y, e.r * (0.3 + k), 0, 7); cx.fill(); }
       else if (e.tipo === 'cura') { cx.fillStyle = 'rgba(90,230,120,' + (1 - k) + ')'; for (var j = 0; j < 5; j++) { cx.fillRect(e.x - 10 + j * 5, e.y - 10 - k * 26 - (j % 2) * 6, 3, 8); cx.fillRect(e.x - 12 + j * 5, e.y - 7 - k * 26 - (j % 2) * 6, 7, 2); } }
       else if (e.tipo === 'aro') { cx.strokeStyle = e.c.replace('A', String(1 - k)); cx.lineWidth = 4; cx.beginPath(); cx.arc(e.x, e.y, 10 + 40 * k, 0, 7); cx.stroke(); }
+      else if (e.tipo === 'onda') { var ro = 14 + 70 * k, go = cx.createRadialGradient(e.x, e.y, ro * 0.6, e.x, e.y, ro); go.addColorStop(0, 'rgba(255,215,90,0)'); go.addColorStop(0.8, 'rgba(255,215,90,' + (0.55 * (1 - k)) + ')'); go.addColorStop(1, 'rgba(255,240,170,0)'); cx.fillStyle = go; cx.beginPath(); cx.ellipse(e.x, e.y, ro, ro * 0.38, 0, 0, 7); cx.fill(); cx.strokeStyle = 'rgba(255,225,120,' + (0.9 * (1 - k)) + ')'; cx.lineWidth = 2.5; cx.beginPath(); cx.ellipse(e.x, e.y, ro, ro * 0.38, 0, 0, 7); cx.stroke(); }
       else if (e.tipo === 'texto') { cx.font = '800 ' + (e.g ? 16 : 12) + 'px system-ui'; cx.textAlign = 'center'; cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.fillStyle = e.c; var ty = e.y - 26 * k; cx.globalAlpha = 1 - k * k; cx.strokeText(e.txt, e.x, ty); cx.fillText(e.txt, e.x, ty); cx.globalAlpha = 1; }
     });
   }
@@ -266,6 +290,7 @@
     if (!a.vivo) return;
     var d = cant * (de && de.buff > 0 ? 1.4 : 1) * (a.escudo > 0 ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
     a.hp -= d; a.en = Math.min(100, a.en + 6);
+    if (a.jefe && a.lado === 'ro') sacude = Math.max(sacude, grande ? 0.28 : 0.12); /* v9.35: la pantalla tiembla un poco al golpear a un jefe */
     efectos.push({ tipo: 'texto', x: a.x + (Math.random() * 10 - 5), y: a.y - 22, txt: '-' + num(d), c: a.lado === 'az' ? '#ff8a7a' : '#ffe08a', g: grande, t: 0, dur: 0.8 });
     if (a.hp <= 0) { a.hp = 0; a.vivo = false; efectos.push({ tipo: 'boom', x: a.x, y: a.y, r: 26, t: 0, dur: 0.5 }); if (G) G.sonar(a.lado === 'az' ? 'error' : 'golpe'); }
   }
@@ -275,6 +300,7 @@
     if (u.rango > 0.1) {
       var dur = Math.min(0.6, dist(u, o) / 420);
       efectos.push({ tipo: h.clase === 'magia' || (!u.h && u.ico === '🔮') ? 'bola' : 'flecha', x0: u.x, y0: u.y - 6, x1: o.x, y1: o.y - 6, c: c, t: 0, dur: dur });
+      if (u.tropa) for (var fl = 1; fl <= 3; fl++) efectos.push({ tipo: 'flecha', x0: u.x - 10 + fl * 6, y0: u.y - 2 + (fl % 2) * 8, x1: o.x - 8 + fl * 5, y1: o.y - 4, c: '#f3e6c8', t: -fl * 0.06, dur: dur }); /* v9.35: el escuadrón de arqueros dispara una lluvia */
       setTimeout(function () { danar(u, o, u.atk); }, dur * 1000 / vel);
     } else { efectos.push({ tipo: 'corte', x: o.x, y: o.y, a: Math.atan2(o.y - u.y, o.x - u.x), t: 0, dur: 0.25 }); danar(u, o, u.atk); }
   }
@@ -288,6 +314,7 @@
     if (!u.vivo || u.en < 100) return;
     u.en = 0; var o = objetivo(u), hab = u.h ? u.h.hab : 'golpe', nom = HAB[hab] ? L(HAB[hab].es, HAB[hab].en) : '';
     efectos.push({ tipo: 'texto', x: u.x, y: u.y - 30, txt: '✨ ' + nom, c: '#ffe08a', g: true, t: 0, dur: 1.2 });
+    if (u.h && !u.tropa) { efectos.push({ tipo: 'onda', x: u.x, y: u.y + 10, t: 0, dur: 0.9 }); efectos.push({ tipo: 'onda', x: u.x, y: u.y + 10, t: -0.18, dur: 0.9 }); } /* v9.35: onda dorada en el suelo */
     if (G) G.sonar('magia');
     if (hab === 'grito') aliados(u).forEach(function (a) { a.buff = 6; efectos.push({ tipo: 'aro', x: a.x, y: a.y, c: 'rgba(255,210,58,A)', t: 0, dur: 0.6 }); });
     else if (hab === 'escudo') aliados(u).forEach(function (a) { a.escudo = 6; efectos.push({ tipo: 'aro', x: a.x, y: a.y, c: 'rgba(127,211,255,A)', t: 0, dur: 0.6 }); });
@@ -348,6 +375,22 @@
     }
   }
   var errBucle = 0;
+  /* v9.35 (dueño): BAJAS JUSTAS. Ganando: cae el % de vida que perdió cada escuadrón (0 daño = 0 bajas). Perdiendo: caen todas las tropas enviadas (los héroes nunca).
+     De las caídas, el 70 % va herido a la Enfermería (hasta llenar las camas) y solo el 30 % muere. */
+  function bajasCampana(gano) {
+    var caidas = {}, env = 0, tot = 0;
+    lado.az.forEach(function (u) { if (!u.tropa) return; env += u.nT; var fr = gano ? Math.min(1, Math.max(0, 1 - Math.max(0, u.hp) / u.max)) : 1, q = Math.min(u.nT, Math.round(u.nT * fr)); if (q > 0) { caidas[u.tropa] = (caidas[u.tropa] || 0) + q; tot += q; } });
+    var her = {}, muer = {}; Object.keys(caidas).forEach(function (k) { var h = Math.round(caidas[k] * 0.7); her[k] = h; muer[k] = caidas[k] - h; });
+    var nHer = 0, nMuer = 0;
+    if (G && G.herir) { try { var rh = G.herir(her); nHer = rh.heridos || 0; Object.keys(rh.sinCama || {}).forEach(function (k) { muer[k] = (muer[k] || 0) + rh.sinCama[k]; }); } catch (e) { Object.keys(her).forEach(function (k) { muer[k] = (muer[k] || 0) + her[k]; }); } }
+    else Object.keys(her).forEach(function (k) { muer[k] = (muer[k] || 0) + her[k]; });
+    if (G && G.perder) { try { nMuer = G.perder(muer); } catch (e) {} }
+    Object.keys(caidas).forEach(function (k) { if (selT[k]) selT[k] = Math.max(0, selT[k] - caidas[k]); });
+    if (!env) return '';
+    var nf = function (x) { return G ? G.num(x) : x; };
+    var pedH = 0; Object.keys(her).forEach(function (k) { pedH += her[k]; });
+    return '<p class="tkc-perd">🛡️ ' + L('Sobrevivieron ', 'Survived ') + '<b>' + nf(Math.max(0, env - tot)) + '</b> · 🏥 ' + L('A la Enfermería ', 'To the Infirmary ') + '<b>' + nf(nHer) + '</b> · 💀 ' + L('Murieron ', 'Died ') + '<b>' + nf(nMuer) + '</b>' + (pedH > nHer ? '<br><small>' + L('No había camas libres en la Enfermería para ' + nf(pedH - nHer) + ' heridos: construye o sube Enfermerías.', 'No free Infirmary beds for ' + nf(pedH - nHer) + ' wounded: build or upgrade Infirmaries.') + '</small>' : '') + '</p>';
+  }
   function bucle(t) {
     if (!corriendo) return;
     requestAnimationFrame(bucle); /* v9.30 (dueño: «se para»): el siguiente fotograma se pide ANTES, así un fallo al dibujar ya no congela la batalla */
@@ -376,10 +419,10 @@
     if (!tropasD.length) return '<p class="tkc-tn">' + L('No tienes tropas en casa. Entrénalas para llevarlas a la Campaña.', 'No troops at home. Train some to bring them to the Campaign.') + '</p>';
     var nTipos = Object.keys(selT).filter(function (k) { return selT[k] > 0; }).length;
     return '<div class="tkc-tit"><span>⚔️ ' + L('Tus tropas (elige cuáles y cuántas van)', 'Your troops (choose which and how many)') + '</span><span>' + nTipos + ' / ' + MAX_TIPOS + '</span></div><div class="tkc-trs">' + tropasD.map(function (t) {
-      var v = Math.min(selT[t.k] || 0, t.n);
-      return '<div class="tkc-tr' + (v ? ' sel' : '') + '"><span class="tkc-ti">' + t.ico + '</span><span class="tkc-td"><b>' + esc(t.nombre) + '</b><small>' + (G ? G.num(v) : v) + ' / ' + (G ? G.num(t.n) : t.n) + '</small></span>' +
-        [[0, '0'], [0.25, '¼'], [0.5, '½'], [1, L('Todas', 'All')]].map(function (q) { return '<button class="tkc-tb' + (v === Math.floor(t.n * q[0]) && (q[0] || !v) ? ' on' : '') + '" data-c="tropa" data-k="' + esc(t.k) + '" data-f="' + q[0] + '">' + q[1] + '</button>'; }).join('') + '</div>';
-    }).join('') + '</div><p class="tkc-tn">' + L('Las tropas que caen en la batalla se pierden. Si pierdes, cambia tus tropas o manda más y vuelve a intentarlo.', 'Troops that fall in battle are lost. If you lose, change your troops or send more and try again.') + '</p>';
+      var mx = Math.min(t.n, topeTropa()), v = Math.min(selT[t.k] || 0, mx);
+      return '<div class="tkc-tr' + (v ? ' sel' : '') + '"><span class="tkc-ti">' + t.ico + '</span><span class="tkc-td"><b>' + esc(t.nombre) + '</b><small>' + (G ? G.num(v) : v) + ' / ' + (G ? G.num(mx) : mx) + '</small></span>' +
+        [[0, '0'], [0.25, '¼'], [0.5, '½'], [1, L('Todas', 'All')]].map(function (q) { return '<button class="tkc-tb' + (v === Math.floor(mx * q[0]) && (q[0] || !v) ? ' on' : '') + '" data-c="tropa" data-k="' + esc(t.k) + '" data-f="' + q[0] + '">' + q[1] + '</button>'; }).join('') + '</div>';
+    }).join('') + '</div><p class="tkc-tn">' + L('Las tropas que caen en la batalla se pierden. Si pierdes, cambia tus tropas o manda más y vuelve a intentarlo.', 'Troops that fall in battle are lost. If you lose, change your troops or send more and try again.') + ' ' + L('Máximo ' + topeTropa() + ' de cada tipo en este capítulo; los heridos van a la Enfermería.', 'Up to ' + topeTropa() + ' of each type in this chapter; the wounded go to the Infirmary.') + '</p>';
   }
   function pantallaFormacion() {
     if (G && G.tropas) { tropasD = G.tropas(); Object.keys(selT).forEach(function (k) { if (!tropasD.some(function (t) { return t.k === k; })) delete selT[k]; }); }
@@ -417,9 +460,7 @@
       var ui = raiz.querySelector('.tkc-ui'), n = etapa, items = [];
       if (mis) { finMision(gano, ui); return; }
       if (gano && G) { try { items = G.ganar(n, sel.slice()); } catch (e) { console.error(e); } etapa = G.etapa(); }
-      var perd = {}, nPerd = 0; lado.az.forEach(function (u) { if (!u.tropa) return; var q = Math.round(u.nT * (1 - Math.max(0, u.hp) / u.max) * (gano ? 0.2 : 0.35)); if (q > 0) { perd[u.tropa] = (perd[u.tropa] || 0) + q; } });
-      if (G && G.perder) { try { nPerd = G.perder(perd); } catch (e) {} } Object.keys(perd).forEach(function (k) { if (selT[k]) selT[k] = Math.max(0, selT[k] - perd[k]); });
-      var txtPerd = nPerd ? '<p class="tkc-perd">💀 ' + L('Tropas perdidas: ', 'Troops lost: ') + (G ? G.num(nPerd) : nPerd) + '</p>' : '';
+      var txtPerd = bajasCampana(gano); /* v9.35 */
       if (G) G.sonar(gano ? 'victoria' : 'derrota');
       var d = document.createElement('div'); d.className = 'tkc-fin';
       d.innerHTML = gano
@@ -436,12 +477,10 @@
     lado.az.forEach(function (u) { vida += Math.max(0, u.hp); vmax += u.max; });
     var e3 = mis.obj === 'sobrevive' ? vida >= vmax * 0.5 : tPelea <= mis.t3;
     var est = gano ? 1 + (heroesCaidos === 0 ? 1 : 0) + (e3 ? 1 : 0) : 0;
-    var perd = {}, nPerd = 0; lado.az.forEach(function (u) { if (!u.tropa) return; var q = Math.round(u.nT * (1 - Math.max(0, u.hp) / u.max) * (gano ? 0.2 : 0.35)); if (q > 0) perd[u.tropa] = (perd[u.tropa] || 0) + q; });
-    if (G && G.perder) { try { nPerd = G.perder(perd); } catch (e) {} } Object.keys(perd).forEach(function (k) { if (selT[k]) selT[k] = Math.max(0, selT[k] - perd[k]); });
+    var txtPerd = bajasCampana(gano); /* v9.35 */
     var r = { items: [] }; try { r = mis.alTerminar({ gano: gano, estrellas: est, t: tPelea, heroes: sel.slice() }) || r; } catch (e) { console.error(e); }
     if (G) G.sonar(gano ? 'victoria' : 'derrota');
     var estHtml = '<div class="tkc-est">' + [1, 2, 3].map(function (k) { return '<span class="' + (k <= est ? 'on' : '') + '" style="animation-delay:' + (0.25 * k) + 's">★</span>'; }).join('') + '</div>';
-    var txtPerd = nPerd ? '<p class="tkc-perd">💀 ' + L('Tropas perdidas: ', 'Troops lost: ') + (G ? G.num(nPerd) : nPerd) + '</p>' : '';
     var premios = r.items && r.items.length ? '<div class="tkc-pr">' + r.items.map(function (x) { return '<div>' + (x.img ? '<img src="' + esc(x.img) + '" alt="">' : '<span>' + x.ico + '</span>') + esc(x.nom) + '<b>' + esc(x.n) + '</b></div>'; }).join('') + '</div>' : '';
     var d = document.createElement('div'); d.className = 'tkc-fin';
     d.innerHTML = gano
@@ -459,9 +498,13 @@
     if (c === 'sig') { var m1 = mis; cerrar(); if (m1 && m1.alSiguiente) m1.alSiguiente(); return; }
     if (G) G.sonar('click');
     if (c === 'heroe') { var id = b.getAttribute('data-id'), k = sel.indexOf(id); if (k >= 0) sel.splice(k, 1); else if (sel.length < 5) sel.push(id); else { G && G.consejo(L('Ya tienes 5 héroes: quita uno para cambiarlo.', 'You already have 5 heroes: remove one first.')); return; } G && G.equipo(sel); pantallaFormacion(); }
-    else if (c === 'rapido') { sel = heroes.slice().sort(function (a, b2) { return (b2.dano * 6 + b2.vida / 3) - (a.dano * 6 + a.vida / 3); }).slice(0, 5).map(function (h) { return h.id; }); G && G.equipo(sel); pantallaFormacion(); }
+    else if (c === 'rapido') { sel = heroes.slice().sort(function (a, b2) { return (b2.dano * 6 + b2.vida / 3) - (a.dano * 6 + a.vida / 3); }).slice(0, 5).map(function (h) { return h.id; }); G && G.equipo(sel);
+      /* v9.35 (dueño): también las tropas: hasta 4 tipos, primero espadachines, arqueros, caballería y guardianes, cada uno con el máximo del capítulo */
+      var PREF = ['espadachin', 'arquero', 'caballeria', 'guardian'], cap = topeTropa(); selT = {};
+      tropasD.slice().sort(function (x, y) { var px = PREF.indexOf(x.k), py = PREF.indexOf(y.k); px = px < 0 ? 99 : px; py = py < 0 ? 99 : py; return px - py || (y.vida + y.dano * 6) - (x.vida + x.dano * 6); }).slice(0, MAX_TIPOS).forEach(function (t) { selT[t.k] = Math.min(t.n, cap); });
+      pantallaFormacion(); }
     else if (c === 'luchar') { if (!sel.length && !Object.keys(selT).some(function (k) { return selT[k] > 0; })) { G && G.consejo(L('Elige al menos un héroe o una tropa.', 'Choose at least one hero or troop.')); return; } if (mis && mis.alEmpezar && !mis.alEmpezar()) return; tPelea = 0; pantallaPelea(); } /* v9.05: las misiones gastan botellas al empezar */
-    else if (c === 'tropa') { var tk = b.getAttribute('data-k'), fr = +b.getAttribute('data-f'), tt = tropasD.filter(function (x) { return x.k === tk; })[0]; if (!tt) return; var ya = Object.keys(selT).filter(function (k) { return selT[k] > 0 && k !== tk; }).length; if (fr > 0 && ya >= MAX_TIPOS) { G && G.consejo(L('Máximo ' + MAX_TIPOS + ' tipos de tropa: quita uno.', 'Max ' + MAX_TIPOS + ' troop types: remove one.')); return; } selT[tk] = Math.floor(tt.n * fr); pantallaFormacion(); }
+    else if (c === 'tropa') { var tk = b.getAttribute('data-k'), fr = +b.getAttribute('data-f'), tt = tropasD.filter(function (x) { return x.k === tk; })[0]; if (!tt) return; var ya = Object.keys(selT).filter(function (k) { return selT[k] > 0 && k !== tk; }).length; if (fr > 0 && ya >= MAX_TIPOS) { G && G.consejo(L('Máximo ' + MAX_TIPOS + ' tipos de tropa: quita uno.', 'Max ' + MAX_TIPOS + ' troop types: remove one.')); return; } selT[tk] = Math.floor(Math.min(tt.n, topeTropa()) * fr); pantallaFormacion(); }
     else if (c === 'hab') { var u = lado.az[+b.getAttribute('data-i')]; if (u) lanzar(u); }
     else if (c === 'vel') { vel = vel === 2 ? 1 : 2; b.classList.toggle('on', vel === 2); var bs = raiz.querySelector('[data-c=saltar]'); if (bs) bs.classList.remove('on'); }
     else if (c === 'saltar') { vel = vel > 2 ? 1 : 8; b.classList.toggle('on', vel > 2); var bv = raiz.querySelector('[data-c=vel]'); if (bv) bv.classList.remove('on'); if (vel > 2 && !auto) { auto = true; var ba = raiz.querySelector('[data-c=auto]'); if (ba) ba.classList.add('on'); } } /* v9.02: pasar la batalla rápido (x8, con habilidades automáticas) */
