@@ -11523,6 +11523,7 @@
         if (estado[r[1]] === undefined && r[0] !== 'amatista') return;
         var nomR = T('r_' + r[0]) === 'r_' + r[0] ? ({ gemas: L('Gemas', 'Gems'), amatista: L('Amatista rúnica', 'Runic amethyst'), hierro: L('Hierro', 'Iron') })[r[0]] || r[0] : T('r_' + r[0]); filas += filaInv(r[2], nomR.charAt(0).toUpperCase() + nomR.slice(1), L('Tienes: ', 'Owned: ') + formatoNumero(estado[r[1]] || 0), '', '');
       });
+      if (subInv === 'misc') fichasInv().forEach(function (f) { filas += filaInv(f.ico, f.nom, L('Tienes: ', 'Owned: ') + formatoNumero(f.n), '<button class="iv-boton" data-accion="' + f.acc + '">' + L('Usa', 'Use') + '</button>', f.des); }); /* v9.53 */
       if (subInv === 'cofre' && diarioDisponible()) filas += '<div class="iv-diario">' + htmlDiario() + '</div>';
       if (subInv === 'equipo') piezas().slice().sort(function (a, b) { return MULT_RAREZA_EQ[b.r] - MULT_RAREZA_EQ[a.r] || b.n - a.n; }).forEach(function (p) {
         filas += filaInv(icoPieza(p), nombrePieza(p) + ' · ' + T('nivel_corto') + ' ' + p.n, (p.h && HEROE[p.h] ? L('Lo lleva ', 'Worn by ') + NH(p.h) : L('Tienes: 1', 'Owned: 1')),
@@ -12281,12 +12282,19 @@
     html += '</div><p class="nota" style="opacity:.75">💳 ' + T('tienda_real') + '</p>';
     abrirPanel(T('p_tienda'), html, { tipo: 'tienda' }); $('panel').classList.add('iv-panel', 'tg-panel'); $('panel').scrollTop = arriba;
   }
+  /* v9.53 (dueño: «compré cofres de fichas y no las veo en el inventario»): las fichas de Azar y de Ruleta salen como objetos en Varios */
+  function fichasInv() { var l = [], a = Math.max(0, estado.fichas || 0), ru = Math.max(0, estado.fichasRul || 0);
+    if (a > 0) l.push({ ico: window.ICONO_FICHA || '🪙', nom: L('Fichas de Azar', 'Lucky tokens'), n: a, des: L('Para abrir cofres en el Azar. Se guardan, no se pierden.', 'To open chests in Lucky. They never expire.'), acc: 'inv-fichas-azar' });
+    if (ru > 0) l.push({ ico: '🎡', nom: L('Fichas de Ruleta', 'Wheel tokens'), n: ru, des: L('Para girar la Ruleta cuando está abierta. Se guardan, no se pierden.', 'To spin the Wheel when it is open. They never expire.'), acc: 'inv-fichas-rul' });
+    return l; }
   function abrirMisObjetos() {
     var cats = CATS_TIENDA, mios = Object.keys(estado.mochila || {}).filter(function (k) { return OBJETOS[k] && estado.mochila[k] > 0; });
     if (!cats.some(function (c) { return c[0] === pestTienda; })) pestTienda = 'varios';
-    var html = barraGemasTienda() + '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var n = mios.filter(function (k) { return catTiendaDe(k) === c[0]; }).length; return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (n ? ' <span class="mail-n">' + n + '</span>' : '') + '</button>'; }).join('') + '</div><div class="lista">';
+    var fichL = fichasInv();
+    var html = barraGemasTienda() + '<div class="subtabs tienda-tabs">' + cats.map(function (c) { var n = mios.filter(function (k) { return catTiendaDe(k) === c[0]; }).length + (c[0] === 'varios' ? fichL.length : 0); return '<button data-accion="tienda-pest" data-p="' + c[0] + '" class="' + (c[0] === pestTienda ? 'activo' : '') + '">' + c[1] + (n ? ' <span class="mail-n">' + n + '</span>' : '') + '</button>'; }).join('') + '</div><div class="lista">';
     var de = mios.filter(function (k) { return catTiendaDe(k) === pestTienda; });
-    if (!de.length) html += '<p class="nota">' + L('No tienes objetos de esta categoría. Cómpralos en la Tienda o gánalos jugando.', 'You have no items in this category. Buy them in the Shop or win them playing.') + '</p>';
+    if (pestTienda === 'varios') fichL.forEach(function (f) { html += '<div class="fila-tienda"><span class="ft-ico">' + f.ico + '</span><span class="ft-info"><b>' + f.nom + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + formatoNumero(f.n) + '</small><small>' + f.des + '</small></span><button class="comprar naranja" data-accion="' + f.acc + '">' + L('Usar', 'Use') + '</button></div>'; });
+    if (!de.length && !(pestTienda === 'varios' && fichL.length)) html += '<p class="nota">' + L('No tienes objetos de esta categoría. Cómpralos en la Tienda o gánalos jugando.', 'You have no items in this category. Buy them in the Shop or win them playing.') + '</p>';
     de.forEach(function (k) {
       var o = OBJETOS[k];
       html += '<div class="fila-tienda"><span class="ft-ico" data-accion="obj-info" data-k="' + k + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(k) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + estado.mochila[k] + '</small><small>' + D(k) + '</small></span>' +
@@ -13133,6 +13141,8 @@
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'), b.hasAttribute('data-c') ? +b.getAttribute('data-c') : null);
     else if (a === 'azar-varios') sacarAzarVarios(+b.getAttribute('data-n')); /* v9.49 */
+    else if (a === 'inv-fichas-azar') { sonar('click'); abrirAzar('normal'); } /* v9.53 */
+    else if (a === 'inv-fichas-rul') { sonar('click'); abrirRuleta(); }
     else if (a === 'azar-comprar') { sonar('click'); comprarFichasAzar(+b.getAttribute('data-n')); } /* v9.50 */
     else if (a === 'azar-nuevo') { sonar('click'); azarGrid = null; abrirAzar(); } /* v8.44 */
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
