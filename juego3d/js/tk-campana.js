@@ -181,16 +181,20 @@
   function aCamino(x, y) { var z = zona(), ax = W * 0.06, ay = z.y1 - 14, bx = W * 0.94, by = z.y0 + 14, dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy), px = -dy / l, py = dx / l, ancho = Math.min(W, z.y1 - z.y0) * 0.21; return { t: ((x - ax) * dx + (y - ay) * dy) / (l * l), c: ((x - ax) * px + (y - ay) * py) / ancho }; }
   function ponerCarril(u, lista, alEmpezar) {
     var k = lista.filter(function (o) { return o.carril != null; }).length, fila = Math.floor(k / 3); u.carril = CARRILES[k % 3];
-    var t = alEmpezar ? (u.lado === 'az' ? Math.max(0.03, 0.2 - fila * 0.07) : Math.min(0.97, 0.82 + fila * 0.06)) : aCamino(u.x, u.y).t;
+    if (alEmpezar && u.lado === 'az') { var grupo = lista.filter(function (o) { return o.carril != null && !!o.tropa === !!u.tropa; }).length - 1; fila = Math.floor(Math.max(0, grupo) / 3); u.carril = CARRILES[Math.max(0, grupo) % 3]; } /* v9.43: héroes y tropas cada uno en sus filas */
+    var t = alEmpezar ? (u.lado === 'az' ? (u.tropa ? Math.max(0.08, 0.16 - fila * 0.05) : Math.max(0.12, 0.26 - fila * 0.06)) : Math.min(0.88, 0.8 + fila * 0.05)) : aCamino(u.x, u.y).t; /* v9.43: héroes delante, tropas detrás, todo a la vista */
     var p = enCarril(t, u.carril); u.x = p.x; u.y = p.y;
   }
   /* v9.41: posición = eje + t · largo · dir + carril · 38 px · perp (lateral siempre entre −45 y +45 px) */
   function enCarril(t, carril) { var e = ejeCamino(), off = Math.max(-45, Math.min(45, carril * 38)); return { x: e.x1 + e.dirX * e.l * t + e.perpX * off, y: e.y1 + e.dirY * e.l * t + e.perpY * off }; }
   function colocarCarriles() { [lado.az, lado.ro].forEach(function (l) { l.forEach(function (u) { u.carril = null; }); l.forEach(function (u) { ponerCarril(u, l, true); }); }); }
   function sujetarAlCamino(dt) {
+    /* v9.43: el héroe vivo que va más atrás marca hasta dónde pueden llegar tus tropas */
+    var eF = ejeCamino(), frenteH = null; lado.az.forEach(function (h) { if (!h.vivo || h.tropa) return; var th = ((h.x - eF.x1) * eF.dirX + (h.y - eF.y1) * eF.dirY) / eF.l; if (frenteH == null || th < frenteH) frenteH = th; }); if (frenteH != null) frenteH = Math.max(0.14, frenteH);
     [lado.az, lado.ro].forEach(function (l) { l.forEach(function (u) {
       if (u.carril == null) ponerCarril(u, l, false); /* refuerzos y los que llaman los jefes */
-      var e = ejeCamino(), rx = u.x - e.x1, ry = u.y - e.y1, t = Math.max(0.02, Math.min(0.98, (rx * e.dirX + ry * e.dirY) / e.l)), lat = (rx * e.perpX + ry * e.perpY) / 38;
+      var e = ejeCamino(), rx = u.x - e.x1, ry = u.y - e.y1, t = Math.max(0.08, Math.min(0.88, (rx * e.dirX + ry * e.dirY) / e.l)), lat = (rx * e.perpX + ry * e.perpY) / 38; /* v9.43: nadie se sale de lo que se ve (ni por arriba ni por abajo) */
+      if (u.lado === 'az' && u.tropa && frenteH != null) t = Math.min(t, frenteH - 0.06); /* v9.43 (dueño): las tropas siempre detrás de tus héroes, como refuerzo */
       var c = lat + (u.carril - lat) * Math.min(1, dt * 8); c = Math.max(-45 / 38, Math.min(45 / 38, c)); var p = enCarril(t, c); u.x = p.x; u.y = p.y; /* v9.41 */
     }); });
   }
