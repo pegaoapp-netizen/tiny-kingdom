@@ -11558,7 +11558,10 @@
     if (estado.gemasInfinitas) return 9999; // v6.65: la cuenta del dueño tiene todo ilimitado
     return fichasGratisHoy() + (estado.fichas || 0);
   }
-  function gastarFichasAzar(c) { if (estado.gemasInfinitas) return; var g = fichasGratisHoy(), deG = Math.min(g, c); estado.gratisAzar = g - deG; estado.fichas = Math.max(0, (estado.fichas || 0) - (c - deG)); }
+  function gastarFichasAzar(c) { var g = fichasGratisHoy(), deG = Math.min(g, c); estado.gratisAzar = g - deG; estado.fichas = Math.max(0, (estado.fichas || 0) - (c - deG)); } /* v9.51: el dueño también gasta primero las fichas que compró (luego sigue gratis) */
+  /* v9.51 (dueño: «las fichas que acabo de comprar»): se ven las fichas de verdad, también en la cuenta del dueño; ∞ solo si no tiene ninguna */
+  function fichasRealesAzar() { return fichasGratisHoy() + Math.max(0, estado.fichas || 0); }
+  function txtFichas(real) { return estado.gemasInfinitas && real <= 0 ? '∞' : formatoNumero(real); }
   function fichasRuleta() { return estado.gemasInfinitas ? 9999 : Math.max(0, estado.fichasRul || 0); }
   function sortearAzar(lista) { var t = lista.reduce(function (a, x) { return a + x[1]; }, 0), n = Math.random() * t; for (var i = 0; i < lista.length; i++) { n -= lista[i][1]; if (n <= 0) return lista[i][0]; } return lista[0][0]; }
   // v8.00: CANDADOS por nivel (Azar Premium, Torneo de Temporada, Equipo de héroe)
@@ -11580,12 +11583,12 @@
         return '<div class="az-celda' + (k ? ' abierta' + (RAROS_AZAR.indexOf(k) >= 0 ? ' rara' : '') : '') + '" data-c="' + i + '"' + (k ? '' : ' data-accion="azar-sacar" data-n="1" data-c="' + i + '"') + '>' + (k ? '<span class="az-premio">' + OBJETOS[k].icono + '</span><small>' + N(k) + '</small>' : COFRE_SVG) + '</div>';
       }).join('') +
       (azarGrid.every(function (x) { return !x; }) ? '<div class="az-cinta az-cinta-aviso">' + (prem ? '<div class="az-raros"><span>' + L('¡Gana uno de estos premios raros!', 'Win one of these rare prizes!') + '</span><div>' + RAROS_AZAR.map(function (k) { return '<b title="' + escaparHTML(N(k)) + '">' + OBJETOS[k].icono + '</b>'; }).join('') + '</div></div>' : '') +
-        L('¡Toca el cofre que quieras abrir! Cada uno cuesta ' + costo + ' ficha' + (costo > 1 ? 's' : '') + '.', 'Tap the chest you want to open! Each costs ' + costo + ' token' + (costo > 1 ? 's' : '') + '.') + '<br>' + L('Tienes: ', 'You have: ') + (estado.gemasInfinitas ? '∞' : n) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
-      '<p class="az-tienes">' + ICONO_FICHA + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + (estado.gemasInfinitas ? '∞' : n) + '</b> · ' + (estado.gemasInfinitas ? '' : '🎁 ' + L('Gratis hoy: ', 'Free today: ') + fichasGratisHoy() + ' / ' + gratisPorNivel() + ' · ') + L('Nv 1-9: 1 gratis al día · Nv 10-19: 2 · Nv 20+: 3. Las gratis se pierden si no las usas hoy.', 'Lv 1-9: 1 free a day · Lv 10-19: 2 · Lv 20+: 3. Free ones expire at the end of the day.') + '</p>' +
+        L('¡Toca el cofre que quieras abrir! Cada uno cuesta ' + costo + ' ficha' + (costo > 1 ? 's' : '') + '.', 'Tap the chest you want to open! Each costs ' + costo + ' token' + (costo > 1 ? 's' : '') + '.') + '<br>' + L('Tienes: ', 'You have: ') + txtFichas(fichasRealesAzar()) + ' ' + L('fichas', 'tokens') + '</div>' : '') + '</div>' +
+      '<p class="az-tienes">' + ICONO_FICHA + ' ' + L('Fichas: ', 'Tokens: ') + '<b>' + txtFichas(fichasRealesAzar()) + '</b> · ' + (estado.gemasInfinitas ? '' : '🎁 ' + L('Gratis hoy: ', 'Free today: ') + fichasGratisHoy() + ' / ' + gratisPorNivel() + ' · ') + L('Nv 1-9: 1 gratis al día · Nv 10-19: 2 · Nv 20+: 3. Las gratis se pierden si no las usas hoy.', 'Lv 1-9: 1 free a day · Lv 10-19: 2 · Lv 20+: 3. Free ones expire at the end of the day.') + '</p>' +
       '<p class="az-elige">👆 ' + L('Tú eliges: toca un cofre cerrado para abrirlo.', 'You choose: tap a closed chest to open it.') + '</p>' + /* v8.44 */
       '<div class="az-botones">' + (azarGrid.every(function (x) { return x; }) ? '<button class="az-b verde" data-accion="azar-nuevo">🔄 ' + L('Tablero nuevo', 'New board') + '</button>' : '') +
       (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : /* v9.49 (dueño): «de una ficha» y «de 10 fichas» (antes «Abrir los 9») */
-        '<div class="az-saldo">' + ICONO_FICHA + ' ' + L('Tienes: ', 'You have: ') + '<b>' + (estado.gemasInfinitas ? '∞' : formatoNumero(n)) + '</b> ' + L(n === 1 ? 'ficha' : 'fichas', n === 1 ? 'token' : 'tokens') + '</div>' + /* v9.50 (dueño): que diga las fichas que tienes */
+        '<div class="az-saldo">' + ICONO_FICHA + ' ' + L('Tienes: ', 'You have: ') + '<b>' + txtFichas(fichasRealesAzar()) + '</b> ' + L(fichasRealesAzar() === 1 ? 'ficha' : 'fichas', fichasRealesAzar() === 1 ? 'token' : 'tokens') + '</div>' + /* v9.50 (dueño): que diga las fichas que tienes */
         '<button class="az-b azul" data-accion="azar-varios" data-n="1"' + (n >= 1 ? '' : ' disabled') + '>' + L('Abrir 1', 'Open 1') + ' · ' + ICONO_FICHA + ' 1</button>' +
         '<button class="az-b azul" data-accion="azar-varios" data-n="10"' + (n >= 10 ? '' : ' disabled') + '>' + L('Abrir 10', 'Open 10') + ' · ' + ICONO_FICHA + ' 10</button>' +
         '<div class="az-compra"><button class="az-b verde" data-accion="azar-comprar" data-n="1"><small><span class="ico gema"></span> ' + PRECIO_FICHA + '</small>' + L('Comprar 1 ficha', 'Buy 1 token') + '</button>' + /* v9.50: comprar fichas con gemas aquí mismo */
@@ -11770,7 +11773,7 @@
     if (!a) { var p = proximoEvento('ruleta'); consejoTemporal(L('La Ruleta no está abierta. Vuelve el ', 'The Wheel is closed. Back on ') + (p ? new Date(p).toLocaleDateString(estado.idioma === 'en' ? 'en' : 'es', { day: 'numeric', month: 'long' }) : '')); return; }
     var r = estadoRuleta(a.id), f = fichasRuleta(), g = estado.gemasInfinitas ? Infinity : (estado.gemas || 0); // v8.19: fichas de Ruleta
     var falta = Math.max(0, 5 - r.llaves);
-    var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b class="rul-fichas">' + (estado.gemasInfinitas ? '∞' : f) + '</b> · ' + L('o gemas', 'or gems') + '</small></div>' +
+    var html = '<div class="rul-arriba"><span>⏳ ' + L('Tiempo restante: ', 'Time left: ') + '<b id="rul-reloj" data-fin="' + a.fin + '">' + fmtTiempo(Math.ceil((a.fin - Date.now()) / 1000)) + '</b></span><small>' + (window.ICONO_FICHA || '🪙') + ' ' + L('Fichas: ', 'Tokens: ') + '<b class="rul-fichas">' + txtFichas(Math.max(0, estado.fichasRul || 0)) + '</b> · ' + L('o gemas', 'or gems') + '</small></div>' +
       htmlRueda() +
       htmlTableroRuleta(r) +
       '<div class="rul-galeon"><div class="rul-llaves">' + [0, 1, 2, 3, 4].map(function (i) { return '<span class="' + (i < r.llaves ? 'si' : '') + '">' + '<img class="ico-obj" src="iconos/ui/o_llave.webp" alt="🗝️">' + '</span>'; }).join('') + '</div><div class="rul-cofre' + (falta ? ' cerrado' : '') + '"' + (falta ? '' : ' data-accion="rul-galeon"') + '><img src="iconos/ui/rul_galeon.webp" alt="🎁"></div>' +
@@ -11812,7 +11815,7 @@
     var liberar = true; try {
     var a = eventoActivo('ruleta'); if (!a) { cerrarPanel(); return; }
     var conF = n < 50 && fichasRuleta() >= n; // v8.19: 1 ficha de Ruleta por tirada
-    if (conF) { if (!estado.gemasInfinitas) estado.fichasRul = fichasRuleta() - n; }
+    if (conF) { estado.fichasRul = Math.max(0, (estado.fichasRul || 0) - n); } /* v9.51: el dueño también gasta las que compró */
     else if (!pagar(0, precioRuleta(n))) return;
     liberar = false;
     var r = estadoRuleta(a.id), ganados = [], idx = [];
@@ -12093,7 +12096,7 @@
     if (!max) return;
     var d = document.createElement('div'); d.id = 'uso-masa';
     d.innerHTML = '<div class="um-caja"><button class="um-x" id="um-x">✕</button><h3>' + (it ? L('Comprar', 'Buy') : L('Uso en masa', 'Bulk use')) + '</h3>' +
-      '<div class="um-cab"><span class="um-ico">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + formatoNumero(tiene) + (it ? ' · 💎 ' + formatoNumero(it.gemas) + L(' cada uno', ' each') : '') + '</small></div></div>' +
+      '<div class="um-cab"><span class="um-ico">' + OBJETOS[k].icono + '</span><div><b>' + N(k) + '</b><small>' + L('Tienes: ', 'Owned: ') + (OBJETOS[k].fichasPack ? formatoNumero(Math.max(0, estado.fichas || 0)) + ' 🪙 · ' + formatoNumero(Math.max(0, estado.fichasRul || 0)) + ' 🎡' : formatoNumero(tiene)) /* v9.51 */ + (it ? ' · 💎 ' + formatoNumero(it.gemas) + L(' cada uno', ' each') : '') + '</small></div></div>' +
       '<div class="um-trae"><b>' + L('Qué trae (cada uno):', 'What is inside (each):') + '</b>' + (htmlContenido(k) || '<p>' + escaparHTML(D(k)) + '</p>') + '</div>' +
       '<div class="um-cant"><button class="um-menos" id="um-menos">−</button><input id="um-n" type="number" inputmode="numeric" min="1" max="' + max + '" value="1"><button class="um-mas" id="um-mas">+</button></div>' +
       '<div class="um-desl"><span>1</span><input id="um-r" type="range" min="1" max="' + max + '" value="1"><button class="um-todos" id="um-todos">' + (it ? L('Máx', 'Max') : L('Todos', 'All')) + '</button></div>' +
@@ -12262,7 +12265,7 @@
     TIENDA.map(function (it, i) { return [it, i]; }).filter(function (x) { return (x[0].cat || 'varios') === pestTienda; }).sort(function (a, b) { return pestTienda === 'cofres' ? a[0].gemas - b[0].gemas || a[1] - b[1] : a[1] - b[1]; }).forEach(function (x) { /* v9.49 (dueño): los cofres de menor a mayor precio */
       var it = x[0], i = x[1];
       var o = OBJETOS[it.id], tiene = (estado.mochila && estado.mochila[it.id]) || 0;
-      html += '<div class="fila-tienda"><span class="ft-ico' + (o.soloInv ? ' arcano' : '') + '" data-accion="obj-info" data-k="' + it.id + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(it.id) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + (o.fichasPack ? (estado.gemasInfinitas ? '∞' : formatoNumero(estado.fichas || 0)) + ' 🪙 · ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.fichasRul || 0)) + ' 🎡' : tiene) /* v9.48: en los cofres de fichas se ven tus fichas */ + '</small><small>' + D(it.id) + '</small>' +
+      html += '<div class="fila-tienda"><span class="ft-ico' + (o.soloInv ? ' arcano' : '') + '" data-accion="obj-info" data-k="' + it.id + '">' + o.icono + '<i class="ft-i">i</i></span><span class="ft-info"><b>' + N(it.id) + '</b><small class="ft-tienes">' + L('Tienes: ', 'Owned: ') + (o.fichasPack ? formatoNumero(Math.max(0, estado.fichas || 0)) + ' 🪙 · ' + formatoNumero(Math.max(0, estado.fichasRul || 0)) + ' 🎡' : tiene) /* v9.48: en los cofres de fichas se ven tus fichas */ + '</small><small>' + D(it.id) + '</small>' +
         '<span class="ft-precio">' + (it.antes ? '<s>' + it.antes + '</s> ' : '') + '<span class="ico gema"></span>' + it.gemas + (it.antes ? ' <i class="oferta">⏳ ' + L('Oferta', 'Offer') + '</i>' : '') + '</span></span>' +
         '<button class="comprar verde" data-accion="comprar" data-i="' + i + '" data-gemas="' + it.gemas + '">' + L('Comprar', 'Buy') + '</button></div>';
     });
