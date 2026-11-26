@@ -2482,3 +2482,12 @@ html body #lateral .redondo:has(.rd-img), html body.tema-oscuro #lateral .redond
 html body #lateral { gap: 4px !important; }
 html body #dock-procesos .dk-tabs button { padding: 4px 2px !important; min-height: 30px !important; font-size: 12.5px !important; }
 html body #dock-procesos .dk-tabs .dk-flecha { min-height: 30px !important; }
+
+/* v9.50: Azar: las fichas que tienes, bien grande, y comprar fichas con gemas */
+#panel.az-panel .az-botones { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+#panel.az-panel .az-saldo { width: 100%; text-align: center; font: 800 17px system-ui, sans-serif; color: #ffe7a0; display: flex; align-items: center; justify-content: center; gap: 6px; }
+#panel.az-panel .az-saldo .ico-obj { width: 26px; height: 26px; }
+#panel.az-panel .az-saldo b { font-size: 20px; color: #fff; }
+#panel.az-panel .az-compra { width: 100%; display: flex; justify-content: center; gap: 8px; }
+#panel.az-panel .az-compra .az-b { flex-direction: column; line-height: 1.15; }
+#panel.az-panel .az-compra .az-b small { font: 800 13px system-ui, sans-serif; display: flex; align-items: center; gap: 3px; }

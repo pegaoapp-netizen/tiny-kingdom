@@ -11585,8 +11585,11 @@
       '<p class="az-elige">👆 ' + L('Tú eliges: toca un cofre cerrado para abrirlo.', 'You choose: tap a closed chest to open it.') + '</p>' + /* v8.44 */
       '<div class="az-botones">' + (azarGrid.every(function (x) { return x; }) ? '<button class="az-b verde" data-accion="azar-nuevo">🔄 ' + L('Tablero nuevo', 'New board') + '</button>' : '') +
       (prem ? '<button class="az-b verde" data-accion="azar-fichas"><span class="ico gema"></span>20 · ' + L('10 fichas', '10 tokens') + '</button>' : /* v9.49 (dueño): «de una ficha» y «de 10 fichas» (antes «Abrir los 9») */
+        '<div class="az-saldo">' + ICONO_FICHA + ' ' + L('Tienes: ', 'You have: ') + '<b>' + (estado.gemasInfinitas ? '∞' : formatoNumero(n)) + '</b> ' + L(n === 1 ? 'ficha' : 'fichas', n === 1 ? 'token' : 'tokens') + '</div>' + /* v9.50 (dueño): que diga las fichas que tienes */
         '<button class="az-b azul" data-accion="azar-varios" data-n="1"' + (n >= 1 ? '' : ' disabled') + '>' + L('Abrir 1', 'Open 1') + ' · ' + ICONO_FICHA + ' 1</button>' +
-        '<button class="az-b azul" data-accion="azar-varios" data-n="10"' + (n >= 10 ? '' : ' disabled') + '>' + L('Abrir 10', 'Open 10') + ' · ' + ICONO_FICHA + ' 10</button>') + '</div>';
+        '<button class="az-b azul" data-accion="azar-varios" data-n="10"' + (n >= 10 ? '' : ' disabled') + '>' + L('Abrir 10', 'Open 10') + ' · ' + ICONO_FICHA + ' 10</button>' +
+        '<div class="az-compra"><button class="az-b verde" data-accion="azar-comprar" data-n="1"><small><span class="ico gema"></span> ' + PRECIO_FICHA + '</small>' + L('Comprar 1 ficha', 'Buy 1 token') + '</button>' + /* v9.50: comprar fichas con gemas aquí mismo */
+        '<button class="az-b verde" data-accion="azar-comprar" data-n="10"><small><span class="ico gema"></span> ' + PRECIO_FICHA * 10 + '</small>' + L('Comprar 10 fichas', 'Buy 10 tokens') + '</button></div>') + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
     $('panel').classList.add('iv-panel', 'az-panel');
   }
@@ -11625,6 +11628,13 @@
     nuevos.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
     if (cant === 1) { consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k); }).join(', ')); return; }
     setTimeout(function () { mostrarRecompensas(L('Azar', 'Lucky') + ' ×' + cant, Object.keys(ganado).map(function (k) { return { ico: OBJETOS[k].icono, n: ganado[k], nom: N(k) }; })); }, 700);
+  }
+  var PRECIO_FICHA = 2; /* v9.50: 1 ficha de Azar = 2 gemas (igual que «10 fichas de Azar» de la Tienda: 20 gemas) */
+  function comprarFichasAzar(cant) {
+    cant = cant === 10 ? 10 : 1;
+    if (!pagar(0, PRECIO_FICHA * cant)) return;
+    estado.fichas = (estado.fichas || 0) + cant; sonar('moneda'); guardar(true); abrirAzar();
+    consejoTemporal('✅ +' + cant + ' ' + L(cant === 1 ? 'ficha de Azar' : 'fichas de Azar', cant === 1 ? 'Lucky token' : 'Lucky tokens'));
   }
   function comprarFichas() {
     if (!pagar(0, 20)) return;
@@ -13120,6 +13130,7 @@
     else if (a === 'al-muro-enviar') { var im = $('al-muro-txt'); if (im && im.value.trim() && canalAlianza()) { iniciarChat(); enviarMensaje(im, canalAlianza()); setTimeout(pintarHubAlianza, 600); } }
     else if (a === 'azar-sacar') sacarAzar(+b.getAttribute('data-n'), b.hasAttribute('data-c') ? +b.getAttribute('data-c') : null);
     else if (a === 'azar-varios') sacarAzarVarios(+b.getAttribute('data-n')); /* v9.49 */
+    else if (a === 'azar-comprar') { sonar('click'); comprarFichasAzar(+b.getAttribute('data-n')); } /* v9.50 */
     else if (a === 'azar-nuevo') { sonar('click'); azarGrid = null; abrirAzar(); } /* v8.44 */
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
     else if (a === 'inv-mover') { var cr = $('iv-carril'); if (cr) cr.scrollBy({ left: +b.getAttribute('data-d') * cr.clientWidth, behavior: 'smooth' }); }
