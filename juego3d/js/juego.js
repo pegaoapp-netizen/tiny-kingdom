@@ -12863,6 +12863,10 @@
   var correoEditar = false;
   function tabDe(m) { return m.cat === 'sistema' ? 'sistema' : (m.cat === 'guerras' || m.cat === 'informes') ? 'informe' : m.cat === 'enviados' ? 'enviados' : 'correo'; }
   function delTab(t) { return correoLista().filter(function (m) { return tabDe(m) === t; }).sort(function (a, b) { return (b.fecha || 0) - (a.fecha || 0); }); }
+  /* v9.75 (dueño): carta CERRADA (con su sello) si no la has leído; carta ABIERTA si ya la leíste. El dibujito de la categoría va en la esquina */
+  var SOBRE_CERRADO = '<svg viewBox="0 0 48 40" class="co-sobre" aria-hidden="true"><rect x="3" y="7" width="42" height="28" rx="3" fill="#f6e7c1" stroke="#7a5320" stroke-width="2"/><path d="M4 9l20 15 20-15" fill="none" stroke="#7a5320" stroke-width="2" stroke-linejoin="round"/><path d="M4 34l15-12M44 34L29 22" stroke="#b8925a" stroke-width="1.5"/><circle cx="24" cy="23" r="5.5" fill="#c62f22" stroke="#7a1410" stroke-width="1.5"/><path d="M21.5 23h5M24 20.5v5" stroke="#ffd2c8" stroke-width="1.3"/></svg>';
+  var SOBRE_ABIERTO = '<svg viewBox="0 0 48 40" class="co-sobre" aria-hidden="true"><path d="M3 18L24 4l21 14v18a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3z" fill="#e9d6a8" stroke="#7a5320" stroke-width="2" stroke-linejoin="round"/><rect x="10" y="9" width="28" height="20" rx="1.5" fill="#fffaf0" stroke="#b8925a" stroke-width="1.2"/><path d="M14 14h20M14 18h20M14 22h13" stroke="#b8925a" stroke-width="1.3" stroke-linecap="round"/><path d="M3 18l21 13 21-13" fill="#f6e7c1" stroke="#7a5320" stroke-width="2" stroke-linejoin="round"/></svg>';
+  function sobreCorreo(m) { return '<span class="co-sobre-c">' + (m.leido ? SOBRE_ABIERTO : SOBRE_CERRADO) + '<i class="co-cat">' + icoCorreo(m) + '</i></span>'; }
   function icoCorreo(m) { return m.cat === 'sistema' ? '📜' : m.cat === 'guerras' ? '⚔️' : m.cat === 'informes' ? '📋' : m.cat === 'enviados' ? '📤' : m.cat === 'alianza' ? '🛡️' : '✉️'; }
   function abrirCorreo(tab) {
     if (!abrirCorreo.ultRev || Date.now() - abrirCorreo.ultRev > 20000) { abrirCorreo.ultRev = Date.now(); try { revisarCompensaciones(); } catch (e) {} } // v8.07
@@ -12879,7 +12883,7 @@
         (m.premio && m.comp ? htmlCompensacionCorreo(m, pend) : m.premio ? '<p class="mail-premio">🎁 ' + textoPremioCorreo(m.premio) + '</p>' + (pend ? '<button class="az-b verde" data-accion="co-reclamar" data-id="' + m.id + '">' + L('Reclamar', 'Claim') + '</button>' : '<p class="nota">✓ ' + L('Reclamado', 'Claimed') + '</p>') : '') + '</div>';
     } else {
       h += '<div class="co-lista">' + (lista.length ? lista.map(function (x) {
-        return '<div class="co-fila' + (x.leido ? '' : ' nuevo') + '" data-accion="co-abrir" data-id="' + x.id + '"><span class="co-ic">' + icoCorreo(x) + '</span><div class="co-txt"><b>' + escaparHTML(x.titulo) + '</b><small>' + fechaCorta(x.fecha) + '</small></div>' +
+        return '<div class="co-fila' + (x.leido ? '' : ' nuevo') + '" data-accion="co-abrir" data-id="' + x.id + '"><span class="co-ic">' + sobreCorreo(x) + '</span><div class="co-txt"><b>' + escaparHTML(x.titulo) + '</b><small>' + fechaCorta(x.fecha) + '</small></div>' +
           (x.premio && !x.reclamado ? '<span class="co-regalo">🎁</span>' : '') + (correoEditar ? '<button class="co-borrar" data-accion="co-borrar" data-id="' + x.id + '">✕</button>' : '<span class="co-flecha">›</span>') + '</div>';
       }).join('') : '<p class="co-vacio">' + L('No tienes ningún correo', 'You have no mail') + '</p>') + '</div>';
     }
