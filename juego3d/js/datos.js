@@ -4,10 +4,11 @@
 //  Para cambiar el nombre del juego, cambia NOMBRE_JUEGO.
 // =====================================================================
 
-var VERSION_JUEGO = '9.40';
+var VERSION_JUEGO = '9.41';
 /* v8.70: NOTAS DE CADA VERSIÓN. Cada versión nueva manda UN correo solo con su nota (las más nuevas arriba).
    Al publicar una versión, agrega aquí su línea: [versión, fecha, texto en español, texto en inglés]. */
-var NOVEDADES_VER = [["9.40","2026-11-25","El castillo queda centrado en su plataforma, con la puerta frente al puente, y la villa se abre con el castillo ya puesto (sin plataforma vacía).","The castle is centered on its platform facing the bridge, and the village opens with the castle already in place."],
+var NOVEDADES_VER = [["9.41","2026-11-25","Campaña: todos avanzan en línea recta por el camino, mirando al enemigo, en filas estrechas que nunca pisan los bordes; los letreros de habilidades son más pequeños, rápidos y no se enciman.","Campaign: units advance straight along the road facing the enemy in narrow rows that never leave it; ability labels are smaller, quicker and never overlap."],
+  ["9.40","2026-11-25","El castillo queda centrado en su plataforma, con la puerta frente al puente, y la villa se abre con el castillo ya puesto (sin plataforma vacía).","The castle is centered on its platform facing the bridge, and the village opens with the castle already in place."],
   ["9.39","2026-11-25","Campaña: camino más ancho con 3 carriles; cada grupo va por su carril, los que sobran se ponen detrás y nadie pisa el césped.","Campaign: wider road with 3 lanes; each group keeps its lane, extras line up behind, and nobody steps on the grass."],
   ["9.38","2026-11-25","Campaña: los muñecos pelean con más espacio, sin amontonarse.","Campaign: figures fight with more space, without piling up."],
   ["9.37","2026-11-25","Campaña: los muñecos caminan rectos, tus héroes de espaldas hacia el frente y los enemigos de frente hacia ellos.","Campaign: figures walk straight: your heroes from behind, enemies facing them."],

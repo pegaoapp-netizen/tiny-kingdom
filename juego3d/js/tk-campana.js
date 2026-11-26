@@ -177,19 +177,21 @@
   }
   /* v9.39 (dueño): TRES CARRILES. El camino tiene dos rayas: cada grupo va por un carril, los que sobran se ponen detrás en fila,
      y nadie (ni los tuyos ni los enemigos) pisa nunca el césped. */
-  var CARRILES = [0, -2 / 3, 2 / 3];
+  var CARRILES = [0, -1, 1]; /* v9.41: en píxeles se multiplican por 38 (−38, 0, +38) */
   function aCamino(x, y) { var z = zona(), ax = W * 0.06, ay = z.y1 - 14, bx = W * 0.94, by = z.y0 + 14, dx = bx - ax, dy = by - ay, l = Math.hypot(dx, dy), px = -dy / l, py = dx / l, ancho = Math.min(W, z.y1 - z.y0) * 0.21; return { t: ((x - ax) * dx + (y - ay) * dy) / (l * l), c: ((x - ax) * px + (y - ay) * py) / ancho }; }
   function ponerCarril(u, lista, alEmpezar) {
     var k = lista.filter(function (o) { return o.carril != null; }).length, fila = Math.floor(k / 3); u.carril = CARRILES[k % 3];
     var t = alEmpezar ? (u.lado === 'az' ? Math.max(0.03, 0.2 - fila * 0.07) : Math.min(0.97, 0.82 + fila * 0.06)) : aCamino(u.x, u.y).t;
-    var p = punto(t, u.carril); u.x = p.x; u.y = p.y;
+    var p = enCarril(t, u.carril); u.x = p.x; u.y = p.y;
   }
+  /* v9.41: posición = eje + t · largo · dir + carril · 38 px · perp (lateral siempre entre −45 y +45 px) */
+  function enCarril(t, carril) { var e = ejeCamino(), off = Math.max(-45, Math.min(45, carril * 38)); return { x: e.x1 + e.dirX * e.l * t + e.perpX * off, y: e.y1 + e.dirY * e.l * t + e.perpY * off }; }
   function colocarCarriles() { [lado.az, lado.ro].forEach(function (l) { l.forEach(function (u) { u.carril = null; }); l.forEach(function (u) { ponerCarril(u, l, true); }); }); }
   function sujetarAlCamino(dt) {
     [lado.az, lado.ro].forEach(function (l) { l.forEach(function (u) {
       if (u.carril == null) ponerCarril(u, l, false); /* refuerzos y los que llaman los jefes */
-      var q = aCamino(u.x, u.y), c = q.c + (u.carril - q.c) * Math.min(1, dt * 8);
-      c = Math.max(-0.8, Math.min(0.8, c)); var t = Math.max(0.02, Math.min(0.98, q.t)), p = punto(t, c); u.x = p.x; u.y = p.y;
+      var e = ejeCamino(), rx = u.x - e.x1, ry = u.y - e.y1, t = Math.max(0.02, Math.min(0.98, (rx * e.dirX + ry * e.dirY) / e.l)), lat = (rx * e.perpX + ry * e.perpY) / 38;
+      var c = lat + (u.carril - lat) * Math.min(1, dt * 8); c = Math.max(-45 / 38, Math.min(45 / 38, c)); var p = enCarril(t, c); u.x = p.x; u.y = p.y; /* v9.41 */
     }); });
   }
   function armarLados() {
@@ -209,7 +211,7 @@
     var t = performance.now() / 1000, vivos = u.vivo ? Math.max(1, Math.ceil(9 * u.hp / u.max)) : 0, k = u.tropa || '', arq = u.rango > 0.1, cab = /caball|jinete/.test(k), gua = /guard/.test(k);
     if (!u.vivo) cx.globalAlpha = 0.35;
     for (var n = 0; n < Math.max(vivos, u.vivo ? 1 : 3); n++) {
-      var fila = Math.floor(n / 3), col = n % 3, sx = u.x - 14 + col * 14 - fila * 6, sy = u.y - 10 + fila * 11 + (col % 2) * 3, salto = u.anda ? Math.abs(Math.sin(t * 9 + n)) * 2 : 0, gol = u.cd > u.ritmo - 0.15 ? 3 : 0;
+      var ejF = ejeCamino(), fila = Math.floor(n / 3), col = n % 3, sx = u.x - ejF.dirX * fila * 13 + ejF.perpX * (col - 1) * 10, sy = u.y - ejF.dirY * fila * 13 + ejF.perpY * (col - 1) * 10, /* v9.41: filas hacia atrás por el camino */ salto = u.anda ? Math.abs(Math.sin(t * 9 + n)) * 2 : 0, gol = u.cd > u.ritmo - 0.15 ? 3 : 0;
       cx.fillStyle = 'rgba(0,0,0,0.3)'; cx.beginPath(); cx.ellipse(sx + 2, sy + 6, cab ? 9 : 6, 2.4, 0, 0, 7); cx.fill();
       if (cab) { cx.fillStyle = '#6b4424'; cx.beginPath(); cx.ellipse(sx, sy + 1 - salto, 8, 4, 0, 0, 7); cx.fill(); cx.fillRect(sx + 5, sy - 5 - salto, 3, 6); cx.fillStyle = '#4a2c14'; cx.fillRect(sx - 6, sy + 3 - salto, 2, 5); cx.fillRect(sx + 4, sy + 3 - salto, 2, 5); sy -= 5; }
       if (arq) { cx.strokeStyle = '#8a5a2a'; cx.lineWidth = 1.4; cx.beginPath(); cx.arc(sx + 5, sy - 6 - salto, 5, -1.2, 1.2); cx.stroke(); cx.strokeStyle = '#ddd'; cx.lineWidth = 0.6; cx.beginPath(); cx.moveTo(sx + 5 + Math.cos(-1.2) * 5, sy - 6 - salto + Math.sin(-1.2) * 5); cx.lineTo(sx + 5 + Math.cos(1.2) * 5 - gol, sy - 6 - salto + Math.sin(1.2) * 5); cx.stroke(); }
@@ -285,7 +287,7 @@
       else if (e.tipo === 'cura') { cx.fillStyle = 'rgba(90,230,120,' + (1 - k) + ')'; for (var j = 0; j < 5; j++) { cx.fillRect(e.x - 10 + j * 5, e.y - 10 - k * 26 - (j % 2) * 6, 3, 8); cx.fillRect(e.x - 12 + j * 5, e.y - 7 - k * 26 - (j % 2) * 6, 7, 2); } }
       else if (e.tipo === 'aro') { cx.strokeStyle = e.c.replace('A', String(1 - k)); cx.lineWidth = 4; cx.beginPath(); cx.arc(e.x, e.y, 10 + 40 * k, 0, 7); cx.stroke(); }
       else if (e.tipo === 'onda') { var ro = 14 + 70 * k, go = cx.createRadialGradient(e.x, e.y, ro * 0.6, e.x, e.y, ro); go.addColorStop(0, 'rgba(255,215,90,0)'); go.addColorStop(0.8, 'rgba(255,215,90,' + (0.55 * (1 - k)) + ')'); go.addColorStop(1, 'rgba(255,240,170,0)'); cx.fillStyle = go; cx.beginPath(); cx.ellipse(e.x, e.y, ro, ro * 0.38, 0, 0, 7); cx.fill(); cx.strokeStyle = 'rgba(255,225,120,' + (0.9 * (1 - k)) + ')'; cx.lineWidth = 2.5; cx.beginPath(); cx.ellipse(e.x, e.y, ro, ro * 0.38, 0, 0, 7); cx.stroke(); }
-      else if (e.tipo === 'texto') { cx.font = '800 ' + (e.g ? 16 : 12) + 'px system-ui'; cx.textAlign = 'center'; cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.fillStyle = e.c; var ty = e.y - 26 * k; cx.globalAlpha = 1 - k * k; cx.strokeText(e.txt, e.x, ty); cx.fillText(e.txt, e.x, ty); cx.globalAlpha = 1; }
+      else if (e.tipo === 'texto') { cx.font = '800 ' + (e.g ? 13 : 10) + 'px system-ui'; /* v9.41: 20 % más pequeños */ cx.textAlign = 'center'; cx.lineWidth = 3; cx.strokeStyle = '#000'; cx.fillStyle = e.c; var ty = e.y - 26 * k; cx.globalAlpha = 1 - k * k; cx.strokeText(e.txt, e.x, ty); cx.fillText(e.txt, e.x, ty); cx.globalAlpha = 1; }
     });
   }
   function dibujar(dt) {
@@ -299,10 +301,16 @@
 
   // ---------------- la pelea ----------------
   function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+  /* v9.41 (dueño): EJE DEL CAMINO. P1 = punto(0,0) abajo a la izquierda, P2 = punto(1,0) arriba a la derecha.
+     dir = vector unitario de avance; perp = vector perpendicular (-dirY, dirX). */
+  function ejeCamino() { var a = punto(0, 0), b = punto(1, 0), dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1, dX = dx / l, dY = dy / l; return { x1: a.x, y1: a.y, dirX: dX, dirY: dY, perpX: -dY, perpY: dX, l: l }; }
+  var ANCHO_UTIL = 110; /* px de camino que se pueden usar: nadie se sale de ±55 px del centro */
   function largoCamino() { var a = punto(0, 0), b = punto(1, 0); return Math.hypot(b.x - a.x, b.y - a.y); }
   function objetivo(u) { var otros = (u.lado === 'az' ? lado.ro : lado.az).filter(function (o) { return o.vivo; }), m = null, dm = 1e9; otros.forEach(function (o) { var d = dist(u, o); if (d < dm) { dm = d; m = o; } }); return m; }
   function aliados(u) { return (u.lado === 'az' ? lado.az : lado.ro).filter(function (o) { return o.vivo; }); }
   function enemigosDe(u) { return (u.lado === 'az' ? lado.ro : lado.az).filter(function (o) { return o.vivo; }); }
+  /* v9.41: un letrero nunca se pone encima de otro: si ya hay uno cerca, sube hasta encontrar sitio */
+  function ponerTexto(e) { for (var i = 0; i < 6; i++) { var choca = efectos.some(function (o) { return o.tipo === 'texto' && o.t < o.dur * 0.6 && Math.abs(o.x - e.x) < 60 && Math.abs(o.y - e.y) < 13; }); if (!choca) break; e.y -= 14; } efectos.push(e); }
   function danar(de, a, cant, grande) {
     if (!a.vivo) return;
     var d = cant * (de && de.buff > 0 ? 1.4 : 1) * (a.escudo > 0 ? 0.5 : 1) * (0.9 + Math.random() * 0.2);
@@ -330,7 +338,7 @@
   function lanzar(u) {
     if (!u.vivo || u.en < 100) return;
     u.en = 0; var o = objetivo(u), hab = u.h ? u.h.hab : 'golpe', nom = HAB[hab] ? L(HAB[hab].es, HAB[hab].en) : '';
-    efectos.push({ tipo: 'texto', x: u.x, y: u.y - 30, txt: '✨ ' + nom, c: '#ffe08a', g: true, t: 0, dur: 1.2 });
+    ponerTexto({ tipo: 'texto', x: u.x, y: u.y - 30, txt: '✨ ' + nom, c: '#ffe08a', g: true, t: 0, dur: 0.6 });
     if (u.h && !u.tropa) { efectos.push({ tipo: 'onda', x: u.x, y: u.y + 10, t: 0, dur: 0.9 }); efectos.push({ tipo: 'onda', x: u.x, y: u.y + 10, t: -0.18, dur: 0.9 }); } /* v9.35: onda dorada en el suelo */
     if (G) G.sonar('magia');
     if (hab === 'grito') aliados(u).forEach(function (a) { a.buff = 6; efectos.push({ tipo: 'aro', x: a.x, y: a.y, c: 'rgba(255,210,58,A)', t: 0, dur: 0.6 }); });
@@ -349,7 +357,7 @@
   };
   function lanzarJefe(u) {
     u.en = 0; var hab = u.habs[u.nh++ % u.habs.length], o = objetivo(u), nom = HAB_JEFE[hab] ? L(HAB_JEFE[hab].es, HAB_JEFE[hab].en) : '';
-    efectos.push({ tipo: 'texto', x: u.x, y: u.y - 40, txt: '☠️ ' + nom, c: '#ff8a7a', g: true, t: 0, dur: 1.4 }); if (G) G.sonar('cuerno');
+    ponerTexto({ tipo: 'texto', x: u.x, y: u.y - 40, txt: '☠️ ' + nom, c: '#ff8a7a', g: true, t: 0, dur: 0.6 }); if (G) G.sonar('cuerno');
     var av = $('tkc-aviso'); if (av) { av.textContent = '☠️ ' + (u.nom || '') + ': ' + nom; av.classList.remove('on'); void av.offsetWidth; av.classList.add('on'); }
     if (hab === 'furia') aliados(u).forEach(function (a) { a.buff = 7; efectos.push({ tipo: 'aro', x: a.x, y: a.y, c: 'rgba(255,80,40,A)', t: 0, dur: 0.7 }); });
     else if (hab === 'escudo') { u.escudo = 7; efectos.push({ tipo: 'aro', x: u.x, y: u.y, c: 'rgba(170,170,190,A)', t: 0, dur: 0.8 }); }
@@ -375,8 +383,8 @@
       if (u.aturdido > 0) { u.aturdido -= dt; return; }
       var o = objetivo(u); if (!o) return;
       if (u.sana) { u.sana -= dt; if (u.sana <= 0) { u.sana = 5; var her = aliados(u).sort(function (a, b) { return a.hp / a.max - b.hp / b.max; })[0]; if (her && her.hp < her.max) { her.hp = Math.min(her.max, her.hp + her.max * 0.12); efectos.push({ tipo: 'cura', x: her.x, y: her.y, t: 0, dur: 1 }); } } }
-      var d = dist(u, o), alcance = u.rango * largo;
-      if (d > alcance) { var v = largo * 0.11 * (u.vel || 1) * dt, k = Math.min(1, v / d); u.x += (o.x - u.x) * k; u.y += (o.y - u.y) * k * 0.6; u.anda = true; }
+      var ej = ejeCamino(), dLargo = (o.x - u.x) * ej.dirX + (o.y - u.y) * ej.dirY, d = Math.abs(dLargo), alcance = u.rango * largo; /* v9.41: distancia a lo largo del camino */
+      if (d > alcance) { var v = Math.min(d - alcance * 0.9, largo * 0.11 * (u.vel || 1) * dt), sg = dLargo > 0 ? 1 : -1; u.x += ej.dirX * v * sg; u.y += ej.dirY * v * sg; u.anda = true; } /* v9.41: solo por (dirX, dirY): nunca de costado */
       else if (u.cd <= 0) { u.cd = u.ritmo; atacar(u, o); }
       if (u.en >= 100 && u.habs) lanzarJefe(u);
       else if (u.en >= 100 && (u.lado === 'ro' || auto)) lanzar(u);
