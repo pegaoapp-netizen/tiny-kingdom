@@ -165,13 +165,24 @@
   // lo que te da ventaja es el equipo, las estrellas, la Maestría y los talentos
   var nivelRival = 1;
   function escuadronEnemigo(n, i) {
-    var f = Math.pow(1.13, n - 1) * (1 + 0.06 * (nivelRival - 1)) * 1.4, e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4), jefe = i === 2 && n % 5 === 0;
+    var jefe = i === 2 && n % 5 === 0, f = Math.pow(1.13, n - 1) * (1 + 0.06 * (nivelRival - 1)) * 1.4 * factorAyuda() * (jefe ? 0.8 : 1), e = ENEMIGOS[i % ENEMIGOS.length], p = punto(0.86 - (i % 2) * 0.05, -0.8 + i * 0.4); /* v9.44 */
     var vida = 1500 * f * (jefe ? 1.8 : 1), atk = 52 * f * (jefe ? 1.5 : 1);
     return { lado: 'ro', ico: jefe ? '🐲' : e.ico, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: jefe, d: e.d };
   }
   /* v9.00: enemigos de una misión: e = { ico, nom, v (vida ×), a (ataque ×), d (a distancia), vel, jefe, habs, sana } */
+  /* v9.44 (Felix y el dueño: «la Campaña siempre se tiene que poder ganar; el combate de verdad es contra jugadores»):
+     cada derrota en la MISMA etapa deja a sus enemigos un 15 % más débiles (hasta la mitad), y los jefes salen un 20 % más flojos de base. Al ganar se reinicia. */
+  function claveAyuda() { return mis ? 'm' + (mis.dif || '') + (mis.num || '') : 'e' + etapa; }
+  function leerAyudas() { try { return JSON.parse(localStorage.getItem('tkc_ayuda') || '{}') || {}; } catch (e) { return {}; } }
+  function factorAyuda() { var d = leerAyudas()[claveAyuda()] || 0; return Math.max(0.5, Math.pow(0.85, d)); }
+  function anotarResultado(gano) {
+    var a = leerAyudas(), k = claveAyuda(); if (gano) delete a[k]; else a[k] = Math.min(10, (a[k] || 0) + 1);
+    try { localStorage.setItem('tkc_ayuda', JSON.stringify(a)); } catch (e) {}
+    if (gano) return ''; var pct = Math.round((1 - Math.max(0.5, Math.pow(0.85, a[k]))) * 100);
+    return '<p class="tkc-tn">🛡️ ' + L('Próximo intento: los enemigos de esta etapa estarán un ' + pct + ' % más débiles.', 'Next try: enemies of this stage will be ' + pct + '% weaker.') + '</p>';
+  }
   function escuadronMision(e, i, n, t0) {
-    var f = mis.f * (1 + 0.06 * (nivelRival - 1)), carril = e.jefe ? 0 : (n > 1 ? -0.85 + i * 1.7 / (n - 1) : 0), p = punto(t0 || (e.jefe ? 0.9 : 0.86 - (i % 2) * 0.05), carril);
+    var f = mis.f * (1 + 0.06 * (nivelRival - 1)) * factorAyuda() * (e.jefe ? 0.8 : 1), carril = e.jefe ? 0 : (n > 1 ? -0.85 + i * 1.7 / (n - 1) : 0), p = punto(t0 || (e.jefe ? 0.9 : 0.86 - (i % 2) * 0.05), carril);
     var vida = 1500 * f * (e.v || 1), atk = 52 * f * (e.a || 1);
     return { lado: 'ro', ico: e.ico, nom: e.nom, i: i, x: p.x, y: p.y, max: vida, hp: vida, atk: atk, rango: e.d ? 0.30 : 0.12, ritmo: e.d ? 1.2 : 0.95, cd: 0.4 + i * 0.1, en: 0, buff: 0, escudo: 0, aturdido: 0, vivo: true, jefe: !!e.jefe, d: !!e.d, vel: e.vel || 1, habs: e.habs || null, nh: 0, sana: e.sana ? 4 : 0, invoca: e.invoca || null };
   }
@@ -490,7 +501,7 @@
       var ui = raiz.querySelector('.tkc-ui'), n = etapa, items = [];
       if (mis) { finMision(gano, ui); return; }
       if (gano && G) { try { items = G.ganar(n, sel.slice()); } catch (e) { console.error(e); } etapa = G.etapa(); }
-      var txtPerd = bajasCampana(gano); /* v9.35 */
+      var txtPerd = bajasCampana(gano) + anotarResultado(gano); /* v9.35 · v9.44 */
       if (G) G.sonar(gano ? 'victoria' : 'derrota');
       var d = document.createElement('div'); d.className = 'tkc-fin';
       d.innerHTML = gano
@@ -507,7 +518,7 @@
     lado.az.forEach(function (u) { vida += Math.max(0, u.hp); vmax += u.max; });
     var e3 = mis.obj === 'sobrevive' ? vida >= vmax * 0.5 : tPelea <= mis.t3;
     var est = gano ? 1 + (heroesCaidos === 0 ? 1 : 0) + (e3 ? 1 : 0) : 0;
-    var txtPerd = bajasCampana(gano); /* v9.35 */
+    var txtPerd = bajasCampana(gano) + anotarResultado(gano); /* v9.35 · v9.44 */
     var r = { items: [] }; try { r = mis.alTerminar({ gano: gano, estrellas: est, t: tPelea, heroes: sel.slice() }) || r; } catch (e) { console.error(e); }
     if (G) G.sonar(gano ? 'victoria' : 'derrota');
     var estHtml = '<div class="tkc-est">' + [1, 2, 3].map(function (k) { return '<span class="' + (k <= est ? 'on' : '') + '" style="animation-delay:' + (0.25 * k) + 's">★</span>'; }).join('') + '</div>';
