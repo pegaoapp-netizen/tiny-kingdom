@@ -853,12 +853,21 @@
   function sincronizarParcelas(c) {
     var cambio = false;
     c.slots.forEach(function (s) {
-      var quiere = s.edificio && !s.campo && s.modelo;
-      var clave = quiere ? s.edificio.tipo + ':' + s.edificio.nivel + ':' + s.modelo.uuid : null;
+      var quiere = s.edificio && !s.campo && s.modelo, D = window.TKCorsariosDemo, dm = D && D.activo() && D.esDemo(s) ? ':demo' + D.version() : ''; // v10.01: zona de demostración (js/tk-corsarios-demo.js)
+      var clave = quiere ? s.edificio.tipo + ':' + s.edificio.nivel + ':' + s.modelo.uuid + dm : null;
       if (clave === s.tkcClave) { if (s.tkc && s.modelo && s.modelo.visible) s.modelo.visible = false; if (s.tkc && s.adornos && s.adornos.visible) s.adornos.visible = false; return; }
       quitarPirata(s); cambio = true; if (!quiere) return;
       s.modelo.visible = true; s.modelo.updateMatrixWorld(true); bbM.setFromObject(s.modelo); if (bbM.isEmpty()) return;
-      var p = edificioPirata(s.edificio.tipo, s.edificio.nivel); p.updateMatrixWorld(true); bbP.setFromObject(p);
+      var p = dm ? D.edificio(s, c, yawCara) : null;
+      if (p) { // edificio de la demo: ya viene a la medida de la parcela y orientado a su calle
+        s.grupo.updateMatrixWorld(true); p.position.copy(s.grupo.worldToLocal(new T3.Vector3(s.pos.x, 0, s.pos.z)));
+        var gq0 = new T3.Quaternion(); s.grupo.getWorldQuaternion(gq0); var ws0 = new T3.Vector3(); s.grupo.getWorldScale(ws0); p.scale.setScalar(1 / (ws0.x || 1));
+        p.rotation.y = p.userData.yaw - new T3.Euler().setFromQuaternion(gq0, 'YXZ').y;
+        s.modelo.visible = false; if (s.adornos) s.adornos.visible = false; s.grupo.add(p); s.tkc = p; s.tkcClave = clave;
+        p.updateMatrixWorld(true); p.userData.lucesMundo = (p.userData.luces || []).map(function (q) { var w = p.localToWorld(new T3.Vector3(q.x, q.y, q.z)); return { x: w.x, y: w.y, z: w.z, faro: q.faro }; });
+        return;
+      }
+      p = edificioPirata(s.edificio.tipo, s.edificio.nivel); p.updateMatrixWorld(true); bbP.setFromObject(p);
       var tM = bbM.getSize(vT), tP = bbP.getSize(vT2), e = Math.max(0.55, Math.min(2.2, Math.max(tM.x, tM.z) / Math.max(tP.x, tP.z) * 0.98));
       p.scale.setScalar(e);
       var cen = bbM.getCenter(new T3.Vector3()); cen.y = bbM.min.y;
@@ -985,6 +994,8 @@
   })();
   window.TKCorsarios = {
     activa: function () { return activa; }, version: function () { return version; }, antorchas: antorchas,
+    // v10.01: piezas internas que reutiliza la zona de demostración (js/tk-corsarios-demo.js), solo lectura
+    _int: { veg: function () { materiales(); return prepararVegetacion(); }, U: U, distCamino: distCamino, segs: function () { return SEGS; }, raizL: function () { return ISL && ISL.raizL; }, bandera: function (g, x, y, z, an, al, ry, tipo) { materiales(); return bandera(g, x, y, z, an, al, ry, tipo); } },
     forzar: function (v) { FORZAR = v === undefined ? true : v === null ? null : !!v; },
     estado: function () { var c = C(); return { veg: ISL && ISL.veg, monteMs: ISL && ISL.fort && ISL.fort.userData.ms, activa: activa, villa: c ? c.villa() : null, ocultos: ocultos.length, edificios: c ? c.slots.filter(function (s) { return s.tkc; }).length : 0, luces: activa ? antorchas().length : 0, piratas: piratas.length, barcos: ISL ? ISL.navegan.length + ISL.amarrados.length : 0, fortaleza: ISL ? ISL.nvFort : 0 }; }
   };
