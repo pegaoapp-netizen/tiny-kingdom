@@ -995,7 +995,7 @@
   window.TKCorsarios = {
     activa: function () { return activa; }, version: function () { return version; }, antorchas: antorchas,
     // v10.01: piezas internas que reutiliza la zona de demostración (js/tk-corsarios-demo.js), solo lectura
-    _int: { veg: function () { materiales(); return prepararVegetacion(); }, U: U, distCamino: distCamino, segs: function () { return SEGS; }, raizL: function () { return ISL && ISL.raizL; }, bandera: function (g, x, y, z, an, al, ry, tipo) { materiales(); return bandera(g, x, y, z, an, al, ry, tipo); } },
+    _int: { veg: function () { materiales(); return prepararVegetacion(); }, U: U, distCamino: distCamino, segs: function () { return SEGS; }, raizL: function () { return ISL && ISL.raizL; }, fort: function () { return ISL && ISL.fort; }, nvFort: function () { return ISL ? ISL.nvFort : 0; }, bandera: function (g, x, y, z, an, al, ry, tipo) { materiales(); return bandera(g, x, y, z, an, al, ry, tipo); } },
     forzar: function (v) { FORZAR = v === undefined ? true : v === null ? null : !!v; },
     estado: function () { var c = C(); return { veg: ISL && ISL.veg, monteMs: ISL && ISL.fort && ISL.fort.userData.ms, activa: activa, villa: c ? c.villa() : null, ocultos: ocultos.length, edificios: c ? c.slots.filter(function (s) { return s.tkc; }).length : 0, luces: activa ? antorchas().length : 0, piratas: piratas.length, barcos: ISL ? ISL.navegan.length + ISL.amarrados.length : 0, fortaleza: ISL ? ISL.nvFort : 0 }; }
   };

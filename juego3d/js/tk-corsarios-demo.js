@@ -127,10 +127,11 @@
           ' } else if (mt < 4.5) {',                                                                             // cristal
           '   float cielo = smoothstep(-0.2, 0.6, fract(fp.y * 1.2) - 0.3 * dN(vec3(fp * 3.0, 1.0))); c = mix(vec3(0.12, 0.16, 0.2), vec3(0.5, 0.64, 0.74), cielo * (1.0 - uDN));',
           '   brillo = 0.12 + 1.5 * uDN * (0.75 + 0.25 * sin(uDT * 2.0 + w.x * 3.0));',
-          ' } else if (mt < 5.5) { c *= 0.85 + 0.25 * g; }',                                                     // hierro
+          ' } else if (mt < 5.5) { c *= 0.85 + 0.25 * g; }',
+          '   else if (mt > 8.5) { c = mix(vec3(1.0, 0.45, 0.08), vec3(1.0, 0.85, 0.3), dN(vec3(w * 4.0 + uDT * 2.0))); brillo = 1.6; }', // fuego de la fragua y braseros                                                     // hierro
           '   else if (mt < 6.5) { c *= 0.75 + 0.4 * dF(w * 3.5); c = mix(c, c * vec3(1.15, 1.2, 0.8), smoothstep(0.3, 1.2, dn.y)); }', // hojas
           '   else if (mt < 7.5) { c *= 0.9 + 0.35 * pow(max(dot(dn, normalize(vec3(0.3, 1.0, 0.4))), 0.0), 6.0); }', // oro
-          ' if (mt < 3.5 || mt > 7.5) c *= mix(0.62, 1.0, smoothstep(0.0, 1.1, w.y));',                         // suciedad y sombra junto al suelo
+          ' if (mt < 3.5 || (mt > 7.5 && mt < 8.5)) c *= mix(0.62, 1.0, smoothstep(0.0, 1.1, w.y));',                         // suciedad y sombra junto al suelo
           ' diffuseColor.rgb = c;'
         ].join('\n'))
         .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n totalEmissiveRadiance += vec3(1.0, 0.62, 0.26) * brillo;');
@@ -211,6 +212,7 @@
       k.quad([o.hwA, -0.12, 0], [-o.hwA, -0.12, 0], [-o.hwC, -0.12, -L], [o.hwC, -0.12, -L], 0x4a2c18, 1);      // cara de abajo (sombra del alero)
       k.caja(2 * o.hwA + 0.04, 0.16, 0.08, K.madO, 1, 0, -0.06, 0.02);                                         // tabla de alero
       for (var u = -o.hwA + 0.25; u < o.hwA - 0.1; u += 0.55) k.caja(0.09, 0.1, 0.42, K.madO, 1, u, -0.16, -0.12); // canecillos
+      if (o.paja) { for (var sp = 0; sp < L - 0.05; sp += 0.34) { var wp = hw(sp + 0.17); k.caja(wp * 2 + 0.1, 0.16, 0.42, new T3.Color(o.col || 0xc8a25a).multiplyScalar(0.82 + r() * 0.3).getHex(), 8, 0, 0.06, -sp - 0.2, 0, -0.12, 0, 0.12); } return; } // haces de paja
       if (CANT < 0.5) return;                                                                  // calidad baja: tablero con color de teja, sin tejas sueltas
       for (var s = 0, fila = 0; s < L - 0.05; s += ds, fila++) {
         var w = hw(s + ds / 2), n = Math.floor((w * 2) / du);
@@ -228,21 +230,21 @@
   // tejado a cuatro aguas (W a lo largo de x). Devuelve la altura de la cumbrera
   function tejado4(k, W, D, yTop, o) {
     o = o || {}; var oh = o.vuelo || 0.55, tg = Math.tan(o.pend || 0.6), R = D / 2 + oh, rise = R * tg, yE = yTop - oh * tg, rh = Math.max(0, (W - D) / 2), col = o.col;
-    faldon(k, { x: 0, y: yE, z: D / 2 + oh, ry: 0, run: R, rise: rise, hwA: W / 2 + oh, hwC: rh, col: col });
-    faldon(k, { x: 0, y: yE, z: -(D / 2 + oh), ry: Math.PI, run: R, rise: rise, hwA: W / 2 + oh, hwC: rh, col: col });
-    faldon(k, { x: W / 2 + oh, y: yE, z: 0, ry: Math.PI / 2, run: R, rise: rise, hwA: D / 2 + oh, hwC: 0, col: col });
-    faldon(k, { x: -(W / 2 + oh), y: yE, z: 0, ry: -Math.PI / 2, run: R, rise: rise, hwA: D / 2 + oh, hwC: 0, col: col });
+    var pj = o.paja; faldon(k, { x: 0, y: yE, z: D / 2 + oh, ry: 0, run: R, rise: rise, hwA: W / 2 + oh, hwC: rh, col: col, paja: pj });
+    faldon(k, { x: 0, y: yE, z: -(D / 2 + oh), ry: Math.PI, run: R, rise: rise, hwA: W / 2 + oh, hwC: rh, col: col, paja: pj });
+    faldon(k, { x: W / 2 + oh, y: yE, z: 0, ry: Math.PI / 2, run: R, rise: rise, hwA: D / 2 + oh, hwC: 0, col: col, paja: pj });
+    faldon(k, { x: -(W / 2 + oh), y: yE, z: 0, ry: -Math.PI / 2, run: R, rise: rise, hwA: D / 2 + oh, hwC: 0, col: col, paja: pj });
     var yc = yE + rise + 0.06;
-    if (rh > 0.05) cumbrera(k, new T3.Vector3(-rh, yc, 0), new T3.Vector3(rh, yc, 0));
-    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { cumbrera(k, new T3.Vector3(q[0] * (W / 2 + oh), yE + 0.06, q[1] * (D / 2 + oh)), new T3.Vector3(q[0] * rh, yc, 0)); });
+    var cc = col ? new T3.Color(col).multiplyScalar(0.78).getHex() : null; if (rh > 0.05) cumbrera(k, new T3.Vector3(-rh, yc, 0), new T3.Vector3(rh, yc, 0), cc);
+    [[1, 1], [1, -1], [-1, 1], [-1, -1]].forEach(function (q) { cumbrera(k, new T3.Vector3(q[0] * (W / 2 + oh), yE + 0.06, q[1] * (D / 2 + oh)), new T3.Vector3(q[0] * rh, yc, 0), cc); });
     return yc;
   }
   // tejado a dos aguas con la cumbrera a lo largo de z (el hastial mira al frente)
   function tejado2(k, W, D, yTop, o) {
     o = o || {}; var oh = o.vuelo || 0.5, tg = Math.tan(o.pend || 0.62), R = W / 2 + oh, rise = R * tg, yE = yTop - oh * tg, hl = D / 2 + 0.35;
-    faldon(k, { x: W / 2 + oh, y: yE, z: 0, ry: Math.PI / 2, run: R, rise: rise, hwA: hl, hwC: hl, col: o.col });
-    faldon(k, { x: -(W / 2 + oh), y: yE, z: 0, ry: -Math.PI / 2, run: R, rise: rise, hwA: hl, hwC: hl, col: o.col });
-    var yc = yE + rise; cumbrera(k, new T3.Vector3(0, yc + 0.06, -hl), new T3.Vector3(0, yc + 0.06, hl));
+    faldon(k, { x: W / 2 + oh, y: yE, z: 0, ry: Math.PI / 2, run: R, rise: rise, hwA: hl, hwC: hl, col: o.col, paja: o.paja });
+    faldon(k, { x: -(W / 2 + oh), y: yE, z: 0, ry: -Math.PI / 2, run: R, rise: rise, hwA: hl, hwC: hl, col: o.col, paja: o.paja });
+    var yc = yE + rise; cumbrera(k, new T3.Vector3(0, yc + 0.06, -hl), new T3.Vector3(0, yc + 0.06, hl), o.col ? new T3.Color(o.col).multiplyScalar(0.78).getHex() : null);
     [-1, 1].forEach(function (s) {    // hastiales y tablas de borde
       k.quad([-W / 2, yTop, s * D / 2], [W / 2, yTop, s * D / 2], [0, yTop + (W / 2) * tg, s * D / 2], [0, yTop + (W / 2) * tg, s * D / 2], o.hastial || K.madC, o.hastial ? 0 : 1);
       if (s < 0) return; [-1, 1].forEach(function (l) { k.viga(new T3.Vector3(l * (W / 2 + oh), yE - 0.05, hl + 0.02), new T3.Vector3(0, yc + 0.02, hl + 0.02), 0.16, K.madO); });
@@ -290,27 +292,30 @@
       for (var c = -W / 2; c <= W / 2 + 0.01; c += W / 6) k.caja(0.12, 0.16, 0.5, K.madO, 1, c, yb - 0.04, D / 2 + 0.1);
       var top = yb + 0.16;
       if (pa) {
-        var Wa = W + 0.3, Da = D + 0.3; k.caja(Wa, pa, Da, K.ocre, 0, 0, top + pa / 2, 0);
+        var Wa = W + 0.3, Da = D + 0.3; k.caja(Wa, pa, Da, ID.pared || K.ocre, 0, 0, top + pa / 2, 0);
         CARAS(Wa, Da).forEach(function (m, i) { k.en(m, function () { var ww = i % 2 ? Da : Wa;      // entramado de madera de la fachada
           k.caja(ww + 0.04, 0.14, 0.06, K.madO, 1, 0, top + 0.07, 0.02); k.caja(ww + 0.04, 0.14, 0.06, K.madO, 1, 0, top + pa - 0.07, 0.02);
           var nb = Math.round(ww / 1.15); for (var b = 0; b <= nb; b++) { var bx = -ww / 2 + b * ww / nb; k.caja(0.13, pa, 0.06, K.madO, 1, bx, top + pa / 2, 0.02); if (b < nb && (b % 2 === 0) && i !== 0) { k.viga(new T3.Vector3(bx + 0.06, top + 0.1, 0.03), new T3.Vector3(bx + ww / nb - 0.06, top + pa - 0.1, 0.03), 0.09, K.madO); } }
-          if (i < 2) for (var v = 0; v < nb; v++) if (v % 2 === (i === 0 ? 0 : 1) || i === 0) ventana(k, -ww / 2 + (v + 0.5) * ww / nb, top + pa * 0.52, { w: 0.55, h: 0.78, contra: K.contra[1], flores: [0xe8344a, 0xff8ab0, 0xfff2c0] });
+          if (i < 2) for (var v = 0; v < nb; v++) if (v % 2 === (i === 0 ? 0 : 1) || i === 0) ventana(k, -ww / 2 + (v + 0.5) * ww / nb, top + pa * 0.52, { w: 0.55, h: 0.78, contra: ID.contra || K.contra[1], flores: [0xe8344a, 0xff8ab0, 0xfff2c0] });
           else ventana(k, 0, top + pa * 0.52, { w: 0.55, h: 0.78, contra: K.contra[1] }); }); });
         top += pa;
       }
-      var yc = tejado4(k, W + 0.3, D + 0.3, top, { pend: 0.62, vuelo: 0.5 });
+      var yc = tejado4(k, W + 0.3, D + 0.3, top, { pend: 0.62, vuelo: 0.5, col: ID.techo, paja: ID.paja }); k.info = { yc: yc };
       chimenea(k, 1.3, -0.6, yc - 1.2, 1.7, humo);
       if (t >= 4) { k.cil(0.04, 0.9, K.oro, 7, -0.9, yc + 0.45, 0, 5); k.esf(0.09, K.oro, 7, -0.9, yc + 0.9, 0, 1, 1, 1, 6); }
     });
     // torreón de vigía (tramo 3+)
-    if (t >= 3) { var tx = 2.55, tz = 1.7, ht = 6.2; k.add(gCil(14), M(tx, ht / 2, tz, 0, 0, 0, 2.3, ht, 2.3), K.sillar, 2);
+    if ((t >= 3 && !ID.sinTorre) || ID.torre) { var tx = 2.55, tz = 1.7, ht = ID.torre ? 6.6 + t * 0.4 : 6.2; k.add(gCil(14), M(tx, ht / 2, tz, 0, 0, 0, 2.3, ht, 2.3), K.sillar, 2);
       k.add(gCil(14), M(tx, ht + 0.12, tz, 0, 0, 0, 2.7, 0.24, 2.7), K.sillarO, 2);
       for (var a = 0; a < 10; a++) { var an = a / 10 * Math.PI * 2; k.caja(0.42, 0.5, 0.3, K.sillar, 2, tx + Math.cos(an) * 1.22, ht + 0.49, tz + Math.sin(an) * 1.22, -an + Math.PI / 2); }
       k.en(M(tx, 0, tz), function () { k.en(M(0, 0, 1.12), function () { puerta(k, 0, { w: 0.8, h: 1.6, y0: 0.0, sinEscalon: true }); ventana(k, 0, 3.6, { w: 0.4, h: 0.7, contra: null, arco: true, marco: K.madO }); }); k.en(M(1.12, 0, 0, 0, Math.PI / 2, 0), function () { ventana(k, 0, 2.6, { w: 0.36, h: 0.65, contra: null, arco: true, marco: K.madO }); ventana(k, 0, 4.7, { w: 0.36, h: 0.65, contra: null, arco: true, marco: K.madO }); }); });
-      canon(k, tx, ht + 0.24, tz, 0.5, 0.75); farol(k, tx - 0.8, ht + 0.6, tz + 0.6, L);
+      if (ID.conoTorre) { k.add(gCono(14), M(tx, ht + 1.7, tz, 0, 0, 0, 3.0, 2.9, 3.0), ID.techo, 3); k.cil(0.05, 1.0, K.oro, 7, tx, ht + 3.5, tz, 5); k.esf(0.12, K.oro, 7, tx, ht + 4.05, tz, 1, 1, 1, 6); }
+      else canon(k, tx, ht + 0.24, tz, 0.5, 0.75);
+      farol(k, tx - 0.8, ht + 0.6, tz + 0.6, L);
       if (t >= 4) { k.cil(0.05, 2.6, K.madO, 1, tx - 0.4, ht + 1.5, tz - 0.6, 5); I() && I().bandera(g, tx - 0.4, ht + 2.5, tz - 0.6, 1.4, 0.95, 0); }
     }
     // atrezo: cañón en la puerta, pirámide de balas, armero, barriles
+    if (ID.sinAtrezo) return;
     canon(k, -2.9, 0, 2.5, 0.3, 0.8); balas(k, -1.9, 0, 3.05); barril(k, 1.0, 0, 2.6); barril(k, 1.55, 0, 2.9, 0.85); cajon(k, 1.2, 0.0, 3.3, 0.8, 0.3);
     k.caja(1.2, 0.08, 0.12, K.madO, 1, -3.3, 0.9, -0.2, Math.PI / 2); for (var e = 0; e < 4; e++) k.caja(0.05, 1.0, 0.05, 0xb8b8c0, 5, -3.32, 0.75, -0.6 + e * 0.27, 0, 0, 0.15);
   }
@@ -319,7 +324,7 @@
     var W = 4.6, D = 5.4, x0 = -0.5, z0 = -0.5, h1 = 2.6, h2 = t >= 2 ? 1.6 : 0;
     k.en(M(x0, 0, z0), function () {
       zocalo(k, W + 0.3, D + 0.3, 0.55);
-      k.caja(W, h1 + h2, D, K.madC, 1, 0, 0.55 + (h1 + h2) / 2, 0);
+      k.caja(W, h1 + h2, D, ID.pared || K.madC, ID.pared ? 0 : 1, 0, 0.55 + (h1 + h2) / 2, 0);
       CARAS(W, D).forEach(function (m, i) { k.en(m, function () { var ww = i % 2 ? D : W;
         for (var b = -ww / 2 + 0.2; b < ww / 2; b += 0.4) k.caja(0.08, h1 + h2, 0.05, K.mad, 1, b, 0.55 + (h1 + h2) / 2, 0.02);   // tablas y tapajuntas
         k.caja(ww + 0.06, 0.16, 0.08, K.madO, 1, 0, 0.55 + h1, 0.03); [-1, 1].forEach(function (s) { k.caja(0.18, h1 + h2, 0.1, K.madO, 1, s * ww / 2, 0.55 + (h1 + h2) / 2, 0.03); });
@@ -328,22 +333,23 @@
           [-1, 1].forEach(function (s) { k.en(M(s * 0.95, 0.55, 0.06, 0, s * 1.9, 0), function () { for (var p = 0; p < 4; p++) k.caja(0.23, 2.05, 0.06, K.mad, 1, s * (0.12 + p * 0.235), 1.03, 0); k.viga(new T3.Vector3(s * 0.05, 0.2, 0.05), new T3.Vector3(s * 0.9, 1.85, 0.05), 0.09, K.madO); k.caja(0.95, 0.09, 0.07, K.madO, 1, s * 0.47, 0.25, 0.05); k.caja(0.95, 0.09, 0.07, K.madO, 1, s * 0.47, 1.8, 0.05); }); });
           cajon(k, -0.4, 0.55, -0.4, 0.8, 0.2); barril(k, 0.45, 0.55, -0.5, 0.8);
           if (h2) { ventana(k, 0, 0.55 + h1 + h2 * 0.5, { w: 0.9, h: 0.9, contra: null, marco: K.madO }); }
-        } else if (i === 1) { ventana(k, -1.2, 1.9, { w: 0.6, h: 0.8, contra: K.contra[0], marco: K.madO }); ventana(k, 1.2, 1.9, { w: 0.6, h: 0.8, contra: K.contra[0], marco: K.madO }); if (h2) ventana(k, 0, 0.55 + h1 + h2 * 0.5, { w: 0.55, h: 0.7, contra: K.contra[0], marco: K.madO }); }
+        } else if (i === 1) { ventana(k, -1.2, 1.9, { w: 0.6, h: 0.8, contra: ID.contra || K.contra[0], marco: K.madO }); ventana(k, 1.2, 1.9, { w: 0.6, h: 0.8, contra: ID.contra || K.contra[0], marco: K.madO }); if (h2) ventana(k, 0, 0.55 + h1 + h2 * 0.5, { w: 0.55, h: 0.7, contra: K.contra[0], marco: K.madO }); }
         else ventana(k, 0, 1.9, { w: 0.6, h: 0.8, contra: K.contra[0], marco: K.madO }); }); });
-      var top = 0.55 + h1 + h2, yc = tejado2(k, W, D, top, { pend: 0.68, vuelo: 0.5, hastial: K.madC });
+      var top = 0.55 + h1 + h2, yc = tejado2(k, W, D, top, { pend: 0.68, vuelo: 0.5, hastial: ID.pared || K.madC, col: ID.techo, paja: ID.paja }); k.info = { yc: yc };
       // óculo en el hastial y viga de la polea con su fardo colgando
       k.add(gToro(), M(0, top + 0.75, D / 2 + 0.05, 0, 0, 0, 0.85, 0.85, 1.4), K.madO, 1); k.add(gCil(12), M(0, top + 0.75, D / 2 + 0.02, Math.PI / 2, 0, 0, 0.7, 0.04, 0.7), K.cristal, 4);
       k.caja(0.2, 0.2, 1.7, K.madO, 1, 0, top + 0.1, D / 2 + 0.75); k.cil(0.13, 0.08, K.hierro, 5, 0, top - 0.02, D / 2 + 1.45, 10, 0, 0, Math.PI / 2);
       k.cuerda(new T3.Vector3(0, top - 0.05, D / 2 + 1.5), new T3.Vector3(0, top - 1.1, D / 2 + 1.5), 0.04, 0xc8b088); cajon(k, 0, top - 1.65, D / 2 + 1.5, 0.75, 0.4);
-      if (t >= 3) chimenea(k, -1.2, -1.5, yc - 1.4, 1.6, humo);
+      if (t >= 3 || ID.fragua) chimenea(k, -1.2, -1.5, yc - 1.4, ID.fragua ? 2.6 : 1.6, humo);
       if (t >= 4) { k.cil(0.04, 1.0, K.oro, 7, 0, yc + 0.5, -D / 2 + 0.6, 5); k.add(gCono(4), M(0.18, yc + 0.95, -D / 2 + 0.6, 0, 0, -Math.PI / 2, 0.16, 0.42, 0.04), K.oro, 7); }
     });
+    if (ID.sinPuesto) { barril(k, -2.9, 0, 2.7); cajon(k, -3.0, 0, 1.9, 0.9, 0.1); return; }
     // puesto de frutas con toldo al costado de la calle
     var px = 2.45, pz = 0.6; k.caja(1.2, 0.85, 2.6, K.mad, 1, px, 0.42, pz); k.caja(1.32, 0.08, 2.72, K.madO, 1, px, 0.88, pz);
     [[-0.55, -1.25], [0.55, -1.25], [-0.55, 1.25], [0.55, 1.25]].forEach(function (q) { k.cil(0.05, 2.1, K.madO, 1, px + q[0], 1.05, pz + q[1], 5); });
     var fr = [[0xf2cc30, 0.11], [0x6a4a2a, 0.13], [0xe8542a, 0.1], [0x8ac83a, 0.1]];
     for (var f = 0; f < 4; f++) for (var q = 0; q < 6; q++) k.esf(fr[f][1], fr[f][0], 8, px - 0.35 + (q % 3) * 0.35, 1.0 + (q > 2 ? 0.08 : 0), pz - 1.0 + f * 0.65 + (q > 2 ? 0.18 : 0), 1, f === 0 ? 0.6 : 1, f === 0 ? 2.2 : 1, 6);
-    toldo(g, px + 0.65, 2.15, pz, 2.9, 1.6, 0.35, Math.PI / 2, '#d8342a', '#f4ead2');
+    toldo(g, px + 0.65, 2.15, pz, 2.9, 1.6, 0.35, Math.PI / 2, ID.toldo ? ID.toldo[0] : '#d8342a', ID.toldo ? ID.toldo[1] : '#f4ead2');
     barril(k, -2.9, 0, 2.7); barril(k, -2.35, 0, 2.95, 0.85); barril(k, -2.65, 0.82, 2.8, 0.75); saco(k, 1.2, 0, 2.9); saco(k, 1.6, 0, 2.7); saco(k, 1.4, 0.3, 2.82); cajon(k, -3.0, 0, 1.9, 0.9, 0.1);
     farol(k, -0.5 + 1.25, 2.3, z0 + D / 2 + 0.06, L, true);
     k.add(gToro(), M(1.9, 0.06, 2.5, Math.PI / 2, 0, 0, 0.6, 0.6, 1.6), 0xc8b088, 8);   // rollo de cuerda
@@ -353,21 +359,21 @@
     var W = 5.6, D = 4.4, x0 = -0.4, z0 = -0.6, pb = 2.4, ps = t >= 2 ? 2.0 : 0, p3 = t >= 3 ? 1.8 : 0;
     k.en(M(x0, 0, z0), function () {
       zocalo(k, W + 0.3, D + 0.3, 0.4);
-      k.caja(W, pb, D, K.cal1, 0, 0, 0.4 + pb / 2, 0); cadenas(k, W, D, 0.4, pb);
+      k.caja(W, pb, D, ID.base || K.cal1, 0, 0, 0.4 + pb / 2, 0); cadenas(k, W, D, 0.4, pb);
       CARAS(W, D).forEach(function (m, i) { k.en(m, function () {
         if (i === 0) { puerta(k, 0, { w: 1.25, h: 2.1, y0: 0.4, madera: 0x2f5f6a }); [-1, 1].forEach(function (s) { ventana(k, s * 1.75, 1.6, { w: 0.7, h: 1.15, contra: null, arco: true, marco: K.blanco }); farol(k, s * 0.95, 1.9, 0.05, L, true); }); }
         else if (i === 1) { ventana(k, -1.0, 1.6, { w: 0.7, h: 1.15, contra: null, arco: true }); ventana(k, 1.0, 1.6, { w: 0.7, h: 1.15, contra: null, arco: true }); }
         else ventana(k, 0, 1.6, { w: 0.7, h: 1.15, contra: null, arco: true }); }); });
       var top = 0.4 + pb; cornisa(k, W, D, top - 0.2);
-      [[ps, col || K.turq], [p3, K.coral]].forEach(function (pl, n) { var h = pl[0]; if (!h) return;
+      [[ps, ID.pared || col || K.turq], [p3, ID.pared2 || K.coral]].forEach(function (pl, n) { var h = pl[0]; if (!h) return;
         k.caja(W, h, D, pl[1], 0, 0, top + h / 2, 0); cadenas(k, W, D, top, h);
         CARAS(W, D).forEach(function (m, i) { k.en(m, function () { var ww = i % 2 ? D : W, nv = i % 2 ? 2 : 3;
-          for (var v = 0; v < nv; v++) ventana(k, -ww / 2 + (v + 0.5) * ww / nv, top + h * 0.5, { w: 0.62, h: 1.05, contra: K.contra[n === 0 ? 2 : 0], flores: [0xe8344a, 0xff9ac0, 0xffd24a] });
+          for (var v = 0; v < nv; v++) ventana(k, -ww / 2 + (v + 0.5) * ww / nv, top + h * 0.5, { w: 0.62, h: 1.05, contra: ID.contra || K.contra[n === 0 ? 2 : 0], flores: [0xe8344a, 0xff9ac0, 0xffd24a] });
           if (n === 0 && i === 0) balcon(k, 0, top + 0.06, W - 0.6, 0.85); if (n === 0 && i === 1) balcon(k, 0, top + 0.06, D - 0.8, 0.7);
         }); });
         top += h; if (n === 0 && p3) cornisa(k, W, D, top - 0.18); else k.caja(W + 0.16, 0.14, D + 0.16, K.blanco, 8, 0, top - 0.3, 0);   // bajo el alero, sin asomar entre las tejas
       });
-      var yc = tejado4(k, W + 0.1, D + 0.1, top, { pend: 0.66, vuelo: 0.6, col: 0xb24a2a });
+      var yc = tejado4(k, W + 0.1, D + 0.1, top, { pend: 0.66, vuelo: 0.6, col: ID.techo || 0xb24a2a }); k.info = { yc: yc };
       // buhardilla en el faldón delantero
       var yb = top + 0.35, zb = D / 2 - 0.55; k.caja(1.0, 0.9, 1.1, K.blanco, 0, 0.9, yb + 0.45, zb); k.en(M(0.9, 0, zb + 0.55), function () { ventana(k, 0, yb + 0.48, { w: 0.5, h: 0.6, contra: null }); });
       faldon(k, { x: 0.9 + 0.72, y: yb + 0.85, z: zb, ry: Math.PI / 2, run: 0.72, rise: 0.5, hwA: 0.72, hwC: 0.72 }); faldon(k, { x: 0.9 - 0.72, y: yb + 0.85, z: zb, ry: -Math.PI / 2, run: 0.72, rise: 0.5, hwA: 0.72, hwC: 0.72 });
@@ -377,11 +383,142 @@
     // macetas con palmitos y bancos a los lados de la entrada
     [-1, 1].forEach(function (s) { var x = x0 + s * 1.3, z = z0 + D / 2 + 1.25; k.cil(0.32, 0.5, 0xb8663e, 8, x, 0.25, z, 10); k.cil(0.36, 0.08, 0xc87a4a, 8, x, 0.52, z, 10); for (var h = 0; h < 7; h++) { var a = h / 7 * Math.PI * 2; k.viga(new T3.Vector3(x, 0.55, z), new T3.Vector3(x + Math.cos(a) * 0.55, 1.25 + (h % 2) * 0.2, z + Math.sin(a) * 0.55), 0.13, 0x3f8a2a, 6); } });
     k.caja(1.2, 0.08, 0.4, K.mad, 1, x0 + 2.7, 0.45, z0 + D / 2 + 0.9); [-0.5, 0.5].forEach(function (d) { k.caja(0.08, 0.45, 0.35, K.hierro, 5, x0 + 2.7 + d, 0.22, z0 + D / 2 + 0.9); });
-    letrero(k, x0 + W / 2 + 0.02, 2.5, z0 + 0.6, texLetrero('⚓'), g, 0.8);
   }
-  var TIPO = { cuartel: cuartel, torre: cuartel, galeria: cuartel, vigia: cuartel, almacen: lonja, mercado: lonja, herreria: lonja, establo: lonja };
-  var COLORES = [K.turq, K.cielo, K.rosa, K.ocre];
-
+  // D · CABAÑA: casita de una planta sobre pilotes con tejado de paja (crece un poco con el nivel)
+  function cabana(k, g, t, L, humo) {
+    var e = 0.8 + t * 0.06, W = 4.0 * e, D = 3.4 * e, h = 2.0;
+    for (var i = -1; i <= 1; i += 2) for (var j = -1; j <= 1; j += 2) k.cil(0.14, 0.7, K.madO, 1, i * (W / 2 - 0.15), 0.35, j * (D / 2 - 0.15), 6);
+    k.caja(W + 0.5, 0.14, D + 0.5, K.mad, 1, 0, 0.7, 0); k.caja(W, h, D, ID.pared, 0, 0, 0.77 + h / 2, 0);
+    CARAS(W, D).forEach(function (m, i) { k.en(m, function () {
+      if (i === 0) { puerta(k, -0.5, { w: 0.9, h: 1.65, y0: 0.77, sinEscalon: true, madera: K.madO }); ventana(k, 0.9, 1.75, { w: 0.6, h: 0.75, contra: ID.contra, flores: [0xe8344a, 0xffd24a] }); for (var st = 0; st < 3; st++) k.caja(1.0, 0.1, 0.3, K.mad, 1, -0.5, 0.15 + st * 0.22, 0.95 - st * 0.28); }
+      else if (i === 1) ventana(k, 0, 1.75, { w: 0.6, h: 0.75, contra: ID.contra, flores: [0xff9ac0, 0xffffff] }); }); });
+    var yc = tejado4(k, W, D, 0.77 + h, { pend: 0.75, vuelo: 0.45, col: 0xc8a25a, paja: true }); k.info = { yc: yc };
+    if (t >= 2) chimenea(k, W / 2 - 0.6, -D / 2 + 0.6, yc - 1.3, 1.4, humo);
+    farol(k, 0.4, 2.3, D / 2 + 0.06, L, true); barril(k, -W / 2 - 0.4, 0, D / 2 + 0.2, 0.8); k.add(gToro(), M(W / 2 + 0.3, 0.06, D / 2 + 0.6, Math.PI / 2, 0, 0, 0.6, 0.6, 1.6), 0xc8b088, 8);
+  }
+  // ---------- lo propio de cada tipo (para distinguirlos de un vistazo) ----------
+  function dianas(k) { [-2.6, -1.2, 0.2].forEach(function (x) { k.en(M(x, 0, 3.0, 0, 0.2, 0), function () { k.viga(new T3.Vector3(-0.35, 0, -0.25), new T3.Vector3(0, 1.4, 0), 0.07, K.madO); k.viga(new T3.Vector3(0.35, 0, -0.25), new T3.Vector3(0, 1.4, 0), 0.07, K.madO);
+    [[0.48, 0xf4ecd8], [0.38, 0xd8342a], [0.27, 0xf4ecd8], [0.16, 0xd8342a], [0.07, 0xf2c030]].forEach(function (q, n) { k.add(gCil(14), M(0, 1.05, 0.02 + n * 0.012, Math.PI / 2, 0, 0, q[0] * 2, 0.08, q[0] * 2), q[1], 8); }); }); });
+    k.caja(1.0, 0.6, 0.6, 0xd8b860, 8, 1.6, 0.3, 3.0); for (var f = 0; f < 5; f++) k.cil(0.02, 0.8, K.madC, 1, 1.4 + f * 0.1, 0.9, 3.0, 4, 0.2 * (f - 2)); }
+  function carpas(k, t) { [[-2.4, 2.4, 0xc8342a], [-0.6, 2.9, 0xf4ecd8]].forEach(function (q) { k.add(gCono(8), M(q[0], 0.9, q[1], 0, 0.4, 0, 1.8, 1.8, 1.8), q[2], 8); k.cil(0.03, 2.1, K.madO, 1, q[0], 1.05, q[1], 4); k.caja(0.4, 0.8, 0.05, 0x2a1a10, 8, q[0], 0.4, q[1] + 0.72, 0.4); });
+    k.caja(1.4, 0.06, 0.1, K.madO, 1, 1.5, 1.0, 3.2); for (var l = 0; l < 4; l++) { k.caja(0.04, 1.3, 0.04, 0xb8b8c0, 5, 1.0 + l * 0.32, 0.95, 3.25, 0, 0, 0.12); k.esf(0.06, 0xb8b8c0, 5, 1.0 + l * 0.32, 1.65, 3.25, 1, 1, 1, 5); } }
+  function fragua(k, L) { k.caja(1.2, 0.8, 1.0, K.sillarO, 2, 2.3, 0.4, 1.4); k.caja(0.9, 0.16, 0.7, 0x1a0f08, 9, 2.3, 0.86, 1.4); for (var c = 0; c < 6; c++) k.esf(0.1, 0xff7a20, 9, 2.0 + (c % 3) * 0.28, 0.92, 1.25 + ((c / 3) | 0) * 0.3, 1, 0.6, 1, 5); L.push({ x: 2.3, y: 1.1, z: 1.4 });
+    k.caja(0.3, 0.6, 0.3, K.madO, 1, 2.4, 0.3, 2.9); k.caja(0.75, 0.22, 0.32, 0x3a3a40, 5, 2.4, 0.72, 2.9); k.add(gCono(6), M(2.86, 0.74, 2.9, 0, 0, -Math.PI / 2, 0.24, 0.35, 0.24), 0x3a3a40, 5); k.caja(0.06, 0.06, 0.5, K.madC, 1, 2.3, 0.88, 2.6, 0.5); k.caja(0.18, 0.12, 0.12, 0x3a3a40, 5, 2.3, 0.88, 2.38); }
+  function cuadra(k) { for (var x = -3.0; x <= 0.6; x += 0.9) { k.cil(0.06, 1.0, K.madC, 1, x, 0.5, 3.1, 5); } [0.45, 0.85].forEach(function (y) { k.caja(3.7, 0.08, 0.06, K.madC, 1, -1.2, y, 3.1); });
+    [[-2.4, 2.3], [-1.6, 2.4], [-2.0, 2.4, 0.6]].forEach(function (q) { k.add(gCil(10), M(q[0], 0.3 + (q[2] || 0), q[1], Math.PI / 2, 0.3, 0, 0.6, 0.8, 0.6), 0xd8b860, 8); });
+    k.en(M(1.6, 0, 2.5, 0, 0.9, 0), function () { k.caja(1.2, 0.5, 0.45, 0x6a3a1e, 8, 0, 0.95, 0); k.caja(0.32, 0.6, 0.3, 0x6a3a1e, 8, 0.65, 1.3, 0, 0, 0, -0.5); k.caja(0.22, 0.4, 0.26, 0x5a3018, 8, 0.92, 1.55, 0, 0, 0, -1.1); [[-0.45, -0.14], [-0.45, 0.14], [0.45, -0.14], [0.45, 0.14]].forEach(function (p) { k.caja(0.1, 0.72, 0.1, 0x4a2a14, 8, p[0], 0.36, p[1]); }); k.caja(0.08, 0.5, 0.08, 0x2a1a10, 8, -0.66, 0.9, 0, 0, 0, 0.6); }); }
+  function observatorio(k) { var y = (k.info && k.info.yc) || 7; k.add(gEsf(14), M(-0.4, y - 0.3, -0.6, 0, 0, 0, 1.9, 1.5, 1.9), 0x3a7ab0, 3); k.cil(0.97, 0.2, K.oro, 7, -0.4, y - 0.35, -0.6, 14); k.add(gCil(8), M(0.1, y + 0.4, -0.3, 0.5, 0, -0.6, 0.18, 1.3, 0.18), K.oro, 7); }
+  function botica(k) { [[-2.6, 2.7], [-1.4, 2.9]].forEach(function (q) { k.caja(1.0, 0.35, 0.6, K.mad, 1, q[0], 0.18, q[1]); for (var h = 0; h < 6; h++) k.esf(0.12, [0x5aa83a, 0x8ac850, 0xb8d870][h % 3], 6, q[0] - 0.35 + (h % 3) * 0.35, 0.45, q[1] - 0.12 + ((h / 3) | 0) * 0.24, 1, 1.3, 1, 5); });
+    k.en(M(1.9, 0, 2.6), function () { k.cil(0.05, 2.2, K.madO, 1, 0, 1.1, 0, 5); k.caja(0.7, 0.22, 0.08, 0x2f9a4a, 8, 0, 2.0, 0.05); k.caja(0.22, 0.7, 0.08, 0x2f9a4a, 8, 0, 2.0, 0.05); }); }
+  function banderas(k, g) { var y = 0; [-1.6, 1.6].forEach(function (x, i) { k.cil(0.05, 3.4, K.blanco, 1, x - 0.4, 1.7, 2.3, 6); k.esf(0.08, K.oro, 7, x - 0.4, 3.45, 2.3, 1, 1, 1, 6); I() && I().bandera(g, x - 0.4, 3.1, 2.3, 1.1, 0.75, 0, i ? 'roja' : 'negra'); }); }
+  function escudos(k) { var y = (k.info && k.info.yc) || 7; [-1.2, 0.4].forEach(function (x, i) { k.en(M(x - 0.4, 3.1, 1.66), function () { k.add(gCil(12), M(0, 0, 0, Math.PI / 2, 0, 0, 0.7, 0.08, 0.8), i ? 0x2a5a9a : 0xa82a22, 8); k.cil(0.12, 0.1, K.oro, 7, 0, 0, 0.06, 8, Math.PI / 2); }); });
+    k.en(M(-0.4, y + 0.1, -0.6), function () { k.cil(0.35, 0.18, K.oro, 7, 0, 0, 0, 12); for (var p = 0; p < 6; p++) { var a = p / 6 * Math.PI * 2; k.add(gCono(4), M(Math.cos(a) * 0.3, 0.28, Math.sin(a) * 0.3, 0, 0, 0, 0.16, 0.36, 0.16), K.oro, 7); } }); }
+  function puestos(k, g) { [[-2.6, 2.9, '#2f7fd8', '#f4ead2'], [-1.0, 3.1, '#f2c030', '#c8342a']].forEach(function (q) { k.caja(1.1, 0.8, 0.7, K.mad, 1, q[0], 0.4, q[1]); for (var f = 0; f < 6; f++) k.esf(0.1, [0xd83a2a, 0xf2a020, 0x8ac83a][f % 3], 8, q[0] - 0.35 + (f % 3) * 0.35, 0.88, q[1] - 0.12 + ((f / 3) | 0) * 0.22, 1, 1, 1, 5); [-0.5, 0.5].forEach(function (d) { k.cil(0.04, 1.8, K.madO, 1, q[0] + d, 0.9, q[1] - 0.3, 4); }); toldo(g, q[0], 1.8, q[1] - 0.3, 1.3, 0.9, 0.25, 0, q[2], q[3]); }); }
+  function mastil(k, L) { var x = -2.9, z = 2.7, h = 6.5; k.cil(0.12, h, K.madO, 1, x, h / 2, z, 6); k.cil(0.5, 0.35, K.mad, 1, x, h - 0.6, z, 10); for (var r = 0; r < 4; r++) { var a = r * Math.PI / 2; k.viga(new T3.Vector3(x + Math.cos(a) * 1.0, 0, z + Math.sin(a) * 1.0), new T3.Vector3(x, h * 0.7, z), 0.05, 0xc8b088); }
+    k.cil(0.3, 0.3, K.hierro, 5, x, h + 0.15, z, 8); k.esf(0.22, 0xff8a20, 9, x, h + 0.38, z, 1, 1.2, 1, 6); L.push({ x: x, y: h + 0.4, z: z, faro: true }); }
+  // tipo → modelo, colores y lo suyo. ban = color del estandarte; ico = su dibujo
+  var IDENT = {
+    cuartel:    { m: cuartel, pared: 0xd89a3a, techo: 0xb8552f, contra: 0xa83a2a, ban: '#a82a22', ico: 'espadas' },
+    torre:      { m: cuartel, pared: 0xa09a8e, techo: 0x4a4a54, contra: 0x2f4f7a, torre: true, conoTorre: true, sinAtrezo: true, ban: '#2a3a6a', ico: 'escudo' },
+    vigia:      { m: cuartel, pared: 0x8a6a4a, techo: 0x5a3a22, contra: 0x2f6a3a, sinTorre: true, sinAtrezo: true, extra: function (k, g, t, L) { mastil(k, L); }, ban: '#2a6a3a', ico: 'ojo' },
+    galeria:    { m: cuartel, pared: 0x8aa850, techo: 0x8e3c22, contra: 0x5a3a1a, sinTorre: true, sinAtrezo: true, extra: dianas, ban: '#c89a20', ico: 'diana' },
+    relevo:     { m: gobernador, base: 0xf2ece0, pared: 0xf4f0e6, pared2: 0xc8342a, techo: 0x9a2a20, contra: 0xc8342a, extra: carpas, ban: '#c8342a', ico: 'bandera' },
+    almacen:    { m: lonja, techo: 0x6e6e74, contra: 0x4a3020, ban: '#6a4a2a', ico: 'barril' },
+    mercado:    { m: lonja, pared: 0xf0c040, techo: 0xd8682a, contra: 0x2f7fd8, toldo: ['#2f7fd8', '#f4ead2'], extra: function (k, g) { puestos(k, g); }, ban: '#e0a020', ico: 'moneda' },
+    herreria:   { m: lonja, pared: 0x5e544a, techo: 0x3a3634, contra: 0x2a2a2a, fragua: true, sinPuesto: true, extra: function (k, g, t, L) { fragua(k, L); }, ban: '#3a3a3a', ico: 'martillo' },
+    establo:    { m: lonja, pared: 0xa83a2a, techo: 0xc8a25a, paja: true, contra: 0xf4ecd8, sinPuesto: true, extra: cuadra, ban: '#8a3a1a', ico: 'herradura' },
+    academia:   { m: gobernador, base: 0xeae4d8, pared: 0x8ac6dc, pared2: 0x5a8ad0, techo: 0x2f6f8a, contra: 0x2a4f9a, extra: observatorio, ban: '#2a5a9a', ico: 'libro' },
+    enfermeria: { m: gobernador, base: 0xf6f2ea, pared: 0xfaf6ee, pared2: 0xbfe0c8, techo: 0x4f8a4a, contra: 0x2f8a4a, extra: botica, ban: '#2f8a4a', ico: 'cruz' },
+    embajada:   { m: gobernador, pared: 0x38b4a6, pared2: 0xe8704c, techo: 0xb24a2a, contra: 0x2a5f8a, extra: banderas, ban: '#1f7f86', ico: 'pergamino' },
+    salon:      { m: gobernador, base: 0xd8b8a0, pared: 0xb85a6a, pared2: 0x8a3a5a, techo: 0x5a2a4a, contra: 0x6a2a5a, extra: escudos, ban: '#6a2a6a', ico: 'corona' },
+    cabana:     { m: cabana, techo: 0xc8a25a, paja: true, ban: '#8a6a3a', ico: 'casa' }
+  };
+  var PASTEL = [0xe8a0a2, 0x7ec0d6, 0xf2c84b, 0x8fd18a, 0xe8775a, 0x3fb7b0];
+  var ID = {};
+  // estandarte del tipo junto a la entrada (se ve desde lejos)
+  function texEstandarte(col, ico) { var key = 'e' + col + ico; return TX[key] || (TX[key] = lienzo(128, 192, function (x, w, h) {
+    x.fillStyle = col; x.beginPath(); x.moveTo(0, 0); x.lineTo(w, 0); x.lineTo(w, h); x.lineTo(w / 2, h - 34); x.lineTo(0, h); x.closePath(); x.fill();
+    x.strokeStyle = '#e8c060'; x.lineWidth = 7; x.stroke(); x.fillStyle = '#fff4d8'; x.strokeStyle = '#fff4d8'; x.lineCap = 'round'; x.lineJoin = 'round'; x.save(); x.translate(w / 2, 74);
+    var L = function (pts, ancho) { x.lineWidth = ancho; x.beginPath(); x.moveTo(pts[0], pts[1]); for (var i = 2; i < pts.length; i += 2) x.lineTo(pts[i], pts[i + 1]); x.stroke(); };
+    var C = function (r, relleno) { x.beginPath(); x.arc(0, 0, r, 0, 6.283); relleno ? x.fill() : x.stroke(); };
+    ({ espadas: function () { L([-30, -30, 30, 30], 8); L([30, -30, -30, 30], 8); L([-22, 10, -10, 22], 6); L([22, 10, 10, 22], 6); },
+       escudo: function () { x.beginPath(); x.moveTo(0, -34); x.lineTo(30, -24); x.lineTo(26, 10); x.quadraticCurveTo(18, 30, 0, 38); x.quadraticCurveTo(-18, 30, -26, 10); x.lineTo(-30, -24); x.closePath(); x.fill(); },
+       ojo: function () { x.lineWidth = 7; x.beginPath(); x.ellipse(0, 0, 34, 20, 0, 0, 6.283); x.stroke(); C(11, true); },
+       diana: function () { x.lineWidth = 7; C(32); C(19); C(7, true); },
+       bandera: function () { L([-22, 38, -22, -36], 7); x.beginPath(); x.moveTo(-20, -34); x.lineTo(30, -22); x.lineTo(-20, -6); x.closePath(); x.fill(); },
+       barril: function () { x.beginPath(); x.ellipse(0, 0, 24, 34, 0, 0, 6.283); x.fill(); x.strokeStyle = col; L([-23, -14, 23, -14], 5); L([-23, 14, 23, 14], 5); },
+       moneda: function () { C(32, true); x.strokeStyle = col; x.lineWidth = 5; C(22); x.fillStyle = col; x.font = 'bold 34px Georgia'; x.textAlign = 'center'; x.fillText('$', 0, 12); },
+       martillo: function () { L([-22, 30, 14, -6], 9); x.save(); x.rotate(-0.78); x.fillRect(-4, -46, 34, 22); x.restore(); },
+       herradura: function () { x.lineWidth = 11; x.beginPath(); x.arc(0, 0, 26, 0.35, Math.PI * 2 - 0.35 + Math.PI, true); x.stroke(); },
+       libro: function () { x.fillRect(-32, -22, 29, 44); x.fillRect(3, -22, 29, 44); },
+       cruz: function () { x.fillRect(-10, -32, 20, 64); x.fillRect(-32, -10, 64, 20); },
+       pergamino: function () { x.fillRect(-22, -30, 44, 60); x.beginPath(); x.arc(-22, -30, 8, 0, 6.283); x.arc(22, 30, 8, 0, 6.283); x.fill(); x.strokeStyle = col; L([-12, -14, 12, -14], 4); L([-12, 0, 12, 0], 4); L([-12, 14, 6, 14], 4); },
+       corona: function () { x.beginPath(); x.moveTo(-32, 22); x.lineTo(-32, -16); x.lineTo(-16, 4); x.lineTo(0, -28); x.lineTo(16, 4); x.lineTo(32, -16); x.lineTo(32, 22); x.closePath(); x.fill(); },
+       casa: function () { x.beginPath(); x.moveTo(-30, 0); x.lineTo(0, -30); x.lineTo(30, 0); x.lineTo(22, 0); x.lineTo(22, 30); x.lineTo(-22, 30); x.lineTo(-22, 0); x.closePath(); x.fill(); x.fillStyle = col; x.fillRect(-7, 10, 14, 20); }
+    }[ico] || function () {})(); x.restore(); })); }
+  function estandarteTipo(k, g) {
+    if (!ID.ban) return; var x = -3.35, z = 3.35, h = 4.6;
+    k.cil(0.06, h, K.madO, 1, x, h / 2, z, 6); k.caja(1.45, 0.08, 0.08, K.madO, 1, x + 0.7, h - 0.1, z); k.esf(0.09, K.oro, 7, x, h + 0.05, z, 1, 1, 1, 6);
+    var m = new T3.Mesh(new T3.PlaneGeometry(1.35, 2.0), new T3.MeshStandardMaterial({ map: texEstandarte(ID.ban, ID.ico), side: T3.DoubleSide, roughness: 0.85 })); m.material.userData.tkpSinVentanas = true;
+    m.position.set(x + 0.72, h - 1.15, z); m.castShadow = true; m.raycast = NOOP; g.add(m);
+  }
+  // ======================================================================
+  //  CASTILLO DE LA 2.ª VILLA: delante de la calavera crece una fortaleza que mejora con cada pocos niveles
+  //  Nv 1-3 empalizada y caseta · 4+ muralla de piedra con portón · 7+ torres con tejado · 10+ cañones y faroles en el adarve
+  //  13+ torres altas con bandera y segunda muralla · 16+ braseros encendidos y remates de oro · 20+ torre del homenaje · 25+ calaveras de oro
+  //  Coordenadas de la fortaleza (las de js/tk-corsarios.js): x hacia la villa, y arriba (0 = terraza), z de lado. La escalera baja en x 9,5…21.
+  // ======================================================================
+  function torreta(k, x, z, r, h, techo, nv, L) {
+    k.add(gCil(12), M(x, h / 2, z, 0, 0, 0, r * 2, h, r * 2), piedraNv(nv), 2); k.add(gCil(12), M(x, h + 0.1, z, 0, 0, 0, r * 2 + 0.4, 0.2, r * 2 + 0.4), K.sillarO, 2);
+    if (techo) { k.add(gCono(12), M(x, h + 0.2 + r * 0.9, z, 0, 0, 0, r * 2 + 0.6, r * 1.8, r * 2 + 0.6), techo, 3); if (nv >= 16) { k.cil(0.05, 1.1, K.oro, 7, x, h + r * 1.8 + 0.7, z, 5); k.esf(nv >= 25 ? 0.32 : 0.14, K.oro, 7, x, h + r * 1.8 + 1.3, z, 1, 1, 1, 8); } if (nv >= 25) k.add(gCil(12), M(x, h + 0.32, z, 0, 0, 0, r * 2 + 0.7, 0.16, r * 2 + 0.7), K.oro, 7); }
+    else for (var a = 0; a < 8; a++) { var an = a / 8 * Math.PI * 2; k.caja(0.45, 0.5, 0.3, K.sillar, 2, x + Math.cos(an) * r, h + 0.45, z + Math.sin(an) * r, -an + Math.PI / 2); }
+    k.en(M(x + r, 0, z, 0, Math.PI / 2, 0), function () { ventana(k, 0, h * 0.6, { w: 0.4, h: 0.7, contra: null, arco: true, marco: K.madO }); });
+  }
+  function piedraNv(nv) { return nv >= 20 ? 0xe2d2ae : nv >= 10 ? 0xd2bf98 : K.sillar; }
+  function muralla(k, x, z0, z1, h, nv, L, g) {
+    var l = Math.abs(z1 - z0), zc = (z0 + z1) / 2, pc = piedraNv(nv); k.caja(1.4, h, l, pc, 2, x, h / 2, zc);
+    for (var z = Math.min(z0, z1) + 0.3; z < Math.max(z0, z1) - 0.2; z += 0.9) k.caja(0.5, 0.55, 0.5, pc, 2, x + 0.5, h + 0.27, z);   // almenas
+    if (nv >= 25) k.caja(0.12, 0.14, l, K.oro, 7, x + 0.72, h - 0.1, zc);
+    if (nv >= 20 && g) for (var bz = Math.min(z0, z1) + 2.4; bz < Math.max(z0, z1) - 1.5; bz += 4.5) { var bm = new T3.Mesh(new T3.PlaneGeometry(1.2, 1.9), new T3.MeshStandardMaterial({ map: texEstandarte('#8a1a1a', 'corona'), side: T3.DoubleSide, roughness: 0.85 })); bm.material.userData.tkpSinVentanas = true; bm.position.set(x + 0.73, h - 1.1, bz); bm.rotation.y = Math.PI / 2; bm.raycast = NOOP; g.add(bm); }
+    if (nv >= 10) { for (var c = Math.min(z0, z1) + 1.6; c < Math.max(z0, z1) - 1; c += 4.5) canon(k, x + 0.1, h, c, Math.PI / 2, 0.75); for (var f = Math.min(z0, z1) + 3.8; f < Math.max(z0, z1); f += 4.5) farol(k, x + 0.75, h - 0.5, f, L, true); }
+  }
+  function fortaleza(nv) {
+    var g = new T3.Group(), k = new Kit(900 + nv), L = [], X = 13.2;
+    if (nv < 4) { // empalizada de troncos con portón y caseta de guardia
+      [[-15, -4.8], [4.8, 15]].forEach(function (q) { for (var z = q[0]; z <= q[1]; z += 0.42) { var h = 2.0 + k.r() * 0.4; k.cil(0.2, h, K.mad, 1, X, h / 2, z, 6); k.add(gCono(6), M(X, h + 0.2, z, 0, 0, 0, 0.42, 0.4, 0.42), K.mad, 1); } });
+      [-1, 1].forEach(function (l) { k.cil(0.26, 3.2, K.madO, 1, X, 1.6, l * 4.9, 6); }); k.caja(0.4, 0.3, 10.2, K.madO, 1, X, 3.0, 0);
+      k.en(M(X - 3, 0, 9), function () { k.caja(2.4, 1.8, 2.0, K.madC, 1, 0, 0.9, 0); tejado4(k, 2.4, 2.0, 1.8, { pend: 0.7, vuelo: 0.3, col: 0xc8a25a, paja: true }); });
+      I() && I().bandera(g, X, 4.2, 0, 1.6, 1.0, 0);
+    } else {
+      var h = nv >= 13 ? 4.6 : 3.4;
+      muralla(k, X, -17, -4.9, h, nv, L, g); muralla(k, X, 4.9, 17, h, nv, L, g);
+      // portón con arco, rastrillo y escudo
+      var pc = piedraNv(nv); k.caja(1.8, h + 1.4, 1.6, pc, 2, X, (h + 1.4) / 2, -5.6); k.caja(1.8, h + 1.4, 1.6, pc, 2, X, (h + 1.4) / 2, 5.6);
+      k.caja(1.8, 1.4, 12.8, pc, 2, X, h + 0.7, 0); for (var z = -6.2; z < 6.4; z += 0.9) k.caja(0.5, 0.55, 0.5, pc, 2, X + 0.6, h + 1.65, z);
+      if (nv >= 25) { k.caja(0.12, 0.16, 12.8, K.oro, 7, X + 0.92, h + 1.3, 0); k.add(gCil(16), M(X + 1.0, h + 0.8, 0, 0, 0, Math.PI / 2, 1.9, 0.1, 1.9), K.oro, 7); }
+      for (var r = -4.6; r <= 4.6; r += 0.5) k.caja(0.08, 1.0, 0.08, K.hierro, 5, X + 0.75, h - 0.1, r);
+      k.add(gCil(14), M(X + 0.95, h + 0.8, 0, 0, 0, Math.PI / 2, 1.5, 0.12, 1.5), 0x141216, 8); k.esf(0.3, K.blanco, 8, X + 1.02, h + 0.9, 0, 0.4, 1, 1, 8);
+      var techo = nv >= 20 ? 0xc0552c : nv >= 7 ? 0x3a3236 : null, ht = nv >= 13 ? 8.5 : nv >= 7 ? 6.0 : h + 1.6;
+      [-6.6, 6.6].forEach(function (z) { torreta(k, X, z, 1.35, ht, techo, nv, L); });
+      [-17.5, 17.5].forEach(function (z) { torreta(k, X, z, 1.2, ht - 1.0, techo, nv, L); });
+      if (nv >= 13) { // segunda muralla más baja delante y torres con bandera
+        muralla(k, X + 4.6, -12, -4.6, 2.2, Math.min(nv, 19), L); muralla(k, X + 4.6, 4.6, 12, 2.2, Math.min(nv, 19), L);
+        (nv >= 20 ? [-17.5, -6.6, 6.6, 17.5] : [-6.6, 6.6]).forEach(function (z, i) { var hh = Math.abs(z) > 10 ? ht - 1.0 : ht; k.cil(0.05, 2.6, K.madO, 1, X, hh + 3.4, z, 5); I() && I().bandera(g, X, hh + 4.4, z, nv >= 20 ? 1.9 : 1.5, nv >= 20 ? 1.25 : 1.0, 0, i % 2 ? 'roja' : 'negra'); });
+      }
+      if (nv >= 16) [-3.4, 3.4].forEach(function (z) { k.cil(0.45, 1.0, K.hierro, 5, X + 1.6, 0.5, z, 8); k.cil(0.55, 0.2, K.hierro, 5, X + 1.6, 1.05, z, 8); for (var b = 0; b < 5; b++) k.esf(0.22, 0xff8a20, 9, X + 1.6 + (b % 2 - 0.5) * 0.3, 1.3 + b * 0.06, z + (b - 2) * 0.12, 1, 1.4, 1, 6); L.push({ x: X + 1.6, y: 1.5, z: z, faro: true }); });
+      if (nv >= 20) { k.en(M(X - 5.5, 0, -11), function () { k.caja(4.0, 9.0, 4.0, K.sillar, 2, 0, 4.5, 0); CARAS(4, 4).forEach(function (m, i) { if (i > 1) return; k.en(m, function () { ventana(k, 0, 3.0, { w: 0.6, h: 1.0, contra: 0x3a3236, arco: true }); ventana(k, 0, 6.0, { w: 0.6, h: 1.0, contra: 0x3a3236, arco: true }); }); }); var yc = tejado4(k, 4.0, 4.0, 9.0, { pend: 0.9, vuelo: 0.4, col: 0x3a3236 }); k.cil(0.05, 2.4, K.madO, 1, 0, yc + 1.1, 0, 5); I() && I().bandera(g, X - 5.5, yc + 2.0 - 0, -11, 1.8, 1.2, 0); }); }
+      if (nv >= 25) [-6.6, 6.6, -17.5, 17.5].forEach(function (z) { k.esf(0.5, K.oro, 7, X + 1.3, h + 0.2, z, 1, 1.1, 0.9, 10); k.esf(0.12, 0x1a0c06, 8, X + 1.75, h + 0.3, z - 0.18, 1, 1, 1, 5); k.esf(0.12, 0x1a0c06, 8, X + 1.75, h + 0.3, z + 0.18, 1, 1, 1, 5); });
+    }
+    g.add(k.malla()); g.userData.luces = L; g.userData.nv = nv; return g;
+  }
+  var FORT = null;
+  function revisarCastillo() {
+    var it = I(), f = it.fort && it.fort(); if (!f) return;
+    var nv = (window.__juego && __juego.estado && __juego.estado().castillo) || 1;
+    if (FORT && FORT.parent === f && FORT.userData.nv === nv) return;
+    if (FORT && FORT.parent) FORT.parent.remove(FORT);
+    FORT = fortaleza(nv); f.add(FORT);
+  }
   // ======================================================================
   //  API para js/tk-corsarios.js
   // ======================================================================
@@ -390,7 +527,8 @@
     if (yawCara === null || yawCara === undefined) return null;
     var tipo = s.edificio.tipo, n = s.edificio.nivel, t = n <= 5 ? 1 : n <= 10 ? 2 : n <= 15 ? 3 : 4, idx = c.slots.indexOf(s);
     var g = new T3.Group(), gi = new T3.Group(), k = new Kit(idx * 131 + n), L = [], humo = [], E = 1.12; gi.scale.setScalar(E); g.add(gi);
-    (TIPO[tipo] || function (k2, g2, t2, L2, h2) { gobernador(k2, g2, t2, L2, h2, COLORES[idx % 4]); })(k, gi, t, L, humo);
+    ID = IDENT[tipo] || { m: gobernador, ban: '#7a5a3a', ico: 'casa' }; if (tipo === 'cabana') ID = Object.assign({}, ID, { pared: PASTEL[idx % PASTEL.length], contra: K.contra[idx % K.contra.length] });
+    k.info = null; ID.m(k, gi, t, L, humo); if (ID.extra) ID.extra(k, gi, t, L, humo); estandarteTipo(k, gi); ID = {};
     gi.add(k.malla()); var esc = function (q) { return { x: q.x * E, y: q.y * E, z: q.z * E }; };
     g.userData.luces = L.map(esc); g.userData.humo = humo.map(esc); g.userData.tkd = true;
     g.userData.yaw = orientar(s, c, yawCara);
@@ -541,7 +679,8 @@
   function paso(dt) {
     var x = window.__tkExtras, c = C(), it = I(); if (!x || !c || !it) return;
     var quiere = ON && TKCorsarios.activa(), raizL = it.raizL();
-    if (!quiere || !raizL) { if (DEC && DEC.g.parent) { DEC.g.parent.remove(DEC.g); DEC.humo.parent && DEC.humo.parent.remove(DEC.humo); devolver(); } ocultosT.forEach(function (o) { o.visible = true; }); ocultosT = []; luz(c, x, false); return; }
+    if (!quiere || !raizL) { if (DEC && DEC.g.parent) { DEC.g.parent.remove(DEC.g); DEC.humo.parent && DEC.humo.parent.remove(DEC.humo); devolver(); } ocultosT.forEach(function (o) { o.visible = true; }); ocultosT = []; luz(c, x, false); if (FORT && FORT.parent) FORT.parent.remove(FORT); FORT = null; return; }
+    revisarCastillo();
     if (!DEC) DEC = construirDecoracion(c, raizL); if (!DEC) return;
     if (!DEC.g.parent) { x.escena.add(DEC.g); x.escena.add(DEC.humo); esconderCantos(); }
     var enCampos = c.vista() === 'campos'; DEC.g.visible = DEC.humo.visible = !enCampos;
