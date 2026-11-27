@@ -438,6 +438,10 @@
   function rutaMuralla(c) {
     var mu = c.muralla(); if (!mu) return null;
     if (vida.muro && vida.muro.obj === mu) return vida.muro;
+    /* v10.08: al volver a una villa con la misma muralla no se repiten los 360 rayos (tardaba medio segundo en cada cambio de villa) */
+    var fz = c.forma || {}, est = window.__juego && __juego.estado ? __juego.estado() : {}, clave = [fz.cx, fz.cz, fz.rx, fz.rz, est.muralla || 0, est.castillo || 0].join('|');
+    vida.rutas = vida.rutas || {};
+    if (vida.rutas[clave]) { vida.muro = { obj: mu, p: vida.rutas[clave] }; vida.patrullas.forEach(function (s) { s.grupo.parent && s.grupo.parent.remove(s.grupo); }); vida.patrullas = []; return vida.muro; }
     mu.updateMatrixWorld(true);
     var f = c.forma, puntos = [], ray = rayo3(), abajo = new T3.Vector3(0, -1, 0), o = new T3.Vector3();
     for (var i = 0; i < 360; i++) {
@@ -452,6 +456,7 @@
     var alturas = puntos.filter(Boolean).map(function (p) { return p.y; }).sort(function (a, b) { return a - b; });
     var med = alturas.length ? alturas[Math.floor(alturas.length * 0.35)] : 0;
     puntos.forEach(function (p) { if (p && Math.abs(p.y - med) < 1.2) p.y = med; else if (p && p.y > med + 1.2) p.y = med; });
+    vida.rutas[clave] = puntos;
     vida.muro = { obj: mu, p: puntos }; vida.patrullas.forEach(function (s) { s.grupo.parent && s.grupo.parent.remove(s.grupo); }); vida.patrullas = [];
     return vida.muro;
   }

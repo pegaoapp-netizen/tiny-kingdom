@@ -47,19 +47,19 @@
     document.body.appendChild(capa); t0 = performance.now();
     void capa.offsetWidth; capa.classList.add('visible'); // aparece ya (con su fundido)
     // se rehace la escena solo cuando la pantalla de carga ya está pintada y tapando (dos fotogramas + el fundido)
-    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () { try { hacer(); } catch (e) { console.warn('TKVillas', e); quitar(); } }, 380); }); });
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(function () { try { hacer(); } catch (e) { console.warn('TKVillas', e); quitar(); } }, 140); /* v10.08: antes 380 ms */ }); });
     seguro = setTimeout(quitar, 9000); // por si algo falla, nunca se queda tapado
   }
   function llegado() {
     if (!capa) return;
     // dos fotogramas con la villa nueva ya dibujada (la isla pirata se construye en el primero) y un mínimo de 1 s en pantalla
-    var falta = Math.max(0, 1000 - (performance.now() - t0));
-    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(quitar, falta + 250); }); });
+    var falta = Math.max(0, 450 - (performance.now() - t0)); // v10.08: mínimo 0,45 s (antes 1 s)
+    requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(quitar, falta + 60); }); });
   }
   function quitar(ya) {
     clearTimeout(seguro); var c = capa; capa = null; if (!c) return;
     if (ya) { c.remove(); return; }
-    c.classList.remove('visible'); c.classList.add('saliendo'); setTimeout(function () { c.remove(); }, 450);
+    c.classList.remove('visible'); c.classList.add('saliendo'); setTimeout(function () { c.remove(); }, 260);
   }
   window.TKVillas = { cabecera: cabecera, cargando: cargando, llegado: llegado, escudo: escudo };
 })();
