@@ -10277,7 +10277,7 @@
       var fav = estado.favoritos || [], ya = fav.some(function (q) { return q.x === a.x && q.y === a.y; });
       return '<div class="mc-cab"><b>' + L('2. Favoritos', '2. Favorites') + '</b><button class="mc-x" data-mc="cerrar">✕</button></div>' +
         '<button class="comprar ' + (ya ? '' : 'naranja') + ' mc-fav-add" data-mc="fav-guardar"' + (ya || a.x === undefined ? ' disabled' : '') + '>⭐ ' + (ya ? L('Ya está en tus favoritos', 'Already in favorites') : L('Guardar este lugar', 'Save this place')) + '</button>' +
-        '<div class="mc-lista">' + (fav.length ? fav.map(function (q, i) { return '<div class="mc-fav"><span>⭐</span><b>' + escaparHTML(q.n) + '</b><small>X ' + q.x + ' · Y ' + q.y + '</small><button class="comprar mini" data-mc="fav-ir" data-i="' + i + '">' + L('Ir', 'Go') + '</button><button class="comprar mini rojo" data-mc="fav-borrar" data-i="' + i + '">✕</button></div>'; }).join('')
+        '<div class="mc-lista">' + (fav.length ? fav.map(function (q, i) { return '<div class="mc-fav"><span>' + ({ amigo: '⭐', guerra: '⚔️' }[q.t] || '🔖') + '</span><b>' + escaparHTML(q.n) + '</b><small>X ' + q.x + ' · Y ' + q.y + '</small><button class="comprar mini" data-mc="fav-ir" data-i="' + i + '">' + L('Ir', 'Go') + '</button><button class="comprar mini rojo" data-mc="fav-borrar" data-i="' + i + '">✕</button></div>'; }).join('')
           : '<p class="nota">' + L('Guarda aquí los lugares a los que vas seguido.', 'Save the places you visit often here.') + '</p>') + '</div>' +
         '<div class="mc-botones"><button class="comprar azul" data-mc="sig">' + L('Siguiente', 'Next') + ' ›</button></div>';
     }
@@ -10335,7 +10335,7 @@
         vista = 'favoritos';
       }
       else if (q === 'todo' || q === 'nada') { var capT = tamanoMarcha(sel.heroe), usado = 0; sel.tropas = {}; if (q === 'todo') tiposDisponibles().forEach(function (k) { var n2 = Math.min(libresParaMarcha(k), Math.max(0, capT - usado)); if (n2 > 0) { sel.tropas[k] = n2; usado += n2; } }); }
-      else if (q === 'fav-guardar') { estado.favoritos = estado.favoritos || []; if (estado.favoritos.length >= 20) estado.favoritos.shift(); estado.favoritos.push({ n: String(a.nombre || '').slice(0, 30), x: a.x, y: a.y }); guardar(true); }
+      else if (q === 'fav-guardar') { estado.favoritos = estado.favoritos || []; if (estado.favoritos.length >= 50) { consejoTemporal(L('Ya tienes 50 favoritos: borra uno primero.', 'You have 50 favorites: delete one first.')); sonar('error'); return; } estado.favoritos.push({ n: String(a.nombre || '').slice(0, 30), x: a.x, y: a.y, t: 'guardado' }); guardar(true); } /* v10.07: tope 50 y ya no borra el más antiguo */
       else if (q === 'fav-borrar') { (estado.favoritos || []).splice(+b.dataset.i, 1); guardar(true); }
       else if (q === 'fav-ir') { var fv = (estado.favoritos || [])[+b.dataset.i]; cerrar(); if (fv) { if (!enMundo) abrirMundo(); setTimeout(function () { if (M3) { M3.obj.copy(posCelda(fv.x, fv.y)); elegirCelda(fv.x, fv.y); } }, 400); } return; }
       else if (q === 'cambiar') vista = 'heroes';
@@ -13707,7 +13707,7 @@
         }).join('') + '</div>' : '<div class="lf-pie">' + L('Todavía no tienes lugares guardados.', 'No saved places yet.') + '</div>');
       $('fav-cerrar').addEventListener('click', function () { sonar('click'); d.remove(); });
       $('fav-guardar').addEventListener('click', function () {
-        if (estado.favoritos.length >= 20) { consejoTemporal(L('Ya tienes 20 lugares: borra uno primero.', 'You have 20 places: delete one first.')); sonar('error'); return; }
+        if (estado.favoritos.length >= 50) { consejoTemporal(L('Ya tienes 50 lugares: borra uno primero.', 'You have 50 places: delete one first.')); sonar('error'); return; }
         var n = ($('fav-nom').value || '').trim() || ('X ' + cx + ' · Y ' + cy);
         estado.favoritos.push({ n: n.slice(0, 20), x: cx, y: cy }); sonar('moneda'); guardar(true); pintar();
       });

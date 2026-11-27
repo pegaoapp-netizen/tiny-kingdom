@@ -8,7 +8,7 @@
    Solo interfaz: no toca combate, marchas, recursos ni reglas. */
 (function () {
   'use strict';
-  var MAX = 20; // el mismo tope que ya usa la Marcha para esta lista
+  var MAX = 50; // v10.07: el mismo tope que la Marcha (antes 20)
   var TIPOS = [
     { k: 'amigo', ico: '⭐', es: 'Amistad', en: 'Friend' },
     { k: 'guerra', ico: '⚔️', es: 'Guerra', en: 'War' },
