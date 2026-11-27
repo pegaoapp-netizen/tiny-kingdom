@@ -1,0 +1,61 @@
+/* v9.91 · INTERFAZ PREMIUM (js/tk-premium.js pone body.tkp-ui). Solo acabado: marcos dorados, relieve, brillo sutil y legibilidad.
+   No cambia tamaños, posiciones ni funciones. En calidad Baja (body.tkp-baja) no hay animaciones ni desenfoques. */
+
+/* ---------- barra de abajo: pestañas con borde dorado y relieve ---------- */
+html body.tkp-ui #abajo { box-shadow: 0 -1px 0 rgba(255, 226, 150, .55), 0 -8px 22px rgba(0, 0, 0, .45) !important; }
+html body.tkp-ui #abajo > button { position: relative; box-shadow: inset 0 1px 0 rgba(255, 240, 200, .55), inset 0 -2px 0 rgba(60, 30, 5, .45), 0 0 0 1px rgba(201, 162, 39, .55), 0 3px 6px rgba(0, 0, 0, .35) !important; transition: transform .12s ease, filter .2s ease; }
+html body.tkp-ui #abajo > button:active { transform: translateY(1px) scale(.98); filter: brightness(1.08); }
+html body.tkp-ui #abajo > button img, html body.tkp-ui #abajo > button svg { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45)) saturate(.92); }
+html body.tkp-ui #abajo > button span.txt { text-shadow: 0 1px 0 rgba(255, 248, 225, .6) !important; letter-spacing: .2px; }
+
+/* ---------- botones redondos de la derecha: aro dorado fino y menos saturación ---------- */
+html body.tkp-ui #lateral .redondo { box-shadow: 0 0 0 1.5px rgba(232, 196, 106, .85), inset 0 2px 0 rgba(255, 248, 220, .45), inset 0 -3px 4px rgba(60, 30, 5, .35), 0 4px 8px rgba(0, 0, 0, .4) !important; }
+html body.tkp-ui #lateral .redondo .rd-img { filter: saturate(.88) drop-shadow(0 2px 2px rgba(0, 0, 0, .4)); }
+html body.tkp-ui #lateral .redondo:active { filter: brightness(1.12); }
+html body.tkp-ui .badge { box-shadow: 0 0 0 1.5px #fff3c4, 0 2px 4px rgba(0, 0, 0, .5) !important; }
+
+/* ---------- pastillas (recursos, tropas): cristal oscuro con filo dorado ---------- */
+html body.tkp-ui .pill { box-shadow: inset 0 1px 0 rgba(255, 240, 200, .35), 0 0 0 1px rgba(201, 162, 39, .45), 0 2px 5px rgba(0, 0, 0, .35) !important; }
+html body.tkp-ui .pill b { text-shadow: 0 1px 2px rgba(0, 0, 0, .65); font-variant-numeric: tabular-nums; }
+
+/* ---------- ventanas: esquinas doradas y profundidad ---------- */
+html body.tkp-ui #panel { box-shadow: 0 0 0 1px rgba(255, 226, 150, .6), 0 0 0 4px rgba(90, 55, 15, .55), 0 0 0 5px rgba(232, 196, 106, .55), 0 18px 48px rgba(0, 0, 0, .55) !important; }
+html body.tkp-ui #panel-titulo { text-shadow: 0 1px 0 rgba(255, 245, 210, .5), 0 2px 6px rgba(0, 0, 0, .35); letter-spacing: .4px; }
+html body.tkp-ui .carta { box-shadow: inset 0 1px 0 rgba(255, 250, 230, .5), 0 0 0 1px rgba(160, 120, 40, .35), 0 3px 8px rgba(0, 0, 0, .18) !important; }
+
+/* ---------- botón de compra: relieve y destello que pasa de vez en cuando ---------- */
+html body.tkp-ui .comprar { position: relative; overflow: hidden; }
+html body.tkp-ui .comprar::after { content: ''; position: absolute; top: -20%; bottom: -20%; left: -60%; width: 40%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .38), transparent); transform: skewX(-18deg); animation: tkp-destello 5.5s ease-in-out infinite; pointer-events: none; }
+html body.tkp-ui .comprar[disabled]::after, html body.tkp-ui .comprar.morado::after { display: none; }
+@keyframes tkp-destello { 0%, 78% { left: -60%; } 100% { left: 130%; } }
+html body.tkp-ui .tkp-sel { box-shadow: 0 0 0 2px #fff1b8, 0 0 14px rgba(255, 210, 90, .8) !important; }
+html body.tkp-ui .tkp-niveles { display: flex; gap: 6px; flex-wrap: wrap; }
+html body.tkp-ui .tkp-niveles .comprar { flex: 1 1 22%; min-width: 64px; }
+
+/* ---------- recompensas y nivel nuevo: rayos dorados que giran detrás ---------- */
+.tkp-rayos { position: absolute; left: 50%; top: 50%; width: 900px; height: 900px; margin: -450px 0 0 -450px; pointer-events: none; z-index: 0;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 214, 110, .30) 0deg 7deg, rgba(255, 214, 110, 0) 7deg 20deg);
+  -webkit-mask: radial-gradient(circle, #000 0, #000 18%, transparent 62%); mask: radial-gradient(circle, #000 0, #000 18%, transparent 62%);
+  animation: tkp-girar 14s linear infinite, tkp-aparece .6s ease-out; }
+.tkp-rayos.grande { background: repeating-conic-gradient(from 0deg, rgba(255, 220, 120, .42) 0deg 6deg, rgba(255, 220, 120, 0) 6deg 15deg); animation: tkp-girar 9s linear infinite, tkp-aparece .6s ease-out; }
+#recompensas > .rc-caja, #nivel-nuevo > .nn-caja { position: relative; z-index: 1; }
+#recompensas, #nivel-nuevo { overflow: hidden; }
+@keyframes tkp-girar { to { transform: rotate(360deg); } }
+@keyframes tkp-aparece { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: scale(1); } }
+html body.tkp-ui #recompensas .rc-caja, html body.tkp-ui #nivel-nuevo .nn-caja { box-shadow: 0 0 0 2px #f3d27a, 0 0 40px rgba(255, 200, 90, .55), 0 20px 50px rgba(0, 0, 0, .6) !important; animation: tkp-aparece .45s cubic-bezier(.2, 1.4, .4, 1); }
+#tkp-celebra { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100000; }
+
+/* ---------- modo cine: se esconde toda la interfaz (sigue ahí y vuelve al salir) ---------- */
+body.tkp-cine > *:not(#juego):not(#tkp-cine-capa):not(#tkp-celebra):not(script):not(style):not(svg) { opacity: 0 !important; pointer-events: none !important; transition: opacity .6s ease !important; }
+body.tkp-cine #juego canvas { pointer-events: none; }
+#tkp-cine-capa { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: flex-end; justify-content: center; padding-bottom: calc(9vh + env(safe-area-inset-bottom)); cursor: pointer; }
+#tkp-cine-capa span { font: 600 13px Georgia, serif; color: #f6ead0; letter-spacing: 1px; text-shadow: 0 1px 3px #000; background: rgba(0, 0, 0, .35); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(232, 196, 106, .5); transition: opacity 1.2s; }
+#tkp-cine-capa.tkp-tenue span { opacity: .25; }
+#tkp-btn-cine { position: fixed; left: 26px; top: calc(50% + 40px); z-index: 25; width: 36px; height: 36px; border-radius: 50%; border: 0; display: flex; align-items: center; justify-content: center;
+  color: #f6e6c0; background: radial-gradient(circle at 35% 30%, #5a4128, #24170c); box-shadow: 0 0 0 1.5px rgba(232, 196, 106, .85), 0 3px 8px rgba(0, 0, 0, .45); opacity: .92; }
+#tkp-btn-cine:active { transform: scale(.94); }
+body.en-menu #tkp-btn-cine, body.tkp-cine #tkp-btn-cine { display: none; }
+
+/* ---------- calidad Baja: sin animaciones ni brillos que gasten ---------- */
+body.tkp-baja .comprar::after, body.tkp-baja .tkp-rayos { animation: none !important; display: none; }
+@media (prefers-reduced-motion: reduce) { .comprar::after, .tkp-rayos { animation: none !important; } }
