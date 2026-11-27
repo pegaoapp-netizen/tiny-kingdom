@@ -9958,6 +9958,7 @@
       }
       slots.forEach(function (s) {
         if (!s.edificio || !esCampo(s.edificio.tipo)) return;
+        if (s.grupo && !s.grupo.visible) return; // v10.05: campo escondido (Ciudad de la 2.ª villa): sin cartel de cosecha encima del castillo
         var cap = capacidadCampo(s);
         if ((s.guardado || 0) >= Math.max(1, cap * 0.1)) ponerReloj('rec' + s.i, s.pos.clone().setY(4.2 * ESCALA_TRAMO[tramoNivel(s.edificio.nivel)]), ICONO_RECURSO[EDIFICIOS[s.edificio.tipo].recurso] + ' ' + corto(Math.floor(s.guardado)) + (s.guardado >= cap ? ' ✔' : ''));
       });

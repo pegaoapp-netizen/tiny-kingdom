@@ -980,6 +980,7 @@
     if (MAT.ojos) { MAT.ojos.color.copy(cOjoDia).lerp(cOjoNoche, Math.min(1, k * 1.2)); MAT.farol.color.copy(cFarolDia).lerp(cFarolNoche, Math.min(1, k * 1.2)); }
     var enCampos = c.vista() === 'campos'; if (ISL.fondo) ISL.fondo.visible = !enCampos; if (ISL.cordillera) ISL.cordillera.visible = !enCampos;
     c.slots.forEach(function (s) { if (s.campo && s.grupo) s.grupo.visible = enCampos; });
+    if (PROXY) PROXY.raycast = enCampos ? NOOP : T3.Mesh.prototype.raycast; // v10.05: en la vista Campos la calavera no se ve y su caja invisible ya no tapa los campos (tocar un campo abría el Castillo)
     sincronizarParcelas(c);
     var ahoraR = performance.now(); revisaT -= (ahoraR - (revisaUlt || ahoraR)) / 1000; revisaUlt = ahoraR;
     if (revisaT <= 0) { revisaT = 0.6; ocultar(c, esc); revisarFortaleza(c); crearPiratas(c, esc); if (!gaviotas) crearGaviotas(); }
