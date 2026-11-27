@@ -1491,9 +1491,9 @@
     g.rotation.y = Math.atan2(dir.x, dir.z);
     var t = M.parcelaLibre(campo);
     // dentro de la muralla el cuadro es la mitad: el edificio ocupa 1 cuadro, no 2
-    if (!campo) t.scale.setScalar(0.5);
+    if (!campo) t.scale.setScalar(0.5); else t.scale.setScalar(1.4); // v10.04: la tierra del campo crece con su edificio
     g.add(t);
-    var tc = M.parcelaCerrada(); tc.scale.setScalar(campo ? 0.9 : 0.5); tc.visible = false; g.add(tc);
+    var tc = M.parcelaCerrada(); tc.scale.setScalar(campo ? 1.3 : 0.5); tc.visible = false; g.add(tc);
     g.userData.slot = i;
     escena.add(g);
     return { i: i, campo: campo, fijo: campo ? '' : (PARCELAS.fijo[i] || ''), orden: campo ? -1 : PARCELAS.orden.indexOf(i), oc: campo ? i - PARCELAS.nCiudad : -1, pos: new V3(p[0], 0, p[1]), grupo: g, terreno: t, tierraCerrada: tc, edificio: null, obra: null, modelo: null, rebote: 1, cd: 0, guardado: 0 };
@@ -4942,7 +4942,7 @@
   var TAM_TIPO = {
     cuartel: 8.6, almacen: 8.6, embajada: 8.8, academia: 8.6, relevo: 8.4, salon: 8.6,
     mercado: 8.6, herreria: 8.2, establo: 8.4, enfermeria: 8.2, galeria: 8.4,
-    cabana: 5.8, granja: 6.2, aserradero: 6.2, mina: 6.2, cantera: 6.2,
+    cabana: 5.8, granja: 10.2, aserradero: 10.2, mina: 10.2, cantera: 10.2, // v10.04: edificios de los campos más grandes (antes 6.2)
     torre: 6.6, vigia: 6.0
   };
   var ESCALA_EDIFICIO = 1.3;
