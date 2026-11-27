@@ -1,4 +1,6 @@
-/* v10.01 · BAHÍA DE LOS CORSARIOS · ZONA DE DEMOSTRACIÓN de la remodelación gráfica (Claude)
+/* v10.02 · BAHÍA DE LOS CORSARIOS · REMODELACIÓN GRÁFICA de toda la 2.ª villa (Claude). Empezó como zona de demostración (v10.01).
+   Ahora se aplica a TODAS las parcelas de la ciudad de la 2.ª villa y está ENCENDIDA. Se apaga con ?demo=0 o TKCorsariosDemo.activar(false).
+   Calidad baja del teléfono: menos vegetación y tejados sin tejas sueltas.
    Prueba de calidad antes de rehacer toda la 2.ª villa: tres parcelas (por defecto 1, 10 y 8), su calle y la vegetación de alrededor.
    - Edificios nuevos con geometría de verdad: zócalo de sillares, paredes de cal con desconchones, entramado de madera,
      ventanas hundidas con cristal, contraventanas y jardineras, puertas en arco, balcones, tejados de teja curva una a una,
@@ -12,7 +14,9 @@
   if (!window.THREE) return;
   var T3 = THREE, NOOP = function () {};
   var qd = /[?&]demo=([0-9,]+|1)(?:&|$)/.exec(location.search);
-  var ON = !!qd, PARC = qd && qd[1].indexOf(',') > 0 ? qd[1].split(',').map(Number) : [1, 10, 8], VER = 1;
+  var ON = !/[?&]demo=0(?:&|$)/.test(location.search), PARC = qd && qd[1].indexOf(',') > 0 ? qd[1].split(',').map(Number) : null, VER = 1; // null = todas las parcelas de la ciudad
+  var CANT = { baja: 0.4, media: 0.7, alta: 1, ultra: 1.2 }[(window.TKPremium && TKPremium.nivel && TKPremium.nivel()) || 'alta'] || 1;
+  function lista(c) { return PARC || c.slots.map(function (s, i) { return s.campo ? -1 : i; }).filter(function (i) { return i >= 0; }); }
   function I() { return window.TKCorsarios && TKCorsarios._int; }
   function C() { var x = window.__tkExtras; return x && x.ciudad; }
   function sm(e0, e1, x) { var t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
@@ -39,7 +43,7 @@
   function gBarril() { if (G.barril) return G.barril; var p = []; for (var i = 0; i <= 8; i++) { var t = i / 8; p.push(new T3.Vector2(0.42 + 0.08 * Math.sin(t * Math.PI), t - 0.5)); } p.unshift(new T3.Vector2(0, -0.5)); p.push(new T3.Vector2(0, 0.5)); return (G.barril = nI(new T3.LatheGeometry(p, 10))); }
   // teja curva: medio tubo algo más estrecho arriba (así se solapan como las de verdad)
   function gTeja() {
-    if (G.teja) return G.teja; var S = 4, P = [], N = [];
+    if (G.teja) return G.teja; var S = 3, P = [], N = [];
     for (var i = 0; i < S; i++) { var f0 = i / S * Math.PI, f1 = (i + 1) / S * Math.PI;
       var q = function (f, z) { var r = z < 0 ? 0.42 : 0.5; return [Math.cos(f) * r, Math.sin(f) * r * 1.0, z]; }, n = function (f) { return [Math.cos(f), Math.sin(f), 0]; };
       var a = q(f0, -0.5), b = q(f0, 0.5), c = q(f1, 0.5), d = q(f1, -0.5);
@@ -200,13 +204,14 @@
   }
   // FALDÓN de tejado con tejas una a una. Marco: origen en el alero, -z hacia la cumbrera, inclinado «ang».
   function faldon(k, o) {
-    var ang = Math.atan2(o.rise, o.run), L = Math.hypot(o.run, o.rise), r = k.r, du = 0.3, ds = 0.4;
+    var ang = Math.atan2(o.rise, o.run), L = Math.hypot(o.run, o.rise), r = k.r, du = 0.4, ds = 0.52;
     k.en(M(o.x, o.y, o.z, ang, o.ry, 0), function () {
       var hw = function (s) { return o.hwA + (o.hwC - o.hwA) * Math.min(1, s / L); };
-      k.quad([-o.hwA, 0, 0], [o.hwA, 0, 0], [o.hwC, 0, -L], [-o.hwC, 0, -L], K.tejaO, 3);                      // tablero bajo las tejas (se ve entre canales)
+      k.quad([-o.hwA, 0, 0], [o.hwA, 0, 0], [o.hwC, 0, -L], [-o.hwC, 0, -L], CANT < 0.5 ? (o.col || K.teja) : K.tejaO, 3);                      // tablero bajo las tejas (se ve entre canales)
       k.quad([o.hwA, -0.12, 0], [-o.hwA, -0.12, 0], [-o.hwC, -0.12, -L], [o.hwC, -0.12, -L], 0x4a2c18, 1);      // cara de abajo (sombra del alero)
       k.caja(2 * o.hwA + 0.04, 0.16, 0.08, K.madO, 1, 0, -0.06, 0.02);                                         // tabla de alero
       for (var u = -o.hwA + 0.25; u < o.hwA - 0.1; u += 0.55) k.caja(0.09, 0.1, 0.42, K.madO, 1, u, -0.16, -0.12); // canecillos
+      if (CANT < 0.5) return;                                                                  // calidad baja: tablero con color de teja, sin tejas sueltas
       for (var s = 0, fila = 0; s < L - 0.05; s += ds, fila++) {
         var w = hw(s + ds / 2), n = Math.floor((w * 2) / du);
         for (var i = 0; i < n; i++) {
@@ -380,7 +385,7 @@
   // ======================================================================
   //  API para js/tk-corsarios.js
   // ======================================================================
-  function esDemo(s) { var c = C(); return !!c && PARC.indexOf(c.slots.indexOf(s)) >= 0; }
+  function esDemo(s) { var c = C(); return !!c && !s.campo && lista(c).indexOf(c.slots.indexOf(s)) >= 0; }
   function edificio(s, c, yawCara) {
     if (yawCara === null || yawCara === undefined) return null;
     var tipo = s.edificio.tipo, n = s.edificio.nivel, t = n <= 5 ? 1 : n <= 10 ? 2 : n <= 15 ? 3 : 4, idx = c.slots.indexOf(s);
@@ -430,20 +435,20 @@
   function texHumo() { return TX.humo || (TX.humo = lienzo(64, 64, function (x, w) { var gr = x.createRadialGradient(32, 32, 2, 32, 32, 31); gr.addColorStop(0, 'rgba(235,230,222,.85)'); gr.addColorStop(0.6, 'rgba(220,214,206,.35)'); gr.addColorStop(1, 'rgba(220,214,206,0)'); x.fillStyle = gr; x.fillRect(0, 0, w, w); })); }
   // arbusto tropical: varias bolas de hojas con flores de hibisco
   function geoArbusto(sem, flor) { var k = new Kit(sem), r = k.r;
-    for (var i = 0; i < 11; i++) { var a = r() * 6.28, d = 0.15 + r() * 0.5, s = 0.32 + r() * 0.3, y = 0.25 + s * 0.4 + (1 - d) * 0.45 * r(); k.add(gIco(2), M(Math.cos(a) * d, y, Math.sin(a) * d, r() * 3, r() * 3, r() * 3, s * 1.7, s * 1.35, s * 1.7), y > 0.7 ? [0x4a8a2e, 0x5a9a34][i % 2] : [0x24561a, 0x2f6a22, 0x386f24][i % 3], 6, 0.25); }
+    for (var i = 0; i < 7; i++) { var a = r() * 6.28, d = 0.15 + r() * 0.45, s = 0.38 + r() * 0.3, y = 0.25 + s * 0.4 + (1 - d) * 0.45 * r(); k.add(gIco(1), M(Math.cos(a) * d, y, Math.sin(a) * d, r() * 3, r() * 3, r() * 3, s * 1.7, s * 1.35, s * 1.7), y > 0.7 ? [0x4a8a2e, 0x5a9a34][i % 2] : [0x24561a, 0x2f6a22, 0x386f24][i % 3], 6, 0.25); }
     if (flor) for (var f = 0; f < 16; f++) { var b = r() * 6.28, h = 0.45 + r() * 0.6, rr = 0.55 + (h - 0.45) * -0.2; k.esf(0.075, flor[f % flor.length], 8, Math.cos(b) * rr, h, Math.sin(b) * rr, 1, 0.6, 1, 5); }
     var m = k.malla(); return m.geometry; }
   var DEC = null;
   function construirDecoracion(c, raizL) {
     var it = I(), V = it.veg(), g = new T3.Group(); g.name = 'tk-demo'; g.matrixAutoUpdate = false; g.matrix.copy(raizL.matrix); g.updateMatrixWorld(true);
-    var k = new Kit(4242), r = k.r, P = PARC.map(function (i) { var s = c.slots[i]; return s ? c.aLocal(s.pos.x, s.pos.z) : null; }).filter(Boolean);
+    var LP = lista(c), k = new Kit(4242), r = k.r, P = LP.map(function (i) { var s = c.slots[i]; return s ? c.aLocal(s.pos.x, s.pos.z) : null; }).filter(Boolean);
     if (!P.length) return null;
-    var a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; P.forEach(function (p) { a0 = Math.min(a0, p.a); a1 = Math.max(a1, p.a); b0 = Math.min(b0, p.b); b1 = Math.max(b1, p.b); }); a0 -= 11; a1 += 11; b0 -= 11; b1 += 11;
+    var a0 = 1e9, a1 = -1e9, b0 = 1e9, b1 = -1e9; P.forEach(function (p) { a0 = Math.min(a0, p.a); a1 = Math.max(a1, p.a); b0 = Math.min(b0, p.b); b1 = Math.max(b1, p.b); }); a0 = Math.max(-39, a0 - 11); a1 = Math.min(45, a1 + 11); b0 = Math.max(-46, b0 - 11); b1 = Math.min(46, b1 + 11); // dentro de la meseta de la villa
     var dentro = function (a, b) { return a > a0 && a < a1 && b > b0 && b < b1; }, enParcela = function (a, b, m) { return P.some(function (p) { return Math.abs(a - p.a) < 3.6 + m && Math.abs(b - p.b) < 3.6 + m; }); };
     var cualquierParcela = function (a, b, m) { return c.slots.some(function (s) { if (s.campo) return false; var l = c.aLocal(s.pos.x, s.pos.z); return Math.abs(a - l.a) < 3.6 + m && Math.abs(b - l.b) < 3.6 + m; }); };
     // césped pintado en todo el verde de la zona (una malla con transparencia por vértice: deja ver calles y plaza)
     var mC = new T3.MeshStandardMaterial({ map: texCesped(), vertexColors: true, transparent: true, roughness: 0.95, depthWrite: false }); mC.userData.tkpSinVentanas = true;
-    var NA = Math.ceil((a1 - a0) / 0.5), NB = Math.ceil((b1 - b0) / 0.5), gp = new T3.PlaneGeometry(a1 - a0, b1 - b0, NA, NB), PP = gp.attributes.position, UV = gp.attributes.uv, CC = new Float32Array(PP.count * 4);
+    var NA = Math.ceil((a1 - a0) / 0.7), NB = Math.ceil((b1 - b0) / 0.7), gp = new T3.PlaneGeometry(a1 - a0, b1 - b0, NA, NB), PP = gp.attributes.position, UV = gp.attributes.uv, CC = new Float32Array(PP.count * 4);
     for (var i = 0; i < PP.count; i++) { var pa = (a0 + a1) / 2 + PP.getX(i), pb = (b0 + b1) / 2 - PP.getY(i); PP.setXYZ(i, pa, 0.035, pb); UV.setXY(i, pa / 5.5, pb / 5.5);
       var al = sm(0.05, 0.45, it.distCamino(pa, pb)) * sm(13.2, 14.2, Math.hypot(pa, pb)) * sm(0, 3, Math.min(pa - a0, a1 - pa, pb - b0, b1 - pb));
       if (cualquierParcela(pa, pb, -0.2) && !enParcela(pa, pb, 0.4)) al *= 0.0;   // otras parcelas: se quedan como están
@@ -452,7 +457,7 @@
     var mces = new T3.Mesh(gp, mC); mces.receiveShadow = true; mces.raycast = NOOP; mces.renderOrder = -4; g.add(mces);
     // sombra de contacto (oclusión) bajo cada edificio: lo asienta en el suelo
     var mS = new T3.MeshBasicMaterial({ map: texSombra(), transparent: true, depthWrite: false, color: 0x000000, opacity: 0.55 }); mS.userData.tkpSinVentanas = true;
-    P.forEach(function (p) { var sm2 = new T3.Mesh(new T3.PlaneGeometry(9.2, 9.2), mS); sm2.rotation.x = -Math.PI / 2; sm2.position.set(p.a, 0.06, p.b); sm2.raycast = NOOP; sm2.renderOrder = -2; g.add(sm2); });
+    var sombras = {}; P.forEach(function (p, i) { var sm2 = new T3.Mesh(new T3.PlaneGeometry(9.2, 9.2), mS); sm2.rotation.x = -Math.PI / 2; sm2.position.set(p.a, 0.06, p.b); sm2.raycast = NOOP; sm2.renderOrder = -2; sm2.visible = false; g.add(sm2); sombras[LP[i]] = sm2; });
     P.forEach(function (p) { var m = 3.72; [[0, 1], [0, -1], [1, 0], [-1, 0]].forEach(function (d) { for (var e = -m; e < m - 0.05; e += 0.56) { var a = p.a + (d[0] ? d[0] * m : e + 0.28), b = p.b + (d[1] ? d[1] * m : e + 0.28);
       k.caja(0.54, 0.16, 0.26, [0xc2b69c, 0xb4a88e, 0xccc0a4][(e * 9 | 0) % 3 < 0 ? 0 : (e * 9 | 0) % 3], 2, a, 0.07, b, d[0] ? 0 : Math.PI / 2); } }); });
     // empedrado pintado (cantos redondeados cálidos con juntas oscuras) encima de las calles de la zona
@@ -478,26 +483,26 @@
     // vegetación en grupos naturales: una palmera o dos, arbustos con flores alrededor y matas de hierba
     var palmas = [], arbustos = [[], [], []], matas = [], o = new T3.Object3D();
     var verde = function (a, b, m) { return it.distCamino(a, b) > m && Math.hypot(a, b) > 14 && !enParcela(a, b, -0.6) && !(cualquierParcela(a, b, 0.2) && !enParcela(a, b, 0.6)) && dentro(a, b); };
-    var centros = []; for (var n = 0; n < 1500 && centros.length < 14; n++) { var ca = a0 + 2 + r() * (a1 - a0 - 4), cb = b0 + 2 + r() * (b1 - b0 - 4); if (!verde(ca, cb, 0.9) || centros.some(function (q) { return Math.hypot(q[0] - ca, q[1] - cb) < 4.0; })) continue; centros.push([ca, cb]); }
+    var NC = Math.round(Math.max(14, (a1 - a0) * (b1 - b0) / 120) * CANT), centros = []; for (var n = 0; n < NC * 100 && centros.length < NC; n++) { var ca = a0 + 2 + r() * (a1 - a0 - 4), cb = b0 + 2 + r() * (b1 - b0 - 4); if (!verde(ca, cb, 0.9) || centros.some(function (q) { return Math.hypot(q[0] - ca, q[1] - cb) < 4.0; })) continue; centros.push([ca, cb]); }
     centros.forEach(function (q, j) {
-      if (j % 3 === 0 && palmas.length < 4 && verde(q[0], q[1], 1.3) && !enParcela(q[0], q[1], 2.2)) palmas.push([q[0], q[1], 0.55 + r() * 0.2, r()]);
-      for (var m = 0; m < 4; m++) { var a = q[0] + (r() - 0.5) * 2.6, b = q[1] + (r() - 0.5) * 2.6; if (verde(a, b, 0.6)) arbustos[(j + m) % 3].push([a, b, 0.9 + r() * 0.6, r()]); }
+      if (j % 3 === 0 && palmas.length < 4 + NC / 4 && verde(q[0], q[1], 1.3) && !enParcela(q[0], q[1], 2.2)) palmas.push([q[0], q[1], 0.55 + r() * 0.2, r()]);
+      for (var m = 0; m < 3; m++) { var a = q[0] + (r() - 0.5) * 2.6, b = q[1] + (r() - 0.5) * 2.6; if (verde(a, b, 0.6)) arbustos[(j + m) % 3].push([a, b, 0.9 + r() * 0.6, r()]); }
       for (var t2 = 0; t2 < 10; t2++) { var a2 = q[0] + (r() - 0.5) * 4, b2 = q[1] + (r() - 0.5) * 4; if (verde(a2, b2, 0.3) && t2 < 5) matas.push([a2, b2, 0.45 + r() * 0.35, r()]); }
     });
-    for (var n2 = 0; n2 < 260; n2++) { var a3 = a0 + r() * (a1 - a0), b3 = b0 + r() * (b1 - b0); if (verde(a3, b3, 0.4)) matas.push([a3, b3, 0.4 + r() * 0.35, r()]); }
+    for (var n2 = 0; n2 < 260 * CANT * Math.max(1, NC / 14); n2++) { var a3 = a0 + r() * (a1 - a0), b3 = b0 + r() * (b1 - b0); if (verde(a3, b3, 0.4)) matas.push([a3, b3, 0.4 + r() * 0.35, r()]); }
     // arbustos pegados al zócalo de cada edificio (esquinas que dan a la calle)
-    P.forEach(function (p) { [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d, j) { var a = p.a + d[0] * 3.75 + d[1] * (r() - 0.5) * 4, b = p.b + d[1] * 3.75 + d[0] * (r() - 0.5) * 4; if (it.distCamino(a, b) > 0.6) arbustos[j % 3].push([a, b, 0.7 + r() * 0.35, r()]); }); });
+    P.forEach(function (p) { [[1, 0], [-1, 0]].forEach(function (d, j) { var a = p.a + d[0] * 3.75 + d[1] * (r() - 0.5) * 4, b = p.b + d[1] * 3.75 + d[0] * (r() - 0.5) * 4; if (it.distCamino(a, b) > 0.6) arbustos[j % 3].push([a, b, 0.7 + r() * 0.35, r()]); }); });
     function inst(geo, mat, lista, sombra, alto) { if (!lista.length) return; var im = new T3.InstancedMesh(geo, mat, lista.length); lista.forEach(function (p, i) { o.position.set(p[0], 0.02, p[1]); o.rotation.set(0, p[3] * 40, 0); o.scale.set(p[2], p[2] * (alto || 1), p[2]); o.updateMatrix(); im.setMatrixAt(i, o.matrix); }); im.castShadow = !!sombra; im.receiveShadow = true; im.raycast = NOOP; g.add(im); }
     inst(V.tronco, V.mTronco, palmas, true); inst(V.fronda, V.mFronda, palmas, true);
     var flores = [[0xd8283e, 0xff5a7a], [0xffa21a, 0xfff0a0], [0xe86aa8, 0xffffff]];
-    arbustos.forEach(function (l, i) { inst(geoArbusto(31 + i, flores[i]), matD(), l, true); });
+    arbustos.forEach(function (l, i) { inst(geoArbusto(31 + i, flores[i]), matD(), l, CANT >= 1); });
     var mm = new T3.MeshStandardMaterial({ map: texMata(), alphaTest: 0.4, side: T3.DoubleSide, roughness: 0.9 }); mm.userData.tkpSinVentanas = true;
     var gm = new T3.PlaneGeometry(0.9, 0.7); gm.translate(0, 0.35, 0); var gm2 = gm.clone().rotateY(Math.PI / 2), gm3 = gm.clone().rotateY(Math.PI / 4), mg = mezclar([gm, gm2, gm3]);
     // matas: solo unas pocas y claras, pegadas a los arbustos
     inst(mg, mm, matas.filter(function (q, i) { return i % 4 === 0; }), false);
     // macizo de flores con borde de piedra delante de cada edificio, en la esquina que da a la calle
-    P.forEach(function (p, i) { var s = c.slots[PARC[i]]; if (!s) return; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (q) {
-      var a = p.a + q[0] * 4.6, b = p.b + q[1] * 4.6; if (it.distCamino(a, b) < 1.2 || cualquierParcela(a, b, 0.1)) return;
+    P.forEach(function (p, i) { var s = c.slots[LP[i]], hecho = 0; if (!s || CANT < 0.7) return; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(function (q) {
+      var a = p.a + q[0] * 4.6, b = p.b + q[1] * 4.6; if (hecho || it.distCamino(a, b) < 1.2 || cualquierParcela(a, b, 0.1)) return; hecho = 1;
       for (var e = 0; e < 14; e++) { var an = e / 14 * Math.PI * 2; k.caja(0.34, 0.16, 0.2, 0xa89a82, 2, a + Math.cos(an) * 0.95, 0.08, b + Math.sin(an) * 0.65, -an + Math.PI / 2); }
       k.add(gCil(14), M(a, 0.04, b, 0, 0, 0, 1.8, 0.12, 1.2), 0x4a3424, 8);
       for (var f = 0; f < 16; f++) { var fa = r() * 6.28, fd = Math.sqrt(r()); k.esf(0.11, K.verdeH, 6, a + Math.cos(fa) * fd * 0.75, 0.18, b + Math.sin(fa) * fd * 0.5, 1, 0.7, 1, 5); k.esf(0.065, [0xe8344a, 0xfff2c0, 0xffb02a, 0xc858d8][f % 4], 8, a + Math.cos(fa) * fd * 0.75, 0.28, b + Math.sin(fa) * fd * 0.5, 1, 1, 1, 5); }
@@ -505,7 +510,7 @@
     g.add(k.malla());
     // humo de las chimeneas
     var mh = new T3.SpriteMaterial({ map: texHumo(), transparent: true, depthWrite: false, opacity: 0.6 }); mh.userData.tkpSinVentanas = true;
-    var hu = []; for (var h = 0; h < 30; h++) { var sp = new T3.Sprite(mh.clone()); sp.visible = false; sp.raycast = NOOP; sp.renderOrder = -1; hu.push(sp); }
+    var hu = []; for (var h = 0; h < 90; h++) { var sp = new T3.Sprite(mh.clone()); sp.visible = false; sp.raycast = NOOP; sp.renderOrder = -1; hu.push(sp); }
     var rz = new T3.Group(); rz.name = 'tk-demo-humo'; hu.forEach(function (s) { rz.add(s); });
     // los cantos redondos que el juego pone en el borde de estas parcelas se esconden (se guardan para devolverlos)
     var quitados = [], mt4 = new T3.Matrix4(), pz = new T3.Vector3(), cero = new T3.Matrix4().makeScale(0, 0, 0);
@@ -513,7 +518,7 @@
       for (var q = 0; q < im.count; q++) { im.getMatrixAt(q, mt4); pz.setFromMatrixPosition(mt4); if (pz.y > 0.2 || pz.y < -0.2) continue;
         if (P.some(function (p) { var da = Math.abs(pz.x - p.a), db = Math.abs(pz.z - p.b); return da < 4.0 && db < 4.0 && Math.max(da, db) > 3.2; })) { quitados.push([im, q, mt4.clone()]); im.setMatrixAt(q, cero); tocado = true; } }
       if (tocado) im.instanceMatrix.needsUpdate = true; });
-    return { g: g, humo: rz, quitados: quitados, puffs: hu, luces: luces, cuenta: { centros: centros.length, palmas: palmas.length, arbustos: arbustos[0].length + arbustos[1].length + arbustos[2].length, matas: matas.length, region: [a0, a1, b0, b1].map(Math.round), parcelas: P.map(function (p) { return [Math.round(p.a), Math.round(p.b)]; }) } };
+    return { g: g, humo: rz, quitados: quitados, sombras: sombras, puffs: hu, luces: luces, cuenta: { centros: centros.length, palmas: palmas.length, arbustos: arbustos[0].length + arbustos[1].length + arbustos[2].length, matas: matas.length, region: [a0, a1, b0, b1].map(Math.round), parcelas: P.map(function (p) { return [Math.round(p.a), Math.round(p.b)]; }) } };
   }
   function mezclar(gs) { var p = [], n = [], u = []; gs.forEach(function (g) { var q = g.index ? g.toNonIndexed() : g; p.push.apply(p, q.attributes.position.array); n.push.apply(n, q.attributes.normal.array); u.push.apply(u, q.attributes.uv.array); }); var r = new T3.BufferGeometry(); r.setAttribute('position', new T3.Float32BufferAttribute(p, 3)); r.setAttribute('normal', new T3.Float32BufferAttribute(n, 3)); r.setAttribute('uv', new T3.Float32BufferAttribute(u, 2)); return r; }
 
@@ -540,10 +545,11 @@
     if (!DEC) DEC = construirDecoracion(c, raizL); if (!DEC) return;
     if (!DEC.g.parent) { x.escena.add(DEC.g); x.escena.add(DEC.humo); esconderCantos(); }
     var enCampos = c.vista() === 'campos'; DEC.g.visible = DEC.humo.visible = !enCampos;
-    PARC.forEach(function (i) { var s = c.slots[i]; if (s && s.terreno && s.terreno.visible && s.tkc && s.tkc.userData.tkd) { s.terreno.visible = false; ocultosT.push(s.terreno); } });
+    var LS = lista(c); LS.forEach(function (i) { var s = c.slots[i], hay = !!(s && s.tkc && s.tkc.userData.tkd); if (DEC.sombras[i]) DEC.sombras[i].visible = hay; if (s && s.terreno && s.terreno.visible && hay) { s.terreno.visible = false; ocultosT.push(s.terreno); } });
+    for (var oi = ocultosT.length - 1; oi >= 0; oi--) { var sl = c.slots.filter(function (q) { return q.terreno === ocultosT[oi]; })[0]; if (!sl || !(sl.tkc && sl.tkc.userData.tkd)) { ocultosT[oi].visible = true; ocultosT.splice(oi, 1); } } // parcela vaciada: vuelve su césped
     tiempo += Math.min(0.05, dt || 0); UD.t.value = tiempo; UD.noche.value = c.noche();
     // humo: cada chimenea suelta bocanadas que suben, crecen y se deshacen
-    var fuentes = []; PARC.forEach(function (i) { var s = c.slots[i]; if (s && s.tkc && s.tkc.userData.humo) s.tkc.userData.humo.forEach(function (h) { fuentes.push(s.tkc.localToWorld(new T3.Vector3(h.x, h.y, h.z))); }); });
+    var fuentes = []; LS.forEach(function (i) { var s = c.slots[i]; if (s && s.tkc && s.tkc.userData.humo) s.tkc.userData.humo.forEach(function (h) { fuentes.push(s.tkc.localToWorld(new T3.Vector3(h.x, h.y, h.z))); }); });
     DEC.puffs.forEach(function (sp, j) { var f = fuentes[j % Math.max(1, fuentes.length)]; if (!f || j >= fuentes.length * 6) { sp.visible = false; return; }
       var ciclo = (tiempo * 0.22 + (j / Math.max(1, fuentes.length) | 0) / 6) % 1; sp.visible = true;
       sp.position.set(f.x + Math.sin(tiempo * 0.7 + j) * 0.3 + ciclo * 1.6, f.y + ciclo * 3.2, f.z + ciclo * 0.8); sp.scale.setScalar(0.6 + ciclo * 2.2); sp.material.opacity = 0.75 * Math.sin(ciclo * Math.PI) * (1 - 0.5 * c.noche()); });
@@ -558,7 +564,7 @@
   window.TKCorsariosDemo = {
     activo: function () { return ON; }, esDemo: esDemo, edificio: edificio, version: function () { return VER; },
     activar: function (v) { ON = v === undefined ? true : !!v; VER++; },
-    parcelas: function (l) { if (l) { PARC = l.slice(); VER++; if (DEC) { DEC.g.parent && DEC.g.parent.remove(DEC.g); DEC.humo.parent && DEC.humo.parent.remove(DEC.humo); devolver(); DEC = null; } } return PARC.slice(); },
-    estado: function () { var c = C(); return { activo: ON, parcelas: PARC, edificios: c ? PARC.filter(function (i) { var s = c.slots[i]; return s && s.tkc && s.tkc.userData.tkd; }).length : 0, decoracion: !!(DEC && DEC.g.parent), cuenta: DEC && DEC.cuenta, tris: DEC ? (function () { var n = 0; DEC.g.traverse(function (o) { if (o.isMesh && o.geometry) n += (o.geometry.attributes.position.count / 3) * (o.isInstancedMesh ? o.count : 1); }); return Math.round(n); })() : 0 }; }
+    parcelas: function (l) { if (l !== undefined) { PARC = l ? l.slice() : null; VER++; if (DEC) { DEC.g.parent && DEC.g.parent.remove(DEC.g); DEC.humo.parent && DEC.humo.parent.remove(DEC.humo); devolver(); DEC = null; } } var c = C(); return c ? lista(c) : []; },
+    estado: function () { var c = C(); return { activo: ON, parcelas: c ? lista(c).length : 0, edificios: c ? lista(c).filter(function (i) { var s = c.slots[i]; return s && s.tkc && s.tkc.userData.tkd; }).length : 0, decoracion: !!(DEC && DEC.g.parent), cuenta: DEC && DEC.cuenta, tris: DEC ? (function () { var n = 0; DEC.g.traverse(function (o) { if (o.isMesh && o.geometry) n += (o.geometry.attributes.position.count / 3) * (o.isInstancedMesh ? o.count : 1); }); return Math.round(n); })() : 0 }; }
   };
 })();
