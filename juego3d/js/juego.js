@@ -3640,14 +3640,17 @@
     if (res) h += '<div class="al-rep-botin">' + ['oro', 'comida', 'madera', 'piedra'].map(function (r) { return '<span>' + ICONO_RECURSO[r] + ' ' + (b[r] ? '-' + cortoNum(b[r]) : '0') + '</span>'; }).join('') + '</div>' +
       '<p class="al-rep-txt">' + (x.gano ? L('¡Los atacantes han atravesado la muralla!', 'The attackers broke through the wall!') : L('La muralla resistió el ataque.', 'The wall held the attack.')) + '</p>';
     else h += '<p class="al-rep-txt">' + estadoAtaqueHTML(x) + '</p>';
+    h = h.replace('<small>' + L('Combate · ', 'Battle · '), '<small>' + L('Combate en ', 'Battle at ') + '<span id="al-xy-h">…</span> · '); /* v9.97: dónde fue */
+    var luchA = x.luchA != null ? x.luchA : Object.keys(x.tropasA || {}).reduce(function (t, k) { return t + (+x.tropasA[k] || 0); }, 0), muerA = x.muertosA != null ? x.muertosA : (res ? Math.round(luchA * (x.bajas || 0)) : null);
+    var filasLado = function (lu, mu) { if (!lu) return ''; return '<span class="al-rep-n">' + L('Lucharon: ', 'Fought: ') + '<b>' + cortoNum(lu) + '</b></span>' + (mu != null && res ? '<span class="al-rep-n">' + L('Sobrevivieron: ', 'Survived: ') + '<b>' + cortoNum(Math.max(0, lu - mu)) + '</b></span><span class="al-rep-n">' + L('Muertos: ', 'Dead: ') + '<b>' + cortoNum(mu) + '</b></span>' : ''); };
     h += '<div class="al-rep-sec">' + L('Detalles del combate', 'Battle details') + '</div><div class="al-rep-vs"><div><small>' + L('ATACANTES', 'ATTACKERS') + '</small><b class="' + (llegada ? 'rojo' : 'verde') + '">' + escaparHTML(x.atacanteNombre || '?') + '</b>' + (x.alA ? '<i>[' + escaparHTML(x.alA) + ']</i>' : '') +
-      '<span>' + L('Poder: ', 'Power: ') + cortoNum(x.fuerza || 0) + '</span><span>' + L('Bajas: ', 'Losses: ') + cortoNum(x.bajas || 0) + '</span><button class="al-rep-xy" id="al-xy-a">📍 …</button></div><div class="al-rep-x">⚔️</div><div><small>' + L('DEFENSORES', 'DEFENDERS') + '</small><b>' + escaparHTML(x.defensorNombre || '?') + '</b>' + (x.alD ? '<i>[' + escaparHTML(x.alD) + ']</i>' : '') +
-      '<span>' + L('Defensa: ', 'Defense: ') + cortoNum(x.defensa || 0) + '</span><span>' + L('Resultado: ', 'Result: ') + (res ? (x.gano ? L('Derrotado', 'Defeated') : L('Resistió', 'Held')) : '—') + '</span><button class="al-rep-xy" id="al-xy-d">📍 …</button></div></div>';
+      '<span>' + L('Poder: ', 'Power: ') + cortoNum(x.fuerza || 0) + '</span><span>' + L('Bajas: ', 'Losses: ') + cortoNum(x.bajas || 0) + '</span>' + filasLado(luchA, muerA) + '<button class="al-rep-xy" id="al-xy-a">📍 …</button></div><div class="al-rep-x">⚔️</div><div><small>' + L('DEFENSORES', 'DEFENDERS') + '</small><b>' + escaparHTML(x.defensorNombre || '?') + '</b>' + (x.alD ? '<i>[' + escaparHTML(x.alD) + ']</i>' : '') +
+      '<span>' + L('Defensa: ', 'Defense: ') + cortoNum(x.defensa || 0) + '</span><span>' + L('Resultado: ', 'Result: ') + (res ? (x.gano ? L('Derrotado', 'Defeated') : L('Resistió', 'Held')) : '—') + '</span>' + filasLado(x.luchD, x.muertosD) + '<button class="al-rep-xy" id="al-xy-d">📍 …</button></div></div>';
     /* v9.96 (Felix): las coordenadas de quien atacó y de quien defendió; al tocarlas vas al mapa */
     setTimeout(function () {
       [['al-xy-a', x.atacante], ['al-xy-d', x.defensor]].forEach(function (q) {
         if (!q[1]) return;
-        var pon = function (l) { var b = $(q[0]); if (!b) return; if (!l || typeof l.x !== 'number') { b.textContent = '📍 ?'; return; } var c = celdaDe(l.x, l.y); b.textContent = '📍 X ' + c.x + ' · Y ' + c.y; b.setAttribute('data-accion', 'al-ir-xy'); b.setAttribute('data-x', c.x); b.setAttribute('data-y', c.y); };
+        var pon = function (l) { var b = $(q[0]); if (!b) return; if (!l || typeof l.x !== 'number') { b.textContent = '📍 ?'; return; } var c = celdaDe(l.x, l.y); b.textContent = '📍 X ' + c.x + ' · Y ' + c.y; if (q[0] === 'al-xy-d') { var hh = $('al-xy-h'); if (hh) hh.textContent = '(' + c.x + ', ' + c.y + ')'; } b.setAttribute('data-accion', 'al-ir-xy'); b.setAttribute('data-x', c.x); b.setAttribute('data-y', c.y); };
         var l0 = lugarDe(q[1]); if (l0) pon(l0); else if (Cuentas.leerAldea) Cuentas.leerAldea(q[1]).then(function (a) { pon(a); }).catch(function () { pon(null); });
       });
     }, 0);
@@ -5303,14 +5306,14 @@
       if (ev.target.closest('#ac-gratis')) { if (antes > 0 && antes <= vipMinGratis() * 60 + 1) { aplicarAcelerador(que, antes + 2); sonar('magia'); despues(antes, '🆓 VIP ' + vipNivel()); } return; }
       if (fin) {
         if (fin.disabled || antes <= 0) return;
-        var g0 = estado.gemas; terminarConGemas(que);
+        var g0 = estado.gemas; gemasOk = true; try { terminarConGemas(que); } finally { gemasOk = false; } /* v9.97: al primer toque */
         if (estado.gemas < g0) { sonar('listo'); actualizarHUD(); abrirAcelerar(que, '⚡ ' + L('Finalizado con ', 'Finished with ') + (g0 - estado.gemas) + ' ' + L('gemas', 'gems') + ': ' + fmtTiempo(antes) + ' → ' + L('¡terminado!', 'finished!')); }
         return;
       }
       if (cy) {
         if (cy.disabled || antes <= 0) return;
         var k2 = cy.getAttribute('data-ac-cyu'), it = TIENDA.filter(function (x) { return x.id === k2; })[0];
-        if (!it || !pagar(0, it.gemas)) return;
+        var okC; gemasOk = true; try { okC = !!it && pagar(0, it.gemas); } finally { gemasOk = false; } if (!okC) return; /* v9.97: al primer toque (el precio ya sale en el botón) */
         sonar('moneda'); sonar('magia');
         aplicarAcelerador(que, OBJETOS[k2].segundos);
         despues(antes, N(k2) + ' (−' + it.gemas + ' ' + L('gemas', 'gems') + ')');
@@ -5927,7 +5930,7 @@
   }
   function salirTropas(listas, lugar) {
     var libres = Math.max(0, TOPE_VISIBLE - visiblesNormales()), r = reserva();
-    var pxE = 0; listas.forEach(function (q) { var dq = TROPAS[q.tipo]; if (dq) pxE += (dq.vida * 2 + dq.dano * 25) * 0.1; }); if (pxE) sumarXP(pxE, true); // v7.87: entrenar da EXP (10% del poder)
+    var pxE = 0; listas.forEach(function (q) { var dq = TROPAS[q.tipo]; if (dq) pxE += (dq.vida * 2 + dq.dano * 25) * 0.1; }); if (pxE && false) sumarXP(pxE, true); /* v9.97 (dueño): entrenar ya NO da EXP de jugador (subía del 84 al 100 en segundos) */ // v7.87: entrenar da EXP (10% del poder)
     for (var k = 0; k < listas.length; k++) { var t = listas[k].tipo; if (k < libres) crearTropa(t, typeof lugar === 'function' ? lugar() : lugar); else r[t] = (r[t] || 0) + 1; }
   }
   function sumarTropa(tipo, desde) {
@@ -6149,8 +6152,9 @@
   // cuántas se pueden entrenar ahora (por espacio y por recursos)
   var TOPE_ORDEN = 10000, TOPE_COLA = 50000;
   // v7.04: un lote grande tarda mucho menos que la suma de cada tropa (n^0.65) y nunca más de 12 horas
-  var LOTE_MAX_HORAS = 12;
-  function tiempoUnidadLote(tipo, n) { n = Math.max(1, n || 1); var b = TROPAS[tipo].tiempo * Math.pow(n, 0.65); b = Math.min(b, LOTE_MAX_HORAS * 3600 * rapidezEntreno()); return b / n; }
+  var LOTE_MAX_HORAS = 24; /* v9.97: una orden puede durar hasta 24 h */
+  /* v9.97 (dueño: «10.000 catapultas en 12 minutos»): cada tropa tarda su tiempo entero (antes una tanda grande tardaba casi lo mismo que una pequeña) */
+  function tiempoUnidadLote(tipo, n) { n = Math.max(1, n || 1); var b = TROPAS[tipo].tiempo * n; b = Math.min(b, LOTE_MAX_HORAS * 3600 * rapidezEntreno()); return b / n; }
   function maxEntrenar(tipo) {
     // v6.40: cada orden llega hasta TOPE_ORDEN tropas y la cola hasta TOPE_COLA (con recursos infinitos el Máx congelaba el juego)
     var libre = Math.max(0, Math.min(capacidad() - tropasOcupadas(), TOPE_ORDEN, TOPE_COLA - colaEntreno.length)), c = costoTropa(tipo), n = libre;
@@ -8503,9 +8507,9 @@
   function estrellasUnidad(t) { return EST_CARRO[t] || TROPA_RANGO_ESTRELLAS[t] || 1; }
   function esAvanzada(t) { return estrellasUnidad(t) >= 3; }
   function htmlPestanasCuartel() {
-    var n = colaEntreno.length;
+    var n = colaEntreno.length ? infoCola().ordenes.length : 0; /* v9.97: colas ocupadas (antes las tropas que faltaban, que bajaban sin parar) */
     var h = '<div class="cafe-tabs ve-tabs">' + [['detalles', L('Detalles', 'Details')], ['entrenar', L('Entrenar tropas', 'Train troops')], ['cola', L('Entrenando', 'Training')]].map(function (q) {
-      return '<button data-accion="cuartel-pest" data-p="' + q[0] + '" class="' + (pestCuartel === q[0] ? 'activo' : '') + '">' + q[1] + (q[0] === 'cola' && n ? ' <span class="mail-n">' + formatoNumero(n) + '</span>' : '') + '</button>';
+      return '<button data-accion="cuartel-pest" data-p="' + q[0] + '" class="' + (pestCuartel === q[0] ? 'activo' : '') + '">' + q[1] + (q[0] === 'cola' && n ? ' <span class="mail-n">' + n + '/' + MAX_ORDENES + '</span>' : '') + '</button>';
     }).join('') + '</div>';
     if (pestCuartel === 'entrenar' && !tropaDetalle) h += '<div class="al-sub cq2-sub"><button data-accion="cuartel-sub" data-s="basicas" class="' + (subCuartel === 'basicas' ? 'activo' : '') + '">' + L('Unidades básicas', 'Basic units') + '</button><button data-accion="cuartel-sub" data-s="avanzadas" class="' + (subCuartel === 'avanzadas' ? 'activo' : '') + '">' + L('Unidades avanzadas', 'Advanced units') + '</button></div>';
     return h;
@@ -8811,7 +8815,7 @@
   }
   function pestanasVentana(i, tipo) {
     var t = [['cafe-det', L('Detalles', 'Details'), true]];
-    if (tipo === 'cuartel') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + colaEntreno.length + '</span>' : '')]); }
+    if (tipo === 'cuartel') { t.push(['cuartel-pest" data-p="entrenar', L('Entrenar tropas', 'Train troops')]); t.push(['cuartel-pest" data-p="cola', L('Entrenando', 'Training') + (colaEntreno.length ? ' <span class="mail-n">' + infoCola().ordenes.length + '/' + MAX_ORDENES + '</span>' : '')]); }
     else if (tipo === 'cabana') t.push(['cafe-pob', L('Población', 'Population')]);
     else if (tipo === 'academia') t.push(['investigacion', L('Investigación', 'Research')]);
     else if (tipo === 'mercado') { t.push(['abrir-mercado', T('mb_comerciar')]); if (estado.villas && estado.villas.lista && estado.villas.lista.length > 1) t.push(['villas-enviar', '🐴 ' + L('Enviar Recursos', 'Send Resources')]); }
@@ -10503,7 +10507,13 @@
     var bj = Math.round((+res.bajas || 0) * 100) / 100; if (!(bj >= 0)) bj = 0; if (bj > 1) bj = 1;
     var dfI = Math.round(+defensa || 0); if (!(dfI >= 0)) dfI = 0; if (dfI > 9007199254740000) dfI = 9007199254740000;
     ['oro', 'comida', 'madera', 'piedra'].forEach(function (k) { var v = Math.floor(+b[k] || 0), mx = Math.floor(+((r.botin || {})[k]) || 0); b[k] = v > 0 ? Math.min(v, mx) : 0; });
-    return { gano: !!res.gano, botin: b, bajas: bj, defensa: dfI, resuelto: true };
+    /* v9.97 (dueño): cuántos lucharon y murieron de cada lado, para el informe de la Alianza */
+    var cuenta = function (lado) { var t = { ini: 0, perd: 0 }; Object.keys(lado || {}).forEach(function (k) { if (k === 'defensas' || !lado[k]) return; t.ini += Math.max(0, Math.round(+lado[k].ini || 0)); t.perd += Math.max(0, Math.round(+(lado[k].perdidos != null ? lado[k].perdidos : lado[k].perd) || 0)); }); t.ini = Math.min(t.ini, 1e12); t.perd = Math.min(t.perd, t.ini); return t; };
+    var cA = cuenta(res.sim && res.sim.atk), cD = cuenta(ladoD), extra = {};
+    if (cA.ini > 0) { extra.luchA = cA.ini; extra.muertosA = cA.perd; }
+    if (cD.ini > 0) { extra.luchD = cD.ini; extra.muertosD = cD.perd; }
+    var out = { gano: !!res.gano, botin: b, bajas: bj, defensa: dfI, resuelto: true }; for (var ke in extra) out[ke] = extra[ke];
+    return out;
   }
   // el atacante: al llegar, si nadie la resolvió, la resuelve con la defensa que el defensor tenía publicada; luego cobra
   function llegarMarcha(m) {

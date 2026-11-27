@@ -2,7 +2,7 @@
  "ataque": {
   "realizarAtaque": "ed7c2d6688afe890",
   "llegarMarcha": "d651a798c11c465c",
-  "decidirAtaque": "edb706aeb7c5fd8d",
+  "decidirAtaque": "f13d22c68dd53b88",
   "resolverBatalla": "d60219d11f6eb575",
   "aplicarPerdidasRondas": "975823d5b7eef91d",
   "fraccionHeridos": "2591fc7ecaba9b40",
@@ -58,6 +58,6 @@
   "abrirPanelChat": "85474d17205892e5"
  },
  "reglas": {
-  "nube/firestore.rules": "214e7f025febead9"
+  "nube/firestore.rules": "b3207ecc27f13880"
  }
 }

@@ -195,7 +195,11 @@ service cloud.firestore {
         (resource.data.get('resuelto', true) == false
           && request.time.toMillis() >= resource.data.llega
           && (resource.data.defensor == request.auth.uid || resource.data.atacante == request.auth.uid)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gano', 'botin', 'resuelto', 'defensa', 'bajas'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['gano', 'botin', 'resuelto', 'defensa', 'bajas', 'luchA', 'muertosA', 'luchD', 'muertosD']) // v9.97: cuántos lucharon y murieron
+          && (!('luchA' in request.resource.data) || (request.resource.data.luchA is int && request.resource.data.luchA >= 0 && request.resource.data.luchA <= 1000000000000))
+          && (!('muertosA' in request.resource.data) || (request.resource.data.muertosA is int && request.resource.data.muertosA >= 0 && request.resource.data.muertosA <= 1000000000000))
+          && (!('luchD' in request.resource.data) || (request.resource.data.luchD is int && request.resource.data.luchD >= 0 && request.resource.data.luchD <= 1000000000000))
+          && (!('muertosD' in request.resource.data) || (request.resource.data.muertosD is int && request.resource.data.muertosD >= 0 && request.resource.data.muertosD <= 1000000000000))
           && request.resource.data.resuelto == true
           && request.resource.data.gano is bool
           && request.resource.data.bajas is number && request.resource.data.bajas >= 0 && request.resource.data.bajas <= 1
