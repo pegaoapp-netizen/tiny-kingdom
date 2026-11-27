@@ -4775,9 +4775,12 @@
     return null;
   }
   function puedePagar(m, g) { return !faltante(m, g); }
+  /* v9.91 (dueño): si faltan GEMAS se abre la tienda de gemas para comprarlas (como en los juegos de castillos) */
+  function abrirTiendaPorFaltaGemas() { setTimeout(function () { try { var vc = document.getElementById('tkc'), vm = document.getElementById('tkm'); if ((vc && vc.offsetParent) || (vm && vm.offsetParent)) return; /* dentro de la Campaña no se abre encima */ var cm = document.getElementById('confirmar-juego'); if (cm) cm.remove(); var um = document.getElementById('uso-masa'); if (um) um.remove(); abrirTiendaGemas(); } catch (e) {} }, 350); }
   function avisarFalta(r) {
     consejoTemporal(T('falta', { r: T('r_' + r) }));
     sonar('error');
+    if (r === 'gemas') abrirTiendaPorFaltaGemas();
     var p = $('pill-' + (r === 'oro' ? 'monedas' : r));
     if (p) { p.classList.remove('falta'); void p.offsetWidth; p.classList.add('falta'); }
   }
@@ -4821,7 +4824,7 @@
   function costoTropa(tipo) { var d = TROPAS[tipo]; return { oro: d.costo, comida: d.comida || 0 }; }
   function pagarViejo(monedas, gemas) {
     if (monedas && !estado.oroInfinito && estado.monedas < monedas) { consejoTemporal(T('sin_monedas')); sonar('error'); return false; }
-    if (gemas && !estado.gemasInfinitas && estado.gemas < gemas) { consejoTemporal(T('sin_gemas')); sonar('error'); return false; }
+    if (gemas && !estado.gemasInfinitas && estado.gemas < gemas) { consejoTemporal(T('sin_gemas')); sonar('error'); abrirTiendaPorFaltaGemas(); return false; }
     if (gemas && !pedirGemas(gemas)) return false;
     if (!estado.oroInfinito) estado.monedas -= monedas || 0;
     if (!estado.gemasInfinitas) { estado.gemas -= gemas || 0; vipGemasGastadas(gemas || 0); }
@@ -10836,7 +10839,22 @@
   // v8.19 (VIP opción 3): puntos para llegar a cada VIP (VIP_PUNTOS[i] = puntos para VIP i+1). Con menos de 200 eres VIP 0.
   var VIP_PUNTOS = [200, 600, 1500, 3000, 5000, 8000, 12000, 17000, 24000, 33000, 45000, 60000, 80000, 105000, 135000];
   var VIP_DIARIO = 15, VIP_POR_DOLAR = 100, VIP_GEMAS = 10; // +15 al día · +100 por cada US$ 1 · +1 por cada 10 gemas gastadas
-  function vipGemasGastadas(g) { if (!g || g <= 0 || estado.gemasInfinitas) return; sumarTorneo(g * PUNTOS_TORNEO.gema); /* v8.38 */ var v = vip(); v.gr = (v.gr || 0) + g; var n = Math.floor(v.gr / VIP_GEMAS); if (n > 0) { v.gr -= n * VIP_GEMAS; vipSumar(n); } }
+  function vipGemasGastadas(g) { if (!g || g <= 0 || estado.gemasInfinitas) return; sumarTorneo(g * PUNTOS_TORNEO.gema); /* v8.38 */ var v = vip(); v.gr = (v.gr || 0) + g; var n = Math.floor(v.gr / VIP_GEMAS); if (n > 0) { v.gr -= n * VIP_GEMAS; vipSumar(n); } sumarBonoGemas(g); }
+  /* v9.91 (dueño): COFRE DE REGALO POR GASTAR GEMAS. La barra de la Tienda se llena con cada gema que gastas; al llegar a la meta te llevas
+     un Cofre del Tesoro y la barra vuelve a empezar. Nunca da gemas (regla del dueño). */
+  var BONO_GEMAS = { meta: 500, premio: 'cofre_tesoro' };
+  function sumarBonoGemas(g) {
+    estado.bonoGemas = (estado.bonoGemas || 0) + g; var n = 0;
+    while (estado.bonoGemas >= BONO_GEMAS.meta) { estado.bonoGemas -= BONO_GEMAS.meta; n++; }
+    if (!n || !OBJETOS[BONO_GEMAS.premio]) return;
+    estado.mochila[BONO_GEMAS.premio] = (estado.mochila[BONO_GEMAS.premio] || 0) + n;
+    setTimeout(function () { try { mostrarRecompensas('🎁 ' + L('¡Cofre de regalo por gastar gemas!', 'Gift chest for spending gems!'), [{ ico: OBJETOS[BONO_GEMAS.premio].icono, n: n, nom: N(BONO_GEMAS.premio) }]); sonar('gemas'); } catch (e) {} }, 600);
+  }
+  function htmlBonoGemas() {
+    var lleva = Math.max(0, Math.floor(estado.bonoGemas || 0)), pct = Math.min(100, Math.round(lleva / BONO_GEMAS.meta * 100));
+    return '<div class="bono-gemas"><span class="bg-ico">' + (OBJETOS[BONO_GEMAS.premio] ? OBJETOS[BONO_GEMAS.premio].icono : '🎁') + '</span><div class="bg-dat"><b>🎁 ' + L('¡Cofre de regalo! Gasta gemas y llena la barra', 'Gift chest! Spend gems to fill the bar') + '</b>' +
+      '<div class="bg-barra"><i style="width:' + pct + '%"></i><span>' + formatoNumero(lleva) + ' / ' + formatoNumero(BONO_GEMAS.meta) + ' ' + L('gemas', 'gems') + ' · ' + N(BONO_GEMAS.premio) + '</span></div></div></div>';
+  }
   function vipMinGratis(n) { return 5 + 2 * ((n || vipNivel()) - 1); }
   function vipProd(n) { return 0.03 * (n || vipNivel()); }
   function vipCombate(n) { return Math.max(0, (n || vipNivel()) - 5) * 0.01; }
@@ -12525,7 +12543,7 @@
     { id: 'p6', nombre: ['Tesoro real', 'Royal treasure'], gemas: 12600, extra: 530, precio: '99,99' }
   ];
   function abrirTiendaGemas() {
-    var h = tabsTienda('gemas') + '<div class="tienda-saldo grande"><span>' + L('Tus gemas', 'Your gems') + '</span><b><span class="ico gema"></span> ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></div>' +
+    var h = tabsTienda('gemas') + htmlBonoGemas() /* v9.91 */ + '<div class="tienda-saldo grande"><span>' + L('Tus gemas', 'Your gems') + '</span><b><span class="ico gema"></span> ' + (estado.gemasInfinitas ? '∞' : formatoNumero(estado.gemas || 0)) + '</b></div>' +
       '<p class="nota">' + L('Las gemas sirven para Construir ya, Terminar ahora, acelerar y comprar cofres y objetos. Siempre ves el costo antes de gastar.', 'Gems are used to Build now, Finish now, speed up and buy chests and items. You always see the cost before spending.') + '</p><div class="gemas-rejilla">';
     PAQUETES_GEMAS.forEach(function (p, i) {
       h += '<div class="gema-paq"><div class="gp-ico">' + ['💎', '💎', '💰', '🧰', '🏆', '👑'][i] + '</div><b>' + p.nombre[estado.idioma === 'en' ? 1 : 0] + '</b><div class="gp-n"><span class="ico gema"></span>' + formatoNumero(p.gemas) + '</div>' +
@@ -13450,7 +13468,10 @@
       if (a === 'mejorar-castillo' || a === 'castillo-ya') ok = ok && !estado.obraCastillo;
       if (a === 'investigar') ok = ok && !estado.investigando && !!academiaLista();
       if (a === 'heroe') ok = ok && !tropas.some(function (u) { return u.tipo === 'heroe'; });
-      b.disabled = !ok;
+      /* v9.91 (dueño): si en la Tienda solo faltan GEMAS, el botón se puede tocar (sale más apagado) y te lleva a comprar gemas */
+      var soloGemas = !ok && g > 0 && (a === 'comprar' || /-gemas$/.test(a || '')) && puedePagar(c, 0) && !estado.gemasInfinitas && (estado.gemas || 0) < g;
+      b.classList.toggle('falta-gema', soloGemas);
+      b.disabled = !ok && !soloGemas;
     });
     if (estado.investigando && $('inv-barra')) {
       var ia = academiaLista(), ii = estado.investigando;

@@ -2539,3 +2539,16 @@ html body #marcha input[type=range] { touch-action: pan-y; }
 
 /* v9.81: el cofre se destapa al instante (antes la animación tardaba medio segundo) */
 html body .az-celda.abierta { animation-duration: .15s !important; }
+
+/* v9.91: barra del cofre de regalo por gastar gemas */
+.bono-gemas { display: flex; align-items: center; gap: 8px; margin: 8px 0; padding: 8px 10px; border-radius: 12px; background: linear-gradient(#3a2614, #24160c); border: 1px solid #c98a1a; }
+.bono-gemas .bg-ico { flex: 0 0 44px; width: 44px; height: 44px; display: grid; place-items: center; font-size: 30px; }
+.bono-gemas .bg-ico img { width: 44px; height: 44px; object-fit: contain; }
+.bono-gemas .bg-dat { flex: 1; min-width: 0; }
+.bono-gemas .bg-dat b { display: block; font-size: 13px; color: #ffe08a; margin-bottom: 4px; }
+.bono-gemas .bg-barra { position: relative; height: 20px; border-radius: 10px; background: #120b05; border: 1px solid #6a4a20; overflow: hidden; }
+.bono-gemas .bg-barra i { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#ffb24a, #d8681c); }
+.bono-gemas .bg-barra span { position: relative; display: block; text-align: center; font: 800 11.5px/20px system-ui, sans-serif; color: #fff; text-shadow: 0 1px 2px #000; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 6px; }
+
+/* v9.91: botón que pide más gemas de las que tienes: se puede tocar y abre la tienda de gemas */
+html body button.falta-gema { filter: grayscale(.55) brightness(.85); }
