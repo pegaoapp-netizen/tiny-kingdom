@@ -3641,8 +3641,16 @@
       '<p class="al-rep-txt">' + (x.gano ? L('¡Los atacantes han atravesado la muralla!', 'The attackers broke through the wall!') : L('La muralla resistió el ataque.', 'The wall held the attack.')) + '</p>';
     else h += '<p class="al-rep-txt">' + estadoAtaqueHTML(x) + '</p>';
     h += '<div class="al-rep-sec">' + L('Detalles del combate', 'Battle details') + '</div><div class="al-rep-vs"><div><small>' + L('ATACANTES', 'ATTACKERS') + '</small><b class="' + (llegada ? 'rojo' : 'verde') + '">' + escaparHTML(x.atacanteNombre || '?') + '</b>' + (x.alA ? '<i>[' + escaparHTML(x.alA) + ']</i>' : '') +
-      '<span>' + L('Poder: ', 'Power: ') + cortoNum(x.fuerza || 0) + '</span><span>' + L('Bajas: ', 'Losses: ') + cortoNum(x.bajas || 0) + '</span></div><div class="al-rep-x">⚔️</div><div><small>' + L('DEFENSORES', 'DEFENDERS') + '</small><b>' + escaparHTML(x.defensorNombre || '?') + '</b>' + (x.alD ? '<i>[' + escaparHTML(x.alD) + ']</i>' : '') +
-      '<span>' + L('Defensa: ', 'Defense: ') + cortoNum(x.defensa || 0) + '</span><span>' + L('Resultado: ', 'Result: ') + (res ? (x.gano ? L('Derrotado', 'Defeated') : L('Resistió', 'Held')) : '—') + '</span></div></div>';
+      '<span>' + L('Poder: ', 'Power: ') + cortoNum(x.fuerza || 0) + '</span><span>' + L('Bajas: ', 'Losses: ') + cortoNum(x.bajas || 0) + '</span><button class="al-rep-xy" id="al-xy-a">📍 …</button></div><div class="al-rep-x">⚔️</div><div><small>' + L('DEFENSORES', 'DEFENDERS') + '</small><b>' + escaparHTML(x.defensorNombre || '?') + '</b>' + (x.alD ? '<i>[' + escaparHTML(x.alD) + ']</i>' : '') +
+      '<span>' + L('Defensa: ', 'Defense: ') + cortoNum(x.defensa || 0) + '</span><span>' + L('Resultado: ', 'Result: ') + (res ? (x.gano ? L('Derrotado', 'Defeated') : L('Resistió', 'Held')) : '—') + '</span><button class="al-rep-xy" id="al-xy-d">📍 …</button></div></div>';
+    /* v9.96 (Felix): las coordenadas de quien atacó y de quien defendió; al tocarlas vas al mapa */
+    setTimeout(function () {
+      [['al-xy-a', x.atacante], ['al-xy-d', x.defensor]].forEach(function (q) {
+        if (!q[1]) return;
+        var pon = function (l) { var b = $(q[0]); if (!b) return; if (!l || typeof l.x !== 'number') { b.textContent = '📍 ?'; return; } var c = celdaDe(l.x, l.y); b.textContent = '📍 X ' + c.x + ' · Y ' + c.y; b.setAttribute('data-accion', 'al-ir-xy'); b.setAttribute('data-x', c.x); b.setAttribute('data-y', c.y); };
+        var l0 = lugarDe(q[1]); if (l0) pon(l0); else if (Cuentas.leerAldea) Cuentas.leerAldea(q[1]).then(function (a) { pon(a); }).catch(function () { pon(null); });
+      });
+    }, 0);
     return h + '</div>';
   }
   function htmlSeccionAl(k) {
@@ -13198,6 +13206,7 @@
     else if (a === 'al-inf-pag') { alInf.pag = +b.getAttribute('data-p') || 0; sonar('click'); pintarHubAlianza(); }
     else if (a === 'al-inf-ver') { alInf.ver = { id: b.getAttribute('data-id'), lado: b.getAttribute('data-lado') }; sonar('click'); pintarHubAlianza(); var pcI = $('panel-cuerpo'); if (pcI) pcI.scrollTop = 0; }
     else if (a === 'al-inf-volver') { alInf.ver = null; sonar('click'); pintarHubAlianza(); }
+    else if (a === 'al-ir-xy') { sonar('click'); var gx = +b.getAttribute('data-x'), gy = +b.getAttribute('data-y'); cerrarPanel(); if (!enMundo) abrirMundo(); setTimeout(function () { try { irACeldaMundo(gx, gy); } catch (e) {} }, 400); } /* v9.96 */
     else if (a === 'al-inf-recargar') { sonar('click'); cargarInformesAl(true); }
     else if (a === 'al-donar') { if (!b.disabled) { b.disabled = true; donarAlianza(b.getAttribute('data-r')); } }
     else if (a === 'al-bonif') { if (!b.disabled) { b.disabled = true; mejorarBonifAl(b.getAttribute('data-k')); } }

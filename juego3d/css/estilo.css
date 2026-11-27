@@ -2552,3 +2552,6 @@ html body .az-celda.abierta { animation-duration: .15s !important; }
 
 /* v9.91: botón que pide más gemas de las que tienes: se puede tocar y abre la tienda de gemas */
 html body button.falta-gema { filter: grayscale(.55) brightness(.85); }
+
+/* v9.96: coordenadas en el informe de la alianza */
+.al-rep-xy { display: inline-block; margin-top: 4px; padding: 2px 8px; border: 1px solid #b8925a; border-radius: 999px; background: rgba(255,255,255,.55); color: #3a2414; font: 700 12px system-ui, sans-serif; cursor: pointer; }
