@@ -7900,6 +7900,7 @@
   function cambiarVilla(k) {
     var v = misVillas(); if (k === v.activa || !v.lista[k] || !v.lista[k].datos || cambiandoVilla) return;
     var no = puedeCambiarVilla(); if (no) { consejoTemporal('🏘️ ' + no); sonar('error'); return; }
+    if (window.TKVillas && !cambiarVilla.cargando) { cambiarVilla.cargando = true; cerrarPanel(); TKVillas.cargando(nombreVilla(k), k, function () { try { cambiarVilla(k); } finally { cambiarVilla.cargando = false; } }); return; } // v10.00: pantalla de carga
     guardar(); // pasa la escena al estado
     var vieja = v.activa; v.lista[vieja].datos = fotoVilla();
     var d = v.lista[k].datos, horas = Math.max(0, (Date.now() - (d.desde || Date.now())) / 3600000);
@@ -7918,6 +7919,7 @@
     cerrarPanel(); if (enMundo) { try { cerrarMundo(); } catch (e) {} }
     empezarPartida(JSON.parse(JSON.stringify(copiaV)));
     sonar('magia'); consejoTemporal('🏘️ ' + L('Estás en ', 'You are in ') + nombreVilla(k));
+    if (window.TKVillas) TKVillas.llegado(); // v10.00: se quita la pantalla de carga cuando la villa ya se ve
     return;
     var cap = document.createElement('div'); cap.id = 'villa-cambio'; cap.innerHTML = '<div><b>🏘️ ' + escaparHTML(nombreVilla(k)) + '</b><small>' + L('Llegando a tu villa…', 'Arriving at your village…') + '</small></div>'; document.body.appendChild(cap);
     var copia = JSON.parse(JSON.stringify(estado));
@@ -7973,7 +7975,10 @@
   }
   function htmlMisVillas() {
     var v = misVillas(), mx = maxVillas();
-    var h = '<div class="carta"><div class="pf-fila"><b>🏘️ ' + L('Mis villas', 'My villages') + ': ' + v.lista.length + ' / 5</b><button class="comprar mini" data-accion="villa-centrar">🏰 ' + L('Ver mi castillo', 'View my castle') + '</button></div></div>';
+    var h = window.TKVillas ? TKVillas.cabecera({ lista: v.lista.map(function (e, i) { var act = i === v.activa, d = act ? null : e.datos, lu = lugarVilla(i) || { x: '?', y: '?' };
+        return { nombre: nombreVilla(i), x: lu.x, y: lu.y, castillo: act ? (estado.castillo || 1) : ((d && d.castillo) || 1), activa: act, tropas: act ? estado.tropas : (d && d.tropas), edificios: act ? (estado.edificios || []).length : ((d && d.edificios) || []).length, muralla: act ? (estado.muralla || 0) : ((d && d.muralla) || 0) }; }),
+      max: mx, poder: calcularPoder(), nombreTropa: N, L: L, corto: corto, formato: formatoNumero, escapar: escaparHTML }) : ''; // v10.00: Mis villas como en el vídeo del dueño (js/tk-villas.js)
+    h += '<div class="carta"><div class="pf-fila"><b>🏘️ ' + L('Mis villas', 'My villages') + ': ' + v.lista.length + ' / 5</b><button class="comprar mini" data-accion="villa-centrar">🏰 ' + L('Ver mi castillo', 'View my castle') + '</button></div></div>';
     h += v.lista.map(function (e, i) {
       var act = i === v.activa, d = act ? null : e.datos, lu = lugarVilla(i) || { x: '?', y: '?' };
       var cast = act ? (estado.castillo || 1) : ((d && d.castillo) || 1), com = act ? cantidad('comida') : ((d && d.comida) || 0);

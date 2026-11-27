@@ -1,0 +1,43 @@
+/* v10.00 · Mis villas con medallones y pantalla de carga al cambiar de villa (js/tk-villas.js) */
+.tkv-cab { padding: 10px 10px 12px !important; }
+.tkv-fila { display: flex; gap: 6px; justify-content: space-between; margin-bottom: 10px; }
+#panel .tkv-med, .tkv-med { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 2px 6px; border-radius: 12px; border: 0; cursor: pointer; position: relative;
+  background: radial-gradient(circle at 50% 30%, #f2ece0 0, #b9b2a4 55%, #77705f 100%) !important; box-shadow: inset 0 1px 0 #fff8, inset 0 -3px 5px #0004, 0 0 0 1.5px #5a5040, 0 3px 6px #0005 !important; color: #2a2014 !important; font: 600 10px/1.15 Georgia, serif !important; opacity: 1 !important; filter: none; text-shadow: none !important; }
+.tkv-med .tkv-num { position: absolute; top: 3px; left: 6px; font-size: 10px; opacity: .75; }
+.tkv-med .tkv-ico { font-size: 24px !important; line-height: 30px; filter: drop-shadow(0 2px 1px #0005); }
+.tkv-med .tkv-nom { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; }
+#panel .tkv-med.activa, .tkv-med.activa { background: radial-gradient(circle at 50% 30%, #fff6c8 0, #f0c450 50%, #a06a10 100%) !important; box-shadow: inset 0 1px 0 #fffc, inset 0 -3px 5px #6a3a0066, 0 0 0 2px #fff1b8, 0 0 14px #ffcf5acc !important; color: #3a2208 !important; cursor: default; }
+.tkv-med:not(.activa):not(.cerrada):active { transform: scale(.95); }
+#panel .tkv-med.libre, .tkv-med.libre { background: radial-gradient(circle at 50% 30%, #e9f2d8 0, #9ab87a 60%, #4f6a3a 100%) !important; }
+#panel .tkv-med.cerrada, .tkv-med.cerrada { opacity: .55 !important; filter: grayscale(.7); cursor: default; }
+.tkv-ficha { display: flex; gap: 10px; align-items: center; padding: 8px; border-radius: 10px; background: linear-gradient(180deg, #3a2414, #24160c); box-shadow: inset 0 0 0 1px #c9a22788, inset 0 2px 8px #0008; color: #f6e8c8; }
+.tkv-ficha b { display: block; font: 700 16px Georgia, serif; color: #ffe7a8; text-shadow: 0 1px 2px #000; }
+.tkv-ficha small { display: block; font-size: 12px; opacity: .9; margin-top: 2px; }
+.tkv-ficha .tkv-pista { opacity: .65; font-style: italic; }
+.tkv-escudo { flex: none; filter: drop-shadow(0 3px 4px #0008); }
+.tkv-tit { margin: 10px 0 4px; text-align: center; font: 700 13px Georgia, serif; color: #f0d48a; text-shadow: 0 1px 2px #000; letter-spacing: .5px; }
+.tkv-tit::before, .tkv-tit::after { content: ''; display: inline-block; width: 22%; height: 1px; vertical-align: middle; margin: 0 8px; background: linear-gradient(90deg, transparent, #d8b060); }
+.tkv-tit::after { background: linear-gradient(90deg, #d8b060, transparent); }
+.tkv-tabla { border-radius: 8px; overflow: hidden; background: #3a2616; box-shadow: inset 0 0 0 1px #c9a22766; }
+.tkv-f { display: flex; justify-content: space-between; padding: 6px 10px; color: #f3e3c3; font-size: 13px; }
+.tkv-f:nth-child(odd) { background: #ffffff0d; }
+.tkv-f b { color: #ffe08a; font-variant-numeric: tabular-nums; }
+.tkv-vacio { padding: 8px 10px; color: #d8c8a8; font-size: 12px; opacity: .8; }
+
+/* pantalla de carga al entrar en otra villa */
+#tkv-carga { position: fixed; inset: 0; z-index: 100001; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .38s ease;
+  background: radial-gradient(ellipse at 50% 45%, #3a2414ee 0, #120a05f5 60%, #050302 100%); }
+#tkv-carga.tema-corsarios { background: radial-gradient(ellipse at 50% 45%, #123040ee 0, #06121af5 60%, #020507 100%); }
+#tkv-carga.visible { opacity: 1; }
+#tkv-carga.saliendo { opacity: 0; transition-duration: .45s; }
+.tkv-c-caja { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #f6e8c8; text-align: center; transform: scale(.92); transition: transform .5s cubic-bezier(.2, 1.3, .4, 1); }
+#tkv-carga.visible .tkv-c-caja { transform: scale(1); }
+.tkv-c-caja .tkv-escudo { animation: tkv-latido 1.6s ease-in-out infinite; }
+.tkv-c-caja b { font: 700 22px Georgia, serif; color: #ffe7a8; text-shadow: 0 2px 4px #000; margin-top: 6px; }
+.tkv-c-caja small { font-size: 13px; opacity: .85; }
+.tkv-c-caja span { font: italic 13px Georgia, serif; opacity: .8; }
+.tkv-c-barra { width: 180px; height: 6px; border-radius: 4px; overflow: hidden; background: #0008; box-shadow: inset 0 0 0 1px #c9a22788; margin-top: 8px; }
+.tkv-c-barra i { display: block; height: 100%; width: 40%; border-radius: 4px; background: linear-gradient(90deg, #a06a10, #ffe08a, #a06a10); animation: tkv-barra 1.1s ease-in-out infinite; }
+@keyframes tkv-latido { 0%, 100% { transform: scale(1); filter: drop-shadow(0 3px 4px #0008); } 50% { transform: scale(1.06); filter: drop-shadow(0 0 14px #ffcf5a99); } }
+@keyframes tkv-barra { 0% { transform: translateX(-110%); } 100% { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) { .tkv-c-caja .tkv-escudo, .tkv-c-barra i { animation: none; } }
