@@ -701,6 +701,8 @@
     TKExtras.cadaFotograma = function (dt) { antes(dt); try { paso(dt); } catch (e) { if (!enganchar.av) { enganchar.av = 1; console.warn('TKCorsariosDemo', e); } } };
   })();
   window.TKCorsariosDemo = {
+    // v10.09: se puede preparar antes (sin ponerla en la escena) para que entrar en la isla sea rápido
+    preparar: function () { var c = C(), it = I(); if (DEC || !ON || !c || !it || !it.raizL()) return null; DEC = construirDecoracion(c, it.raizL()); return DEC; },
     activo: function () { return ON; }, esDemo: esDemo, edificio: edificio, version: function () { return VER; },
     activar: function (v) { ON = v === undefined ? true : !!v; VER++; },
     parcelas: function (l) { if (l !== undefined) { PARC = l ? l.slice() : null; VER++; if (DEC) { DEC.g.parent && DEC.g.parent.remove(DEC.g); DEC.humo.parent && DEC.humo.parent.remove(DEC.humo); devolver(); DEC = null; } } var c = C(); return c ? lista(c) : []; },

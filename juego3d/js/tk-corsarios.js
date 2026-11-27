@@ -889,6 +889,28 @@
     }
     proxyCastillo(c);
   }
+  // v10.09: ENTRAR RÁPIDO. Si tienes la 2.ª villa y estás en otra, la isla se prepara en un rato libre (una sola vez):
+  // se construye sin ponerla en la escena y se preparan sus gráficos. Así el primer viaje a la Bahía ya no la construye.
+  // No se hace en móviles con poca memoria (menos de 4 GB) ni con calidad Baja. Se queda en memoria como ya pasaba tras la primera visita.
+  var preT0 = 0, preHecho = false;
+  function precalentar(c, esc) {
+    if (preHecho || ISL || FORZAR !== null) return;
+    var ahora = performance.now(); if (!preT0) { preT0 = ahora; return; } if (ahora - preT0 < 8000) return; // espera a que el juego ya esté tranquilo
+    preHecho = true;
+    var J = window.__juego, e = J && J.estado && J.estado(), v = e && e.villas;
+    if (!v || !v.lista || !v.lista[1] || v.activa === 1) { preHecho = false; preT0 = ahora; return; } // vuelve a mirar más tarde (por si fundas la villa)
+    if (navigator.deviceMemory && navigator.deviceMemory < 4) return;
+    if (window.TKPremium && TKPremium.nivel && TKPremium.nivel() === 'baja') return;
+    var hacer = function () {
+      try {
+        if (ISL || activa || c.enMenu()) { if (!ISL) preHecho = false; return; }
+        construirIsla(c, esc);
+        var D = window.TKCorsariosDemo, dec = D && D.preparar ? D.preparar() : null;
+        var x = X(); if (x && x.render && x.render.compile) { esc.add(ISL.raizW); if (dec) esc.add(dec.g); try { x.render.compile(esc, x.camara); } catch (e2) {} esc.remove(ISL.raizW); if (dec) esc.remove(dec.g); }
+      } catch (e3) { console.warn('TKCorsarios precalentar', e3); }
+    };
+    var ric = window['requestIdleCallback']; if (ric) ric.call(window, hacer, { timeout: 4000 }); else setTimeout(hacer, 300); // Safari (iPhone) no tiene requestIdleCallback
+  }
   // tocar la calavera abre el castillo (el castillo de verdad sigue en su sitio, invisible; su centro ya no se toca: ahí está la plaza)
   var PROXY = null;
   function proxyCastillo(c) {
@@ -972,7 +994,7 @@
     var quiere = FORZAR !== null ? FORZAR : (!c.enMenu() && c.villa() === 1);
     if (quiere && !activa) { if (yawCara === null) { var cp = x.camara.position, ob = c.cam.objetivo; yawCara = Math.atan2(cp.x - ob.x, cp.z - ob.z); } activar(c, esc); }
     else if (!quiere && activa) desactivar(c, esc);
-    if (!activa) return;
+    if (!activa) { precalentar(c, esc); return; }
     for (var oi = 0; oi < ocultos.length; oi++) ocultos[oi].visible = false; // el juego vuelve a encender algunos grupos en cada fotograma (detalles de cerca)
     if (esc.fog) { esc.fog.near += 160; esc.fog.far += 260; } // aire limpio de isla: la niebla solo funde el mar lejano con el horizonte
     U_FILL.dir.value.set(c.ejeU.x * 0.75, 0.55, c.ejeU.z * 0.75).normalize(); U_FILL.col.value.setRGB(0.42, 0.36, 0.28).multiplyScalar(1 - 0.7 * c.noche());
