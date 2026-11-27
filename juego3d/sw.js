@@ -1,6 +1,6 @@
 // Tiny Kingdom se juega solo con internet: no se guarda nada para jugar sin conexión.
 // Cambia VERSION cada vez que publiques una versión nueva del juego.
-var VERSION = 'tinykingdom-v9.98';
+var VERSION = 'tinykingdom-v9.99';
 
 var CACHE_NAME = VERSION; /* v9.42: el nombre de la caché lleva la versión */
 self.addEventListener('install', function () { self.skipWaiting(); });

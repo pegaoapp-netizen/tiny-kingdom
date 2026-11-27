@@ -2559,3 +2559,7 @@ html body button.falta-gema { filter: grayscale(.55) brightness(.85); }
 /* v9.97: filas de tropas del informe de la alianza */
 .al-rep-n { display: block; font-size: 12px; }
 .al-rep-n b { font-weight: 800; }
+
+/* v9.99: Azar, premio y botón Vale */
+#panel.az-panel .az-ganaste { width: 100%; text-align: center; font: 800 16px system-ui, sans-serif; color: #ffe7a0; margin: 2px 0 6px; }
+#panel.az-panel .az-vale { min-width: 180px; min-height: 48px; font-size: 18px; }

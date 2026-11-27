@@ -11714,9 +11714,9 @@
   // v8.00: CANDADOS por nivel (Azar Premium, Torneo de Temporada, Equipo de héroe)
   function bloqueo(k) { var q = DESBLOQUEO[k]; if (!q || estado.dueno) return null; if (q.jugador && nivelJugador() < q.jugador) return { que: 'jugador', n: q.jugador }; if (q.castillo && (estado.castillo || 1) < q.castillo) return { que: 'castillo', n: q.castillo }; return null; }
   function htmlCandado(k, texto) { var b = bloqueo(k); return '<div class="candado-nivel"><div class="cn-ico">🔒</div><p>' + texto + '</p><small>' + (b.que === 'jugador' ? L('Tu nivel: ', 'Your level: ') + nivelJugador() + ' / ' + b.n : L('Tu castillo: Nv ', 'Your castle: Lv ') + (estado.castillo || 1) + ' / ' + b.n) + '</small></div>'; }
-  var azarAvisoVisto = false; /* v9.86 (dueño): el cartel «¡Toca el cofre…!» solo al abrir el Azar; al primer cofre se quita hasta que lo vuelvas a abrir */
+  var azarAvisoVisto = false, azarEsperaVale = ''; /* v9.86 (dueño): el cartel «¡Toca el cofre…!» solo al abrir el Azar; al primer cofre se quita hasta que lo vuelvas a abrir */
   function abrirAzar(modo) {
-    if (modo) { modoAzar = modo; azarGrid = null; azarAvisoVisto = false; }
+    if (modo) { modoAzar = modo; azarGrid = null; azarAvisoVisto = false; azarEsperaVale = ''; azarFant = null; azarGanaC = -1; }
     var evP = eventoActivo('premium'); if (modoAzar === 'premium' && !evP) { modoAzar = 'normal'; azarGrid = null; }
     var prem = modoAzar === 'premium', n = fichasAzar(), costo = prem ? 6 : 1; // v8.19: el Premium cuesta 6 fichas
     if (!azarGrid) azarGrid = [null, null, null, null, null, null, null, null, null];
@@ -11746,6 +11746,8 @@
         '<button class="az-b verde" data-accion="azar-comprar" data-n="10"><small><span class="ico gema"></span> ' + PRECIO_FICHA * 10 + '</small>' + L('Comprar 10 fichas', 'Buy 10 tokens') + '</button></div>') + '</div>';
     abrirPanel(L('Azar', 'Lucky'), html, { tipo: 'azar' });
     $('panel').classList.add('iv-panel', 'az-panel');
+    /* v9.99 (dueño, opción B): con 1 cofre abierto, el tablero se queda así (premio + los demás en gris) hasta que tocas «Vale» */
+    if (azarEsperaVale) { var bz = document.querySelector('#panel .az-botones'); if (bz) { bz.innerHTML = '<p class="az-ganaste">🎁 ' + escaparHTML(azarEsperaVale) + '</p><button class="az-b azul az-vale" data-accion="azar-vale">✅ ' + L('Vale', 'OK') + '</button>'; } }
   }
   function sacarAzar(cuantos, celda) {
     /* v9.90 (vídeo del dueño): el cofre tiembla un momento y luego se abre; mientras, no se puede tocar otro */
@@ -11758,6 +11760,7 @@
     sacarAzarYa(cuantos, celda);
   }
   function sacarAzarYa(cuantos, celda) {
+    if (azarEsperaVale) return; /* v9.99: primero «Vale» */
     azarAvisoVisto = true; azarFant = null; azarGanaC = -1;
     /* v8.44: el jugador escoge el cofre. Con celda abre ESE; sin celda (Abrir todos) abre todos los que quedan cerrados */
     if (!azarGrid || azarGrid.every(function (x) { return x; })) azarGrid = [null, null, null, null, null, null, null, null, null];
@@ -11782,15 +11785,17 @@
     // los cofres se abren uno por uno
     document.querySelectorAll('.az-celda.abierta').forEach(function (c) { if (libres.indexOf(+c.getAttribute('data-c')) < 0) c.style.animation = 'none'; }); /* solo se anima lo que acabas de abrir */
     libres.forEach(function (c, i) { var el = document.querySelector('.az-celda[data-c="' + c + '"]'); if (el) el.style.animationDelay = (i * 0.12) + 's'; });
-    consejoTemporal('🎁 ' + Object.keys(ganado).map(function (k) { return N(k) + (ganado[k] > 1 ? ' ×' + ganado[k] : ''); }).join(', '));
-    cerrarCofresLuego(uno ? 2600 : 1400); /* v9.79: el cofre vuelve a cerrarse (v9.90: más tarde para ver los demás) */
+    var textoGan = Object.keys(ganado).map(function (k) { return N(k) + (ganado[k] > 1 ? ' ×' + ganado[k] : ''); }).join(', ');
+    if (uno) { clearTimeout(tmCerrarAzar); azarEsperaVale = textoGan; var bz1 = document.querySelector('#panel .az-botones'); if (bz1) bz1.innerHTML = '<p class="az-ganaste">🎁 ' + escaparHTML(textoGan) + '</p><button class="az-b azul az-vale" data-accion="azar-vale">✅ ' + L('Vale', 'OK') + '</button>'; return; } /* v9.99: espera a «Vale» */
+    consejoTemporal('🎁 ' + textoGan);
+    cerrarCofresLuego(1400);
   }
   /* v9.49 (dueño): abrir 1 o 10 cofres de una vez (1 ficha cada uno). Si el tablero se llena, sale uno nuevo y se sigue; al final, la ventana con todo lo ganado */
   /* v9.79 (dueño): el cofre se abre, enseña el premio un momento y SE VUELVE A CERRAR, para que el jugador siga escogiendo */
   var tmCerrarAzar = null;
   function cerrarCofresLuego(ms) { clearTimeout(tmCerrarAzar); tmCerrarAzar = setTimeout(function () { azarGrid = [null, null, null, null, null, null, null, null, null]; azarFant = null; azarGanaC = -1; if (panelActual && panelActual.tipo === 'azar' && !$('panel').classList.contains('oculto')) abrirAzar(); }, ms || 1400); }
   function sacarAzarVarios(cant) {
-    if (azarOcupado) return;
+    if (azarOcupado || azarEsperaVale) return;
     azarAvisoVisto = true; azarFant = null; azarGanaC = -1;
     cant = Math.max(1, Math.min(50, Math.floor(+cant || 1))); /* v9.90: hasta 50 */
     if (cant === 1) { /* v9.90: «Abrir 1» abre un cofre al azar con la misma animación que tocarlo */
@@ -13431,6 +13436,7 @@
     else if (a === 'azar-varios') sacarAzarVarios(+b.getAttribute('data-n')); /* v9.49 */
     else if (a === 'inv-fichas-azar') { sonar('click'); abrirAzar('normal'); } /* v9.53 */
     else if (a === 'inv-fichas-rul') { sonar('click'); abrirRuleta(); }
+    else if (a === 'azar-vale') { sonar('click'); clearTimeout(tmCerrarAzar); azarEsperaVale = ''; azarGrid = [null, null, null, null, null, null, null, null, null]; azarFant = null; azarGanaC = -1; abrirAzar(); } /* v9.99 */
     else if (a === 'azar-comprar') { sonar('click'); comprarFichasAzar(+b.getAttribute('data-n')); } /* v9.50 */
     else if (a === 'azar-nuevo') { sonar('click'); azarGrid = null; abrirAzar(); } /* v8.44 */
     else if (a === 'azar-fichas') { sonar('click'); comprarFichas(); }
