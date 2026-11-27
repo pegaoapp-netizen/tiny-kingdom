@@ -11396,7 +11396,7 @@
     botellas: function () { return Math.max(0, Math.floor((estado.mochila && estado.mochila.botella) || 0)); },
     gastarBotellas: function (n) { var t = (estado.mochila && estado.mochila.botella) || 0; if (n > t) return false; estado.mochila.botella = t - n; guardar(true); return true; },
     darBotellas: function (n) { if (n > 0) { estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); } },
-    comprarBotellas: function (n, g) { if (!(n > 0) || !(g > 0)) return false; var okB; gemasOk = true; try { okB = pagarViejo(0, g); } finally { gemasOk = false; } if (!okB) return false; /* v9.87 (Felix: «está bloqueado»): la pregunta de gemas quedaba DETRÁS de la Campaña y nunca se podía aceptar; el precio ya sale en el botón */ estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); sonar('moneda'); return true; },
+    comprarBotellas: function (n, g) { return false; /* v10.11 (dueño): las botellas ya no se compran con gemas */ if (!(n > 0) || !(g > 0)) return false; var okB; gemasOk = true; try { okB = pagarViejo(0, g); } finally { gemasOk = false; } if (!okB) return false; /* v9.87 (Felix: «está bloqueado»): la pregunta de gemas quedaba DETRÁS de la Campaña y nunca se podía aceptar; el precio ya sale en el botón */ estado.mochila.botella = (estado.mochila.botella || 0) + n; guardar(true); sonar('moneda'); return true; },
     gemas: function () { return estado.gemasInfinitas ? Infinity : estado.gemas || 0; },
     regalosBotellas: function () { return { dia: BOT_DIA, mes: BOT_MES }; },
     revisarSemana: function () { revisarCampSemana(); },

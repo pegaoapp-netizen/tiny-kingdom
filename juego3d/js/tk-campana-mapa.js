@@ -756,7 +756,7 @@
     ventana('<span class="tkm-sello" style="background:radial-gradient(circle at 40% 35%,#ffe36a,#c9781a 60%,#6a3a04)">🧪</span><h2>' + L('Botellas de campaña', 'Campaign flasks') + '</h2><div class="tkm-sub">' + L('Tienes ', 'You have ') + botellas() + '</div>' +
       '<p class="tkm-nota">' + L('Cada misión gasta botellas: normal 1, enemigo especial 2, jefe 3 (Élite ×2, Pesadilla ×3). El Barrido gasta lo mismo por cada pasada.', 'Each mission spends flasks: normal 1, special enemy 2, boss 3 (Elite ×2, Nightmare ×3). Sweeps cost the same per run.') + '</p>' +
       '<h3>🎁 ' + L('Gratis', 'Free') + '</h3><div class="tkm-fuentes"><div>📅 ' + L('Cada día al entrar: ', 'Every day you log in: ') + '<b>+' + rg.dia + '</b></div><div>🗓️ ' + L('Cada mes al entrar: ', 'Every month you log in: ') + '<b>+' + rg.mes + '</b></div><div>🏆 ' + L('Torneo semanal, Entrenamiento, Subir poder y Temporada', 'Weekly, Training, Power and Season tournaments') + '</div><div>🗺️ ' + L('Podio de la Campaña semanal, logros y cofres de estrellas', 'Weekly Campaign podium, feats and star chests') + '</div></div>' +
-      '<h3>💎 ' + L('Comprar con gemas', 'Buy with gems') + ' · ' + L('tienes ', 'you have ') + (gm === Infinity ? '∞' : num(gm)) + '</h3><div class="tkm-packs">' + PACKS.map(function (q) { return '<button class="tkm-pack" data-c="comprar" data-n="' + q[0] + '" data-g="' + q[1] + '"><span>🧪</span><b>×' + q[0] + '</b><i><img src="iconos/ui/r_gemas.webp" alt="">' + q[1] + '</i></button>'; }).join('') + '</div>');
+      '<p class="tkm-nota">' + L('Las botellas no se compran con gemas.', 'Flasks cannot be bought with gems.') + '</p>'); /* v10.11 (dueño): sin compra con gemas */
   }
   var rkTab = 'avance';
   function ventanaClasificacion(tab) {
