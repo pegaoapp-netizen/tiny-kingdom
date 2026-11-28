@@ -2353,6 +2353,14 @@ body.en-batalla #villa-volver { display: none !important; }
 /* v10.13: Acelerar y ×2 (Leva real) uno encima del otro para que se lea el nombre de la tropa */
 .cola-ordenes .co-btns { flex: none; display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
 .cola-ordenes .co-btns .chip.co-x2 { text-align: center; }
+/* v10.14: objetos de población dentro de la ventana Población (Cabaña) */
+.pob-objs { margin: 8px 0; }
+.pob-objs .pob-objs-t { margin: 0 0 6px; font-weight: 800; color: #f2c96a; text-shadow: 0 1px 2px #000; }
+.pob-objs .fila-tienda { display: flex !important; flex-direction: row !important; align-items: center; width: auto !important; text-align: left !important; }
+.pob-objs .fila-tienda .ft-ico { flex: none; font-size: 26px; width: 44px; text-align: center; }
+.pob-objs .fila-tienda .ft-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pob-objs .fila-tienda .ft-info b, .pob-objs .fila-tienda .ft-info small { white-space: normal; word-break: normal; }
+.pob-objs .fila-tienda .comprar { flex: none; margin-left: auto; white-space: nowrap; }
 /* v7.96: altavoz rápido en la barra de arriba */
 #btn-mute-rapido { align-self: flex-end; margin: 2px 0; flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #6b4206; background: rgba(30,18,8,.72); color: #fff; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; box-shadow: 0 2px 4px #0008; }
 /* v7.97: Amatista rúnica en la Academia */
