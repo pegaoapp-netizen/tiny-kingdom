@@ -1529,6 +1529,7 @@ html body #panel.rul-panel .rul-marco.timon { border-radius: 50%; box-shadow: 0 
 .ev-pag { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 4px 0 6px; }
 .ev-pag button { width: 36px; height: 30px; border-radius: 7px; border: 1px solid #8a6a2a; background: #3a2610; color: #ffe08a; font-size: 13px; cursor: pointer; }
 .ev-pag span { min-width: 70px; padding: 5px 8px; border-radius: 7px; background: #f4e7c8; color: #3a2610; font-weight: 800; text-align: center; }
+body:has(#tq-modal) #consejo { display: none !important; } /* v10.12: el consejo no se ve borroso detrás de la ventana del torneo */
 #tq-modal { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(0,0,0,.6); padding: 16px; }
 .tqm-caja { width: min(420px, 100%); max-height: 86vh; display: flex; flex-direction: column; border-radius: 14px; background: linear-gradient(#3a2610, #1e1205); border: 2px solid #c99a3e; color: #f5e6c8; }
 .tqm-cab { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-bottom: 1px solid #6b4a1a; } .tqm-cab b { color: #ffe08a; font: 800 16px system-ui, sans-serif; }

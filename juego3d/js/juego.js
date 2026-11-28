@@ -13602,7 +13602,7 @@
   }
   function calcularPoder() { var d = desglosePoder(); return d.tropas + d.edificios + d.invest + d.equipo + d.oleadas; }
   // v7.36: con B (miles de millones) y T (billones) para que los poderes grandes no salgan como «16326,6»
-  function corto(n) { n = Math.floor(n || 0); return n < 10000 ? '' + n : n < 1e6 ? (Math.floor(n / 100) / 10) + 'k' : n < 1e9 ? (Math.floor(n / 1e5) / 10) + 'M' : n < 1e12 ? (Math.floor(n / 1e8) / 10) + 'B' : (Math.floor(n / 1e11) / 10) + 'T'; }
+  function corto(n) { n = Math.floor(n || 0); return n < 10000 ? '' + n : n < 1e6 ? (Math.floor(n / 100) / 10) + 'k' : n < 1e9 ? (Math.floor(n / 1e5) / 10) + 'M' : n < 1e12 ? (Math.floor(n / 1e8) / 10) + 'B' : n < 1e15 ? (Math.floor(n / 1e11) / 10) + 'T' : n < 1e18 ? (Math.floor(n / 1e14) / 10) + 'Qa' : (Math.floor(n / 1e17) / 10) + 'Qi'; } /* v10.12: cifras enormes ya no salen como 89999999.9T */
   function formatoNumero(n) { return Math.floor(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, estado.idioma === 'en' ? ',' : '.'); }
   var consejoFijo = '', consejoHasta = 0;
   function consejoTemporal(txt) { consejoFijo = txt; consejoHasta = performance.now() + 2600; mostrarConsejo(); }
