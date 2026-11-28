@@ -43,7 +43,7 @@
       tropas.forEach(function (u) { if (u.tipo === 'heroe' || u.refuerzo) return; if (u.invocada) inv[u.tipo] = (inv[u.tipo] || 0) + 1; else t[u.tipo] = (t[u.tipo] || 0) + 1; });
       estado.invocadas = inv;
       var cola = [];
-      colaEntreno.forEach(function (c, i) { var q = cola[cola.length - 1]; if (q && i > 0 && q[0] === c.tipo && q[3] === c.o) q[1]++; else cola.push([c.tipo, 1, Math.round(c.t * 10) / 10, c.o]); }); // v7.96: [tipo, n, t, orden]
+      colaEntreno.forEach(function (c, i) { var q = cola[cola.length - 1]; if (q && i > 0 && q[0] === c.tipo && q[3] === c.o) q[1]++; else cola.push(c.x2 ? [c.tipo, 1, Math.round(c.t * 10) / 10, c.o, c.total, 1] : [c.tipo, 1, Math.round(c.t * 10) / 10, c.o]); }); // v7.96: [tipo, n, t, orden] · v10.13: + [tiempo, ×2] si la orden se duplicó
       estado.colaEntreno = cola;
       estado.tropas = t;
       estado.heroe = tropas.some(function (u) { return u.tipo === 'heroe'; });
@@ -8599,7 +8599,8 @@
       var pct = q.frente ? Math.round(Math.min(1, (q.tot - q.rest - (c0.total - c0.t)) / q.tot) * 100) : Math.round(Math.max(0, 1 - q.rest / q.tot) * 100);
       return '<div class="co-orden' + (q.frente ? ' activa' : '') + '" data-orden="' + q.o + '"><span class="co-num">' + (i + 1) + '/' + MAX_ORDENES + '</span><span class="foto mini">' + fotoHTML(q.tipo, TROPAS[q.tipo] ? TROPAS[q.tipo].icono : '⚔️') + '</span>' +
         '<div class="co-od"><b>' + N(q.tipo) + ' <span class="chip">×' + formatoNumero(q.n) + '</span></b><div class="ped-barra"><div style="width:' + Math.max(2, pct) + '%"></div><span class="co-reloj">' + (q.frente ? '⚔️ ' : '⏳ ') + fmtTiempo(Math.ceil(faltaOrden(q.o))) + '</span></div></div>' +
-        '<button class="comprar mini naranja" data-accion="acelerar-orden" data-o="' + q.o + '">⚡ ' + T('mb_acelerar') + '</button></div>';
+        '<span class="co-btns"><button class="comprar mini naranja" data-accion="acelerar-orden" data-o="' + q.o + '">⚡ ' + T('mb_acelerar') + '</button>' +
+        (esDoble(q.o) ? '<span class="chip co-x2">×2 ✓</span>' : '<button class="comprar mini verde co-x2" data-accion="doble-orden" data-o="' + q.o + '" title="' + N('tropa_x2') + '">⚔️ ×2' + (estado.mochila.tropa_x2 > 0 ? ' (' + estado.mochila.tropa_x2 + ')' : '') + '</button>') + '</span></div>';
     }).join('') + '</div>';
   }
   // v7.52: marco dorado suave en la parcela del edificio tocado (solo mientras está elegido)
@@ -9919,6 +9920,37 @@
     var r = rapidezEntreno() * velReal(), c0 = colaEntreno[0], acc = 0, l = infoCola().ordenes;
     for (var i = 0; i < l.length; i++) { var q = l[i], mio = q.rest + (q.frente ? c0.total - c0.t : 0); if (q.o === o) return ((propio ? 0 : acc) + mio) / r; acc += mio; }
     return 0;
+  }
+  // v10.13 (dueño, como en su vídeo): la Leva real duplica las tropas de una orden; cada tropa tarda la mitad, así la orden acaba a la misma hora
+  function doblarOrden(o) {
+    var i0 = -1, n = 0;
+    for (var i = 0; i < colaEntreno.length; i++) { if (colaEntreno[i].o === o) { if (i0 < 0) i0 = i; n++; } else if (i0 >= 0) break; }
+    if (!n) return 'nada';
+    if (colaEntreno[i0].x2) return 'ya';
+    if (colaEntreno.length + n > TOPE_COLA) return 'llena';
+    var nuevas = [];
+    for (var k = 0; k < n; k++) { var c = colaEntreno[i0 + k]; c.total /= 2; c.t /= 2; c.x2 = 1; nuevas.push({ tipo: c.tipo, t: 0, total: c.total, o: o, x2: 1 }); }
+    colaEntreno = colaEntreno.slice(0, i0 + n).concat(nuevas, colaEntreno.slice(i0 + n));
+    colaVer++;
+    sumarLogro('tropas', n);
+    return n;
+  }
+  function esDoble(o) { for (var i = 0; i < colaEntreno.length; i++) if (colaEntreno[i].o === o) return !!colaEntreno[i].x2; return false; }
+  function usarLevaEn(o) {
+    if (!(estado.mochila.tropa_x2 > 0)) {
+      var it = -1; TIENDA.forEach(function (x, j) { if (x.id === 'tropa_x2') it = j; });
+      consejoTemporal('⚔️ ' + L('No tienes ', 'You have no ') + N('tropa_x2') + '. ' + L('Cómprala aquí.', 'Buy it here.')); sonar('error');
+      if (it >= 0) comprarTienda(it);
+      return false;
+    }
+    var r = doblarOrden(o);
+    if (r === 'nada') { consejoTemporal(L('Esa orden ya terminó.', 'That order already finished.')); sonar('error'); return false; }
+    if (r === 'ya') { consejoTemporal(L('Esta orden ya está duplicada (×2).', 'This order is already doubled (×2).')); sonar('error'); return false; }
+    if (r === 'llena') { consejoTemporal(L('La cola está llena (' + formatoNumero(TOPE_COLA) + '). No caben más tropas.', 'The queue is full.')); sonar('error'); return false; }
+    gastar1('tropa_x2'); sonar('magia');
+    consejoTemporal('⚔️ ' + L('Se ha duplicado el número de tropas que se están entrenando: +', 'Troops in training doubled: +') + formatoNumero(r));
+    guardar(true); actualizarHUD(); reabrirPanel();
+    return true;
   }
   function esEnt(que) { return que === 'entreno' || String(que).indexOf('entreno:') === 0; }
   function faltaEntreno() {
@@ -11698,9 +11730,9 @@
     '<path d="M6 22 Q32 2 58 22 L58 26 L6 26 Z" fill="url(#azc1)" stroke="#2a0c06" stroke-width="2"/><rect x="6" y="26" width="52" height="26" rx="3" fill="url(#azc1)" stroke="#2a0c06" stroke-width="2"/>' +
     '<rect x="14" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="44" y="10" width="6" height="42" fill="#d9a13a" stroke="#6a4a10"/><rect x="6" y="24" width="52" height="5" fill="#d9a13a" stroke="#6a4a10"/>' +
     '<rect x="27" y="27" width="10" height="12" rx="2" fill="#f2c45a" stroke="#6a4a10"/><circle cx="32" cy="33" r="2" fill="#3a2410"/></svg>';
-  var PREMIOS_AZAR = [['bolsa_oro', 20], ['saco_comida', 18], ['saco_madera', 18], ['saco_piedra', 14], ['acel_5m', 14], ['acel_15m', 8], ['libro_peq', 6], ['cofre_madera', 6], ['acel_1h', 3], ['cofre_plata', 2], ['botella', 8]]; /* v9.87 (dueño): un cofre puede traer botellas de campaña */
+  var PREMIOS_AZAR = [['bolsa_oro', 20], ['saco_comida', 18], ['saco_madera', 18], ['saco_piedra', 14], ['acel_5m', 14], ['acel_15m', 8], ['libro_peq', 6], ['cofre_madera', 6], ['acel_1h', 3], ['cofre_plata', 2], ['botella', 8], ['pob_1000', 3], ['tropa_x2', 1]]; /* v9.87 (dueño): un cofre puede traer botellas de campaña */
   var CANT_AZAR = { botella: 5 }, CANT_AZAR_PREM = { botella: 15 }; /* cuántas da ese cofre (los demás premios dan 1) */
-  var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4], ['botella', 10]];
+  var PREMIOS_AZAR_PREMIUM = [['caracola', 6], ['flor_coral', 3], ['estrella_mar', 2], ['acel_1h', 16], ['libro_peq', 16], ['cofre_plata', 14], ['oro_500k', 8], ['comida_500k', 8], ['madera_500k', 8], ['acel_2h5', 10], ['cofre_oro', 4], ['libro_gra', 4], ['acel_8h', 4], ['botella', 10], ['pob_1000', 6], ['pob_llena', 3], ['tropa_x2', 3]];
   var RAROS_AZAR = ['cofre_oro', 'libro_gra', 'acel_8h'];
   var modoAzar = 'normal', azarGrid = null, azarFant = null, azarGanaC = -1, azarOcupado = false; /* v9.90: lo que podías haber ganado y el cofre ganador */
   // v8.19: fichas gratis de cada día según tu nivel (Nv 1-9: 1 · Nv 10-19: 2 · Nv 20+: 3). Las gratis NO se acumulan: si no las usas hoy, se pierden.
@@ -12282,6 +12314,16 @@
       Cuentas.cambiarNombre(nuevo).then(function () { gastar1(k); guardar(true); publicarAldea(true); actualizarHUD(); reabrirPanel(); sonar('magia'); consejoTemporal('✒️ ' + L('Ahora te llamas ', 'Your name is now ') + escaparHTML(nuevo)); })
         .catch(function () { consejoTemporal(L('No se pudo cambiar el nombre. Revisa tu internet.', 'Could not change the name.')); sonar('error'); });
       return;
+    } else if (e === 'pob' || e === 'pobLlena') { /* v10.13: población al momento en la ciudad donde estás */
+      var gp = estado.pobGastada || 0;
+      if (gp <= 0) { consejoTemporal(L('Tu población ya está al 100 %.', 'Your population is already at 100%.')); sonar('error'); return; }
+      var dar = e === 'pob' ? Math.min(o.n, Math.ceil(gp)) : Math.ceil(gp);
+      estado.pobGastada = e === 'pob' ? Math.max(0, gp - o.n) : 0; if (estado.pobGastada < 0.5) estado.pobGastada = 0;
+      msg = '👥 +' + formatoNumero(dar) + ' ' + L('habitantes', 'people') + ' · ' + formatoNumero(Math.max(0, poblacionLibre())) + ' / ' + formatoNumero(poblacionMax()) + ' ' + L('libres', 'free');
+    } else if (e === 'dobleCola') { /* v10.13: desde el Inventario se usa en la primera orden sin duplicar */
+      var ords = infoCola().ordenes.filter(function (q) { return !esDoble(q.o); });
+      if (!ords.length) { consejoTemporal(colaEntreno.length ? L('Todas tus órdenes ya están duplicadas.', 'All your orders are already doubled.') : L('No hay tropas entrenando. Ve a Entrenar tropas.', 'No troops in training. Go to Train troops.')); sonar('error'); return; }
+      usarLevaEn(ords[0].o); return;
     } else if (e === 'megafono') { estado.megafono = (estado.megafono || 0) + o.n; msg = '📣 ' + L('Tus próximos ', 'Your next ') + estado.megafono + L(' mensajes del chat Global saldrán destacados.', ' Global chat messages will stand out.'); }
     else ok = false;
     if (!ok) return;
@@ -13186,6 +13228,7 @@
     else if (a === 'det-relevar') { var tr = b.getAttribute('data-tipo'), nr = cantDetalle; confirmarJuego('🏳️ ' + L('¿Relevar ' + nr + ' ' + N(tr) + '?', 'Dismiss ' + nr + ' ' + N(tr) + '?'), L('Se van del ejército y no devuelven recursos.', 'They leave the army and return no resources.'), L('Sí, relevar', 'Yes, dismiss'), function () { propiasDe(tr).slice(0, nr).forEach(quitarUnidad); asignarPuestos(); guardar(true); actualizarHUD(); sonar('click'); consejoTemporal(L('Relevaste ' + nr + ' ' + N(tr) + '.', 'You dismissed ' + nr + ' ' + N(tr) + '.')); cantDetalle = 1; abrirPanelEdificio(slotElegido); }); }
     else if (a === 'cuartel-3d') { sonar('click'); var tt = b.getAttribute('data-tipo'); vistaTropa.tipo = tt; vistaTropa.modo = 'detalle'; vistaTropa.pest = edificioTropa(tt) === 'establo' ? 'establo' : edificioTropa(tt) === 'galeria' ? 'tiro' : 'cuartel'; vistaTropa.rango = null; abrirPanelTropas(); }
     else if (a === 'acelerar-entreno') { sonar('click'); abrirAcelerar('entreno'); }
+    else if (a === 'doble-orden') { sonar('click'); usarLevaEn(+b.getAttribute('data-o')); }
     else if (a === 'acelerar-orden') { sonar('click'); abrirAcelerar('entreno:' + b.getAttribute('data-o')); }
     else if (a === 'tienda-pest') { sonar('click'); pestTienda = b.getAttribute('data-p'); $('panel').scrollTop = 0; abrirPanelTienda(); }
     else if (a === 'sub-fortaleza') { sonar('click'); abrirFortaleza(); }
@@ -14328,9 +14371,9 @@
       colaEntreno = [];
       (g.colaEntreno || []).forEach(function (q) {
         if (!q || !TROPAS[q[0]] || q[0] === 'heroe') return;
-        var tuq = tiempoUnidadLote(q[0], q[1] || 1); // v7.04: las colas guardadas también se acortan
+        var tuq = q[5] && q[4] > 0 ? q[4] : tiempoUnidadLote(q[0], q[1] || 1); // v7.04: las colas guardadas también se acortan · v10.13: la orden duplicada guarda su tiempo
         var oq = typeof q[3] === 'number' ? q[3] : sigOrden++; if (oq >= sigOrden) sigOrden = oq + 1; // v7.96: cada orden guarda su número
-        for (var k = 0; k < Math.min(q[1] || 0, TOPE_COLA - colaEntreno.length); k++) colaEntreno.push({ tipo: q[0], t: k === 0 ? Math.min(q[2] || 0, tuq * 0.99) : 0, total: tuq, o: oq });
+        for (var k = 0; k < Math.min(q[1] || 0, TOPE_COLA - colaEntreno.length); k++) { var ce0 = { tipo: q[0], t: k === 0 ? Math.min(q[2] || 0, tuq * 0.99) : 0, total: tuq, o: oq }; if (q[5]) ce0.x2 = 1; colaEntreno.push(ce0); }
       });
       colaVer++;
       avanzarCola(cuartelesListos().length ? cerrado * rapidezEntreno() : 0, function () { return reunion.clone(); });

@@ -162,8 +162,8 @@
     };
   }
   function premiosRepetir(p) { return { oro: p.oro * 0.35, madera: p.madera * 0.35, piedra: p.piedra * 0.35, hierro: p.hierro * 0.35, expH: Math.round(p.expH * 0.5), expR: Math.round(p.expR * 0.4), frag: 1, obj: [['acel_5m', 1]], pieza: null, piezaProb: 0.08, piezaR: p.piezaR }; }
-  function premioTres(M) { var k = (1 + M.gIdx * 0.3) * M.dm; return { hierro: 300 * k, obj: [['acel_15m', 1], ['libro_peq', 1]], pieza: Math.random() < 0.5 ? RAR[Math.min(3, Math.floor((M.c - 1) / 2) + (M.dif === 'normal' ? 0 : 1))] : null }; }
-  function premioCofre(c, n, dm) { var k = (1 + (c - 1) * 2) * dm; return n === 1 ? { madera: 4000 * k, piedra: 4000 * k, obj: [['acel_15m', 2], ['botella', 5]] } : n === 2 ? { hierro: 1500 * k, obj: [['libro_gra', 1], ['acel_1h', 1], ['botella', 10]] } : { oro: 20000 * k, pieza: RAR[Math.min(3, c - 1 + (dm > 1 ? 1 : 0))], obj: [['acel_1h', 2], ['botella', 20]] }; }
+  function premioTres(M) { var k = (1 + M.gIdx * 0.3) * M.dm; return { hierro: 300 * k, obj: [['acel_15m', 1], ['libro_peq', 1]].concat(Math.random() < 0.25 ? [['pob_1000', 1]] : Math.random() < 0.1 ? [['tropa_x2', 1]] : []), pieza: Math.random() < 0.5 ? RAR[Math.min(3, Math.floor((M.c - 1) / 2) + (M.dif === 'normal' ? 0 : 1))] : null }; }
+  function premioCofre(c, n, dm) { var k = (1 + (c - 1) * 2) * dm; return n === 1 ? { madera: 4000 * k, piedra: 4000 * k, obj: [['acel_15m', 2], ['botella', 5]] } : n === 2 ? { hierro: 1500 * k, obj: [['libro_gra', 1], ['acel_1h', 1], ['botella', 10], ['pob_1000', 1]] } : { oro: 20000 * k, pieza: RAR[Math.min(3, c - 1 + (dm > 1 ? 1 : 0))], obj: [['acel_1h', 2], ['botella', 20], ['pob_llena', 1], ['tropa_x2', 1]] }; } /* v10.13: población y Leva real */
 
   // ======================= EL MUNDO =======================
   var WW = 1000, WH = 2400;
